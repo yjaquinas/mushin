@@ -1,0 +1,60 @@
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add host to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          PROJECT: "mushin"
+          DOMAIN: "mushin.aqnas.xyz"
+        run: |
+          ssh deploy@$SSH_HOST <<EOF
+            set -euo pipefail
+            cd /opt/$PROJECT/$PROJECT
+            git fetch --prune
+            git reset --hard origin/main
+            UV_CACHE_DIR=/opt/$PROJECT/.uv-cache /usr/local/bin/uv sync --frozen
+            sudo /bin/systemctl restart $PROJECT
+          EOF
+
+      - name: Health check
+        env:
+          DOMAIN: "mushin.aqnas.xyz"
+        run: |
+          set -e
+          for i in $(seq 1 15); do
+            if curl -sSf "https://$DOMAIN/health" > /dev/null; then
+              echo "Health check passed on attempt $i"
+              exit 0
+            fi
+            echo "Attempt $i failed, retrying in 2s..."
+            sleep 2
+          done
+          echo "Health check failed after 15 attempts"
+          exit 1

@@ -1,0 +1,27 @@
+[Unit]
+Description=Mushin (mushin.aqnas.xyz)
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=exec
+User=mushin
+Group=mushin
+WorkingDirectory=/opt/mushin/mushin
+EnvironmentFile=/opt/mushin/.env
+Environment=UV_CACHE_DIR=/opt/mushin/.uv-cache
+ExecStart=/usr/local/bin/uv run uvicorn app.main:app --host 127.0.0.1 --port 8013 --workers 2
+Restart=on-failure
+RestartSec=3
+
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+ReadWritePaths=/opt/mushin/data /opt/mushin/.uv-cache
+ReadOnlyPaths=/opt/mushin
+
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

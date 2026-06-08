@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "Mushin",
+    "slug": "mushin",
+    "scheme": "mushin",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "xyz.aqnas.mushin"
+    },
+    "android": {
+      "package": "xyz.aqnas.mushin"
+    }
+  }
+}
