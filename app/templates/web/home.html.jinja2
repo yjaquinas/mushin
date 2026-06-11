@@ -1,0 +1,24 @@
+{% extends "web/base.html.jinja2" %}
+
+{% block title %}{{ strings.HOME_TITLE }} · {{ strings.APP_NAME }}{% endblock %}
+
+{% block content %}
+<header class="flex items-center justify-between py-2">
+    <h1 class="text-title font-semibold text-text-primary">{{ strings.HOME_TITLE }}</h1>
+    <span class="text-caption text-text-muted">{{ strings.APP_NAME }} {{ strings.APP_NAME_HANJA }}</span>
+</header>
+
+{% if not cards %}
+<p class="text-body text-text-secondary">{{ strings.HOME_EMPTY }}</p>
+{% else %}
+<div class="flex flex-col gap-3">
+    {% for card in cards %}
+        {% include "components/activity_card.html.jinja2" with context %}
+    {% endfor %}
+</div>
+{% endif %}
+
+{# Quick-add sheet target: empty until a card's "기록하기" button swaps in the
+   form fragment (see GET /sub-tallies/{id}/log). #}
+<div id="log-sheet"></div>
+{% endblock %}

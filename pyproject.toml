@@ -12,6 +12,9 @@ dependencies = [
     "python-multipart>=0.0.12",
     "structlog>=24.4",
     "python-dotenv>=1.0",
+    "argon2-cffi>=25.1.0",
+    "itsdangerous>=2.2.0",
+    "httpx>=0.28.1",
 ]
 
 [dependency-groups]
@@ -45,6 +48,9 @@ quote-style = "double"
 testpaths = ["tests"]
 asyncio_mode = "auto"
 addopts = "-ra --strict-markers"
+markers = [
+    "e2e: Playwright specs driven via the Playwright MCP (require a browser; not run by plain `uv run pytest`).",
+]
 
 [build-system]
 requires = ["hatchling"]

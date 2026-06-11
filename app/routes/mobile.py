@@ -4,6 +4,7 @@ All mobile endpoints live under /m/. Responses must set
 media_type="application/vnd.hyperview+xml" or the client silently ignores them.
 See .claude/rules/mobile-templates.md and the hyperview-patterns skill.
 """
+
 from __future__ import annotations
 
 from fastapi import APIRouter

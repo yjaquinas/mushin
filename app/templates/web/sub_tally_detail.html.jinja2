@@ -1,0 +1,34 @@
+{% extends "web/base.html.jinja2" %}
+
+{% block title %}{{ card.name }} · {{ strings.APP_NAME }}{% endblock %}
+
+{% block content %}
+<a href="/home" class="text-caption text-text-muted underline-offset-2 hover:underline">
+    {{ strings.DETAIL_BACK }}
+</a>
+
+{% include "components/activity_card.html.jinja2" with context %}
+
+{% if record is not none %}
+    {% include "components/competition_stats.html.jinja2" with context %}
+{% endif %}
+
+{% if progression is not none %}
+    {% include "components/progression_status.html.jinja2" with context %}
+{% endif %}
+
+{% include "components/stats_summary.html.jinja2" with context %}
+
+<section class="flex flex-col gap-3 rounded-card border border-border bg-surface-1 p-4">
+    {% include "components/calendar.html.jinja2" with context %}
+</section>
+
+<section class="flex flex-col gap-3 rounded-card border border-border bg-surface-1 p-4">
+    {% include "components/heatmap.html.jinja2" with context %}
+</section>
+
+{% include "components/field_stats.html.jinja2" with context %}
+
+{# Quick-add sheet target: empty until "기록하기" swaps in the form fragment. #}
+<div id="log-sheet"></div>
+{% endblock %}

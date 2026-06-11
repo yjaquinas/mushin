@@ -1,0 +1,96 @@
+{#
+  Progression status — current stage, progress toward the next stage, and
+  eligibility (per track: dan / shōgō / reading tier).
+
+  Context: progression ({"tracks": [...]} from
+  app.routes.web._build_progression_context, or None for non-progression
+  sub-tallies — the caller checks that before including this template).
+#}
+<section class="flex flex-col gap-4 rounded-card border border-border bg-surface-1 p-4">
+    <h2 class="text-title font-semibold text-text-primary">{{ strings.PROGRESSION_TITLE }}</h2>
+
+    {% for track in progression.tracks %}
+        <div class="flex flex-col gap-2">
+            <h3 class="text-body font-medium text-text-primary">{{ track.track_label }}</h3>
+
+            <p class="text-hero-numeral font-semibold leading-tight text-brand">
+                {% if track.current_level %}
+                    {{ track.current_level.label }}
+                {% else %}
+                    {{ strings.PROGRESSION_NO_CURRENT }}
+                {% endif %}
+            </p>
+            <p class="text-caption text-text-muted">{{ strings.PROGRESSION_CURRENT_LABEL }}</p>
+
+            {% if track.next_level %}
+                <div class="flex flex-col gap-1">
+                    <p class="text-body text-text-primary">
+                        {{ strings.PROGRESSION_NEXT_LABEL }}: {{ track.next_level.label }}
+                    </p>
+                    <p class="text-caption {% if track.eligible %}text-text-primary font-medium{% else %}text-text-muted{% endif %}">
+                        {% if track.eligible %}
+                            {{ strings.PROGRESSION_ELIGIBLE }}
+                        {% else %}
+                            {{ strings.PROGRESSION_NOT_ELIGIBLE }}
+                        {% endif %}
+                    </p>
+
+                    {% for path in track.paths %}
+                        <div class="flex flex-col gap-1 rounded-button bg-surface-2 p-2 text-caption text-text-muted">
+                            {% set gate = path.gate %}
+                            {% if gate.gate_type == "time" %}
+                                {% if gate.satisfied %}
+                                    <p>{{ strings.PROGRESSION_TIME_HELD_PREFIX }}: {{ gate.years_held }}{{ strings.PROGRESSION_TIME_HELD_YEARS_UNIT }}</p>
+                                {% else %}
+                                    <p>
+                                        {{ strings.PROGRESSION_TIME_REMAINING_PREFIX }}
+                                        {{ gate.days_remaining }}{{ strings.PROGRESSION_TIME_REMAINING_DAYS_UNIT }}
+                                    </p>
+                                {% endif %}
+                            {% elif gate.gate_type == "count" %}
+                                {% if gate.satisfied %}
+                                    <p>{{ gate.current_count }}{{ strings.PROGRESSION_COUNT_PROGRESS_UNIT }}</p>
+                                {% else %}
+                                    <p>
+                                        {{ strings.PROGRESSION_COUNT_REMAINING_PREFIX }}
+                                        {{ gate.count_remaining }}{{ strings.PROGRESSION_COUNT_REMAINING_UNIT }}
+                                    </p>
+                                {% endif %}
+                            {% elif gate.gate_type == "event" %}
+                                {% if gate.satisfied %}
+                                    <p>{{ strings.PROGRESSION_EVENT_PASS_PREFIX }}: {{ gate.passing_attempts }}</p>
+                                {% else %}
+                                    <p>{{ strings.PROGRESSION_EVENT_NEED_PASS }}</p>
+                                {% endif %}
+                            {% elif gate.gate_type == "manual" %}
+                                <p>{{ strings.PROGRESSION_MANUAL_NOTE }}</p>
+                            {% endif %}
+
+                            {% if path.prerequisite %}
+                                <p>
+                                    {{ strings.PROGRESSION_PREREQ_PREFIX }}: {{ path.prerequisite.label }}
+                                    {% if path.prerequisite.held %}
+                                        ({{ strings.PROGRESSION_PREREQ_HELD }})
+                                    {% else %}
+                                        ({{ strings.PROGRESSION_PREREQ_NOT_HELD }})
+                                    {% endif %}
+                                </p>
+                            {% endif %}
+
+                            {% if path.age %}
+                                <p>
+                                    {{ strings.PROGRESSION_AGE_REQUIREMENT_PREFIX }}{{ path.age.age_requirement }}{{ strings.PROGRESSION_AGE_REQUIREMENT_SUFFIX }}
+                                </p>
+                                {% if not path.age.age_known %}
+                                    <p>{{ strings.PROGRESSION_AGE_UNKNOWN_NOTE }}</p>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="text-caption text-text-muted">{{ strings.PROGRESSION_NO_NEXT }}</p>
+            {% endif %}
+        </div>
+    {% endfor %}
+</section>

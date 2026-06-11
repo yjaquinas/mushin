@@ -1,13 +1,18 @@
 """Mushin — FastAPI entrypoint."""
+
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 import structlog
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
+
+from app.auth.routes import router as auth_router
+from app.models.migrate import run_migrations
+from app.routes.web import router as web_router
 
 log = structlog.get_logger()
 
@@ -17,33 +22,29 @@ log = structlog.get_logger()
 #   app/templates/mobile/ ← HXML templates (if --mobile)
 #   app/static/           ← CSS, JS, images
 APP_DIR = Path(__file__).resolve().parent
-TEMPLATE_DIR = APP_DIR / "templates"
 STATIC_DIR = APP_DIR / "static"
 
-app = FastAPI(title="Mushin")
+
+@asynccontextmanager
+async def lifespan(application: FastAPI):  # noqa: ARG001
+    applied = run_migrations()
+    for name in applied:
+        log.info("migration.applied", filename=name)
+    yield
+
+
+app = FastAPI(title="Mushin", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
-# Two Jinja2 environments: one for web (.html.jinja2), one for mobile (.hxml.jinja2)
-templates_web = Jinja2Templates(directory=str(TEMPLATE_DIR / "web"))
+# Auth / guest / upgrade routes live in their own router (app/auth/), not in
+# app/routes/web.py, which the page-UI task owns. See app/auth/routes.py.
+app.include_router(auth_router)
 
-# Uncomment if --mobile was used at scaffold time:
-# templates_mobile = Jinja2Templates(directory=str(TEMPLATE_DIR / "mobile"))
+# Page-UI routes (entry screen, character-sheet home, quick-add log flow).
+app.include_router(web_router)
 
 
 @app.get("/health", response_class=HTMLResponse)
 async def health() -> str:
     """Cron-pingable health endpoint. Do not gate behind auth."""
     return "ok"
-
-
-@app.get("/", response_class=HTMLResponse)
-async def index(request: Request) -> HTMLResponse:
-    return templates_web.TemplateResponse(
-        request=request,
-        name="index.html.jinja2",
-        context={"title": "Mushin"},
-    )
-
-
-# Import route modules here to register them
-# from app.routes import web, mobile, api  # noqa: F401

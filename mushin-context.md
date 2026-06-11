@@ -46,7 +46,7 @@ Three levels: category (activity) -> sub-tally -> entry.
 - Count modes per sub-tally: `running`, or `progression` (a level track).
 - Progression gating, four kinds: time, count, event, manual. A parallel
   secondary track is supported for prestige tiers.
-- Onboarding seeds each account with starter templates: kumdo (full-featured),
+- Onboarding seeds each account with starter templates: kendo (full-featured),
   plus reading, cooking, knitting, travel (lighter).
 - Tables: user, category, sub_tally, field_def, tag, entry, entry_tag,
   entry_value, match, level_rule. Columns in build plan Section 3.
@@ -68,4 +68,4 @@ tables, Korean UI scaffolding.
 - Login providers beyond Kakao (Naver, Apple, email?).
 - Keep 무심 given the everyday "indifferent" connotation, or reconsider.
 - Starter-template set and richness.
-- Seed kumdo `level_rule` with 대한검도회 (KKA) values (short research pass).
+- Seed kendo `level_rule` with 대한검도회 (KKA) values (short research pass).

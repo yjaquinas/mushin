@@ -1,0 +1,47 @@
+{#
+  Count summary (week/month/year/lifetime + avg/week) and streak (current +
+  longest). Detail-screen only — see app.routes.web.sub_tally_detail.
+
+  Context: counts (stats.counts output), streaks (stats.streaks output).
+#}
+<section class="flex flex-col gap-3 rounded-card border border-border bg-surface-1 p-4">
+    <h2 class="text-title font-semibold text-text-primary">{{ strings.STATS_SUMMARY_TITLE }}</h2>
+
+    <dl class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div class="flex flex-col">
+            <dt class="text-caption text-text-muted">{{ strings.STATS_PERIOD_WEEK }}</dt>
+            <dd class="text-title font-medium text-text-primary">{{ counts.this_week }}</dd>
+        </div>
+        <div class="flex flex-col">
+            <dt class="text-caption text-text-muted">{{ strings.STATS_PERIOD_MONTH }}</dt>
+            <dd class="text-title font-medium text-text-primary">{{ counts.this_month }}</dd>
+        </div>
+        <div class="flex flex-col">
+            <dt class="text-caption text-text-muted">{{ strings.STATS_PERIOD_YEAR }}</dt>
+            <dd class="text-title font-medium text-text-primary">{{ counts.this_year }}</dd>
+        </div>
+        <div class="flex flex-col">
+            <dt class="text-caption text-text-muted">{{ strings.STATS_PERIOD_LIFETIME }}</dt>
+            <dd class="text-title font-medium text-text-primary">{{ counts.lifetime }}</dd>
+        </div>
+    </dl>
+
+    <p class="text-caption text-text-muted">
+        {{ strings.STATS_AVG_PER_WEEK }} {{ counts.avg_per_week }}
+    </p>
+
+    <dl class="grid grid-cols-2 gap-3">
+        <div class="flex flex-col">
+            <dt class="text-caption text-text-muted">{{ strings.STREAK_CURRENT_LABEL }}</dt>
+            <dd class="text-title font-medium text-text-primary">
+                {{ streaks.current }}{{ strings.STREAK_DAYS_UNIT }}
+            </dd>
+        </div>
+        <div class="flex flex-col">
+            <dt class="text-caption text-text-muted">{{ strings.STREAK_LONGEST_LABEL }}</dt>
+            <dd class="text-title font-medium text-text-primary">
+                {{ streaks.longest }}{{ strings.STREAK_DAYS_UNIT }}
+            </dd>
+        </div>
+    </dl>
+</section>

@@ -1,0 +1,57 @@
+{#
+  Tag-frequency and scale-distribution sections, rendered for whichever
+  fields exist on the sub-tally's recipe (see app.routes.web._build_field_stats_context).
+
+  Context: field_stats ({"tag_groups": [...], "scales": [...]}).
+#}
+{% if field_stats.tag_groups %}
+<section class="flex flex-col gap-3 rounded-card border border-border bg-surface-1 p-4">
+    {% for group in field_stats.tag_groups %}
+        <div class="flex flex-col gap-2">
+            <h3 class="text-body font-medium text-text-primary">{{ group.label }}</h3>
+            {% if not group.tags %}
+                <p class="text-caption text-text-muted">{{ strings.TAG_FREQUENCY_EMPTY }}</p>
+            {% else %}
+                <ul class="flex flex-wrap gap-2">
+                    {% for tag in group.tags %}
+                        <li class="chip">
+                            {{ tag.name }}
+                            <span class="ms-1 text-text-muted">{{ tag.total }}</span>
+                            {% if tag.this_period %}
+                                <span class="ms-1 text-caption text-text-muted">
+                                    ({{ strings.TAG_FREQUENCY_THIS_PERIOD_PREFIX }} {{ tag.this_period }})
+                                </span>
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        </div>
+    {% endfor %}
+</section>
+{% endif %}
+
+{% if field_stats.scales %}
+<section class="flex flex-col gap-3 rounded-card border border-border bg-surface-1 p-4">
+    {% for scale in field_stats.scales %}
+        <div class="flex flex-col gap-2">
+            <h3 class="text-body font-medium text-text-primary">{{ scale.label }}</h3>
+            {% if not scale.distribution %}
+                <p class="text-caption text-text-muted">{{ strings.SCALE_DISTRIBUTION_EMPTY }}</p>
+            {% else %}
+                <ul class="flex flex-wrap gap-2">
+                    {% for bucket in scale.distribution %}
+                        <li class="chip">
+                            {{ bucket.value }}
+                            <span class="ms-1 text-text-muted">{{ bucket.count }}</span>
+                        </li>
+                    {% endfor %}
+                </ul>
+                <p class="text-caption text-text-muted">
+                    {{ strings.SCALE_DISTRIBUTION_AVERAGE_LABEL }} {{ scale.average }}
+                </p>
+            {% endif %}
+        </div>
+    {% endfor %}
+</section>
+{% endif %}

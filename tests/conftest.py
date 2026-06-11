@@ -3,6 +3,7 @@
 See .claude/rules/tests.md for layout and conventions. Integration tests use
 httpx.AsyncClient against the FastAPI app directly; never run against the dev DB.
 """
+
 from __future__ import annotations
 
 import pytest

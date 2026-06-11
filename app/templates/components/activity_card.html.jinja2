@@ -1,0 +1,61 @@
+{#
+  Activity card — one hero numeral + one progress affordance.
+  Used both on the home page (per sub-tally) and as the HTMX fragment that
+  swaps in after a log (see POST /sub-tallies/{id}/log).
+
+  Context: `card` (see app.routes.web._build_card_context), and optionally
+  `show_nudge` / `nudge_level_id` for the guest upgrade nudge.
+#}
+<article
+    id="card-{{ card.id }}"
+    class="flex flex-col gap-3 rounded-card border border-border bg-surface-1 p-4"
+>
+    <header class="flex items-baseline justify-between gap-2">
+        <div class="flex flex-col">
+            <span class="text-caption text-text-muted">{{ card.category_name }}</span>
+            <h2 class="text-title font-medium text-text-secondary">
+                <a href="/sub-tallies/{{ card.id }}" class="hover:underline">{{ card.name }}</a>
+            </h2>
+        </div>
+        <button
+            type="button"
+            hx-get="/sub-tallies/{{ card.id }}/log"
+            hx-target="#log-sheet"
+            hx-swap="innerHTML"
+            class="min-h-tap min-w-tap rounded-button bg-brand px-4 text-body font-semibold text-surface-1 transition focus-visible:outline-offset-2"
+        >
+            {{ strings.HOME_LOG_BUTTON }}
+        </button>
+    </header>
+
+    {# Hero numeral — the single dominant figure on the card. #}
+    <p class="text-hero-numeral font-semibold leading-tight text-brand">
+        {% if card.count_mode == "progression" %}
+            {{ card.hero_label or "—" }}
+        {% else %}
+            {{ card.hero_label }}<span class="text-title font-normal text-text-muted"> {{ strings.HOME_COUNT_UNIT }}</span>
+        {% endif %}
+    </p>
+
+    {# Progress affordance — at most one per card. #}
+    {% if card.progress is not none %}
+    <div class="progress-track" role="progressbar" aria-valuenow="{{ card.progress.percent }}" aria-valuemin="0" aria-valuemax="100">
+        <div
+            class="progress-fill{% if card.progress.leveled %} progress-fill--leveled{% endif %}"
+            style="width: {{ card.progress.percent }}%"
+        ></div>
+    </div>
+    {% endif %}
+
+    {# Advance line — demoted caption, never competes with the hero numeral. #}
+    <p class="text-caption text-text-muted">
+        {% if card.advance_line %}{{ card.advance_line }}{% endif %}
+        {% if card.streak %}
+            <span class="ms-2">{{ strings.HOME_STREAK_LABEL }} {{ card.streak }}{{ strings.HOME_STREAK_DAYS_UNIT }}</span>
+        {% endif %}
+    </p>
+</article>
+
+{% if show_nudge %}
+    {% include "components/upgrade_nudge.html.jinja2" with context %}
+{% endif %}

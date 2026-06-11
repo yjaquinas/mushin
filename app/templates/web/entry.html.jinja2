@@ -1,0 +1,61 @@
+{% extends "web/base.html.jinja2" %}
+
+{% block title %}{{ strings.ENTRY_TITLE }} {{ strings.APP_NAME_HANJA }}{% endblock %}
+
+{% block content %}
+<section class="flex min-h-[80vh] flex-col justify-center gap-8 py-8">
+    <header class="flex flex-col items-center gap-2 text-center">
+        <h1 class="text-hero-numeral font-semibold leading-tight text-brand">
+            {{ strings.ENTRY_TITLE }} <span class="text-text-muted">{{ strings.APP_NAME_HANJA }}</span>
+        </h1>
+        <p class="text-body text-text-secondary">{{ strings.APP_GLOSS }}</p>
+        <p class="text-caption text-text-muted">{{ strings.ENTRY_TAGLINE }}</p>
+    </header>
+
+    <div class="flex flex-col gap-3">
+        <button
+            type="button"
+            hx-post="/auth/guest"
+            hx-swap="none"
+            hx-on::after-request="if(event.detail.successful) window.location.href = '/home'"
+            class="min-h-tap w-full rounded-button bg-brand px-4 py-3 text-title font-semibold text-surface-1 transition focus-visible:outline-offset-2"
+        >
+            {{ strings.ENTRY_START_GUEST }}
+        </button>
+        <p class="text-center text-caption text-text-secondary">{{ strings.ENTRY_START_GUEST_SUB }}</p>
+        <p class="text-center text-micro text-text-muted">{{ strings.ENTRY_START_GUEST_NOTE }}</p>
+    </div>
+
+    <div class="flex items-center gap-3 text-caption text-text-muted" role="separator" aria-label="{{ strings.ENTRY_DIVIDER }}">
+        <span class="h-px flex-1 bg-border"></span>
+        <span>{{ strings.ENTRY_DIVIDER }}</span>
+        <span class="h-px flex-1 bg-border"></span>
+    </div>
+
+    <div class="flex flex-col gap-3">
+        <a
+            href="/auth/kakao/authorize"
+            class="flex min-h-tap w-full items-center justify-center rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-primary transition hover:bg-surface-2"
+        >
+            {{ strings.ENTRY_SIGNIN_KAKAO }}
+        </a>
+        <a
+            href="/auth/google/authorize"
+            class="flex min-h-tap w-full items-center justify-center rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-primary transition hover:bg-surface-2"
+        >
+            {{ strings.ENTRY_SIGNIN_GOOGLE }}
+        </a>
+        <a
+            href="/auth/email"
+            class="flex min-h-tap w-full items-center justify-center rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-primary transition hover:bg-surface-2"
+        >
+            {{ strings.ENTRY_SIGNIN_EMAIL }}
+        </a>
+    </div>
+
+    <p class="text-center text-micro text-text-muted">
+        {{ strings.ENTRY_CONSENT_NOTICE }}
+        <a href="/privacy" class="underline underline-offset-2 focus-visible:outline-offset-2">{{ strings.ENTRY_CONSENT_LINK_TEXT }}</a>{{ strings.ENTRY_CONSENT_SUFFIX }}
+    </p>
+</section>
+{% endblock %}

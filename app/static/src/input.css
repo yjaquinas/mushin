@@ -1,0 +1,377 @@
+/*
+ * Mushin — Tailwind v4 entry
+ *
+ * This is the single source of truth for all design tokens.
+ * One palette, renderer-agnostic: the same CSS custom-property names
+ * map to Tailwind v4 utilities here and will map to HXML style
+ * attributes when native parity lands (Phase 5). Never duplicate the
+ * palette — read TOKENS.md for the naming contract.
+ *
+ * Token categories:
+ *   --color-*        palette (see TOKENS.md §Palette)
+ *   --text-*         semantic text-role aliases
+ *   --font-size-*    type scale (see TOKENS.md §Type scale)
+ *   --font-weight-*  weight scale
+ *   --radius-*       border-radius tokens
+ *   --spacing-tap    minimum tap-target size (≥44 px, WCAG 2.5.5)
+ */
+
+@import "tailwindcss";
+
+@theme {
+  /* ── Palette ──────────────────────────────────────────────────────────── */
+
+  /*
+   * Brand — a desaturated ink, not a punchy accent. Used for the app name,
+   * primary actions, and the hero numeral. Not pure black — slightly warm so
+   * Korean glyphs render with weight on white.
+   */
+  --color-brand:         #1a1a1a;
+  --color-brand-subtle:  #3d3d3d;
+
+  /*
+   * Surface — background layers. surface-0 is the canvas; surface-1 is the
+   * card / sheet; surface-2 is an inset or pressed state.
+   */
+  --color-surface-0:     #f7f6f4;
+  --color-surface-1:     #ffffff;
+  --color-surface-2:     #eeece9;
+
+  /*
+   * Border — used for card outlines, dividers, chip outlines.
+   */
+  --color-border:        #dedad5;
+  --color-border-strong: #b8b2aa;
+
+  /*
+   * Text roles — semantic aliases on top of the palette.
+   * text-primary  : body copy and labels
+   * text-secondary: demoted labels (sub-tally name on card, timestamps)
+   * text-muted    : captions, placeholder copy, disabled states
+   */
+  --color-text-primary:   #1a1a1a;
+  --color-text-secondary: #5c5751;
+  --color-text-muted:     #9e9790;
+
+  /*
+   * Accent — a quiet ink-blue, used sparingly: selected chip outline,
+   * active progress bar fill, focused input border. Never used as a
+   * background fill that carries meaning alone.
+   */
+  --color-accent:        #2e5b8a;
+  --color-accent-subtle: #e8eef5;
+
+  /*
+   * Level-up / success — a single, restrained green. Used only for the
+   * progression milestone moment (bar tick, level-up notice). Never as a
+   * general "good" status color — one use keeps its meaning legible.
+   */
+  --color-level:         #2a7a4b;
+  --color-level-subtle:  #e6f4ec;
+
+  /*
+   * Danger — account deletion, irreversible destructive actions only.
+   */
+  --color-danger:        #b03a2e;
+  --color-danger-subtle: #fbeae8;
+
+  /*
+   * Heatmap intensity ramp — used by the trailing-365-day contribution
+   * heatmap. Five steps, monotonically increasing in both lightness and
+   * saturation toward --color-accent, so the ramp reads correctly even
+   * with hue removed (colorblind-safe). heat-0 is the explicit "no
+   * activity" cell and must stay visually distinct from heat-1 (a
+   * low-but-nonzero day) — it sits on surface-2, not white, so an empty
+   * cell never looks like a card background.
+   *
+   * heat-0 : zero entries        (== --color-surface-2)
+   * heat-1 : low activity
+   * heat-2 : moderate activity
+   * heat-3 : high activity
+   * heat-4 : busiest day(s)      (== --color-accent)
+   */
+  --color-heat-0: #eeece9; /* surface-2 — empty */
+  --color-heat-1: #d6e0ec;
+  --color-heat-2: #aec4dc;
+  --color-heat-3: #6f93b9;
+  --color-heat-4: #2e5b8a; /* accent — busiest */
+
+  /* ── Type scale ───────────────────────────────────────────────────────── */
+
+  /*
+   * The home-card hierarchy is the load-bearing rule (see TOKENS.md §Type
+   * scale). One hero numeral per card; everything else demoted.
+   *
+   * hero-numeral  : the single big count / current level per activity card
+   * title         : category / sub-tally name (secondary to hero)
+   * body          : default prose, form labels, field content
+   * caption       : demoted stats, timestamps, chip labels
+   * micro         : legal / footnote only
+   *
+   * Base is 16 px (1 rem). Scale chosen to stay legible at 1.5× system
+   * font scaling and to give Korean glyphs comfortable line cadence.
+   */
+  --font-size-hero-numeral: 3rem;     /* 48 px — the single dominant numeral */
+  --font-size-title:        1.125rem; /* 18 px — activity name, section head  */
+  --font-size-body:         1rem;     /* 16 px — default                       */
+  --font-size-caption:      0.8125rem;/* 13 px — demoted metrics, timestamps   */
+  --font-size-micro:        0.6875rem;/* 11 px — legal only                    */
+
+  /* ── Font weights ─────────────────────────────────────────────────────── */
+
+  /*
+   * Chips use weight to distinguish selected vs unselected state — never
+   * color alone (colorblind + bright-sun safe). See component-patterns skill.
+   */
+  --font-weight-normal:     400;
+  --font-weight-medium:     500;
+  --font-weight-semibold:   600;
+
+  /* ── Border radius ────────────────────────────────────────────────────── */
+
+  /*
+   * Cards and sheets use a modest radius — quiet, not bubbly.
+   * Chips use pill radius when selected and a slightly smaller radius when
+   * unselected, so shape itself communicates state.
+   */
+  --radius-card:            0.75rem;  /* 12 px — activity card, sheets         */
+  --radius-chip-selected:   9999px;   /* pill — selected chip shape            */
+  --radius-chip-unselected: 0.375rem; /* 6 px  — unselected chip shape         */
+  --radius-button:          0.5rem;   /* 8 px  — primary / secondary buttons   */
+  --radius-input:           0.5rem;   /* 8 px  — text inputs                   */
+
+  /* ── Spacing ──────────────────────────────────────────────────────────── */
+
+  /*
+   * Minimum tap target: 44 px on each axis (WCAG 2.5.5 / Apple HIG).
+   * Applied as min-h / min-w on every interactive element.
+   */
+  --spacing-tap:            2.75rem;  /* 44 px */
+
+  /* ── Line height ──────────────────────────────────────────────────────── */
+
+  --line-height-tight:      1.25;     /* hero numeral, large headings          */
+  --line-height-snug:       1.4;      /* titles, chips                         */
+  --line-height-normal:     1.6;      /* body copy (generous for Korean)       */
+  --line-height-relaxed:    1.75;     /* long-form prose                       */
+}
+
+/* ── Focus-visible: global baseline ──────────────────────────────────────── */
+/*
+ * Every interactive element must have a visible focus ring. We set a single
+ * consistent ring here rather than relying on per-component classes, so
+ * keyboard and switch-access users always have orientation.
+ *
+ * Using outline-offset so the ring sits just outside the element's border,
+ * visible on both light and dark surfaces. 2 px solid accent, 2 px offset.
+ */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  /* Remove the default outline for mouse/touch (preserve for keyboard). */
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  /* Prevent Safari from showing a yellow autofill background on inputs. */
+  input:-webkit-autofill,
+  input:-webkit-autofill:focus {
+    transition: background-color 0s 600000s;
+  }
+}
+
+/* ── Chip base styles ─────────────────────────────────────────────────────── */
+/*
+ * .chip — the base class applied to every tag chip.
+ *
+ * Interaction requirements (from component-patterns skill):
+ *   - Chips wrap (never scroll-hide). Enforced by flex-wrap on the container.
+ *   - Tap targets ≥44 px. Achieved via min-height + padding.
+ *   - Selected vs unselected differ by shape (pill vs rounded-sm) + weight +
+ *     a glyph (✓ prepended via ::before on .chip--selected). NOT color alone.
+ *
+ * The color difference (accent fill vs surface-2 background) is a secondary
+ * affordance, never the sole signal. The shape change + checkmark glyph carry
+ * the meaning for colorblind and bright-sun contexts.
+ *
+ * Tailwind v4 utilities cover everything except the ::before glyph and the
+ * shape transition, which require a base class.
+ */
+@layer components {
+  .chip {
+    display:         inline-flex;
+    align-items:     center;
+    min-height:      var(--spacing-tap);   /* ≥44 px tap target */
+    padding-block:   0.375rem;             /* 6 px  */
+    padding-inline:  0.75rem;              /* 12 px */
+    font-size:       var(--font-size-caption);
+    font-weight:     var(--font-weight-normal);
+    line-height:     var(--line-height-snug);
+    border:          1.5px solid var(--color-border);
+    border-radius:   var(--radius-chip-unselected);
+    background:      var(--color-surface-2);
+    color:           var(--color-text-secondary);
+    cursor:          pointer;
+    transition:      border-radius 120ms ease, border-color 120ms ease,
+                     background 120ms ease, font-weight 120ms ease;
+    user-select:     none;
+    /* No gap here — the glyph is inline text via ::before */
+  }
+
+  .chip--selected {
+    border-radius:   var(--radius-chip-selected);  /* shape change: pill */
+    border-color:    var(--color-accent);
+    background:      var(--color-accent-subtle);
+    color:           var(--color-accent);
+    font-weight:     var(--font-weight-semibold);  /* weight change */
+  }
+
+  /*
+   * Glyph signal on selected state.
+   * Using a plain checkmark character — no icon font dependency.
+   * Screen readers see nothing (content is decorative; the aria-pressed
+   * state on the button is the semantic signal).
+   */
+  .chip--selected::before {
+    content:         "✓\00a0"; /* checkmark + narrow no-break space */
+    font-weight:     var(--font-weight-semibold);
+    aria-hidden:     true;
+  }
+
+  /* Focus ring on chip buttons uses the global :focus-visible rule above.
+   * Add an explicit offset so the ring clears the pill shape. */
+  .chip:focus-visible {
+    outline-offset: 3px;
+  }
+
+  /* ── Progress bar ─────────────────────────────────────────────────────── */
+  /*
+   * .progress-track / .progress-fill — the single quiet progress affordance
+   * on activity cards.
+   *
+   * Motion: the fill width animates on log (the "one moment of motion"
+   * reward). Driven by an inline style width set by the HTMX fragment.
+   * No glow, no pulse, no confetti — just the bar moving.
+   */
+  .progress-track {
+    position:        relative;
+    height:          0.375rem;   /* 6 px — unobtrusive */
+    border-radius:   9999px;
+    background:      var(--color-surface-2);
+    overflow:        hidden;
+  }
+
+  .progress-fill {
+    position:        absolute;
+    inset-block:     0;
+    inset-inline-start: 0;
+    border-radius:   9999px;
+    background:      var(--color-accent);
+    transition:      width 400ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /*
+   * Level-up state: the fill turns level-green for the one celebratory moment,
+   * then reverts. Applied by swapping the HTMX fragment with an additional
+   * .progress-fill--leveled class; a CSS animation handles the fade-back.
+   */
+  .progress-fill--leveled {
+    background:      var(--color-level);
+    animation:       level-revert 2.4s ease 0.6s forwards;
+  }
+
+  @keyframes level-revert {
+    to { background: var(--color-accent); }
+  }
+
+  /* ── Heatmap (trailing-365-day contribution grid) ────────────────────── */
+  /*
+   * .heat-cell — a single day-cell in the contribution heatmap.
+   *
+   * NON-INTERACTIVE: heatmap cells are decorative density indicators, not
+   * tap targets — there are 365 of them, far below the 44px minimum is
+   * unavoidable and not required here. If a cell needs to be tappable
+   * (e.g. "view this day"), use .cal-day instead. Intensity is set by
+   * applying one of .heat-cell--0 through .heat-cell--4 (mapping to the
+   * --color-heat-* ramp), driven server-side from the entry count.
+   *
+   * Render heatmap cells inside a `role="img"` grid with a single
+   * descriptive aria-label (e.g. "지난 365일 활동 기록") — individual cells
+   * are aria-hidden; per-cell tooltips are not required at this size.
+   */
+  .heat-cell {
+    width:           0.625rem;  /* 10 px */
+    height:          0.625rem;  /* 10 px */
+    border-radius:   0.125rem;  /* 2 px — small square, slightly softened */
+    background:      var(--color-heat-0);
+  }
+
+  .heat-cell--0 { background: var(--color-heat-0); }
+  .heat-cell--1 { background: var(--color-heat-1); }
+  .heat-cell--2 { background: var(--color-heat-2); }
+  .heat-cell--3 { background: var(--color-heat-3); }
+  .heat-cell--4 { background: var(--color-heat-4); }
+
+  /* ── Calendar (month view with marked days) ──────────────────────────── */
+  /*
+   * .cal-day — a single day cell in the month calendar.
+   *
+   * INTERACTIVE: calendar days ARE tap targets (tapping a day opens that
+   * day's entries), so .cal-day enforces the ≥44px minimum via
+   * --spacing-tap on both axes.
+   *
+   * State affordances:
+   *   .cal-day--marked — a day with at least one entry. Signaled by a
+   *     dot glyph (::after) PLUS a weight change, never by fill color
+   *     alone (colorblind + bright-sun safe).
+   *   .cal-day--today  — the current day. Signaled by an outline ring
+   *     (shape), distinct from the marked-day dot and from focus-visible.
+   *
+   * .cal-day--marked and .cal-day--today may combine on the same cell;
+   * the dot and the ring are independent affordances and both render.
+   */
+  .cal-day {
+    display:         flex;
+    align-items:     center;
+    justify-content: center;
+    position:        relative;
+    min-width:       var(--spacing-tap);   /* ≥44 px tap target */
+    min-height:      var(--spacing-tap);   /* ≥44 px tap target */
+    border-radius:   var(--radius-button);
+    font-size:       var(--font-size-body);
+    font-weight:     var(--font-weight-normal);
+    color:           var(--color-text-primary);
+    background:      transparent;
+    cursor:          pointer;
+    transition:      background 120ms ease, font-weight 120ms ease;
+  }
+
+  .cal-day:hover {
+    background:      var(--color-surface-2);
+  }
+
+  /* Marked: bolder numeral + a small dot beneath it (shape, not color, carries
+   * the signal — the dot uses accent as a secondary affordance only). */
+  .cal-day--marked {
+    font-weight:     var(--font-weight-semibold);
+  }
+
+  .cal-day--marked::after {
+    content:         "";
+    position:        absolute;
+    bottom:          0.375rem; /* 6 px */
+    width:           0.25rem;  /* 4 px */
+    height:          0.25rem;  /* 4 px */
+    border-radius:   9999px;
+    background:      var(--color-accent);
+  }
+
+  /* Today: an outline ring distinguishes the current day by shape, separate
+   * from the focus-visible ring (which uses outline, not box-shadow). */
+  .cal-day--today {
+    box-shadow:      inset 0 0 0 1.5px var(--color-border-strong);
+  }
+}
