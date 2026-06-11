@@ -37,4 +37,8 @@ Path-scoped: loads when Claude is editing HTMX templates, shared components, or 
 
 ## Project-specific additions
 
-_(Add project-specific UI conventions here — brand tokens, header/footer structure, etc.)_
+- Render fields in the shared field-priority order from the domain layer (hero stat → progress affordance → advance line); don't invent a per-template hierarchy.
+- Quick-add / "log" return HTMX fragments that swap without full reload; tag selection survives the swap.
+- One hero numeral per activity card; tag chips wrap (never horizontal scroll-hide), ≥44px targets, selected state differs by shape/weight + glyph (not color alone).
+- The no-account entry path uses **"계정 없이, 나만 보는 기록"** framing — never claim "nothing leaves your device" (guest data is on the server).
+- Never hardcode user-facing copy — pull from the centralized strings module (see `copy-patterns`).

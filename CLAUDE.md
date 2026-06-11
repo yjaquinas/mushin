@@ -29,8 +29,10 @@ Three levels: category (activity) → sub-tally → entry.
 - Count modes per sub-tally: `running`, or `progression` (a level track).
 - Progression gating, four kinds: time, count, event, manual. A parallel
   secondary track is supported for prestige tiers.
-- Onboarding seeds each account with starter templates: kumdo (full-featured),
-  plus reading, cooking, knitting, travel (lighter).
+- Onboarding seeds each account with two starter templates: **kendo**
+  (full-featured — running practice, tournament with match-list, time-gated dan
+  progression + shōgō track) and **reading** (count-gated progression tiers).
+  Cooking, knitting, travel are deferred to a future template gallery.
 - Tables: user, category, sub_tally, field_def, tag, entry, entry_tag,
   entry_value, match, level_rule.
 
@@ -40,10 +42,22 @@ Online-first.
 
 ## Auth + accounts
 
-Multi-user from day one. Social login: Kakao first (Korean default), Naver
-optional, email/password fallback. Every query scoped by `owner_id`. OAuth
-client id/secret are manual tasks (Kakao/Naver dev console), stored like
-`SERVER_HOST` / `DEPLOY_KEY`.
+Multi-user from day one. Social login: **Kakao + Google**, plus **email/password
+fallback**. Naver and Apple are deferred (Apple revisited at iOS launch). Kakao
+scope is `profile_nickname` only; Google scope is `openid email profile`. Every
+query scoped by `owner_id`. OAuth client id/secret are manual tasks (Kakao +
+Google dev consoles), stored in `/opt/mushin/.env` like `SERVER_HOST` /
+`DEPLOY_KEY`.
+
+**No-signup guest mode:** users can start with no account via an **anonymous
+server account** — a guest `owner_id` behind a device cookie, data in the same
+server SQLite (not local/on-device). Created on first interaction (not page
+load), templates lazy-seeded on first entry, upgradeable to a real account in
+place with zero data migration, and purged by a guest-reaper retention timer if
+abandoned. "No signup" is honored; "no server storage" is deliberately **not** —
+true local-first was rejected (would fork the domain layer and break native).
+The app stays **online-first**: no on-device storage, no offline write queue, no
+sync.
 
 ## Key constraints
 

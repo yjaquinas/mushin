@@ -42,4 +42,10 @@ Before any of the following, ask before proceeding:
 
 ## Project-specific additions
 
-_(Add any project-wide rules here — naming conventions, domain constraints, integration specifics.)_
+### Personal data (PIPA)
+
+- Every `owner_id`-scoped row is personal data under Korea's PIPA (개인정보보호법) — **including free-text memos**, which can contain anything (health, names, locations).
+- **Account deletion must cascade** to all of a user's data (`category`, `sub_tally`, `field_def`, `tag`, `entry`, `entry_tag`, `entry_value`, `match`, `level_rule`, memos) — a deletion that leaves orphaned data is a PIPA failure. Enforce via `ON DELETE CASCADE` from `user`.
+- **No memo content (or any `owner_id`-scoped data) may be sent to a third-party API** — no LLM "summarize your progress", no analytics capturing memo text, no error-tracker that might log a memo. Adding any such feature requires a privacy-policy update + fresh explicit consent, never a quiet add.
+- Data export/deletion tooling must include memos to make the access/deletion rights honest.
+- **Anonymous guest accounts are data subjects too.** A guest `owner_id` (behind a device cookie) holds personal data on our server and is in PIPA scope exactly like a logged-in user. Guests therefore need: disclosure (the 처리방침 covers guests; data is on the server, not on-device — never imply otherwise), a cookie-bound deletion control, and a defined **retention window** enforced by the guest-reaper timer (purge zero-entry guests ~7d, inactive guests ~30d). Never leave un-authenticatable orphan guest rows accumulating.

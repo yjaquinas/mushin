@@ -18,15 +18,23 @@ Mushin tracks personal progress across any activity. The model has three levels:
 
 ## Agents
 
-Twelve Task Force agents live in `.claude/agents/` — they do the building work (as opposed to the C-level agents at studio scope, who deliberate).
+Seven Task Force agents live in `.claude/agents/` — they do the building work (as opposed to the C-level agents at studio scope, who deliberate):
 
-_(List the project's TF agent roster here as it's populated — which agents are active, what each owns.)_
+- **schema-migrator** — `app/models/`, plain-SQL migrations, db connection, indexes, archive/cascade conventions.
+- **domain-engineer** — `app/services/`: counting, streaks, stats, progression math. Renderer-agnostic; no HTTP, no templates.
+- **auth-engineer** — `app/auth/`: Kakao + Google OAuth, email/password, guest mode, sessions, `owner_id` scoping helper.
+- **web-renderer** — `app/routes/web.py` + `app/templates/web/`: HTMX + Jinja fragments.
+- **seed-author** — onboarding template seeding (kendo + reading), including the KKA `level_rule` data.
+- **ui-stylist** — Tailwind v4, the renderer-agnostic color/type tokens, `app/static/`.
+- **test-engineer** — `tests/`: pytest + Playwright.
+
+A `mobile-renderer` agent (HXML/Hyperview) will be added at Phase 5 (native parity), not before.
 
 ## Skills
 
-Seven project-scope skills live in `.claude/skills/`. Two are commands (`fix-issue`, `refactor`); five are knowledge skills encoding project-specific conventions (color system, typography, component patterns, data model, copy patterns).
+Project-scope skills live in `.claude/skills/`. Knowledge skills encoding project conventions: **data-model** and **copy-patterns** (created this meeting); **color-system**, **typography**, and **component-patterns** (stubs, filled as the UI lands). Command skills (`fix-issue`, `refactor`) are deferred until there's enough surface to warrant them.
 
-See `.claude/skills/README.md` for the full index once populated.
+See `.claude/skills/README.md` for the full index.
 
 ## Rules
 

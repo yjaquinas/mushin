@@ -40,4 +40,4 @@ Path-scoped: loads when Claude is editing Hyperview templates or the mobile-clie
 
 ## Project-specific additions
 
-_(Add project-specific mobile conventions here — navigation stacks, modal patterns, etc.)_
+- When native parity lands (Phase 5): HXML renders the **same ordered fields** as web (shared domain hierarchy), differing only in how a control is drawn (Tailwind div vs HXML `<view>`), never in what's shown or in what order. Home is a `<list>` of activity cards; pull-to-refresh (`trigger="refresh"`) is the native equivalent of the web HTMX fragment refresh. Color/type tokens must be the same renderer-agnostic source used by web.

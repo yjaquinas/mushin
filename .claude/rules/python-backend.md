@@ -46,4 +46,8 @@ Path-scoped: loads when Claude is editing `app/**` or `tests/**`. Fill in the co
 
 ## Project-specific additions
 
-_(Add project-specific Python conventions here as they emerge.)_
+- Raw SQL only (stdlib `sqlite3`), no ORM. Per-request connection context manager, never a global connection. WAL + `foreign_keys=ON`.
+- Every data-access function takes `owner_id` as a **required argument**; provide a helper so it can't be omitted. Multi-user isolation is non-negotiable.
+- Domain/service code in `app/services/` is renderer-agnostic: no HTTP, no Jinja, no HXML — returns plain data both renderers consume.
+- Secrets via `os.getenv(...)` only; documented in `.env.example`.
+- Password hashing is Argon2id (`argon2-cffi`); sessions are `HttpOnly; Secure; SameSite=Lax`.

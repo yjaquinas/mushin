@@ -14,8 +14,8 @@ Appear in the `/` picker. Each is a slash command scoped to this project.
 
 | Command | Purpose |
 |---|---|
-| `/fix-issue` | _(populate once the skill is defined)_ |
-| `/refactor` | _(populate once the skill is defined)_ |
+| `/fix-issue` | _(deferred — not yet defined)_ |
+| `/refactor` | _(deferred — not yet defined)_ |
 
 ## Knowledge (background)
 
@@ -23,11 +23,11 @@ Loaded automatically by Claude when their descriptions match the task at hand.
 
 | Skill | Covers |
 |---|---|
-| `color-system` | _(populate: palette, color tokens, usage rules)_ |
-| `typography` | _(populate: fonts, type scale, weights)_ |
-| `component-patterns` | _(populate: buttons, cards, forms, status pills, etc.)_ |
-| `data-model` | _(populate: tables, relationships, query patterns for this domain)_ |
-| `copy-patterns` | _(populate: voice rules, banned words, example phrasings)_ |
+| `data-model` | Category→sub-tally→entry model, field_def/entry_value recipe, count modes, progression gates, derived-status rule, owner_id/index conventions |
+| `copy-patterns` | Korean voice (해요체, 나-person), understated 무심/無心 tone, banned gamer-loanwords, no-account/guest copy, centralized-strings i18n |
+| `color-system` | _(stub — renderer-agnostic color tokens, filled as the UI lands)_ |
+| `typography` | _(stub — type scale + home-card hero hierarchy, filled as the UI lands)_ |
+| `component-patterns` | _(stub — activity card, quick-add, chip-group, progress bar, calendar/heatmap)_ |
 
 ## Adding a skill
 
