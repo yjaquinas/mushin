@@ -173,22 +173,138 @@ Manual (Alembic planned). Document any migration steps performed here.
 
 ---
 
-## 7. Backups (optional, per-project)
+## 7. Backups
 
-If this project needs scheduled backups, add `infra/backup.sh` and `infra/backup-cron` to handle SQLite snapshots, integrity checks, and remote sync via rclone.
+Daily SQLite snapshot, taken via `infra/mushin-backup.timer` →
+`infra/mushin-backup.service` (oneshot, `User=mushin`), which runs
+`infra/backup.sh`.
 
-Pattern (from aqnas-xyz's `infra/backup.sh`, adaptable):
+### Snapshot, never `cp`
 
-1. SQLite `.backup` (WAL-safe snapshot)
-2. `PRAGMA integrity_check` on the backup (delete if corrupt)
-3. `rclone sync` to remote object storage (if configured)
-4. Prune local backups older than N days
+WAL mode keeps recent writes in `app.db-wal`, separate from `app.db`. A raw
+`cp`/`rclone` of `app.db` while the app is running can capture a `.db` file
+that's missing those writes — a corrupt-looking, incomplete snapshot. The
+backup script **always** uses SQLite's online backup API via the `sqlite3`
+CLI:
 
-Cron schedule typically lives in `infra/backup-cron`, installed to `/etc/cron.d/mushin-backup` and running as the service user.
+```bash
+sqlite3 /opt/mushin/data/app.db ".backup '/opt/mushin/data/backups/app-<timestamp>.db'"
+```
+
+This produces a single self-contained, consistent file regardless of
+concurrent writers.
+
+### What the script does (`infra/backup.sh`)
+
+1. `.backup` snapshot to `/opt/mushin/data/backups/app-<UTC timestamp>.db`
+   (directory created if missing).
+2. `PRAGMA integrity_check` on the snapshot — if it doesn't return `ok`, the
+   snapshot is deleted and the script exits non-zero (failure is visible via
+   `systemctl status mushin-backup` / `journalctl -u mushin-backup`).
+3. Rotation: keeps the newest `MUSHIN_BACKUP_RETENTION` snapshots (default 7,
+   ~one week of daily backups), deletes older ones.
+
+Configurable via environment (set in `/opt/mushin/.env` if overriding
+defaults):
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `MUSHIN_DB_PATH` | `/opt/mushin/data/app.db` | Source DB |
+| `MUSHIN_BACKUP_DIR` | `/opt/mushin/data/backups` | Snapshot output directory |
+| `MUSHIN_BACKUP_RETENTION` | `7` | Number of daily snapshots to keep |
+| `MUSHIN_BACKUP_DATE_STAMP` | `$(date -u +%Y%m%d-%H%M%S)` | Override for testing/reproducibility |
+
+### Timer
+
+`mushin-backup.timer` runs `mushin-backup.service` daily at 03:15 UTC (with up
+to a 5-minute random delay to avoid thundering-herd on shared hosts).
+`Persistent=true` means a missed run (host was down) fires shortly after boot.
+
+### Off-host copy
+
+`/opt/mushin/data/backups/` is **inside** `mushin.service`'s existing
+`ReadWritePaths=/opt/mushin/data` — no systemd unit change was needed for
+either new timer. The existing host-level rclone job ships the contents of
+`/opt/mushin/data/backups/` to off-host object storage; this repo doesn't run
+rclone itself.
+
+### Install (one-time, on the production host)
+
+```bash
+sudo cp infra/mushin-backup.service infra/mushin-backup.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now mushin-backup.timer
+```
+
+### Restore
+
+```bash
+sudo systemctl stop mushin
+sudo -u mushin cp /opt/mushin/data/backups/app-<timestamp>.db /opt/mushin/data/app.db
+sudo systemctl start mushin
+```
+
+(Stopping the service first avoids restoring under a live WAL.)
 
 ---
 
-## 8. Local development
+## 8. Guest retention (PIPA)
+
+Anonymous guest accounts (`user.auth_provider = 'guest'`, no signup) are
+personal data on the server, in scope for Korea's PIPA exactly like a
+logged-in account. Two retention windows, enforced daily by
+`infra/mushin-guest-reaper.timer` → `infra/mushin-guest-reaper.service`
+(oneshot, `User=mushin`), which runs `uv run python -m app.services.guest_reaper`:
+
+| Condition | Default window | Rule |
+|---|---|---|
+| Zero-entry guest | **7 days** | `user.created_at` older than 7 days AND no rows in `entry` for that owner |
+| Inactive guest | **30 days** | `user.last_active_at` (or `created_at` if never set) older than 30 days, regardless of entry count |
+
+Either condition alone is sufficient to purge. A purge deletes the `user` row;
+`ON DELETE CASCADE` from `user` (migration 0001) removes every dependent row
+(`category`, `sub_tally`, `field_def`, `tag`, `entry`, `entry_tag`,
+`entry_value`, `match`, `level`, `level_rule`) in the same transaction — no
+orphans.
+
+**Real accounts (`kakao`, `google`, `email`) are never matched** — the purge
+query is hard-filtered to `auth_provider = 'guest'`.
+
+These two windows (7 days zero-entry / 30 days inactive) are the values to
+cite in the 개인정보처리방침 guest-data retention disclosure.
+
+### Implementation
+
+- Logic: `app/services/guest_reaper.py` — `purge_guests(conn, *, now, zero_entry_days=7, inactive_days=30, dry_run=False)`. `now` is injectable for tests; this is the only place in the codebase that legitimately queries across all owners (a maintenance job, not a request-path accessor — kept separate from the owner-scoped helpers in `app/services/_db.py`).
+- CLI: `uv run python -m app.services.guest_reaper [--dry-run] [--zero-entry-days N] [--inactive-days N]`.
+
+### Dry run
+
+```bash
+cd /opt/mushin/mushin
+uv run python -m app.services.guest_reaper --dry-run
+```
+
+Logs (via structlog, `guest_reaper.would_purge`) every user id that *would* be
+purged, without deleting anything. Useful for verifying the thresholds before
+trusting the timer.
+
+### Timer
+
+`mushin-guest-reaper.timer` runs daily at 03:45 UTC (staggered after the
+backup timer), with up to a 5-minute random delay and `Persistent=true`.
+
+### Install (one-time, on the production host)
+
+```bash
+sudo cp infra/mushin-guest-reaper.service infra/mushin-guest-reaper.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now mushin-guest-reaper.timer
+```
+
+---
+
+## 9. Local development
 
 ### Quick start
 
@@ -213,7 +329,7 @@ uv sync                               # Sync deps from uv.lock
 
 ---
 
-## 9. Monitoring and break-glass
+## 10. Monitoring and break-glass
 
 ### Monitoring
 

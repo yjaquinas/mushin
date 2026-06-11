@@ -1,0 +1,18 @@
+[Unit]
+Description=Mushin SQLite WAL-safe backup snapshot
+After=mushin.service
+
+[Service]
+Type=oneshot
+User=mushin
+Group=mushin
+WorkingDirectory=/opt/mushin/mushin
+EnvironmentFile=-/opt/mushin/.env
+ExecStart=/bin/bash /opt/mushin/mushin/infra/backup.sh
+
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+ReadWritePaths=/opt/mushin/data
+ReadOnlyPaths=/opt/mushin
