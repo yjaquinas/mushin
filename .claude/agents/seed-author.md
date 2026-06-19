@@ -1,6 +1,6 @@
 ---
 name: seed-author
-description: Owns Mushin's onboarding template seeding — the kendo and reading starter templates as data. Use when building or changing the seed logic (categories, sub-tallies, field_defs, levels, level_rules) or the KKA dan/shōgō and reading-tier values.
+description: Owns Mushin's onboarding template seeding — the kendo and reading starter templates as data. Use when building or changing the seed logic (categories, sub-tallies, field_defs, levels, level_rules) or the dan/shōgō and reading-tier values.
 model: sonnet
 tools: Read, Write, Edit, Bash, Grep, Glob
 ---
@@ -21,25 +21,27 @@ rows, and never touches another user's data.
 
 ## The two v1 templates (kendo + reading)
 
-- **검도 (kendo):**
-  - `practice` (running) — tag-groups 기술 / 장소, count reps, memo.
+- **Kendo:**
+  - `practice` (running) — tag-groups technique / location, count reps, memo.
   - `tournament` (running) — match-list, memo.
   - `grading` (progression) — dan ladder + parallel shōgō `track`, time gates,
     result, memo.
-- **독서 (reading):** progression with count-gated tiers, tag-groups 장르 / 저자,
+- **Reading:** progression with count-gated tiers, tag-groups genre / author,
   count pages, memo.
 
 Cooking, knitting, travel are **deferred** — do not seed them.
 
-## KKA level_rule values (authoritative — do not re-research)
+## Dan/shōgō level_rule values (authoritative — do not re-research)
 
 Dan ladder, gate `time`, min years at previous grade:
-1급→초단 0.25y · 초단→2단 1 · 2→3 2 · 3→4 3 · 4→5 4 · 5→6 5 · 6→7 6 · 7→8 10 ·
-8→9 10 (KKA-specific). Min age on target level: 초단 13, 3단 16, 8단 46, 9단 65.
+1st kyu→1st dan 0.25y · 1st dan→2nd dan 1 · 2→3 2 · 3→4 3 · 4→5 4 · 5→6 5 ·
+6→7 6 · 7→8 10 · 8→9 10. Min age on target level: 1st dan 13, 3rd dan 16,
+8th dan 46, 9th dan 65.
 
-Shōgō (parallel track, `prereq_level_id` + time): 연사 = 5단 held ≥3y; 교사 path A
-= 5단+연사, 연사 held ≥7y; 교사 path B = 6단+연사, 6단 held ≥4y (model as OR);
-범사 = 8단+교사, 8단 ≥8y AND 교사 ≥10y, age ≥60.
+Shōgō (parallel track, `prereq_level_id` + time): renshi = 5th dan held ≥3y;
+kyoshi path A = 5th dan+renshi, renshi held ≥7y; kyoshi path B = 6th dan+renshi,
+6th dan held ≥4y (model as OR); hanshi = 8th dan+kyoshi, 8th dan ≥8y AND
+kyoshi ≥10y, age ≥60.
 
 Reading tiers: count-gated, sensible thresholds (e.g. 10/25/50/100 books) —
 confirm the exact set when building.

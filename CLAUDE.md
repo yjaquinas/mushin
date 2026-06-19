@@ -4,8 +4,7 @@
 
 Mushin (무심, 無心 — "no-mind") is a general personal progress tracker. Log how
 often you do any activity and watch your level in it rise — a raising-sim RPG of
-yourself. Multi-user from day one; built for the Korean market with UI strings
-centralized for later i18n.
+yourself. Multi-user from day one; UI strings centralized for i18n.
 
 Stack: FastAPI + uv + Uvicorn. Optional Tailwind CSS v4 + Alpine.js + HTMX
 (web), Hyperview/HXML (mobile), SQLite.
@@ -33,8 +32,14 @@ Three levels: category (activity) → sub-tally → entry.
   (full-featured — running practice, tournament with match-list, time-gated dan
   progression + shōgō track) and **reading** (count-gated progression tiers).
   Cooking, knitting, travel are deferred to a future template gallery.
-- Tables: user, category, sub_tally, field_def, tag, entry, entry_tag,
-  entry_value, match, level_rule.
+- Tables: user, category, sub_tally (activity), field_def, tag, entry,
+  entry_tag, entry_value, match, level_rule, **connection, block**.
+- Social graph: a **fellow** is a mutual connection (request → accept/decline;
+  symmetric). The `connection` table holds the directed handshake plus a
+  canonical `user_lo/user_hi` pair (unique, prevents reverse-duplicates);
+  `block` is a one-directional silence with a no-existence-oracle guarantee.
+  The connection term in all copy is "fellow"; the action verb is always
+  "Connect" (never coin "to fellow").
 
 Architecture: one FastAPI backend, two hypermedia renderers — HTMX (web/PWA) and
 HXML (Hyperview native) — over a shared renderer-agnostic domain/service layer.
@@ -42,27 +47,38 @@ Online-first.
 
 ## Auth + accounts
 
-Multi-user from day one. Social login: **Kakao + Google**, plus **email/password
-fallback**. Naver and Apple are deferred (Apple revisited at iOS launch). Kakao
-scope is `profile_nickname` only; Google scope is `openid email profile`. Every
-query scoped by `owner_id`. OAuth client id/secret are manual tasks (Kakao +
-Google dev consoles), stored in `/opt/mushin/.env` like `SERVER_HOST` /
-`DEPLOY_KEY`.
+Multi-user from day one. Social login: **Google**, plus **email/password
+fallback**. Apple is deferred (revisited at iOS launch). Google scope is
+`openid email profile`. Every query scoped by `owner_id`. OAuth client
+id/secret are a manual task (Google dev console), stored in
+`/opt/mushin/.env` like `SERVER_HOST` / `DEPLOY_KEY`.
 
-**No-signup guest mode:** users can start with no account via an **anonymous
-server account** — a guest `owner_id` behind a device cookie, data in the same
-server SQLite (not local/on-device). Created on first interaction (not page
-load), templates lazy-seeded on first entry, upgradeable to a real account in
-place with zero data migration, and purged by a guest-reaper retention timer if
-abandoned. "No signup" is honored; "no server storage" is deliberately **not** —
-true local-first was rejected (would fork the domain layer and break native).
-The app stays **online-first**: no on-device storage, no offline write queue, no
-sync.
+**Account required to start (guest mode retired 2026-06-16).** Every new user
+must sign up (username + password, or Google OAuth) before logging an entry.
+Username is load-bearing infrastructure — every activity lives at
+`/@{username}/{slug}` — so a no-username guest account can't participate in
+the core shareable-URL feature. Existing guest rows drain via the guest-reaper
+timer on their normal 7d/30d schedule; the reaper service keeps running until
+the backlog is empty, at which point it will be removed in a separate cleanup
+build. The upgrade-in-place flow (`/auth/upgrade`) remains functional during
+the drain window.
+
+**Visibility is three-tier (not binary).** `public` = whole record incl. notes
+visible to anyone. `private` = a non-connected visitor sees the **character
+sheet** at `/@{username}` (activity names + levels/progress/counts, cards not
+clickable) but **cannot open `/@{username}/{slug}`** — that 303-redirects to
+`/@{username}`. A **fellow** (accepted mutual connection, after a separate
+sharing-consent) sees the full record incl. entries and free-text notes on
+either account. `private` no longer means "hidden": all accounts are searchable
+by username/display name, and a private account's activity *names* are visible
+to any searcher. The single fail-closed authority for every visibility decision
+is `app/services/profiles.py::viewer_capability` / `can_view_activity_detail` —
+never inline a `visibility` check in a handler, never cache a capability.
 
 ## Key constraints
 
 - Every data query is scoped by `owner_id` — multi-user isolation is non-negotiable.
-- UI strings stay centralized for later i18n (Korean-only at launch).
+- UI strings stay centralized for i18n (English at launch; other locales are a later addition).
 - {add further externally-committed constraints as they emerge}
 
 ## Deployment

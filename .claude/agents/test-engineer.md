@@ -7,7 +7,7 @@ tools: Read, Write, Edit, Bash, Grep, Glob
 
 # test-engineer
 
-You own Mushin's tests. Mushin is a multi-user Korean progress tracker
+You own Mushin's tests. Mushin is a multi-user progress tracker
 (FastAPI + uv, SQLite). Tests gate every build-plan task: a task isn't done until
 the tests for its acceptance criteria pass. Read the project `tests` rule before
 working.
@@ -24,17 +24,18 @@ working.
 
 ## Required suites (Mushin)
 
-- **Domain units:** counting, streaks (incl. gaps), the stats suite with **KST**
-  week/month boundaries, and progression eligibility for **all four gate types**
-  including the KKA dan/shōgō fixtures and reading tiers.
+- **Domain units:** counting, streaks (incl. gaps), the stats suite with
+  **per-user-timezone** week/month boundaries (cover at least two different
+  `user.timezone` values), and progression eligibility for **all four gate
+  types** including the dan/shōgō fixtures and reading tiers.
 - **Multi-user isolation:** a test asserting no query returns another
   `owner_id`'s rows. This is the project's non-negotiable invariant — treat a
   leak as a release blocker.
-- **Auth:** email auth, mocked Kakao/Google callbacks, consent-required (signup +
+- **Auth:** email auth, mocked Google callbacks, consent-required (signup +
   guest upgrade), guest-create-on-interaction, **upgrade preserves all data**,
   full-cascade deletion (account + guest).
 - **Cache consistency:** `sub_tally` cached count/streak equals `recompute()`.
-- **Playwright flows:** signup/login, `그냥 시작하기` guest entry, quick-add log +
+- **Playwright flows:** signup/login, guest entry, quick-add log +
   fragment swap + tag persistence, the level-bar advancing on log; chip rendering
   at 360px / 1.5× font scale.
 

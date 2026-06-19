@@ -1,58 +1,125 @@
 ---
 name: copy-patterns
-description: Mushin's Korean copy voice and string conventions — register (해요체), person (나/내, never 당신), the understated 무심/無心 no-hype tone, banned gamer-loanword register, the 無心 framing/gloss requirement, the no-account/guest copy rules, and the centralized-strings i18n rule. Use whenever writing any user-facing Korean string — onboarding, button labels, empty states, nudges, notifications.
+description: Mushin's English copy voice and string conventions for a US audience — plain, warm, second-person tone, the "Mushin 無心" brand mark (never glossed beyond one line), banned hype language, and the centralized-strings i18n rule. Use whenever writing any user-facing string — onboarding, button labels, empty states, nudges, notifications.
 ---
 
 # Mushin copy patterns
 
-Mushin is a Korean "육성 RPG of yourself." The brand is 무심/無心 ("no-mind") —
-quiet, egoless, unburdened. The copy is a supportive companion, never a hype-man.
+Mushin is a personal progress tracker — a "raising-sim RPG of yourself." The
+brand pairs the English name **Mushin** with the **無心** ("no-mind") hanja as
+a quiet mark.
 
 ## Register & person
 
-- **해요체 throughout** — polite-friendly. Not 합니다체 (too corporate), not 반말
-  (presumptuous).
-- **Address the user as their own first person — 나 / 내**, never 당신. This is a
-  raising-sim *of yourself*: "내 검도", "오늘의 나". 당신 creates distance and reads
-  like an ad.
+- Plain, warm, second person ("you", "your") — natural American English. Not
+  corporate, not hype-driven.
+- Frame copy as the user's own record: "your reading log", "today's entry" —
+  not a third party narrating at them.
 
 ## Tone
 
 - Quietly on the user's side. **Celebrate by stating the fact plainly**
-  ("3단계 달성") and letting the number speak. No exclamation spam.
-- **No false urgency or guilt.** Banned: "지금 기록 안 하면 스트릭 끊겨요!",
-  "기록이 사라질 수 있어요", any guilt-trip — it contradicts no-mind.
-- XP/level language is fine as **quiet structure**, never as loud decoration.
+  ("Level 3 reached") and let the number speak. No exclamation spam.
+- **No false urgency or guilt.** Banned: "Log now or lose your streak!",
+  "Your progress may disappear" — any guilt-trip contradicts the no-mind
+  premise.
+- **Carve-out: factual data-consequence statements are fine when the user is
+  initiating the action themselves** (account-switch confirmation, account
+  deletion). State the real consequence neutrally, as fact, never with alarm
+  punctuation or framing that implies the user made a mistake.
+- XP/level language is quiet structure, never loud decoration.
 
 ## Banned register
 
-- English gamer loanwords stacked for hype: 콤보!, 미션 클리어!, 레벨업!! 대박!!.
+- Hype-stacked gamer language: "Combo!!", "Mission complete!!", "Level up!! 🔥".
 - Exclamation-mark spam and ⚠️-style alarm in normal flows.
 
-## Brand framing (무심/無心)
+## Brand framing (Mushin 無心)
 
-- **무심 never ships bare.** Pair it with the hanja 無心 + a one-line gloss on the
-  store listing, splash, and onboarding screen 1. Sample gloss:
-  "힘 빼고, 무심하게. 매일 쌓이는 나." The gloss *reclaims* the everyday 무심하다
-  ("indifferent") into the intended 無心 ("no-mind / egoless flow").
+- **Mushin never ships without 無心 beside it** in the masthead and on the
+  entry screen — but **never explained**. No "what does 無心 mean?" tooltip or
+  etymology aside, anywhere.
+- One quiet gloss line on the entry screen and the empty home state:
+  *"No-mind. Just show up, and watch it add up."* Don't repeat or expand it
+  elsewhere.
 
-## No-account / guest copy
+## Account-first entry (guest mode retired)
 
-- The entry choice **leads with `그냥 시작하기`** (계정 없이 바로); sign-in is the
-  calm secondary. Honest, not a dark pattern.
-- Frame the no-account path as **"계정 없이, 나만 보는 기록"** (no account,
-  only-you).
-- **Never claim "아무 데도 안 보내요 / nothing leaves your device."** Under the
-  anonymous-server design the data IS on our server — that line would be false.
-- The guest **upgrade nudge** is gift-framed and fires at the first level-up:
-  "여기까지 온 기록, 계정에 연결해 두면 계속 이어져요" `[연결하기] [나중에]`. It is
-  dismissible, respects "나중에", and never blocks logging. No loss/urgency framing.
+- The entry screen leads with **login / create-account** (a segmented toggle
+  over a two-field form: username + password, plus an optional email on create).
+  There is no secondary guest path — every user must sign up before logging
+  an entry. Username is required; it becomes the public handle in every activity
+  URL (`/@{username}/{slug}`).
+- The optional email field on create-account is framed as **account
+  recovery**, not as a promise of a working password-reset flow — don't say
+  "for password reset" until that flow actually ships. Use: *"For account
+  recovery. Optional."*
+- **`ENTRY_GUEST_LINK` and `ENTRY_GUEST_SUB` are retired strings** — do not
+  use them in new templates. They remain in `ui_strings.py` as dead string
+  constants until the full guest-cleanup build removes them.
+- If a public demo account is configured (`DEMO_PROFILE_USERNAME` env-var), the
+  entry screen shows a quiet "See an example record →" link pointing to
+  `/@{DEMO_PROFILE_USERNAME}`. This is informational only — copy is factual,
+  no sales pressure, no urgency. If the env-var is absent, the link is hidden.
+
+## Theme toggle copy
+
+- Three `aria-label` strings in `ui_strings.py`, one per state, each stating
+  current state + the action a tap performs (e.g. "Theme: system. Switch to
+  light."). No visible label text — icon + aria-label only.
 
 ## i18n
 
-- **Every user-facing string is centralized** in one strings module — never
-  hardcode copy in a template (web or HXML). Korean only at launch; other locales
-  are a later addition, not a rewrite.
-- Keep layouts width-flexible: Korean is often shorter than its equivalents, so
-  don't bake Korean character widths into the home-card numerals or "advance"
-  lines.
+- **Every user-facing string is centralized** in `app/ui_strings.py` — never
+  hardcode copy in a template (web or HXML). English at launch; other locales
+  are a later addition, not a rewrite — keep the flat, centralized structure.
+- Keep layouts width-flexible: labels may run longer if other locales are
+  added later — the home hero numeral and "advance" lines must stay flexible
+  in that direction.
+
+## Visibility & public profiles
+
+- **The one-time visibility-consent screen** (shown once per account, before
+  the owner first reaches `/@{username}`) states plainly, with no alarm framing:
+  `public` means your whole record — including your notes — is visible to anyone
+  with your profile link; `private` (pre-selected default) means only that your
+  page exists, with nothing else shown. This is a factual data-consequence
+  statement the user is making themselves — same carve-out as account
+  deletion, not a warning. Login, signup, and the consent screen itself all
+  send a real (named) user straight to `/@{username}` — there's no
+  intermediate redirect. `/home` still renders the activity list in place for
+  guests (no `username` to address yet) and, as a fallback, for any real user
+  who lands there directly.
+- **The private-profile stub** a visitor sees at `/@{username}` for a
+  private account is one quiet line — `PROFILE_PRIVATE`: *"This record is
+  private."* No lock icons, no "request access" framing (that's a different,
+  unbuilt feature).
+- **`/account` settings page**: the visibility toggle restates the
+  consequence briefly each time it's changed (not the full first-run
+  explainer), and the username is framed as the share link — *"Your profile
+  is shareable at mushin.aqnas.xyz/@{username}"* — so a user understands
+  their login username doubles as a public handle.
+- **Rename caption (slug changes on rename).** When the owner edits the activity
+  title, a quiet inline caption informs them the shared link will change:
+  `RENAME_SLUG_NOTICE`: *"Renaming will change your share link. Anyone with the
+  old link will see a 404."* Factual, no alarm punctuation. Shown only when the
+  current name already has a slug (i.e. not a brand-new unsaved activity).
+
+## Social-graph vocabulary
+
+- A mutual connection is a **fellow** ("a fellow", "your fellows", "12
+  fellows"). Chosen for the *mushin* sense — a peer present to the slow
+  adding-up; warmer than "follower", lighter than "friend".
+- The action/CTA is always the plain verb **"Connect"** (button, request line).
+  Reserve "fellow" for describing the *established* relationship; **never** coin
+  a verb ("to fellow someone").
+- Connection/consent copy uses the existing calm, factual, no-alarm register
+  (mirror `welcome_sharing`): state data consequences plainly ("you'll each see
+  the other's full record incl. notes"), no lock icons, no urgency.
+- Search empty states: "No one by that name." / "No public records with that
+  tag yet." Fellows empty state: "No fellows yet."
+- **Supersedes the private-stub copy above:** once the three-tier visibility
+  build lands, `private` no longer means "nothing shown" — a visitor sees the
+  character sheet. The `PROFILE_PRIVATE` "This record is private." line and the
+  "only that your page exists" consent wording get replaced; update the
+  "Visibility & public profiles" section above when that ships.

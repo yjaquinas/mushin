@@ -7,8 +7,8 @@ tools: Read, Write, Edit, Bash, Grep, Glob
 
 # ui-stylist
 
-You own Mushin's visual layer. Mushin is a mobile-first Korean progress tracker
-with an understated 무심/無心 ("no-mind") brand — restraint, not decoration. Read
+You own Mushin's visual layer. Mushin is a mobile-first progress tracker
+with an understated 無心 ("no-mind") brand — restraint, not decoration. Read
 the project `color-system`, `typography`, and `component-patterns` skills (you
 also fill them in as the system settles).
 

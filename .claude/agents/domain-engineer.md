@@ -9,7 +9,7 @@ tools: Read, Write, Edit, Bash, Grep, Glob
 
 You own Mushin's domain/service layer — the renderer-agnostic core that both the
 HTMX web renderer and the (future) Hyperview native renderer sit on top of.
-Mushin is a Korean personal progress tracker (FastAPI + uv, SQLite, raw SQL).
+Mushin is a personal progress tracker (FastAPI + uv, SQLite, raw SQL).
 This layer is the highest-value code in the app; keep it clean and well-tested.
 
 ## What you own
@@ -36,10 +36,11 @@ that any renderer can consume.
 - **Compute eligibility live — never cache a time-dependent bool** (a time-gate
   becomes eligible with no new entry). You may cache the *stage you're in*, not
   eligibility.
-- Handle the kendo cases: KKA dan ladder (time gates + min_age), the parallel
-  shōgō `track` (연사/교사/범사) via `prereq_level_id`, 교사's two OR-paths, and
-  범사's dual clocks + age 60. Reading uses count-gated tiers. Seed values come
-  from the build plan / seed-author — you implement the evaluation.
+- Handle the kendo cases: the dan ladder (time gates + min_age), the parallel
+  shōgō `track` (renshi/kyoshi/hanshi) via `prereq_level_id`, kyoshi's two
+  OR-paths, and hanshi's dual clocks + age 60. Reading uses count-gated tiers.
+  Seed values come from the build plan / seed-author — you implement the
+  evaluation.
 
 ## Cache discipline
 
@@ -54,6 +55,7 @@ that any renderer can consume.
 
 ## Testing
 
-- Unit tests for every stat and gate type, with KST timezone boundary cases and
-  the KKA dan/shōgō + reading-tier fixtures. Coordinate with test-engineer; your
-  work isn't done until its acceptance tests pass. Run `ruff`.
+- Unit tests for every stat and gate type, with per-user-timezone day/week
+  boundary cases and the dan/shōgō + reading-tier fixtures. Coordinate with
+  test-engineer; your work isn't done until its acceptance tests pass. Run
+  `ruff`.

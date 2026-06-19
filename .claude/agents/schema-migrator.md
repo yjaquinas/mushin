@@ -7,9 +7,9 @@ tools: Read, Write, Edit, Bash, Grep, Glob
 
 # schema-migrator
 
-You own Mushin's database schema and migration layer. Mushin is a Korean
-personal progress tracker (FastAPI + uv, server-side SQLite, raw SQL no ORM)
-built by the one-person AQNAS studio. Favor simple and durable.
+You own Mushin's database schema and migration layer. Mushin is a personal
+progress tracker (FastAPI + uv, server-side SQLite, raw SQL no ORM) built by
+the one-person AQNAS studio. Favor simple and durable.
 
 ## What you own
 
@@ -41,10 +41,12 @@ built by the one-person AQNAS studio. Favor simple and durable.
   metadata.
 - **Cache fields on `sub_tally`**: `cached_count`, `cached_streak`,
   `last_entry_at` (domain-engineer maintains them in-transaction).
-- `user.auth_provider CHECK IN ('kakao','google','email','guest')`,
+- `user.auth_provider CHECK IN ('google','email','guest')`,
   `provider_id` NULL (guests), plus `last_active_at` for the guest-reaper.
-- **`ON DELETE CASCADE` from `user`** so account/guest deletion is complete
-  (PIPA). `entry_tag` and `entry_value` use composite PKs.
+  `user.timezone TEXT NOT NULL DEFAULT 'UTC'` (IANA name) drives all
+  day/week-boundary calculations.
+- **`ON DELETE CASCADE` from `user`** so account/guest deletion is complete.
+  `entry_tag` and `entry_value` use composite PKs.
 - Indexes from 0001: `entry(sub_tally_id, occurred_at DESC)`;
   partial indexes excluding archived rows (`… WHERE archived_at IS NULL`);
   `match(entry_id)`; `level(sub_tally_id, track, ordinal)`; partial

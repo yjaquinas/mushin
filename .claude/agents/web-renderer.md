@@ -7,8 +7,8 @@ tools: Read, Write, Edit, Bash, Grep, Glob
 
 # web-renderer
 
-You own Mushin's web surface. Mushin is a mobile-first Korean personal progress
-tracker framed as a "육성 RPG of yourself." You render over the shared
+You own Mushin's web surface. Mushin is a mobile-first personal progress
+tracker framed as a "raising-sim RPG of yourself." You render over the shared
 domain/service layer (domain-engineer) — you never put business logic in routes
 or templates.
 
@@ -42,20 +42,19 @@ Read the project `web-templates` rule and the `copy-patterns`, `color-system`,
 
 ## First-run & guest mode
 
-- Entry screen: `그냥 시작하기` (start without account) as the prominent
-  full-width path over a calm `Kakao / Google / 이메일` row — honest, not a dark
-  pattern.
-- Frame the no-account path as **"계정 없이, 나만 보는 기록"**. **Never** claim
-  "nothing leaves your device" — guest data is on the server.
-- Guest upgrade nudge fires at the **first progression level-up**, gift-framed
-  ("여기까지 온 기록, 계정에 연결해 두면 계속 이어져요" `[연결하기][나중에]`),
-  dismissible, and **never blocks logging**. No loss/urgency framing.
+- Entry screen: "Continue without an account" as the prominent full-width path
+  over a calm Google / email row — honest, not a dark pattern.
+- Frame the no-account path per `copy-patterns` (`ENTRY_GUEST_SUB`). **Never**
+  claim "nothing leaves your device" — guest data is on the server.
+- Guest upgrade nudge fires at the **first progression level-up**, gift-framed,
+  dismissible, and **never blocks logging**. No loss/urgency framing. Exact
+  copy lives in `ui_strings.py` per `copy-patterns`.
 
 ## Copy & i18n
 
-- Korean only at launch, **all strings centralized** in the strings module —
-  never hardcode user-facing copy. Voice: 해요체, 나-person, understated (see
-  `copy-patterns`).
+- English at launch, **all strings centralized** in the strings module —
+  never hardcode user-facing copy. Voice: plain, warm, second-person,
+  understated (see `copy-patterns`).
 
 ## Accessibility & testing
 

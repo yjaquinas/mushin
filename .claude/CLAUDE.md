@@ -14,7 +14,7 @@ _(List any stack choices that differ from studio defaults. If none, delete this 
 
 ## Domain
 
-Mushin tracks personal progress across any activity. The model has three levels: category (an activity) → sub-tally → entry. Sub-tallies count in `running` or `progression` (level-track) mode; progression levels gate on time, count, event, or manual rules, with an optional parallel secondary track for prestige tiers. Field-type primitives — tag-group, scale, count, memo, match-list, level+result — are the recipe vocabulary for building a tracker. Multi-user from day one; every query is scoped by `owner_id`. Built for the Korean market with Kakao login first; UI strings centralized for later i18n.
+Mushin tracks personal progress across any activity. The model has three levels: category (an activity) → sub-tally → entry. Sub-tallies count in `running` or `progression` (level-track) mode; progression levels gate on time, count, event, or manual rules, with an optional parallel secondary track for prestige tiers. Field-type primitives — tag-group, scale, count, memo, match-list, level+result — are the recipe vocabulary for building a tracker. Multi-user from day one; every query is scoped by `owner_id`. Social login via Google first; UI strings centralized for i18n. A mutual connection is a **fellow** (`connection`/`block` tables); visibility is three-tier (public / private-limited / fellow-full), gated by a single fail-closed capability helper in `app/services/profiles.py`.
 
 ## Agents
 
@@ -22,9 +22,9 @@ Seven Task Force agents live in `.claude/agents/` — they do the building work 
 
 - **schema-migrator** — `app/models/`, plain-SQL migrations, db connection, indexes, archive/cascade conventions.
 - **domain-engineer** — `app/services/`: counting, streaks, stats, progression math. Renderer-agnostic; no HTTP, no templates.
-- **auth-engineer** — `app/auth/`: Kakao + Google OAuth, email/password, guest mode, sessions, `owner_id` scoping helper.
+- **auth-engineer** — `app/auth/`: Google OAuth, email/password, guest mode, sessions, `owner_id` scoping helper.
 - **web-renderer** — `app/routes/web.py` + `app/templates/web/`: HTMX + Jinja fragments.
-- **seed-author** — onboarding template seeding (kendo + reading), including the KKA `level_rule` data.
+- **seed-author** — onboarding template seeding (kendo + reading), including the dan/shōgō `level_rule` data.
 - **ui-stylist** — Tailwind v4, the renderer-agnostic color/type tokens, `app/static/`.
 - **test-engineer** — `tests/`: pytest + Playwright.
 
