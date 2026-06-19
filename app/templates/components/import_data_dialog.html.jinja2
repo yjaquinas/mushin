@@ -1,0 +1,92 @@
+{#
+  Import-my-data — quiet footer link opening a focus-trapped confirm dialog
+  for uploading a previously-exported JSON file and replacing ALL of the
+  current account's data with its contents. Clones the
+  delete_data_dialog.html.jinja2 Alpine open/close + focus-trap pattern.
+
+  The form posts to /import (multipart/form-data) and targets this whole
+  component (#import-data-dialog) so the route can re-render it in place
+  with an inline error on failure, or return HX-Redirect: /home on success.
+
+  Optional context (set by the route on an error re-render):
+    import_error   - error string shown inline above the form.
+    open_on_error  - when true, the dialog opens immediately on swap-in.
+#}
+<div
+    id="import-data-dialog"
+    x-data="{ open: {{ 'true' if open_on_error else 'false' }} }"
+    @keydown.escape.window="open = false"
+>
+    <button
+        type="button"
+        @click="open = true"
+        class="text-caption text-text-muted underline-offset-2 hover:underline focus-visible:outline-offset-2"
+    >
+        {{ strings.FOOTER_IMPORT_DATA }}
+    </button>
+
+    <div
+        x-show="open"
+        x-cloak
+        class="fixed inset-0 z-50 flex items-end justify-center bg-text-primary/50 sm:items-center"
+        role="presentation"
+    >
+        <div
+            x-show="open"
+            @click.outside="open = false"
+            x-init="$watch('open', (open) => { if (open) $nextTick(() => $refs.importCancelButton.focus()) })"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="import-data-title"
+            class="flex w-full max-w-md flex-col gap-4 rounded-card border border-border bg-surface-1 p-4 sm:rounded-card"
+        >
+            <h2 id="import-data-title" class="text-body font-semibold text-text-primary">
+                {{ strings.IMPORT_DATA_TITLE }}
+            </h2>
+            <p class="text-caption text-text-secondary">{{ strings.IMPORT_DATA_BODY }}</p>
+
+            {% if import_error %}
+                <p class="text-caption text-danger">{{ import_error }}</p>
+            {% endif %}
+
+            <form
+                hx-post="/import"
+                hx-encoding="multipart/form-data"
+                hx-target="#import-data-dialog"
+                hx-swap="outerHTML"
+                class="flex flex-col gap-4"
+            >
+                <div class="flex flex-col gap-1">
+                    <label for="import-data-file" class="text-caption font-medium text-text-secondary">
+                        {{ strings.IMPORT_DATA_FILE_LABEL }}
+                    </label>
+                    <input
+                        type="file"
+                        id="import-data-file"
+                        name="file"
+                        accept=".json,application/json"
+                        required
+                        class="min-h-tap rounded-input border border-border bg-surface-1 px-3 py-2 text-body text-text-primary focus-visible:outline-2"
+                    >
+                </div>
+
+                <button
+                    type="submit"
+                    hx-disabled-elt="this"
+                    class="min-h-tap w-full rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-danger transition hover:bg-surface-2 focus-visible:outline-offset-2 disabled:opacity-60"
+                >
+                    {{ strings.IMPORT_DATA_CONFIRM }}
+                </button>
+
+                <button
+                    type="button"
+                    x-ref="importCancelButton"
+                    @click="open = false"
+                    class="min-h-tap w-full rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline-offset-2"
+                >
+                    {{ strings.IMPORT_DATA_CANCEL }}
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
