@@ -1,0 +1,67 @@
+{#
+  Fellows section — a restrained block BELOW the activity cards, on both the
+  owner dashboard (home.html.jinja2) and the read-only profile
+  (public_profile.html.jinja2). Swappable as a whole fragment after any
+  connection action (see app.routes.web._render_fellows_section).
+
+  Names-vs-count rule: `fellows.show_fellow_names` is True only for the
+  profile owner or a viewer who is themselves a mutual fellow of this
+  profile (computed server-side in _build_fellows_context — never decided
+  here). Every other viewer sees only `fellows.fellow_count`, never a
+  clickable name (so a private fellow can't be outed by association).
+
+  Context: `fellows` (see app.routes.web._build_fellows_context) — keys
+  `fellow_count`, `fellows` (list, only populated when show_fellow_names),
+  `show_fellow_names`, `is_owner`, `incoming_requests`, `outgoing_requests`,
+  `pending_count`. Optional `error` (str|None) — a calm inline message from
+  a just-attempted action.
+#}
+<section id="fellows-section" class="flex flex-col gap-3 border-t border-border pt-4">
+    <header class="flex flex-wrap items-center gap-2">
+        <h2 class="text-title font-medium text-text-primary">{{ strings.FELLOWS_HEADING }}</h2>
+        {% if fellows.is_owner and fellows.pending_count > 0 %}
+        <span
+            class="inline-flex min-h-5 items-center rounded-full border border-border-strong px-2 text-caption font-medium text-text-secondary"
+            aria-label="{{ strings.REQUESTS_PENDING_BADGE.format(count=fellows.pending_count) }}"
+        >{{ strings.REQUESTS_PENDING_BADGE.format(count=fellows.pending_count) }}</span>
+        {% endif %}
+    </header>
+
+    {% if error %}
+    <p class="text-caption text-danger" role="alert">{{ error }}</p>
+    {% endif %}
+
+    {% if fellows.show_fellow_names %}
+        {% if not fellows.fellows %}
+        <p class="text-caption text-text-secondary">{{ strings.FELLOWS_EMPTY }}</p>
+        {% else %}
+        <ul class="flex flex-col gap-1">
+            {% for fellow in fellows.fellows %}
+            <li>
+                <a
+                    href="/@{{ fellow.username }}"
+                    class="flex min-h-tap flex-wrap items-center gap-x-2 gap-y-0.5 rounded-card px-2 py-2 text-body text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                >
+                    <span class="font-medium">@{{ fellow.username }}</span>
+                    {% if fellow.display_name %}
+                    <span class="text-caption text-text-secondary">{{ fellow.display_name }}</span>
+                    {% endif %}
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    {% else %}
+        <p class="text-body text-text-secondary">
+            {% if fellows.fellow_count == 1 %}
+                {{ strings.FELLOWS_COUNT_LABEL_ONE }}
+            {% else %}
+                {{ strings.FELLOWS_COUNT_LABEL.format(count=fellows.fellow_count) }}
+            {% endif %}
+        </p>
+    {% endif %}
+
+    {% if fellows.is_owner %}
+        {% include "components/requests_cluster.html.jinja2" with context %}
+    {% endif %}
+</section>

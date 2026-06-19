@@ -1,0 +1,40 @@
+{#
+  Inline two-step confirm before blocking an account. Mirrors
+  category_delete_confirm.html.jinja2's pattern — never a naked destructive
+  button.
+
+  Swaps outerHTML into #relationship-affordance (or `dom_id`, see below).
+
+  On confirm: POST /fellows/{username}/block -> relationship_affordance ("blocked")
+  On cancel:  GET  /fellows/{username}/block-cancel -> restores the plain
+              relationship_affordance at the current (un-mutated) state.
+
+  Context: `username` — the account being blocked. Optional `dom_id`
+  (default "relationship-affordance") lets a caller with multiple instances
+  on one page (search results) give each row a unique id — see
+  relationship_affordance.html.jinja2 for why this matters. Optional
+  `from_search` (bool, default false) keeps `?source=search` on the
+  confirm/cancel URLs so the route handlers keep targeting this row.
+#}
+{% set dom_id = dom_id | default("relationship-affordance") %}
+{% set from_search = from_search | default(false) %}
+{% set qs = "?source=search" if from_search else "" %}
+<div id="{{ dom_id }}" class="flex flex-col gap-3">
+    <p class="text-caption text-text-muted">{{ strings.CONNECT_BLOCK_CONFIRM_BODY }}</p>
+    <div class="flex flex-wrap items-center gap-3">
+        <button
+            type="button"
+            hx-post="/fellows/{{ username }}/block{{ qs }}"
+            hx-target="#{{ dom_id }}"
+            hx-swap="outerHTML"
+            class="min-h-tap rounded-button border border-border px-4 text-body font-medium text-danger transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+        >{{ strings.CONNECT_BLOCK_CONFIRM }}</button>
+        <button
+            type="button"
+            hx-get="/fellows/{{ username }}/block-cancel{{ qs }}"
+            hx-target="#{{ dom_id }}"
+            hx-swap="outerHTML"
+            class="min-h-tap rounded-button border border-border px-3 text-body text-text-secondary transition hover:bg-surface-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+        >{{ strings.CONNECT_BLOCK_CANCEL }}</button>
+    </div>
+</div>

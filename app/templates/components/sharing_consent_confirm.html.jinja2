@@ -1,0 +1,48 @@
+{#
+  Sharing-consent confirm step — the deliberate consequence screen shown
+  before EITHER sending a connection request (Connect) OR accepting one,
+  per app.services.connections (accepting is what actually stamps
+  sharing_consent_at and makes the pair fellows, but the same plain warning
+  is shown before the request is sent too, since accepting it later will
+  have this effect).
+
+  Swaps in place of the triggering control (`#relationship-affordance` for
+  Connect, `#fellows-section` for Accept — confirm_url/cancel_url already
+  encode which).
+
+  Context: `username` (the other party), `action` ("connect" | "accept"),
+  `confirm_url`, `cancel_url`. Optional `dom_id` (default
+  "relationship-affordance") overrides the Connect-branch target id for a
+  caller with multiple instances on one page (search results); the Accept
+  branch always targets the page-singleton `#fellows-section` and ignores
+  `dom_id` — see relationship_affordance.html.jinja2 for why this matters.
+#}
+{% set dom_id = dom_id | default("relationship-affordance") %}
+<div class="flex flex-col gap-3 rounded-card border border-border bg-surface-1 p-4">
+    <h2 class="text-title font-medium text-text-primary">{{ strings.SHARING_CONSENT_TITLE }}</h2>
+    <p class="text-body text-text-secondary">{{ strings.SHARING_CONSENT_BODY }}</p>
+    <p class="text-caption text-text-secondary">
+        {{ strings.SHARING_CONSENT_PRIVACY_PREFIX }}
+        <a
+            href="/privacy"
+            class="underline underline-offset-2 hover:no-underline focus-visible:outline-offset-2"
+        >{{ strings.SHARING_CONSENT_PRIVACY_LINK_TEXT }}</a>
+        {{ strings.SHARING_CONSENT_PRIVACY_SUFFIX }}
+    </p>
+    <div class="flex flex-wrap items-center gap-3">
+        <button
+            type="button"
+            hx-post="{{ confirm_url }}"
+            hx-target="{% if action == 'accept' %}#fellows-section{% else %}#{{ dom_id }}{% endif %}"
+            hx-swap="outerHTML"
+            class="min-h-tap rounded-button bg-brand px-4 text-body font-semibold text-on-brand transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+        >{{ strings.SHARING_CONSENT_CONFIRM }}</button>
+        <button
+            type="button"
+            hx-get="{{ cancel_url }}"
+            hx-target="{% if action == 'accept' %}#fellows-section{% else %}#{{ dom_id }}{% endif %}"
+            hx-swap="outerHTML"
+            class="min-h-tap rounded-button border border-border px-3 text-body text-text-secondary transition hover:bg-surface-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+        >{{ strings.SHARING_CONSENT_CANCEL }}</button>
+    </div>
+</div>

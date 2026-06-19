@@ -1,0 +1,39 @@
+{% extends "web/base.html.jinja2" %}
+
+{% block title %}{{ strings.REDEFINITION_TITLE }} · {{ strings.APP_NAME }}{% endblock %}
+
+{% block content %}
+<header class="flex flex-col gap-2 py-2">
+    <h1 class="text-title font-semibold text-text-primary">{{ strings.REDEFINITION_TITLE }}</h1>
+    <p class="text-body text-text-secondary">{{ strings.REDEFINITION_BODY }}</p>
+</header>
+
+<form method="post" action="/visibility-update" class="flex flex-col gap-4">
+    <p class="text-caption text-text-secondary">
+        {{ strings.REDEFINITION_PRIVACY_PREFIX }}
+        <a
+            href="/privacy"
+            class="underline underline-offset-2 hover:no-underline focus-visible:outline-offset-2"
+        >{{ strings.REDEFINITION_PRIVACY_LINK_TEXT }}</a>
+        {{ strings.REDEFINITION_PRIVACY_SUFFIX }}
+    </p>
+
+    <button
+        type="submit"
+        class="flex min-h-tap w-full items-center justify-center rounded-button bg-brand px-4 py-3 text-title font-semibold text-surface-1 transition focus-visible:outline-offset-2"
+    >
+        {{ strings.REDEFINITION_ACKNOWLEDGE }}
+    </button>
+</form>
+{% endblock %}
+
+{# One-time gate: no skip link, and the footer's data/logout controls are
+   suppressed so the only way forward is to acknowledge. Privacy link stays. #}
+{% block footer %}
+<a
+    href="/privacy"
+    class="text-caption text-text-muted underline-offset-2 hover:underline focus-visible:outline-offset-2"
+>
+    {{ strings.FOOTER_PRIVACY }}
+</a>
+{% endblock %}

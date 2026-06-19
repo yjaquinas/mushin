@@ -1,0 +1,97 @@
+{#
+  Public profile (/@{username}) — read-only, unauthenticated or non-owner.
+
+  Dedicated read-only template per .claude/rules/web-templates.md: zero write
+  affordances. Do NOT include components that carry log/edit/tag forms
+  (activity_card.html.jinja2's `linked` mode only adds a navigation link, but
+  we render the card body inline here anyway to keep this template fully
+  self-contained and auditable).
+
+  Context: username, view_mode ("connected" | "public" | "limited"), cards
+  (list, see app.routes.web._build_card_context — each card's own `linked`
+  flag controls whether it's wrapped in an <a>; non-clickable for "limited").
+#}
+{% extends "web/base.html.jinja2" %}
+
+{% block title %}{{ username }} · {{ strings.APP_NAME }}{% endblock %}
+
+{# Public pages are zero-write: no theme-toggle POST either. #}
+{% block theme_toggle %}{% endblock %}
+
+{% block content %}
+{% from "components/_icon.html.jinja2" import icon %}
+<header class="flex items-center py-2">
+    <h1 class="text-title font-semibold text-text-primary">{{ username }}</h1>
+</header>
+
+{% if not cards %}
+<p class="text-body text-text-secondary">{{ strings.PROFILE_ACTIVITIES_EMPTY }}</p>
+{% else %}
+<div class="flex flex-col gap-3">
+    {% for card in cards %}
+    <article class="rounded-card border border-border bg-surface-1">
+        {% if card.linked %}
+        <a
+            href="/@{{ username }}/{{ card.slug }}"
+            class="flex flex-col gap-3 rounded-card p-4 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-strong"
+        >
+        {% else %}
+        <div class="flex flex-col gap-3 rounded-card p-4">
+        {% endif %}
+            <header class="flex flex-col">
+                <span class="flex items-center gap-1 text-caption text-text-muted">
+                    <span class="text-text-secondary">{{ icon(card.icon, size=20) }}</span>
+                    {{ card.category_name }}
+                </span>
+                <h2 class="text-title font-medium text-text-secondary">{{ card.name }}</h2>
+            </header>
+
+            <p class="text-hero-numeral font-semibold leading-tight text-brand">
+                {% if card.count_mode == "progression" %}
+                    {{ card.hero_label or "—" }}
+                {% else %}
+                    {{ card.hero_label }}<span class="text-title font-normal text-text-muted"> {{ strings.HOME_COUNT_UNIT }}</span>
+                {% endif %}
+            </p>
+
+            {% if card.progress is not none %}
+            <div class="progress-track" role="progressbar" aria-valuenow="{{ card.progress.percent }}" aria-valuemin="0" aria-valuemax="100">
+                <div class="progress-fill" style="width: {{ card.progress.percent }}%"></div>
+            </div>
+            {% endif %}
+
+            <p class="text-caption text-text-muted">
+                {% if card.advance_line %}{{ card.advance_line }}{% endif %}
+                {% if card.streak %}
+                    <span class="ms-2">{{ strings.HOME_STREAK_LABEL }} {{ card.streak }}{{ strings.HOME_STREAK_DAYS_UNIT }}</span>
+                {% endif %}
+            </p>
+        {% if card.linked %}
+        </a>
+        {% else %}
+        </div>
+        {% endif %}
+    </article>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if view_mode == "limited" %}
+<p class="text-caption text-text-muted">{{ strings.PROFILE_LIMITED_NOTICE }}</p>
+{% endif %}
+
+{% if viewer_logged_in %}
+{% include "components/relationship_affordance.html.jinja2" with context %}
+{% endif %}
+
+{% include "components/fellows_section.html.jinja2" with context %}
+{% endblock %}
+
+{% block footer %}
+<a
+    href="/privacy"
+    class="text-caption text-text-muted underline-offset-2 hover:underline focus-visible:outline-offset-2"
+>
+    {{ strings.FOOTER_PRIVACY }}
+</a>
+{% endblock %}

@@ -1,0 +1,110 @@
+{#
+  Public activity detail (/@{username}/{slug}) — read-only, for a public-account
+  visitor or a consented fellow.
+
+  Dedicated read-only template per .claude/rules/web-templates.md: zero write
+  affordances (no log form, no edit/tag controls, no links into /activities/{id}
+  or any session-only route). Memo text IS shown — the route only reaches
+  this template for "connected" or "public" capability (per
+  profiles.can_view_activity_detail), so the viewer is either a consented
+  fellow or the owner chose `public` visibility; either way the whole record
+  is visible per the updated repo-wide.md privacy rules.
+
+  Context: username, view_mode ("connected" | "public"), card, slug,
+  record/timeline/head_to_head (competition, or None/[]), counts, streaks,
+  progression, field_stats, entries (read-only log). This template is only
+  ever rendered for a viewer who may see detail — the caller (public.py)
+  redirects "limited" viewers to the profile and 404s "blocked" ones before
+  reaching here.
+#}
+{% extends "web/base.html.jinja2" %}
+
+{% block title %}{% if card %}{{ card.name }} · {% endif %}{{ username }} · {{ strings.APP_NAME }}{% endblock %}
+
+{# Public pages are zero-write: no theme-toggle POST either. #}
+{% block theme_toggle %}{% endblock %}
+
+{% block content %}
+{% from "components/_icon.html.jinja2" import icon %}
+<a href="/@{{ username }}" class="text-caption text-text-muted underline-offset-2 hover:underline">
+    {{ strings.PROFILE_BACK_TO_PROFILE }}
+</a>
+
+    {# Card body (no link wrapper, no log button — read-only) #}
+    <article class="flex flex-col gap-3 rounded-card border border-border bg-surface-1 p-4">
+        <header class="flex flex-col">
+            <span class="flex items-center gap-1 text-caption text-text-muted">
+                <span class="text-text-secondary">{{ icon(card.icon, size=20) }}</span>
+                {{ card.category_name }}
+            </span>
+            <h1 class="text-title font-medium text-text-secondary">{{ card.name }}</h1>
+        </header>
+
+        <p class="text-hero-numeral font-semibold leading-tight text-brand">
+            {% if card.count_mode == "progression" %}
+                {{ card.hero_label or "—" }}
+            {% else %}
+                {{ card.hero_label }}<span class="text-title font-normal text-text-muted"> {{ strings.HOME_COUNT_UNIT }}</span>
+            {% endif %}
+        </p>
+
+        {% if card.progress is not none %}
+        <div class="progress-track" role="progressbar" aria-valuenow="{{ card.progress.percent }}" aria-valuemin="0" aria-valuemax="100">
+            <div class="progress-fill" style="width: {{ card.progress.percent }}%"></div>
+        </div>
+        {% endif %}
+
+        <p class="text-caption text-text-muted">
+            {% if card.advance_line %}{{ card.advance_line }}{% endif %}
+            {% if card.streak %}
+                <span class="ms-2">{{ strings.HOME_STREAK_LABEL }} {{ card.streak }}{{ strings.HOME_STREAK_DAYS_UNIT }}</span>
+            {% endif %}
+        </p>
+    </article>
+
+    {% if record is not none %}
+        {% include "components/competition_stats.html.jinja2" with context %}
+    {% endif %}
+
+    {% if progression is not none %}
+        {% include "components/progression_status.html.jinja2" with context %}
+    {% endif %}
+
+    {% include "components/stats_summary.html.jinja2" with context %}
+
+    {% include "components/field_stats.html.jinja2" with context %}
+
+    {# Read-only chronological log, newest first — memo text included for
+       public accounts (the owner's own choice; see repo-wide.md). #}
+    <section class="flex flex-col gap-3 rounded-card border border-border bg-surface-1 p-4">
+        <h2 class="text-title font-semibold text-text-primary">{{ strings.HISTORY_LOG_TITLE }}</h2>
+        {% if not entries %}
+            <p class="text-caption text-text-muted">{{ strings.HISTORY_LOG_EMPTY }}</p>
+        {% else %}
+            <ul class="flex flex-col gap-1">
+                {% for entry in entries %}
+                    <li class="text-body text-text-primary">
+                        <span class="text-caption text-text-muted">
+                            {{- entry.occurred_at[:10] -}}
+                            {%- if entry.time_known == 1 %}
+                                {{ entry.occurred_at | format_entry_time }}
+                            {%- endif %}
+                        </span>
+                        {% if entry.memo %}
+                            <span class="ms-2">{{ entry.memo }}</span>
+                        {% endif %}
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </section>
+{% endblock %}
+
+{% block footer %}
+<a
+    href="/privacy"
+    class="text-caption text-text-muted underline-offset-2 hover:underline focus-visible:outline-offset-2"
+>
+    {{ strings.FOOTER_PRIVACY }}
+</a>
+{% endblock %}

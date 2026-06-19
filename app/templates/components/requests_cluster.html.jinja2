@@ -1,0 +1,78 @@
+{#
+  Requests cluster — owner-only, included by fellows_section.html.jinja2.
+  Incoming pending: Accept (consent-gated GET->POST) / Decline (direct).
+  Outgoing pending: "Requested" label + a quiet Cancel (direct).
+
+  Context: `fellows.incoming_requests` / `fellows.outgoing_requests`, each
+  ``[{connection_id, id, username, display_name}, ...]`` (see
+  app.services.connections.list_incoming_pending / list_outgoing_pending).
+#}
+<div class="flex flex-col gap-3">
+    <h3 class="text-body font-medium text-text-secondary">{{ strings.REQUESTS_HEADING }}</h3>
+
+    {% if not fellows.incoming_requests and not fellows.outgoing_requests %}
+    <p class="text-caption text-text-secondary">{{ strings.REQUESTS_INCOMING_EMPTY }}</p>
+    {% endif %}
+
+    {% if fellows.incoming_requests %}
+    <ul class="flex flex-col gap-2">
+        {% for req in fellows.incoming_requests %}
+        <li class="flex flex-wrap items-center justify-between gap-2 rounded-card px-1 py-1">
+            <a
+                href="/@{{ req.username }}"
+                class="flex min-h-tap flex-wrap items-center gap-x-2 gap-y-0.5 rounded-card px-2 py-2 text-body text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+            >
+                <span class="font-medium">@{{ req.username }}</span>
+                {% if req.display_name %}
+                <span class="text-caption text-text-secondary">{{ req.display_name }}</span>
+                {% endif %}
+            </a>
+            <div class="flex flex-wrap items-center gap-2">
+                <button
+                    type="button"
+                    hx-get="/fellows/requests/{{ req.username }}/accept-confirm"
+                    hx-target="#fellows-section"
+                    hx-swap="outerHTML"
+                    class="min-h-tap rounded-button bg-brand px-3 text-body font-semibold text-on-brand transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                >{{ strings.REQUESTS_ACCEPT }}</button>
+                <button
+                    type="button"
+                    hx-post="/fellows/requests/{{ req.username }}/decline"
+                    hx-target="#fellows-section"
+                    hx-swap="outerHTML"
+                    class="min-h-tap rounded-button border border-border px-3 text-body text-text-secondary transition hover:bg-surface-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                >{{ strings.REQUESTS_DECLINE }}</button>
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+
+    {% if fellows.outgoing_requests %}
+    <ul class="flex flex-col gap-2">
+        {% for req in fellows.outgoing_requests %}
+        <li class="flex flex-wrap items-center justify-between gap-2 rounded-card px-1 py-1">
+            <a
+                href="/@{{ req.username }}"
+                class="flex min-h-tap flex-wrap items-center gap-x-2 gap-y-0.5 rounded-card px-2 py-2 text-body text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+            >
+                <span class="font-medium">@{{ req.username }}</span>
+                {% if req.display_name %}
+                <span class="text-caption text-text-secondary">{{ req.display_name }}</span>
+                {% endif %}
+            </a>
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="text-caption text-text-muted">{{ strings.REQUESTS_OUTGOING_HEADING }}</span>
+                <button
+                    type="button"
+                    hx-post="/fellows/requests/{{ req.username }}/cancel"
+                    hx-target="#fellows-section"
+                    hx-swap="outerHTML"
+                    class="min-h-tap rounded-button border border-border px-3 text-body text-text-secondary transition hover:bg-surface-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                >{{ strings.REQUESTS_CANCEL }}</button>
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+</div>
