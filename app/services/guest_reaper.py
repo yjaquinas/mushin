@@ -1,7 +1,7 @@
 """Guest-account retention purge for Mushin.
 
 Anonymous guest accounts (``user.auth_provider = 'guest'``) are personal data
-under PIPA exactly like logged-in accounts, but they are also the cheapest
+like logged-in accounts, but they are also the cheapest
 accounts to create — a device cookie is enough. Left unchecked they accumulate
 forever. This module enforces two retention windows:
 
@@ -14,7 +14,7 @@ forever. This module enforces two retention windows:
 
 Either condition is sufficient to purge. A guest is purged by deleting its
 ``user`` row; ``ON DELETE CASCADE`` (declared from ``user`` in migration 0001)
-removes every dependent row (category, sub_tally, field_def, tag, entry,
+removes every dependent row (category, activity, field_def, tag, entry,
 entry_tag, entry_value, match, level, level_rule) — no separate cleanup needed.
 
 Owner model
@@ -113,7 +113,7 @@ def purge_guests(
     """Purge (or, in dry-run, identify) stale guest accounts.
 
     Returns the set of ``user.id`` values that were purged (or would be,
-    under ``dry_run``). Real accounts (``kakao``, ``google``, ``email``) are
+    under ``dry_run``). Real accounts (``google``, ``email``) are
     never matched — the query is hard-filtered to ``auth_provider = 'guest'``.
 
     Deletion relies on ``ON DELETE CASCADE`` from ``user`` (migration 0001) to
@@ -156,7 +156,7 @@ def purge_guests(
 
 def _run_cli() -> None:
     parser = argparse.ArgumentParser(
-        description="Purge stale anonymous guest accounts (PIPA retention)."
+        description="Purge stale anonymous guest accounts (retention)."
     )
     parser.add_argument(
         "--dry-run",

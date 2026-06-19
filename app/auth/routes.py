@@ -6,20 +6,21 @@ file) so the two tasks don't collide on one module.
 
 What lives here
 ---------------
-* email signup + login
-* Kakao + Google authorize-redirect + callback (userinfo is mocked in tests)
+* username + password signup + login (with an optional recovery email — no
+  reset flow ships yet; email is never a login key)
+* Google authorize-redirect + callback (userinfo is mocked in tests)
 * guest creation on first interaction + a guest "log immediately" demo endpoint
 * guest upgrade-in-place when a guest signs in
 * account / guest deletion
-* the PIPA consent gate (signup AND upgrade)
+* the consent gate (signup AND upgrade)
 
 Consent
 -------
 Every account-*creating* and account-*attaching* path requires an explicit,
 unbundled ``consent`` boolean that the caller must send ``true``. The form copy
-links the 개인정보처리방침 (privacy policy). Marketing-email consent, if ever
-added, is a *separate* optional field — never bundled into this one. Without
-consent we reject with 400 before any row is written/attached.
+links the privacy policy. Marketing-email consent, if ever added, is a
+*separate* optional field — never bundled into this one. Without consent we
+reject with 400 before any row is written/attached.
 
 Sessions
 --------
@@ -30,7 +31,9 @@ the ``HttpOnly; Secure; SameSite=Lax`` flags can't be dropped by a route.
 from __future__ import annotations
 
 import os
+import re
 import secrets
+import unicodedata
 from typing import Annotated
 
 import structlog
@@ -38,16 +41,18 @@ from fastapi import APIRouter, Cookie, Form, HTTPException, Request, Response
 from fastapi.responses import JSONResponse, RedirectResponse
 
 from app.auth import oauth, passwords, sessions, users
+from app.services import profiles
 
 log = structlog.get_logger()
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 # Placeholder privacy-policy link. The policy TEXT is the CEO's; this is the gate.
-PRIVACY_POLICY_URL = "/privacy"  # 개인정보처리방침
+PRIVACY_POLICY_URL = "/privacy"
 
 CONSENT_REQUIRED_MESSAGE = (
-    f"개인정보 수집·이용에 대한 동의가 필요합니다. (개인정보처리방침: {PRIVACY_POLICY_URL})"
+    f"Please agree to how we collect and use your data to continue. "
+    f"(Privacy policy: {PRIVACY_POLICY_URL})"
 )
 
 
@@ -71,10 +76,73 @@ def _require_consent(consent: bool) -> None:
         raise HTTPException(status_code=400, detail=CONSENT_REQUIRED_MESSAGE)
 
 
+_USERNAME_RE = re.compile(r"^[a-z0-9_]{3,20}$")
+_USERNAME_ERROR = (
+    "Username must be 3-20 characters: lowercase letters, numbers, "
+    "and underscores only."
+)
+# Loose x@y.z shape check — intentionally NOT a full RFC validator. Email is
+# optional recovery metadata, never a login key.
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+def _normalize_username(username: str) -> str:
+    """Normalize a username to its canonical identity form.
+
+    ``strip`` → NFKC (so visually-identical Unicode forms collapse) →
+    ``casefold`` (aggressive lowercase). Validated against ``[a-z0-9_]{3,20}``
+    after normalization; raises ``HTTPException(400)`` on any violation so
+    ``foo``/``Foo``/``FOO`` all resolve to the one account ``foo``.
+    """
+    normalized = unicodedata.normalize("NFKC", username.strip()).casefold()
+    if not _USERNAME_RE.match(normalized):
+        raise HTTPException(status_code=400, detail=_USERNAME_ERROR)
+    return normalized
+
+
+def _normalize_email(email: str | None) -> str | None:
+    """Lowercase + loose-shape-check an optional recovery email.
+
+    Returns ``None`` for an absent/blank email (it's optional). Raises
+    ``HTTPException(400)`` if a non-blank value isn't ``x@y.z``-shaped. This is
+    recovery metadata only and is never used as a login key.
+    """
+    if email is None:
+        return None
+    cleaned = email.strip().lower()
+    if not cleaned:
+        return None
+    if not _EMAIL_RE.match(cleaned):
+        raise HTTPException(status_code=400, detail="That email address looks malformed.")
+    return cleaned
+
+
 def _redirect_uri(provider: str) -> str:
     """The provider callback redirect URI (env-overridable for prod)."""
     env_key = f"{provider.upper()}_REDIRECT_URI"
     return os.getenv(env_key, f"https://mushin.aqnas.xyz/auth/{provider}/callback")
+
+
+def _oauth_enabled() -> bool:
+    """Whether the OAuth routes are exposed.
+
+    The product is guest-only for now; Google sign-in is hidden behind
+    this flag. The underlying OAuth code (provider-attach/upgrade logic) is kept
+    intact for a future re-enable — only the route surface is gated. Default off
+    so existing deployments that don't set the var stay guest-only with no
+    regression.
+    """
+    return os.getenv("OAUTH_ENABLED", "false").lower() == "true"
+
+
+def _known_provider(provider: str) -> bool:
+    """True only when OAuth is enabled AND the provider is one we support.
+
+    A disabled flag is deliberately indistinguishable from "provider doesn't
+    exist": both paths raise the same 404, so a caller can't probe whether OAuth
+    is merely turned off versus unimplemented.
+    """
+    return _oauth_enabled() and provider == "google"
 
 
 def _lazy_seed(owner_id: int) -> None:
@@ -100,28 +168,34 @@ def _lazy_seed(owner_id: int) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Email / password
+# Username / password (with optional recovery email)
 # ---------------------------------------------------------------------------
 
 
 @router.post("/signup")
-async def email_signup(
+async def username_signup(
     response: Response,
-    email: Annotated[str, Form()],
+    username: Annotated[str, Form()],
     password: Annotated[str, Form()],
+    email: Annotated[str | None, Form()] = None,
     consent: Annotated[bool, Form()] = False,
+    timezone: Annotated[str | None, Form()] = None,
     session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
 ) -> JSONResponse:
-    """Create an email/password account (or upgrade the current guest in place).
+    """Create a username/password account (or upgrade the current guest in place).
 
-    Requires explicit unbundled consent. The password is hashed with Argon2id;
-    plaintext is never logged. If the caller already has a guest session, this
-    upgrades that guest **in place** (zero data migration).
+    Identity is the (normalized) ``username``; ``email`` is an optional recovery
+    address only (never a login key). Requires explicit unbundled consent. The
+    password is hashed with Argon2id; plaintext is never logged. If the caller
+    already has a guest session, this upgrades that guest **in place** (zero data
+    migration).
     """
     _require_consent(consent)
-    if not email or not password:
-        raise HTTPException(status_code=400, detail="email and password are required")
+    if not password:
+        raise HTTPException(status_code=400, detail="username and password are required")
 
+    username = _normalize_username(username)
+    email = _normalize_email(email)
     password_hash = passwords.hash_password(password)
     current = _current_uid(session)
 
@@ -129,59 +203,92 @@ async def email_signup(
     if current is not None:
         guest = users.get_user(current)
         if guest is not None and guest["auth_provider"] == "guest":
-            if users.find_by_email(email) is not None:
-                # The email already maps to a real account: do not merge.
+            if users.find_by_username(username) is not None:
+                # The username already maps to a real account: do not merge.
                 raise HTTPException(
                     status_code=409,
-                    detail="이미 가입된 이메일입니다. 게스트 데이터를 유지하거나 폐기할지 선택하세요.",
+                    detail="That username already has an account. "
+                    "Choose whether to keep or discard your guest data.",
+                )
+            if email is not None and users.find_by_email(email) is not None:
+                raise HTTPException(
+                    status_code=409,
+                    detail="That email already has an account. "
+                    "Choose whether to keep or discard your guest data.",
                 )
             user = users.attach_provider(
                 current,
                 "email",
+                username=username,
                 password_hash=password_hash,
-                display_name=email,
+                email=email,
             )
-            resp = JSONResponse({"user_id": user["id"], "upgraded": True})
+            resp = JSONResponse(
+                {
+                    "user_id": user["id"],
+                    "upgraded": True,
+                    "redirect_url": profiles.canonical_profile_url(username),
+                }
+            )
             _set_session(resp, user["id"])
             log.info("auth.upgrade.email", user_id=user["id"])
             return resp
 
-    # Fresh signup.
+    # Fresh signup. Timezone is stored at creation only (the guest-upgrade path
+    # above keeps the timezone already stamped on the guest row at guest-create).
     try:
-        user_id = users.create_email_user(email, password_hash)
+        user_id = users.create_username_user(username, password_hash, email, timezone)
     except users.IdentityTakenError as exc:
-        raise HTTPException(status_code=409, detail="이미 가입된 이메일입니다.") from exc
+        # Generic message: don't leak whether the username or email collided.
+        raise HTTPException(
+            status_code=409, detail="That username is already taken."
+        ) from exc
 
-    resp = JSONResponse({"user_id": user_id, "upgraded": False})
+    resp = JSONResponse(
+        {
+            "user_id": user_id,
+            "upgraded": False,
+            "redirect_url": profiles.canonical_profile_url(username),
+        }
+    )
     _set_session(resp, user_id)
     log.info("auth.signup.email", user_id=user_id)
     return resp
 
 
 @router.post("/login")
-async def email_login(
+async def username_login(
     response: Response,
-    email: Annotated[str, Form()],
+    username: Annotated[str, Form()],
     password: Annotated[str, Form()],
+    timezone: Annotated[str | None, Form()] = None,  # noqa: ARG001 - form parity only
 ) -> JSONResponse:
-    """Log in with email/password. Wrong password is rejected with 401.
+    """Log in with username/password. Wrong username or password is 401.
 
-    Verification is constant-time Argon2id; plaintext is never logged.
+    The username is normalized before lookup so ``Foo`` and ``foo`` resolve to
+    the same account. Verification is constant-time Argon2id; plaintext is never
+    logged.
     """
-    user = users.find_by_email(email)
+    username = _normalize_username(username)
+    user = users.find_by_username(username)
     if user is None or not passwords.verify_password(user["password_hash"], password):
-        # Same response whether the user is unknown or the password is wrong, so
-        # we don't leak which emails are registered.
-        raise HTTPException(status_code=401, detail="이메일 또는 비밀번호가 올바르지 않습니다.")
+        # Same response whether the username is unknown or the password is wrong,
+        # so we don't leak which usernames are registered.
+        raise HTTPException(status_code=401, detail="That username or password isn't right.")
 
-    resp = JSONResponse({"user_id": user["id"]})
+    resp = JSONResponse(
+        {
+            "user_id": user["id"],
+            "redirect_url": profiles.canonical_profile_url(user["username"]),
+        }
+    )
     _set_session(resp, user["id"])
     log.info("auth.login.email", user_id=user["id"])
     return resp
 
 
 # ---------------------------------------------------------------------------
-# OAuth — Kakao + Google
+# OAuth — Google
 # ---------------------------------------------------------------------------
 
 
@@ -192,7 +299,7 @@ async def oauth_authorize(provider: str, response: Response) -> RedirectResponse
     A random ``state`` is set in an HttpOnly cookie and echoed back on callback
     to defend against CSRF on the OAuth round-trip.
     """
-    if provider not in {"kakao", "google"}:
+    if not _known_provider(provider):
         raise HTTPException(status_code=404, detail="unknown provider")
     state = secrets.token_urlsafe(24)
     url = oauth.authorize_url(provider, _redirect_uri(provider), state)
@@ -227,7 +334,7 @@ async def oauth_callback(
     ``oauth.fetch_userinfo`` is monkeypatched in tests, so this whole path runs
     without live credentials or network.
     """
-    if provider not in {"kakao", "google"}:
+    if not _known_provider(provider):
         raise HTTPException(status_code=404, detail="unknown provider")
     # CSRF state check (skipped only when no state cookie was set, e.g. tests
     # hitting the callback directly with a mocked userinfo).
@@ -256,7 +363,8 @@ async def oauth_callback(
                 status_code=409,
                 detail={
                     "code": "identity_exists",
-                    "message": "이미 이 계정으로 가입되어 있습니다. 게스트 데이터를 유지하거나 폐기하세요.",
+                    "message": "You already have an account with this login. "
+                    "Keep or discard your guest data.",
                     "existing_user_id": existing["id"],
                     "guest_user_id": guest["id"],
                 },
@@ -296,6 +404,7 @@ async def oauth_callback(
 @router.post("/guest")
 async def guest_start(
     response: Response,
+    timezone: Annotated[str | None, Form()] = None,
     session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
 ) -> JSONResponse:
     """Mint a guest account on the user's *first interaction* and start a session.
@@ -303,39 +412,24 @@ async def guest_start(
     This is an explicit POST the UI calls when the user *acts* — never a
     middleware on GET — so a bare page load (or a bot crawling) creates no row.
     Idempotent for an existing valid session: if the caller already has a user
-    (guest or real), we return it instead of minting a duplicate.
+    (guest or real), we return it instead of minting a duplicate. *timezone* is
+    the untrusted browser-detected IANA name, persisted on the guest row at
+    creation only.
     """
     current = _current_uid(session)
     if current is not None and users.get_user(current) is not None:
         users.touch_last_active(current)
         return JSONResponse({"user_id": current, "created": False})
 
-    user_id = users.create_guest()
+    user_id = users.create_guest(timezone)
     resp = JSONResponse({"user_id": user_id, "created": True})
     _set_session(resp, user_id)
     log.info("auth.guest.created", user_id=user_id)
     return resp
 
 
-@router.post("/guest/seed")
-async def guest_seed(
-    session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
-) -> JSONResponse:
-    """Lazy-seed starter templates on the guest's first entry (Task 5 seam).
-
-    Separate from guest creation so seeding really happens on *first entry*, not
-    at mint time. Bumps ``last_active_at``.
-    """
-    current = _current_uid(session)
-    if current is None or users.get_user(current) is None:
-        raise HTTPException(status_code=401, detail="no active session")
-    users.touch_last_active(current)
-    _lazy_seed(current)
-    return JSONResponse({"user_id": current, "seeded": True})
-
-
 # ---------------------------------------------------------------------------
-# Deletion (account + guest) — PIPA data-subject right
+# Deletion (account + guest) — data-subject right
 # ---------------------------------------------------------------------------
 
 
@@ -345,7 +439,7 @@ async def delete_account(
 ) -> Response:
     """Delete the current account (real or guest) and ALL its data, then log out.
 
-    Cookie-bound: a guest is a PIPA data subject and deletes via this same
+    Cookie-bound: a guest is a data subject and deletes via this same
     control. The cascade (schema ``ON DELETE CASCADE``) removes every owned row
     including memos. The session cookie is cleared on the response.
     """

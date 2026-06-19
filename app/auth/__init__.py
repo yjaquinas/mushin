@@ -1,8 +1,8 @@
 """Authentication, accounts, guest mode, sessions, and consent for Mushin.
 
-This package owns everything under the auth boundary: the three real providers
-(Kakao, Google, email/password), the anonymous guest account, signed-cookie
-sessions, the unbundled PIPA consent gate, account/guest deletion, and the
+This package owns everything under the auth boundary: the real providers
+(Google, email/password), the anonymous guest account, signed-cookie
+sessions, the unbundled consent gate, account/guest deletion, and the
 guest upgrade-in-place flow.
 
 Routes live in ``app.auth.routes`` as an ``APIRouter`` registered from

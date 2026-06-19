@@ -1,0 +1,38 @@
+{#
+  Log in / Create account segmented toggle. Included by both
+  auth_login_form.html.jinja2 and auth_create_form.html.jinja2 so each
+  fragment re-asserts the active tab when loaded standalone.
+
+  Each tab hx-gets the other form's fragment route and swaps #auth-form
+  (outerHTML, since each fragment's root carries that id).
+
+  Context: active ("login" | "create").
+#}
+<div role="tablist" aria-label="{{ strings.ENTRY_AUTH_TAB_LOGIN }} / {{ strings.ENTRY_AUTH_TAB_CREATE }}" class="flex gap-2">
+    {% for tab_key, tab_label, tab_href in [
+        ("login", strings.ENTRY_AUTH_TAB_LOGIN, "/auth/login-form"),
+        ("create", strings.ENTRY_AUTH_TAB_CREATE, "/auth/create-form"),
+    ] %}
+        {% set is_selected = active == tab_key %}
+        <button
+            type="button"
+            role="tab"
+            id="auth-tab-{{ tab_key }}"
+            aria-selected="{{ "true" if is_selected else "false" }}"
+            aria-controls="auth-form"
+            {% if not is_selected %}
+            hx-get="{{ tab_href }}"
+            hx-target="#auth-form"
+            hx-swap="outerHTML"
+            {% endif %}
+            class="min-h-tap flex-1 rounded-button px-3 text-body transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-strong
+                {% if is_selected %}
+                    border border-border-strong bg-surface-2 font-semibold text-text-primary
+                {% else %}
+                    border border-border text-text-secondary hover:bg-surface-2
+                {% endif %}"
+        >
+            {{ tab_label }}
+        </button>
+    {% endfor %}
+</div>

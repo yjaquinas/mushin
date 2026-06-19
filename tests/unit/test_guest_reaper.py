@@ -49,23 +49,23 @@ def _insert_user(
 
 
 def _seed_owned_rows(conn: sqlite3.Connection, owner_id: int, *, with_entry: bool) -> None:
-    """Insert a category/sub_tally and, optionally, an entry/match for owner_id."""
+    """Insert a category/activity and, optionally, an entry/match for owner_id."""
     cur = conn.execute(
         "INSERT INTO category (owner_id, name, sort_order) VALUES (?, 'Cat', 0)",
         (owner_id,),
     )
     category_id = cur.lastrowid
     cur = conn.execute(
-        """INSERT INTO sub_tally (owner_id, category_id, name, count_mode, sort_order)
+        """INSERT INTO activity (owner_id, category_id, name, count_mode, sort_order)
            VALUES (?, ?, 'Sub', 'running', 0)""",
         (owner_id, category_id),
     )
-    sub_tally_id = cur.lastrowid
+    activity_id = cur.lastrowid
 
     if with_entry:
         cur = conn.execute(
-            "INSERT INTO entry (owner_id, sub_tally_id, occurred_at) VALUES (?, ?, ?)",
-            (owner_id, sub_tally_id, _iso(NOW)),
+            "INSERT INTO entry (owner_id, activity_id, occurred_at) VALUES (?, ?, ?)",
+            (owner_id, activity_id, _iso(NOW)),
         )
         entry_id = cur.lastrowid
         conn.execute(
@@ -167,7 +167,7 @@ def test_real_account_never_purged_even_if_old_and_inactive(tmp_path: Path) -> N
     try:
         old_created = NOW - timedelta(days=365)
         old_active = NOW - timedelta(days=365)
-        for provider in ("kakao", "google", "email"):
+        for provider in ("google", "email"):
             user_id = _insert_user(
                 conn,
                 auth_provider=provider,
@@ -182,7 +182,7 @@ def test_real_account_never_purged_even_if_old_and_inactive(tmp_path: Path) -> N
         count = conn.execute("SELECT COUNT(*) FROM user WHERE auth_provider != 'guest'").fetchone()[
             0
         ]
-        assert count == 3
+        assert count == 2
     finally:
         conn.close()
 
@@ -192,7 +192,7 @@ def test_real_account_never_purged_even_if_old_and_inactive(tmp_path: Path) -> N
 # ---------------------------------------------------------------------------
 
 
-OWNED_TABLES = ["category", "sub_tally", "entry", "match"]
+OWNED_TABLES = ["category", "activity", "entry", "match"]
 
 
 def test_purge_cascades_with_no_orphans(tmp_path: Path) -> None:

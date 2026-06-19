@@ -1,16 +1,12 @@
-"""Kakao + Google OAuth — authorization-code flow, userinfo normalization.
+"""Google OAuth — authorization-code flow, userinfo normalization.
 
-Two real providers:
+One real provider:
 
-* **Kakao** — scope ``profile_nickname`` only. We deliberately request *no*
-  email or phone (less personal data collected = less PIPA surface). Identity is
-  the Kakao numeric user id; the nickname becomes ``display_name``.
 * **Google** — scope ``openid email profile``. Identity is the OIDC ``sub``
   claim; ``name`` becomes ``display_name``; ``email`` is captured as the email.
 
 All client ids/secrets come from ``os.getenv`` (never hardcoded):
-``KAKAO_REST_API_KEY``, ``KAKAO_CLIENT_SECRET``, ``GOOGLE_CLIENT_ID``,
-``GOOGLE_CLIENT_SECRET``.
+``GOOGLE_CLIENT_ID``, ``GOOGLE_CLIENT_SECRET``.
 
 Testability seam
 ----------------
@@ -30,15 +26,10 @@ from typing import Any
 
 import httpx
 
-KAKAO_AUTHORIZE_URL = "https://kauth.kakao.com/oauth/authorize"
-KAKAO_TOKEN_URL = "https://kauth.kakao.com/oauth/token"
-KAKAO_USERINFO_URL = "https://kapi.kakao.com/v2/user/me"
-
 GOOGLE_AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 GOOGLE_USERINFO_URL = "https://openidconnect.googleapis.com/v1/userinfo"
 
-KAKAO_SCOPE = "profile_nickname"
 GOOGLE_SCOPE = "openid email profile"
 
 
@@ -50,9 +41,8 @@ class OAuthError(Exception):
 class OAuthIdentity:
     """Normalized identity from any provider.
 
-    ``provider_id`` is the stable per-provider subject (Kakao id / Google sub),
-    used for ``(auth_provider, provider_id)`` lookup. ``email`` is ``None`` for
-    Kakao by design.
+    ``provider_id`` is the stable per-provider subject (Google sub), used for
+    ``(auth_provider, provider_id)`` lookup.
     """
 
     auth_provider: str
@@ -68,12 +58,6 @@ class OAuthIdentity:
 
 def authorize_url(provider: str, redirect_uri: str, state: str) -> str:
     """Build the provider authorize URL the browser is redirected to."""
-    if provider == "kakao":
-        client_id = _require_env("KAKAO_REST_API_KEY")
-        return (
-            f"{KAKAO_AUTHORIZE_URL}?response_type=code&client_id={client_id}"
-            f"&redirect_uri={redirect_uri}&scope={KAKAO_SCOPE}&state={state}"
-        )
     if provider == "google":
         client_id = _require_env("GOOGLE_CLIENT_ID")
         return (
@@ -98,16 +82,7 @@ def _require_env(name: str) -> str:
 
 def _exchange_code(provider: str, code: str, redirect_uri: str) -> str:
     """Exchange an authorization *code* for an access token. Returns the token."""
-    if provider == "kakao":
-        data = {
-            "grant_type": "authorization_code",
-            "client_id": _require_env("KAKAO_REST_API_KEY"),
-            "client_secret": _require_env("KAKAO_CLIENT_SECRET"),
-            "redirect_uri": redirect_uri,
-            "code": code,
-        }
-        token_url = KAKAO_TOKEN_URL
-    elif provider == "google":
+    if provider == "google":
         data = {
             "grant_type": "authorization_code",
             "client_id": _require_env("GOOGLE_CLIENT_ID"),
@@ -130,9 +105,10 @@ def _exchange_code(provider: str, code: str, redirect_uri: str) -> str:
 
 def _get_userinfo(provider: str, access_token: str) -> dict[str, Any]:
     """Fetch the raw userinfo payload for *provider* using *access_token*."""
-    url = KAKAO_USERINFO_URL if provider == "kakao" else GOOGLE_USERINFO_URL
+    if provider != "google":
+        raise OAuthError(f"unknown provider {provider!r}")
     resp = httpx.get(
-        url,
+        GOOGLE_USERINFO_URL,
         headers={"Authorization": f"Bearer {access_token}"},
         timeout=10.0,
     )
@@ -158,20 +134,6 @@ def normalize(provider: str, raw: dict[str, Any]) -> OAuthIdentity:
     canned payloads, and so a mocked ``_get_userinfo`` flows through the real
     mapping logic.
     """
-    if provider == "kakao":
-        # { "id": 12345, "kakao_account": {"profile": {"nickname": "철수"}}, ... }
-        provider_id = raw.get("id")
-        if provider_id is None:
-            raise OAuthError("kakao userinfo missing id")
-        nickname = raw.get("kakao_account", {}).get("profile", {}).get("nickname") or raw.get(
-            "properties", {}
-        ).get("nickname")
-        return OAuthIdentity(
-            auth_provider="kakao",
-            provider_id=str(provider_id),
-            display_name=nickname,
-            email=None,
-        )
     if provider == "google":
         # OIDC userinfo: { "sub": "1078...", "name": "...", "email": "..." }
         sub = raw.get("sub")
