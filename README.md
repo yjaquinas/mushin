@@ -1,6 +1,6 @@
 # Mushin
 
-A general personal progress tracker — log how often you do any activity and watch your level in it rise. A raising-sim RPG of yourself.
+Mushin is a social network for people who'd rather log than scroll: no feed, no followers, no strangers — just your record, and the fellows you connect with by mutual consent.
 
 Part of the [AQNAS](https://aqnas.xyz) studio.
 
@@ -60,4 +60,4 @@ meetings/    # Meeting outputs from /run-meeting
 
 ## License
 
-{Unset — add before publishing.}
+Copyright (c) 2026 AQNAS. All rights reserved. See [LICENSE](LICENSE).
