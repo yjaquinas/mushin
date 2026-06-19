@@ -1,0 +1,79 @@
+{#
+  Grouped People/Tags search results — swapped into #search-results by the
+  search box's HTMX debounce (see web/search.html.jinja2 and
+  GET /search/results in app/routes/web.py).
+
+  Context: `query` (str, possibly blank), `people` (list of
+  search.search_people rows — `id`, `username`, `display_name`, `visibility`,
+  `relationship_state`), `tags` (list of search.search_tags_public rows —
+  `username`, `activity_slug`, `activity_name`, `tag`).
+
+  A blank `query` renders the calm prompt state, never an error. Each people
+  row reuses components/relationship_affordance.html.jinja2 for its
+  Connect/Requested/Fellows control — the same component used on
+  public_profile.html.jinja2 — so the control behaves identically here.
+  Multiple rows on one page each need a unique DOM id (HTMX's `#id` target
+  resolves via a global `document.querySelector`, always the first match),
+  so each row passes `dom_id="relationship-affordance-{username}"` and
+  `from_search=true` — see relationship_affordance.html.jinja2 and
+  app.routes.web._relationship_dom_id for the mechanism.
+#}
+{% if not query %}
+<p class="py-6 text-center text-caption text-text-secondary">{{ strings.SEARCH_PROMPT }}</p>
+{% else %}
+<div class="flex flex-col gap-6">
+    <section class="flex flex-col gap-2">
+        <h2 class="text-body font-medium text-text-secondary">{{ strings.SEARCH_PEOPLE_HEADING }}</h2>
+        {% if not people %}
+        <p class="text-caption text-text-secondary">{{ strings.SEARCH_PEOPLE_EMPTY }}</p>
+        {% else %}
+        <ul class="flex flex-col gap-2">
+            {% for person in people %}
+            <li class="flex flex-wrap items-center justify-between gap-2 rounded-card px-1 py-1">
+                <a
+                    href="/@{{ person.username }}"
+                    class="flex min-h-tap flex-wrap items-center gap-x-2 gap-y-0.5 rounded-card px-2 py-2 text-body text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                >
+                    <span class="font-medium">@{{ person.username }}</span>
+                    {% if person.display_name %}
+                    <span class="text-caption text-text-secondary">{{ person.display_name }}</span>
+                    {% endif %}
+                </a>
+                {% with
+                    username=person.username,
+                    state=person.relationship_state,
+                    error=None,
+                    dom_id="relationship-affordance-" ~ person.username,
+                    pending_incoming_target_id="relationship-affordance-" ~ person.username,
+                    from_search=true
+                %}
+                {% include "components/relationship_affordance.html.jinja2" %}
+                {% endwith %}
+            </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </section>
+
+    <section class="flex flex-col gap-2">
+        <h2 class="text-body font-medium text-text-secondary">{{ strings.SEARCH_TAGS_HEADING }}</h2>
+        {% if not tags %}
+        <p class="text-caption text-text-secondary">{{ strings.SEARCH_TAGS_EMPTY }}</p>
+        {% else %}
+        <ul class="flex flex-col gap-2">
+            {% for result in tags %}
+            <li>
+                <a
+                    href="/@{{ result.username }}/{{ result.activity_slug }}"
+                    class="flex min-h-tap flex-wrap items-center gap-x-2 gap-y-0.5 rounded-card px-2 py-2 text-body text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                >
+                    <span class="font-medium">#{{ result.tag }}</span>
+                    <span class="text-caption text-text-secondary">{{ result.activity_name }} · @{{ result.username }}</span>
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </section>
+</div>
+{% endif %}
