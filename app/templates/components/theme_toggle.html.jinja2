@@ -1,0 +1,30 @@
+{#
+  Theme toggle — single icon-button cycling light -> dark -> system -> light.
+  Icon and aria-label reflect the *current* theme; tapping posts to
+  /preferences/theme, which sets the mushin_theme cookie and returns this
+  same fragment re-rendered for the new state.
+
+  Context: theme ("light" | "dark" | "system").
+#}
+{% from "components/_icon.html.jinja2" import icon %}
+{% if theme == "light" %}
+    {% set theme_icon = "sun" %}
+    {% set theme_label = strings.THEME_TOGGLE_LABEL_LIGHT %}
+{% elif theme == "dark" %}
+    {% set theme_icon = "moon" %}
+    {% set theme_label = strings.THEME_TOGGLE_LABEL_DARK %}
+{% else %}
+    {% set theme_icon = "monitor" %}
+    {% set theme_label = strings.THEME_TOGGLE_LABEL_SYSTEM %}
+{% endif %}
+<button
+    type="button"
+    id="theme-toggle"
+    hx-post="/preferences/theme"
+    hx-swap="outerHTML"
+    aria-label="{{ theme_label }}"
+    {% if theme in ("light", "dark") %} data-theme="{{ theme }}"{% endif %}
+    class="flex min-h-tap min-w-tap items-center justify-center rounded-button text-text-secondary transition hover:bg-surface-2 focus-visible:outline-offset-2"
+>
+    {{ icon(theme_icon, size=24) }}
+</button>

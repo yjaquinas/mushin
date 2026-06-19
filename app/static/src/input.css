@@ -28,6 +28,7 @@
    */
   --color-brand:         #1a1a1a;
   --color-brand-subtle:  #3d3d3d;
+  --color-on-brand:      #ffffff;
 
   /*
    * Surface — background layers. surface-0 is the canvas; surface-1 is the
@@ -154,6 +155,105 @@
   --line-height-snug:       1.4;      /* titles, chips                         */
   --line-height-normal:     1.6;      /* body copy (generous for Korean)       */
   --line-height-relaxed:    1.75;     /* long-form prose                       */
+
+  /* ── Icon sizing ──────────────────────────────────────────────────────── */
+
+  /*
+   * Defined under the --spacing namespace (not a custom --size one)
+   * because Tailwind v4's size, w and h utilities are generated from
+   * --spacing tokens — this is what makes `size-icon` / `size-icon-lg`
+   * work as utility classes. (--spacing-tap above is the same namespace,
+   * used for tap-target min-h/min-w; these two are unrelated dimensions.)
+   *
+   * icon    : the per-category icon in the activity card label row, sits
+   *           inline with the title — sized to not compete with the hero
+   *           numeral. Use as `size-icon`.
+   * icon-lg : the empty-state 無心 glyph — large but quiet, no decoration.
+   *           Use as `size-icon-lg`.
+   */
+  --spacing-icon:    1.25rem; /* 20 px */
+  --spacing-icon-lg: 4rem;    /* 64 px */
+}
+
+/* ── Dark mode tokens ─────────────────────────────────────────────────────── */
+/*
+ * Two activation paths, both needed:
+ *   1. [data-theme="dark"]  — explicit user choice (cookie/toggle).
+ *   2. prefers-color-scheme — system default, only when the user has not
+ *      explicitly chosen "light" (so an explicit light choice on a dark OS
+ *      isn't overridden).
+ *
+ * Same token names as light — only values change, so both the Tailwind
+ * mapping (web) and the future HXML mapping (native) consume one contract.
+ *
+ * Re-derived (not naively darkened) so the invariants still hold:
+ *   - heat-0 == surface-2, heat-4 == accent.
+ *   - accent-subtle / level-subtle are dark, desaturated tints suitable as
+ *     backgrounds under light accent/level text (chip-selected, level-up
+ *     fill), not light tints under dark text as in light mode.
+ *   - accent clears WCAG non-text contrast (3:1) against surface-0/1 for
+ *     the global focus ring.
+ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-surface-0:     #1c1b1a;
+    --color-surface-1:     #262524;
+    --color-surface-2:     #322f2d;
+
+    --color-border:        #3d3a37;
+    --color-border-strong: #5c5751;
+
+    --color-text-primary:   #f0eeec;
+    --color-text-secondary: #b8b2aa;
+    --color-text-muted:     #7d766f;
+
+    --color-accent:        #7ba3cc;
+    --color-accent-subtle: #2a3a4d;
+
+    --color-level:         #5fae80;
+    --color-level-subtle:  #1f3a2a;
+
+    --color-danger:        #e08a7d;
+    --color-danger-subtle: #3d2420;
+
+    --color-heat-0: #322f2d; /* surface-2 — empty */
+    --color-heat-1: #3a4350;
+    --color-heat-2: #4a5c70;
+    --color-heat-3: #5f7f9c;
+    --color-heat-4: #7ba3cc; /* accent — busiest */
+
+    --color-on-brand: #f0eeec;
+  }
+}
+
+[data-theme="dark"] {
+  --color-surface-0:     #1c1b1a;
+  --color-surface-1:     #262524;
+  --color-surface-2:     #322f2d;
+
+  --color-border:        #3d3a37;
+  --color-border-strong: #5c5751;
+
+  --color-text-primary:   #f0eeec;
+  --color-text-secondary: #b8b2aa;
+  --color-text-muted:     #7d766f;
+
+  --color-accent:        #7ba3cc;
+  --color-accent-subtle: #2a3a4d;
+
+  --color-level:         #5fae80;
+  --color-level-subtle:  #1f3a2a;
+
+  --color-danger:        #e08a7d;
+  --color-danger-subtle: #3d2420;
+
+  --color-heat-0: #322f2d; /* surface-2 — empty */
+  --color-heat-1: #3a4350;
+  --color-heat-2: #4a5c70;
+  --color-heat-3: #5f7f9c;
+  --color-heat-4: #7ba3cc; /* accent — busiest */
+
+  --color-on-brand: #f0eeec;
 }
 
 /* ── Focus-visible: global baseline ──────────────────────────────────────── */
@@ -180,6 +280,12 @@
   input:-webkit-autofill,
   input:-webkit-autofill:focus {
     transition: background-color 0s 600000s;
+  }
+
+  /* Hide Alpine-controlled elements until Alpine initializes, avoiding a
+   * flash of the dialog before x-show takes effect. */
+  [x-cloak] {
+    display: none !important;
   }
 }
 
@@ -270,7 +376,6 @@
     inset-inline-start: 0;
     border-radius:   9999px;
     background:      var(--color-accent);
-    transition:      width 400ms cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   /*
@@ -285,6 +390,68 @@
 
   @keyframes level-revert {
     to { background: var(--color-accent); }
+  }
+
+  /* ── Hero numeral "settle" on log ────────────────────────────────────── */
+  /*
+   * .hero--bumped — applied (once) to the hero numeral <p> by the HTMX swap
+   * fragment when a log changes its value. A quiet settle: the numeral
+   * fades and nudges up into place — no scale/bounce, no color change.
+   * `animation-fill-mode: none` so the element returns to its normal,
+   * un-animated state once the one-shot finishes (no residual transform/
+   * opacity to fight subsequent renders or re-triggers).
+   */
+  @keyframes hero-settle {
+    from {
+      opacity:   0.6;
+      transform: translateY(2px);
+    }
+    to {
+      opacity:   1;
+      transform: translateY(0);
+    }
+  }
+
+  /* ── Reduced-motion gate ──────────────────────────────────────────────── */
+  /*
+   * All non-essential motion (hero settle, progress-fill width transition,
+   * and the swapped-in fill's start-state transition below) is gated behind
+   * prefers-reduced-motion: no-preference. Under reduced motion these rules
+   * don't apply at all, so elements render directly at their final
+   * opacity/transform/width with no animation step — correct end state,
+   * zero motion.
+   */
+  @media (prefers-reduced-motion: no-preference) {
+    .hero--bumped {
+      animation: hero-settle 280ms ease-out;
+      animation-fill-mode: none;
+    }
+
+    .progress-fill {
+      transition: width 400ms cubic-bezier(0.4, 0, 0.2, 1);
+
+      /*
+       * @starting-style lets a freshly-inserted .progress-fill (from an HTMX
+       * swap) transition from a "starting" width to its specified inline
+       * width, instead of snapping straight to the new value.
+       *
+       * Simplification vs. the ideal "animate from prior width": the prior
+       * width lived on the *old* (now-removed) element, and @starting-style
+       * has no way to reference it — it can only declare a fixed starting
+       * value for the *new* element. We use 0% as that starting value. In
+       * practice the visual result is close to the ideal for the common
+       * case (the bar fills further on a successful log, so 0% → new-width
+       * still reads as "the bar advancing" rather than a jump). The one
+       * imperfect case is a *decreasing* width (rare — progress doesn't
+       * usually go backward), which would visibly animate from 0% before
+       * settling at the lower value. Accepted as a one-off visual quirk in
+       * an edge case that's not part of the core "log advances the bar"
+       * reward.
+       */
+      @starting-style {
+        width: 0%;
+      }
+    }
   }
 
   /* ── Heatmap (trailing-365-day contribution grid) ────────────────────── */
