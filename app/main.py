@@ -6,13 +6,18 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 import structlog
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.auth.routes import router as auth_router
-from app.models.migrate import run_migrations
-from app.routes.web import router as web_router
+load_dotenv()
+
+from app.auth.routes import router as auth_router  # noqa: E402
+from app.models.migrate import run_migrations  # noqa: E402
+from app.routes.data_io import router as data_io_router  # noqa: E402
+from app.routes.public import router as public_router  # noqa: E402
+from app.routes.web import router as web_router  # noqa: E402
 
 log = structlog.get_logger()
 
@@ -42,6 +47,12 @@ app.include_router(auth_router)
 
 # Page-UI routes (entry screen, character-sheet home, quick-add log flow).
 app.include_router(web_router)
+
+# Public, unauthenticated profile routes (/@{username}, /@{username}/{slug}).
+app.include_router(public_router)
+
+# Data-portability routes (export download).
+app.include_router(data_io_router)
 
 
 @app.get("/health", response_class=HTMLResponse)

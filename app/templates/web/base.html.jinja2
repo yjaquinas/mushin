@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en"{% if theme in ("light", "dark") %} data-theme="{{ theme }}"{% endif %}>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,18 +7,70 @@
     <link rel="stylesheet" href="/static/style.css">
     <script src="https://unpkg.com/htmx.org@2"></script>
     <script defer src="https://unpkg.com/alpinejs@3" ></script>
+    <script defer src="/static/js/theme.js"></script>
+    <script defer src="/static/js/auth-form.js"></script>
 </head>
 <body class="bg-surface-0 text-text-primary text-body min-h-screen">
+    <div class="mx-auto flex max-w-screen-sm items-baseline justify-between gap-2 px-4 pt-4">
+        <a
+            href="{{ home_url }}"
+            class="flex items-baseline gap-2 focus-visible:outline-offset-2"
+        >
+            <span class="text-title font-semibold text-brand">{{ strings.APP_NAME }}</span>
+            <span class="text-caption text-text-muted">{{ strings.APP_NAME_HANJA }}</span>
+        </a>
+        <div class="flex items-center gap-1">
+            {% block search_link %}
+            {% if home_url != "/" %}
+            <a
+                href="/search"
+                aria-label="{{ strings.SEARCH_NAV_LABEL }}"
+                class="flex min-h-tap min-w-tap items-center justify-center rounded-button text-text-secondary transition hover:bg-surface-2 focus-visible:outline-offset-2"
+            >
+                {% from "components/_icon.html.jinja2" import icon %}
+                {{ icon("search", size=22) }}
+            </a>
+            {% endif %}
+            {% endblock %}
+            {% block theme_toggle %}
+            {% include "components/theme_toggle.html.jinja2" with context %}
+            {% endblock %}
+        </div>
+    </div>
     <main class="mx-auto flex max-w-screen-sm flex-col gap-4 p-4">
         {% block content %}{% endblock %}
     </main>
-    <footer class="mx-auto flex max-w-screen-sm justify-center p-4">
+    <footer class="mx-auto flex max-w-screen-sm items-center justify-center gap-4 p-4">
+        {% block footer %}
         <a
             href="/privacy"
             class="text-caption text-text-muted underline-offset-2 hover:underline focus-visible:outline-offset-2"
         >
             {{ strings.FOOTER_PRIVACY }}
         </a>
+        <a
+            href="/account"
+            class="text-caption text-text-muted underline-offset-2 hover:underline focus-visible:outline-offset-2"
+        >
+            {{ strings.FOOTER_ACCOUNT }}
+        </a>
+        <a
+            href="/export"
+            class="text-caption text-text-muted underline-offset-2 hover:underline focus-visible:outline-offset-2"
+        >
+            {{ strings.FOOTER_EXPORT_DATA }}
+        </a>
+        {% include "components/import_data_dialog.html.jinja2" with context %}
+        <button
+            type="button"
+            hx-post="/auth/logout"
+            hx-swap="none"
+            hx-on::after-request="if(event.detail.successful) window.location.href = '/'"
+            class="min-h-tap text-caption text-text-muted underline-offset-2 transition hover:underline focus-visible:outline-offset-2"
+        >
+            {{ strings.FOOTER_LOGOUT }}
+        </button>
+        {% endblock %}
     </footer>
 </body>
 </html>
