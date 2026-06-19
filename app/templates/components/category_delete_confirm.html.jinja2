@@ -1,0 +1,38 @@
+{#
+  Inline delete-confirm fragment for a category (whole activity + all entries).
+  Swaps outerHTML into #rename-heading on the sub-tally detail page.
+
+  On confirm: POST /activities/{activity_id}/delete
+              -> HX-Redirect: /home (200) -> browser navigates to /home
+  On cancel:  GET  /activities/{activity_id}/rename-form-cancel
+              -> restores the plain heading fragment
+
+  Context:
+    activity_id    int   — the sub-tally whose parent category will be deleted
+    activity_name  str   — display name (for any future use; not rendered directly here)
+#}
+<div id="rename-heading">
+    <div class="flex flex-col gap-4">
+        <p class="text-caption text-text-muted">{{ strings.CATEGORY_DELETE_CONFIRM_BODY }}</p>
+        <div class="flex items-center gap-3">
+            <button
+                type="button"
+                hx-post="/activities/{{ activity_id }}/delete"
+                hx-target="#rename-heading"
+                hx-swap="outerHTML"
+                class="min-h-tap rounded-button bg-red-600 px-4 text-body font-semibold text-white transition hover:bg-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+            >
+                {{ strings.CATEGORY_DELETE_CONFIRM }}
+            </button>
+            <button
+                type="button"
+                hx-get="/activities/{{ activity_id }}/rename-form-cancel"
+                hx-target="#rename-heading"
+                hx-swap="outerHTML"
+                class="min-h-tap rounded-button border border-border px-3 text-body text-text-secondary transition hover:bg-surface-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+            >
+                {{ strings.CATEGORY_DELETE_CANCEL }}
+            </button>
+        </div>
+    </div>
+</div>
