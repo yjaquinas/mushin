@@ -25,7 +25,7 @@ from typing import Any
 _OWNED_TABLES = frozenset(
     {
         "category",
-        "sub_tally",
+        "activity",
         "entry",
         "tag",
         "match",

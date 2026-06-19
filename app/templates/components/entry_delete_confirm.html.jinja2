@@ -1,0 +1,39 @@
+{#
+  Inline delete-confirm fragment for a single entry row. Swaps outerHTML into
+  the .entry-row container so the surrounding log stays intact.
+
+  On confirm: POST /activities/{activity_id}/entries/{entry_id}/delete
+              -> empty 200 -> HTMX removes .entry-row from the DOM
+  On cancel:  GET  /activities/{activity_id}/entries/{entry_id}/edit
+              -> returns to the edit form
+
+  Context:
+    activity_id   int    — owning sub-tally
+    entry          dict   — hydrated entry (id, occurred_at, …)
+#}
+
+<li class="entry-row">
+    <div class="flex flex-col gap-4 rounded-card border border-border bg-surface-1 p-4">
+        <p class="text-body text-text-primary">{{ strings.ENTRY_DELETE_CONFIRM_BODY }}</p>
+        <div class="flex items-center justify-between gap-2">
+            <button
+                type="button"
+                hx-post="/activities/{{ activity_id }}/entries/{{ entry.id }}/delete"
+                hx-target="closest .entry-row"
+                hx-swap="outerHTML"
+                class="min-h-tap rounded-button bg-red-600 px-4 text-body font-semibold text-white transition hover:bg-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+            >
+                {{ strings.ENTRY_DELETE_CONFIRM }}
+            </button>
+            <button
+                type="button"
+                hx-get="/activities/{{ activity_id }}/entries/{{ entry.id }}/edit"
+                hx-target="closest .entry-row"
+                hx-swap="outerHTML"
+                class="min-h-tap rounded-button border border-border px-3 text-body text-text-secondary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+            >
+                {{ strings.ENTRY_DELETE_CANCEL }}
+            </button>
+        </div>
+    </div>
+</li>

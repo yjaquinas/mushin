@@ -2,98 +2,114 @@
   Quick-add / log sheet — tap-select tag chips grouped by tag_group field,
   plus scale, count, memo, and an editable-defaulting occurred_at.
 
-  On submit, POSTs to /sub-tallies/{id}/log and swaps the result into the
+  On submit, POSTs to /activities/{id}/log and swaps the result into the
   matching activity card (#card-{id}); the sheet then closes itself.
 
-  Context: sub_tally_id, name, fields (field-priority order), now (default
-  occurred_at value).
+  Context: activity_id, name, fields (field-priority order), today (default
+  occurred_at value, KST date YYYY-MM-DD).
 #}
 <div
-    x-data="{ open: true }"
-    x-show="open"
-    @keydown.escape.window="open = false"
-    class="fixed inset-0 z-10 flex items-end justify-center bg-black/30 sm:items-center"
-    role="dialog"
-    aria-modal="true"
-    aria-label="{{ strings.LOG_SHEET_TITLE }}"
+    x-init="$nextTick(() => $el.querySelector('input, textarea, select, button, [tabindex]')?.focus())"
+    class="flex flex-col gap-4 rounded-card border border-border bg-surface-1 p-4"
 >
-    <div
-        @click.outside="open = false"
-        class="flex max-h-[90vh] w-full max-w-screen-sm flex-col gap-4 overflow-y-auto rounded-t-card bg-surface-1 p-4 sm:rounded-card"
-    >
-        <header class="flex items-center justify-between">
-            <h2 class="text-title font-semibold text-text-primary">{{ name }}</h2>
-            <button
-                type="button"
-                @click="open = false"
-                class="min-h-tap min-w-tap rounded-button px-3 text-body text-text-secondary transition hover:bg-surface-2"
-            >
-                {{ strings.LOG_CANCEL }}
-            </button>
-        </header>
-
-        <form
-            hx-post="/sub-tallies/{{ sub_tally_id }}/log"
-            hx-target="#card-{{ sub_tally_id }}"
-            hx-swap="outerHTML"
-            @htmx:after-request="open = false"
-            class="flex flex-col gap-4"
+    <header class="flex items-center justify-between">
+        <h2 class="text-title font-semibold text-text-primary">{{ name }}</h2>
+        <button
+            type="button"
+            @click="open = false"
+            class="min-h-tap min-w-tap rounded-button px-3 text-body text-text-secondary transition hover:bg-surface-2"
         >
-            {% for field in fields %}
-                {% if field.kind == "tag_group" %}
-                    {% include "components/tag_group.html.jinja2" with context %}
-                {% elif field.kind in ("count", "scale") %}
-                    <div class="flex flex-col gap-1">
-                        <label for="value_{{ field.id }}" class="text-caption font-medium text-text-secondary">
-                            {{ field.label }}
-                        </label>
-                        <input
-                            type="number"
-                            inputmode="decimal"
-                            step="any"
-                            id="value_{{ field.id }}"
-                            name="value_{{ field.id }}"
-                            class="min-h-tap rounded-input border border-border bg-surface-1 px-3 py-2 text-body text-text-primary focus-visible:outline-2"
-                        >
-                    </div>
-                {% elif field.kind == "match_list" %}
-                    {% set rows = field.rows %}
-                    {% include "components/match_rows.html.jinja2" with context %}
-                {% elif field.kind == "memo" %}
-                    <div class="flex flex-col gap-1">
-                        <label for="value_{{ field.id }}" class="text-caption font-medium text-text-secondary">
-                            {{ strings.LOG_MEMO_LABEL }}
-                        </label>
-                        <textarea
-                            id="value_{{ field.id }}"
-                            name="value_{{ field.id }}"
-                            rows="3"
-                            placeholder="{{ strings.LOG_MEMO_PLACEHOLDER }}"
-                            class="rounded-input border border-border bg-surface-1 px-3 py-2 text-body text-text-primary focus-visible:outline-2"
-                        ></textarea>
-                    </div>
-                {% endif %}
-            {% endfor %}
+            {{ strings.LOG_CANCEL }}
+        </button>
+    </header>
 
+    <form
+        hx-post="/activities/{{ activity_id }}/log"
+        hx-target="#card-{{ activity_id }}"
+        hx-swap="outerHTML"
+        class="flex flex-col gap-4"
+    >
+        {% set tag_group_fields = fields | selectattr("kind", "equalto", "tag_group") | list %}
+        {% set has_tag_group = tag_group_fields | length > 0 %}
+
+        {% for field in fields %}
+            {% if field.kind == "tag_group" %}
+                {% include "components/tag_group.html.jinja2" with context %}
+            {% elif field.kind in ("count", "scale") %}
+                <div class="flex flex-col gap-1">
+                    <label for="value_{{ field.id }}" class="text-caption font-medium text-text-secondary">
+                        {{ field.label }}
+                    </label>
+                    <input
+                        type="number"
+                        inputmode="decimal"
+                        step="any"
+                        id="value_{{ field.id }}"
+                        name="value_{{ field.id }}"
+                        class="min-h-tap rounded-input border border-border bg-surface-1 px-3 py-2 text-body text-text-primary focus-visible:outline-2"
+                    >
+                </div>
+            {% elif field.kind == "match_list" %}
+                {% set rows = field.rows %}
+                {% include "components/match_rows.html.jinja2" with context %}
+            {% elif field.kind == "memo" and not has_tag_group %}
+                <div class="flex flex-col gap-1">
+                    <label for="value_{{ field.id }}" class="text-caption font-medium text-text-secondary">
+                        {{ strings.LOG_MEMO_LABEL }}
+                    </label>
+                    <textarea
+                        id="value_{{ field.id }}"
+                        name="value_{{ field.id }}"
+                        rows="3"
+                        placeholder="{{ strings.LOG_MEMO_PLACEHOLDER }}"
+                        class="rounded-input border border-border bg-surface-1 px-3 py-2 text-body text-text-primary focus-visible:outline-2"
+                    ></textarea>
+                </div>
+            {% endif %}
+        {% endfor %}
+
+        <div x-data="{ addTime: false }" class="flex flex-col gap-2">
             <div class="flex flex-col gap-1">
-                <label for="occurred_at" class="text-caption font-medium text-text-secondary">
+                <label for="date" class="text-caption font-medium text-text-secondary">
                     {{ strings.LOG_OCCURRED_AT_LABEL }}
                 </label>
                 <input
-                    type="datetime-local"
-                    id="occurred_at"
-                    name="occurred_at"
-                    value="{{ now }}"
+                    type="date"
+                    id="date"
+                    name="date"
+                    value="{{ today }}"
+                    required
                     class="min-h-tap rounded-input border border-border bg-surface-1 px-3 py-2 text-body text-text-primary focus-visible:outline-2"
                 >
             </div>
+            <label class="flex min-h-tap items-center gap-2 text-body text-text-secondary">
+                <input
+                    type="checkbox"
+                    name="add_time"
+                    x-model="addTime"
+                    class="rounded border-border"
+                >
+                {{ strings.LOG_TIME_ADD }}
+            </label>
+            <div x-show="addTime" x-cloak class="flex flex-col gap-1">
+                <label for="time" class="text-caption font-medium text-text-secondary">
+                    {{ strings.LOG_TIME_ADD }}
+                </label>
+                <input
+                    type="time"
+                    id="time"
+                    name="time"
+                    class="min-h-tap rounded-input border border-border bg-surface-1 px-3 py-2 text-body text-text-primary focus-visible:outline-2"
+                >
+            </div>
+        </div>
 
-            <button
-                type="submit"
-                class="min-h-tap w-full rounded-button bg-brand px-4 py-3 text-title font-semibold text-surface-1 transition focus-visible:outline-offset-2"
-            >
-                {{ strings.LOG_SUBMIT }}
-            </button>
-        </form>
-    </div>
+        <button
+            type="submit"
+            hx-disabled-elt="this"
+            class="min-h-tap w-full rounded-button bg-brand px-4 py-3 text-title font-semibold text-on-brand transition focus-visible:outline-offset-2 disabled:opacity-60"
+        >
+            {{ strings.LOG_SUBMIT }}
+        </button>
+    </form>
 </div>

@@ -3,7 +3,7 @@
 Public entry point
 ------------------
 ``seed_account(owner_id)`` — idempotent. Inserts the v1 starter templates
-(검도 + 독서) for *owner_id*. Re-running is a no-op: the guard key is the
+(Kendo + Reading) for *owner_id*. Re-running is a no-op: the guard key is the
 presence of a category named exactly as in the template under that owner_id.
 Every inserted row carries the passed *owner_id*; another owner's seed is
 completely independent.
@@ -36,15 +36,17 @@ TODO(task-7): fill ``seed_level_rules`` with the following level_rule rows:
   │ 8dan           │ 9dan           │ 10.0         │ 65      │ KKA-only │
   └────────────────┴────────────────┴──────────────┴─────────┴──────────┘
 
-  Shōgō / 칭호 (parallel track='shogo'; prereq_level_id points to the required
-  dan-track level, gate_type='time', gate_value in years):
+  Shōgō / honorific title (parallel track='shogo'; prereq_level_id points to
+  the required dan-track level, gate_type='time', gate_value in years):
   ┌──────────┬──────────────────────────────────────────────────────────────┐
   │ to_code  │ rule description                                             │
   ├──────────┼──────────────────────────────────────────────────────────────┤
-  │ yeonsa   │ prereq=5단(5dan), 5단 held ≥ 3 yrs                           │
-  │ gyosa    │ path A: prereq=연사(yeonsa), 연사 held ≥ 7 yrs                 │
-  │          │ path B: prereq=6단(6dan)+연사, 6단 held ≥ 4 yrs  (OR of A/B) │
-  │ beomsa   │ prereq=교사(gyosa)+8단, 8단 ≥ 8 yrs AND 교사 ≥ 10 yrs, age≥60│
+  │ yeonsa   │ prereq=5th Dan (5dan), 5th Dan held ≥ 3 yrs                  │
+  │ gyosa    │ path A: prereq=Renshi (yeonsa), Renshi held ≥ 7 yrs          │
+  │          │ path B: prereq=6th Dan (6dan)+Renshi, 6th Dan held ≥ 4 yrs   │
+  │          │         (OR of A/B)                                          │
+  │ beomsa   │ prereq=Kyoshi (gyosa)+8th Dan, 8th Dan ≥ 8 yrs AND           │
+  │          │         Kyoshi ≥ 10 yrs, age≥60                              │
   └──────────┴──────────────────────────────────────────────────────────────┘
 
   Reading tiers (gate_type='count', gate_value = books needed to reach tier):
@@ -56,7 +58,7 @@ TODO(task-7): fill ``seed_level_rules`` with the following level_rule rows:
   │ gogup    │ 50         │
   │ dain     │ 100        │
   └──────────┴────────────┘
-  (입문/ibmun is the entry tier; no rule needed to enter it.)
+  (ibmun/Beginner is the entry tier; no rule needed to enter it.)
 """
 
 from __future__ import annotations
@@ -66,6 +68,7 @@ import sqlite3
 import structlog
 
 from app.models import db
+from app.services import slugs
 from app.services.seed_data import LEVEL_RULES, V1_TEMPLATES, CategorySpec, LevelRuleSpec
 
 log = structlog.get_logger()
@@ -128,34 +131,36 @@ def _insert_category(
     log.debug("seeding.category.insert", owner_id=owner_id, name=cat_spec["name"])
 
     for st_spec in cat_spec["sub_tallies"]:
+        slug = slugs.unique_slug(conn, owner_id, st_spec["name"])
         cur = conn.execute(
-            "INSERT INTO sub_tally"
-            " (owner_id, category_id, name, count_mode, sort_order)"
-            " VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO activity"
+            " (owner_id, category_id, name, slug, count_mode, sort_order)"
+            " VALUES (?, ?, ?, ?, ?, ?)",
             (
                 owner_id,
                 category_id,
                 st_spec["name"],
+                slug,
                 st_spec["count_mode"],
                 st_spec["sort_order"],
             ),
         )
-        sub_tally_id = cur.lastrowid
+        activity_id = cur.lastrowid
 
         for fd_spec in st_spec["field_defs"]:
             conn.execute(
-                "INSERT INTO field_def (sub_tally_id, kind, label, sort_order) VALUES (?, ?, ?, ?)",
-                (sub_tally_id, fd_spec["kind"], fd_spec["label"], fd_spec["sort_order"]),
+                "INSERT INTO field_def (activity_id, kind, label, sort_order) VALUES (?, ?, ?, ?)",
+                (activity_id, fd_spec["kind"], fd_spec["label"], fd_spec["sort_order"]),
             )
 
         # Collect inserted level ids keyed by code for the rule seam.
         level_ids: dict[str, int] = {}
         for lv_spec in st_spec["levels"]:
             cur = conn.execute(
-                "INSERT INTO level (sub_tally_id, owner_id, track, ordinal, code, label)"
+                "INSERT INTO level (activity_id, owner_id, track, ordinal, code, label)"
                 " VALUES (?, ?, ?, ?, ?, ?)",
                 (
-                    sub_tally_id,
+                    activity_id,
                     owner_id,
                     lv_spec["track"],
                     lv_spec["ordinal"],
@@ -169,10 +174,10 @@ def _insert_category(
             seed_level_rules(
                 owner_id,
                 conn,
-                sub_tally_id,
+                activity_id,
                 level_ids,
                 category_name=cat_spec["name"],
-                sub_tally_name=st_spec["name"],
+                activity_name=st_spec["name"],
             )
 
 
@@ -184,16 +189,16 @@ def _insert_category(
 def seed_level_rules(
     owner_id: int,
     conn: sqlite3.Connection,
-    sub_tally_id: int,
+    activity_id: int,
     level_ids: dict[str, int],
     *,
     category_name: str,
-    sub_tally_name: str,
+    activity_name: str,
 ) -> None:
-    """Insert ``level_rule`` rows for *sub_tally_id*.
+    """Insert ``level_rule`` rows for *activity_id*.
 
     Rule specs are looked up from ``seed_data.LEVEL_RULES`` by
-    ``(category_name, sub_tally_name)``. If no spec exists for this sub-tally
+    ``(category_name, activity_name)``. If no spec exists for this sub-tally
     the function is a no-op (running sub-tallies, etc.).
 
     **Idempotent**: rows are inserted only when ``level_rule`` has no existing
@@ -208,21 +213,21 @@ def seed_level_rules(
     - ``prereq_code`` absent → ``prereq_level_id = NULL``.
     - ``min_age`` absent     → ``min_age = NULL``.
     """
-    rule_specs: list[LevelRuleSpec] | None = LEVEL_RULES.get((category_name, sub_tally_name))
+    rule_specs: list[LevelRuleSpec] | None = LEVEL_RULES.get((category_name, activity_name))
     if not rule_specs:
         return
 
-    # Guard: if any level_rule row already exists for this owner+sub_tally,
+    # Guard: if any level_rule row already exists for this owner+activity,
     # skip the whole batch (idempotency — re-seeding never duplicates).
     existing = conn.execute(
-        "SELECT COUNT(*) FROM level_rule WHERE owner_id = ? AND sub_tally_id = ?",
-        (owner_id, sub_tally_id),
+        "SELECT COUNT(*) FROM level_rule WHERE owner_id = ? AND activity_id = ?",
+        (owner_id, activity_id),
     ).fetchone()[0]
     if existing:
         log.debug(
             "seeding.level_rules.skip",
             owner_id=owner_id,
-            sub_tally_id=sub_tally_id,
+            activity_id=activity_id,
             existing=existing,
         )
         return
@@ -237,15 +242,15 @@ def seed_level_rules(
 
         conn.execute(
             "INSERT INTO level_rule"
-            " (owner_id, sub_tally_id, from_level_id, to_level_id,"
+            " (owner_id, activity_id, from_level_id, to_level_id,"
             "  gate_type, gate_value, min_age, prereq_level_id)"
             " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            (owner_id, sub_tally_id, from_id, to_id, gate_type, gate_value, min_age, prereq_id),
+            (owner_id, activity_id, from_id, to_id, gate_type, gate_value, min_age, prereq_id),
         )
         log.debug(
             "seeding.level_rule.insert",
             owner_id=owner_id,
-            sub_tally_id=sub_tally_id,
+            activity_id=activity_id,
             to_code=spec["to_code"],
             gate_type=gate_type,
         )

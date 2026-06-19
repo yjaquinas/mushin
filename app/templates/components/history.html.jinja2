@@ -1,0 +1,149 @@
+{#
+  Unified history view: week/month/year period switcher + prev/current/next nav +
+  a period-shaped visual (week strip / month calendar / year heatmap) + the
+  day-grouped actual log.
+
+  This whole div is the HTMX swap target (#history-{{ activity_id }}) for
+  every period-switch and prev/next interaction — `hx-swap="outerHTML"`.
+
+  Focus-after-swap: for `outerHTML` swaps, htmx dispatches `htmx:afterSwap`
+  with `event.target` set to the newly-swapped-in root element (this one).
+  The currently-selected period tab carries `data-history-focus` so that,
+  after every swap, focus lands back on the active period tab — a stable,
+  predictable landing spot regardless of which control (tab or prev/next)
+  triggered the swap. This keeps keyboard/screen-reader users oriented
+  without requiring per-control id-matching.
+
+  Context: activity_id, history (see app.routes.web._build_history_context).
+#}
+<div
+    id="history-{{ activity_id }}"
+    class="flex flex-col gap-3"
+    hx-on::after-swap="
+        const active = event.target.querySelector('[data-history-focus]');
+        if (active) { active.focus(); }
+    "
+>
+    {# Sentinel: refreshes the whole history section on log-saved.
+       Lives here (not on the parent div) so its hx-vals don't bleed into
+       period/prev/next button requests via HTMX ancestor-merging. #}
+    <span
+        class="sr-only"
+        aria-hidden="true"
+        hx-get="/activities/{{ activity_id }}/history"
+        hx-vals='{"period": "{{ history.period }}", "anchor": "{{ history.anchor }}"}'
+        hx-trigger="log-saved from:body"
+        hx-target="#history-{{ activity_id }}"
+        hx-swap="outerHTML"
+    ></span>
+    {# Period switcher #}
+    <div role="tablist" aria-label="{{ strings.HISTORY_PERIOD_SWITCHER_LABEL }}" class="flex gap-2">
+        {% for period_key, period_label in [
+            ("week", strings.HISTORY_PERIOD_WEEK),
+            ("month", strings.HISTORY_PERIOD_MONTH),
+            ("year", strings.HISTORY_PERIOD_YEAR),
+            ("all", strings.HISTORY_PERIOD_ALL),
+        ] %}
+            {% set is_selected = history.period == period_key %}
+            <button
+                type="button"
+                role="tab"
+                id="history-tab-{{ activity_id }}-{{ period_key }}"
+                aria-selected="{{ "true" if is_selected else "false" }}"
+                {% if is_selected %}data-history-focus{% endif %}
+                hx-get="/activities/{{ activity_id }}/history?period={{ period_key }}&anchor={{ history.anchor }}"
+                hx-target="#history-{{ activity_id }}"
+                hx-swap="outerHTML"
+                class="min-h-tap min-w-tap flex-1 rounded-button px-3 text-body transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-strong
+                    {% if is_selected %}
+                        border border-border-strong bg-surface-2 font-semibold text-text-primary
+                    {% else %}
+                        border border-border text-text-secondary hover:bg-surface-2
+                    {% endif %}"
+            >
+                {% if is_selected %}&check; {% endif %}{{ period_label }}
+            </button>
+        {% endfor %}
+    </div>
+
+    {# Prev / current / next nav — hidden for the "all" period #}
+    {% if history.period != "all" %}
+    <div class="flex items-center justify-between">
+        <button
+            type="button"
+            hx-get="/activities/{{ activity_id }}/history?period={{ history.period }}&anchor={{ history.prev_anchor }}"
+            hx-target="#history-{{ activity_id }}"
+            hx-swap="outerHTML"
+            class="min-h-tap min-w-tap rounded-button px-2 text-body text-text-secondary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-strong"
+            aria-label="{% if history.period == 'week' %}{{ strings.HISTORY_PREV_WEEK }}{% elif history.period == 'year' %}{{ strings.HISTORY_PREV_YEAR }}{% else %}{{ strings.CALENDAR_PREV_MONTH }}{% endif %}"
+        >
+            &lt;
+        </button>
+        <h3 class="text-body font-medium text-text-primary" aria-live="polite">
+            {{ history.label }}
+        </h3>
+        <button
+            type="button"
+            hx-get="/activities/{{ activity_id }}/history?period={{ history.period }}&anchor={{ history.next_anchor }}"
+            hx-target="#history-{{ activity_id }}"
+            hx-swap="outerHTML"
+            class="min-h-tap min-w-tap rounded-button px-2 text-body text-text-secondary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-strong"
+            aria-label="{% if history.period == 'week' %}{{ strings.HISTORY_NEXT_WEEK }}{% elif history.period == 'year' %}{{ strings.HISTORY_NEXT_YEAR }}{% else %}{{ strings.CALENDAR_NEXT_MONTH }}{% endif %}"
+        >
+            &gt;
+        </button>
+    </div>
+    {% endif %}
+
+    {# Visual representation, branched on period — not rendered for "all" #}
+    {% if history.period == "month" %}
+        <table class="w-full border-collapse">
+            <caption class="sr-only">{{ strings.CALENDAR_TITLE }}</caption>
+            <thead>
+                <tr>
+                    {% for wd in history.visual.weekdays %}
+                        <th scope="col" class="text-caption font-medium text-text-muted">{{ wd }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for week in history.visual.weeks %}
+                    <tr>
+                        {% for day in week %}
+                            <td class="text-center">
+                                {% if day is not none %}
+                                    <button
+                                        type="button"
+                                        class="cal-day{% if day.marked %} cal-day--marked{% endif %}{% if day.today %} cal-day--today{% endif %}"
+                                        hx-get="/activities/{{ activity_id }}/calendar/day/{{ day.date }}"
+                                        hx-target="#calendar-day-detail"
+                                        hx-swap="innerHTML"
+                                    >
+                                        {{ day.day }}
+                                    </button>
+                                {% endif %}
+                            </td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div id="calendar-day-detail"></div>
+    {% elif history.period == "week" %}
+        {% include "components/week_strip.html.jinja2" with context %}
+    {% elif history.period == "year" %}
+        <div
+            class="grid grid-flow-col grid-rows-7 gap-1 overflow-x-auto"
+            role="img"
+            aria-label="{{ strings.HISTORY_YEAR_HEATMAP_ARIA_LABEL }}"
+        >
+            {% for cell in history.visual.cells %}
+                <span class="heat-cell heat-cell--{{ cell.bucket }}" aria-hidden="true"></span>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    {# Actual log #}
+    {% include "components/period_log.html.jinja2" with context %}
+</div>

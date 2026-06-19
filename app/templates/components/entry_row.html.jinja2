@@ -1,0 +1,34 @@
+{#
+  Read-only entry row fragment. Returned by cancel-edit and update routes
+  to swap back into the .entry-row container via hx-swap="outerHTML".
+
+  is_owner is always True for these routes (only the owner can reach the edit
+  flow), so the pencil button is always present here.
+
+  Context:
+    activity_id   int    — owning sub-tally
+    entry          dict   — hydrated entry (id, occurred_at, memo, ...)
+#}
+{% from "components/_icon.html.jinja2" import icon %}
+
+<li class="entry-row flex items-start justify-between gap-2">
+    <span class="text-body text-text-primary">
+        <span class="text-caption text-text-muted">
+            {{- entry.occurred_at[:10] -}}
+            {%- if entry.time_known == 1 %}
+                {{ entry.occurred_at | format_entry_time }}
+            {%- endif %}
+        </span>
+        {% if entry.memo %}
+            <span class="ms-2">{{ entry.memo }}</span>
+        {% endif %}
+    </span>
+    <button
+        type="button"
+        aria-label="{{ strings.ENTRY_EDIT }}"
+        hx-get="/activities/{{ activity_id }}/entries/{{ entry.id }}/edit"
+        hx-target="closest .entry-row"
+        hx-swap="outerHTML"
+        class="min-h-tap min-w-tap flex shrink-0 items-center justify-center rounded text-text-muted transition hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+    >{{ icon('pencil', size=16) }}</button>
+</li>

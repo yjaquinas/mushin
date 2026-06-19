@@ -1,0 +1,134 @@
+{#
+  Inline edit form for a single entry row. Swaps outerHTML into the
+  .entry-row container so the surrounding log stays intact.
+
+  On submit: POST /activities/{activity_id}/entries/{entry_id}
+  On cancel: GET  /activities/{activity_id}/entries/{entry_id}/cancel-edit
+
+  Context:
+    activity_id   int    — owning sub-tally
+    entry          dict   — hydrated entry (id, occurred_at, memo, values, tags)
+    fields         list   — field_def contexts [{id, kind, label, tags?}]
+                           same shape as _build_card_context / log_sheet
+#}
+{% from "components/_icon.html.jinja2" import icon %}
+
+<li class="entry-row">
+    <form
+        hx-post="/activities/{{ activity_id }}/entries/{{ entry.id }}"
+        hx-target="closest .entry-row"
+        hx-swap="outerHTML"
+        class="flex flex-col gap-3 rounded-card border border-border bg-surface-1 p-3"
+    >
+        {# Date + optional time #}
+        <div
+            x-data="{ addTime: {{ 'true' if entry.time_known == 1 else 'false' }} }"
+            class="flex flex-col gap-2"
+        >
+            <div class="flex flex-col gap-1">
+                <label for="edit-date-{{ entry.id }}" class="text-caption font-medium text-text-secondary">
+                    {{ strings.LOG_OCCURRED_AT_LABEL }}
+                </label>
+                <input
+                    type="date"
+                    id="edit-date-{{ entry.id }}"
+                    name="date"
+                    value="{{ entry.occurred_at[:10] }}"
+                    required
+                    class="min-h-tap rounded-input border border-border bg-surface-1 px-3 py-2 text-body text-text-primary focus-visible:outline-2"
+                >
+            </div>
+            <label class="flex min-h-tap items-center gap-2 text-body text-text-secondary">
+                <input
+                    type="checkbox"
+                    name="add_time"
+                    x-model="addTime"
+                    class="rounded border-border"
+                >
+                {{ strings.LOG_TIME_ADD }}
+            </label>
+            <div x-show="addTime" x-cloak class="flex flex-col gap-1">
+                <label for="edit-time-{{ entry.id }}" class="text-caption font-medium text-text-secondary">
+                    {{ strings.LOG_TIME_ADD }}
+                </label>
+                <input
+                    type="time"
+                    id="edit-time-{{ entry.id }}"
+                    name="time"
+                    value="{{ entry.occurred_at[11:16] if entry.time_known == 1 else '' }}"
+                    class="min-h-tap rounded-input border border-border bg-surface-1 px-3 py-2 text-body text-text-primary focus-visible:outline-2"
+                >
+            </div>
+        </div>
+
+        {# Recipe fields — tag groups, count/scale, memo #}
+        {% set tag_group_fields = fields | selectattr("kind", "equalto", "tag_group") | list %}
+        {% set has_tag_group = tag_group_fields | length > 0 %}
+
+        {% for field in fields %}
+            {% if field.kind == "tag_group" %}
+                {% include "components/tag_group.html.jinja2" %}
+            {% elif field.kind in ("count", "scale") %}
+                <div class="flex flex-col gap-1">
+                    <label for="edit-value-{{ field.id }}-{{ entry.id }}" class="text-caption font-medium text-text-secondary">
+                        {{ field.label }}
+                    </label>
+                    <input
+                        type="number"
+                        inputmode="decimal"
+                        step="any"
+                        id="edit-value-{{ field.id }}-{{ entry.id }}"
+                        name="value_{{ field.id }}"
+                        value="{{ field.prefilled_value }}"
+                        class="min-h-tap rounded-input border border-border bg-surface-1 px-3 py-2 text-body text-text-primary focus-visible:outline-2"
+                    >
+                </div>
+            {% elif field.kind == "memo" and not has_tag_group %}
+                {# standalone memo only when no tag_group exists in this sub-tally #}
+                <div class="flex flex-col gap-1">
+                    <label for="edit-memo-{{ entry.id }}" class="text-caption font-medium text-text-secondary">
+                        {{ strings.LOG_MEMO_LABEL }}
+                    </label>
+                    <textarea
+                        id="edit-memo-{{ entry.id }}"
+                        name="memo"
+                        rows="3"
+                        placeholder="{{ strings.LOG_MEMO_PLACEHOLDER }}"
+                        class="rounded-input border border-border bg-surface-1 px-3 py-2 text-body text-text-primary focus-visible:outline-2"
+                    >{{ entry.memo or "" }}</textarea>
+                </div>
+            {% endif %}
+        {% endfor %}
+
+        {# Action row: Delete on the left (demoted, text-only), Save+Cancel on the right #}
+        <div class="flex items-center justify-between gap-2">
+            <button
+                type="button"
+                hx-get="/activities/{{ activity_id }}/entries/{{ entry.id }}/delete-confirm"
+                hx-target="closest .entry-row"
+                hx-swap="outerHTML"
+                class="min-h-tap px-2 text-body text-red-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+            >
+                {{ strings.ENTRY_DELETE }}
+            </button>
+            <div class="flex gap-2">
+                <button
+                    type="submit"
+                    hx-disabled-elt="this"
+                    class="min-h-tap flex-1 rounded-button bg-brand px-4 text-body font-semibold text-on-brand transition focus-visible:outline-offset-2 disabled:opacity-60"
+                >
+                    {{ strings.ENTRY_SAVE }}
+                </button>
+                <button
+                    type="button"
+                    hx-get="/activities/{{ activity_id }}/entries/{{ entry.id }}/cancel-edit"
+                    hx-target="closest .entry-row"
+                    hx-swap="outerHTML"
+                    class="min-h-tap rounded-button border border-border px-3 text-body text-text-secondary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                >
+                    {{ strings.ENTRY_CANCEL }}
+                </button>
+            </div>
+        </div>
+    </form>
+</li>

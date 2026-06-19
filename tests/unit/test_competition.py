@@ -17,12 +17,18 @@ from __future__ import annotations
 
 import sqlite3
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import pytest
 
 from app.models import db
 from app.models.migrate import run_migrations
 from app.services import competition, entries
+
+# These fixtures use +09:00 timestamps; pass the matching zone explicitly so the
+# (cache-only) tz parameter on entries.create is satisfied. Competition stats
+# themselves don't bucket by calendar day, so the zone choice is immaterial here.
+KST = ZoneInfo("Asia/Seoul")
 
 # ---------------------------------------------------------------------------
 # Fixtures / helpers
@@ -51,7 +57,7 @@ def _seed_user(db_path: Path, name: str = "U") -> int:
 
 
 def _seed_tournament(db_path: Path, owner_id: int, name: str = "Tournament") -> int:
-    """A category + sub_tally carrying a match_list field_def. Returns sub_tally_id."""
+    """A category + activity carrying a match_list field_def. Returns activity_id."""
     conn = sqlite3.connect(str(db_path), isolation_level=None)
     try:
         cur = conn.execute(
@@ -60,24 +66,24 @@ def _seed_tournament(db_path: Path, owner_id: int, name: str = "Tournament") -> 
         )
         category_id = cur.lastrowid
         cur = conn.execute(
-            "INSERT INTO sub_tally (owner_id, category_id, name, count_mode, sort_order)"
+            "INSERT INTO activity (owner_id, category_id, name, count_mode, sort_order)"
             " VALUES (?, ?, ?, 'running', 0)",
             (owner_id, category_id, name),
         )
-        sub_tally_id = cur.lastrowid
+        activity_id = cur.lastrowid
         conn.execute(
-            "INSERT INTO field_def (sub_tally_id, kind, label, sort_order)"
+            "INSERT INTO field_def (activity_id, kind, label, sort_order)"
             " VALUES (?, 'match_list', 'Bouts', 0)",
-            (sub_tally_id,),
+            (activity_id,),
         )
-        return sub_tally_id
+        return activity_id
     finally:
         conn.close()
 
 
-def _make_entry(owner_id: int, sub_tally_id: int, occurred_at: str) -> int:
+def _make_entry(owner_id: int, activity_id: int, occurred_at: str) -> int:
     """Create a tournament entry via the entries service; return its id."""
-    return entries.create(owner_id, sub_tally_id, occurred_at=occurred_at)["id"]
+    return entries.create(owner_id, activity_id, occurred_at=occurred_at, tz=KST)["id"]
 
 
 # ---------------------------------------------------------------------------
@@ -197,7 +203,7 @@ def test_user_a_cannot_read_user_b_matches(test_db: Path) -> None:
 
 
 def test_stats_never_count_another_owners_matches(test_db: Path) -> None:
-    """Same sub_tally id existing for two owners must not bleed across the join."""
+    """Same activity id existing for two owners must not bleed across the join."""
     a = _seed_user(test_db, "A")
     b = _seed_user(test_db, "B")
     sub_a = _seed_tournament(test_db, a)
@@ -220,7 +226,7 @@ def test_stats_never_count_another_owners_matches(test_db: Path) -> None:
     assert (rec_a["wins"], rec_a["losses"], rec_a["draws"]) == (1, 0, 0)
     assert (rec_b["wins"], rec_b["losses"], rec_b["draws"]) == (0, 2, 0)
 
-    # A querying B's sub_tally id sees nothing (owner scope on both join sides).
+    # A querying B's activity id sees nothing (owner scope on both join sides).
     cross = competition.record(a, sub_b)
     assert (cross["wins"], cross["losses"], cross["draws"], cross["total"]) == (0, 0, 0, 0)
 

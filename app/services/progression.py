@@ -72,8 +72,8 @@ this engine accepts an optional ``age: int | None``:
 
 Batching
 --------
-``status_for_sub_tallies`` takes a list of sub_tally ids and reads each table
-(``level``, ``level_rule``, level entries) with **one** ``WHERE sub_tally_id IN
+``status_for_sub_tallies`` takes a list of activity ids and reads each table
+(``level``, ``level_rule``, level entries) with **one** ``WHERE activity_id IN
 (...)`` query apiece — no N+1 fan-out when a category renders many progression
 sub-tallies at once.
 """
@@ -85,10 +85,15 @@ from collections import defaultdict
 from collections.abc import Iterable
 from datetime import datetime
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from app.models import db
 from app.services import _db
-from app.services.entries import KST
+
+# Default reference zone for progression time math. The ``now=`` parameter is
+# normally supplied by the caller (tests inject a fixed instant; the renderer
+# passes the user's clock), so this default is only the bare-call fallback.
+KST = ZoneInfo("Asia/Seoul")
 
 # Seconds in a (Julian) year — the unit ``time`` gate_values are expressed in.
 # 365.25 days absorbs leap years so a "1 year" gate lands on roughly the same
@@ -113,9 +118,9 @@ def _now() -> datetime:
 def _parse_ts(occurred_at: str) -> datetime:
     """Parse an entry ``occurred_at`` to a tz-aware datetime.
 
-    Mirrors ``entries._kst_day``: a naive timestamp is interpreted as KST
-    wall-clock (the least-surprising rule for a Korean-market app); an aware one
-    is converted to KST so comparisons against the reference clock are sound.
+    Mirrors ``entries._local_day``: a naive timestamp is interpreted as
+    wall-clock in the reference zone; an aware one is converted to that zone so
+    comparisons against the reference clock are sound.
     """
     dt = datetime.fromisoformat(occurred_at)
     if dt.tzinfo is None:
@@ -129,126 +134,126 @@ def _parse_ts(occurred_at: str) -> datetime:
 
 
 def _load_levels(
-    conn: sqlite3.Connection, owner_id: int, sub_tally_ids: list[int]
+    conn: sqlite3.Connection, owner_id: int, activity_ids: list[int]
 ) -> dict[int, list[sqlite3.Row]]:
-    """All active ``level`` rows for the given sub-tallies, grouped by sub_tally.
+    """All active ``level`` rows for the given sub-tallies, grouped by activity.
 
-    One query (``WHERE sub_tally_id IN (...)``). Ordered by track then ordinal so
+    One query (``WHERE activity_id IN (...)``). Ordered by track then ordinal so
     callers can rely on ascending ladder order within each track.
     """
-    placeholders = ",".join("?" for _ in sub_tally_ids)
+    placeholders = ",".join("?" for _ in activity_ids)
     rows = _db.fetch_all(
         conn,
         "level",
         owner_id,
-        where=f"sub_tally_id IN ({placeholders}) AND archived_at IS NULL",
-        params=tuple(sub_tally_ids),
-        order_by="sub_tally_id, track, ordinal",
+        where=f"activity_id IN ({placeholders}) AND archived_at IS NULL",
+        params=tuple(activity_ids),
+        order_by="activity_id, track, ordinal",
     )
     grouped: dict[int, list[sqlite3.Row]] = defaultdict(list)
     for r in rows:
-        grouped[r["sub_tally_id"]].append(r)
+        grouped[r["activity_id"]].append(r)
     return grouped
 
 
 def _load_rules(
-    conn: sqlite3.Connection, owner_id: int, sub_tally_ids: list[int]
+    conn: sqlite3.Connection, owner_id: int, activity_ids: list[int]
 ) -> dict[int, list[sqlite3.Row]]:
-    """All ``level_rule`` rows for the given sub-tallies, grouped by sub_tally.
+    """All ``level_rule`` rows for the given sub-tallies, grouped by activity.
 
     One query. A given ``to_level_id`` may have several rules (the shōgō 교사
     OR-paths); callers evaluate them as alternatives.
     """
-    placeholders = ",".join("?" for _ in sub_tally_ids)
+    placeholders = ",".join("?" for _ in activity_ids)
     rows = _db.fetch_all(
         conn,
         "level_rule",
         owner_id,
-        where=f"sub_tally_id IN ({placeholders})",
-        params=tuple(sub_tally_ids),
+        where=f"activity_id IN ({placeholders})",
+        params=tuple(activity_ids),
     )
     grouped: dict[int, list[sqlite3.Row]] = defaultdict(list)
     for r in rows:
-        grouped[r["sub_tally_id"]].append(r)
+        grouped[r["activity_id"]].append(r)
     return grouped
 
 
 def _load_level_entries(
-    conn: sqlite3.Connection, owner_id: int, sub_tally_ids: list[int]
+    conn: sqlite3.Connection, owner_id: int, activity_ids: list[int]
 ) -> dict[int, list[tuple[str, str]]]:
     """Level-entry history per sub-tally as ``(level_code, occurred_at)`` tuples.
 
     A "level entry" is an ``entry_value`` whose ``field_def`` is of kind
     ``level``, carrying the attained level's ``code`` in ``text_value``, joined
     back through the **owner-scoped** ``entry`` table so a value can never reach
-    across tenants. One query (``WHERE e.sub_tally_id IN (...)``).
+    across tenants. One query (``WHERE e.activity_id IN (...)``).
     """
-    placeholders = ",".join("?" for _ in sub_tally_ids)
+    placeholders = ",".join("?" for _ in activity_ids)
     rows = conn.execute(
-        f"""SELECT e.sub_tally_id AS sub_tally_id,
+        f"""SELECT e.activity_id AS activity_id,
                    ev.text_value  AS code,
                    e.occurred_at  AS occurred_at
               FROM entry_value ev
               JOIN entry e     ON e.id = ev.entry_id
               JOIN field_def fd ON fd.id = ev.field_def_id
              WHERE e.owner_id = ?
-               AND e.sub_tally_id IN ({placeholders})
+               AND e.activity_id IN ({placeholders})
                AND fd.kind = 'level'
                AND ev.text_value IS NOT NULL""",  # noqa: S608 - placeholders are '?'
-        (owner_id, *sub_tally_ids),
+        (owner_id, *activity_ids),
     ).fetchall()
     grouped: dict[int, list[tuple[str, str]]] = defaultdict(list)
     for r in rows:
-        grouped[r["sub_tally_id"]].append((r["code"], r["occurred_at"]))
+        grouped[r["activity_id"]].append((r["code"], r["occurred_at"]))
     return grouped
 
 
 def _load_result_events(
-    conn: sqlite3.Connection, owner_id: int, sub_tally_ids: list[int]
+    conn: sqlite3.Connection, owner_id: int, activity_ids: list[int]
 ) -> dict[int, list[tuple[str, str]]]:
     """Result-entry history per sub-tally as ``(result_value, occurred_at)``.
 
     A ``result``-kind entry_value carries the outcome of a grading attempt
     (pass/fail). Used by the ``event`` gate. Owner-scoped, one query.
     """
-    placeholders = ",".join("?" for _ in sub_tally_ids)
+    placeholders = ",".join("?" for _ in activity_ids)
     rows = conn.execute(
-        f"""SELECT e.sub_tally_id AS sub_tally_id,
+        f"""SELECT e.activity_id AS activity_id,
                    ev.text_value  AS result,
                    e.occurred_at  AS occurred_at
               FROM entry_value ev
               JOIN entry e     ON e.id = ev.entry_id
               JOIN field_def fd ON fd.id = ev.field_def_id
              WHERE e.owner_id = ?
-               AND e.sub_tally_id IN ({placeholders})
+               AND e.activity_id IN ({placeholders})
                AND fd.kind = 'result'
                AND ev.text_value IS NOT NULL""",  # noqa: S608 - placeholders are '?'
-        (owner_id, *sub_tally_ids),
+        (owner_id, *activity_ids),
     ).fetchall()
     grouped: dict[int, list[tuple[str, str]]] = defaultdict(list)
     for r in rows:
-        grouped[r["sub_tally_id"]].append((r["result"], r["occurred_at"]))
+        grouped[r["activity_id"]].append((r["result"], r["occurred_at"]))
     return grouped
 
 
 def _load_entry_counts(
-    conn: sqlite3.Connection, owner_id: int, sub_tally_ids: list[int]
+    conn: sqlite3.Connection, owner_id: int, activity_ids: list[int]
 ) -> dict[int, int]:
     """Lifetime entry count per sub-tally (owner-scoped, one query).
 
     This is the *book count* for the reading tiers: each entry is one book read,
     and the tier thresholds (10/25/50/100) are cumulative lifetime counts.
     """
-    placeholders = ",".join("?" for _ in sub_tally_ids)
+    placeholders = ",".join("?" for _ in activity_ids)
     rows = conn.execute(
-        f"""SELECT sub_tally_id, COUNT(*) AS n
+        f"""SELECT activity_id, COUNT(*) AS n
               FROM entry
              WHERE owner_id = ?
-               AND sub_tally_id IN ({placeholders})
-             GROUP BY sub_tally_id""",  # noqa: S608 - placeholders are '?'
-        (owner_id, *sub_tally_ids),
+               AND activity_id IN ({placeholders})
+             GROUP BY activity_id""",  # noqa: S608 - placeholders are '?'
+        (owner_id, *activity_ids),
     ).fetchall()
-    return {r["sub_tally_id"]: r["n"] for r in rows}
+    return {r["activity_id"]: r["n"] for r in rows}
 
 
 # ---------------------------------------------------------------------------
@@ -578,7 +583,7 @@ def _level_brief(level: sqlite3.Row, attained: dict[int, datetime]) -> dict[str,
 
 
 def status_for_sub_tallies(
-    sub_tally_ids: Iterable[int],
+    activity_ids: Iterable[int],
     owner_id: int,
     *,
     age: int | None = None,
@@ -587,7 +592,7 @@ def status_for_sub_tallies(
     """Derived progression status for many sub-tallies, batched (no N+1).
 
     Reads ``level``, ``level_rule`` and the level/result entry history with one
-    ``WHERE sub_tally_id IN (...)`` query per table. Returns ``{sub_tally_id:
+    ``WHERE activity_id IN (...)`` query per table. Returns ``{activity_id:
     status}`` for every requested id; an id with no levels gets an empty
     ``tracks`` list (it isn't a progression ladder, or hasn't been seeded yet).
 
@@ -596,7 +601,7 @@ def status_for_sub_tallies(
     injectable for deterministic time math; it defaults to the current KST
     instant. **Eligibility is computed live here every call — never cached.**
     """
-    ids = list(dict.fromkeys(int(s) for s in sub_tally_ids))  # de-dupe, keep order
+    ids = list(dict.fromkeys(int(s) for s in activity_ids))  # de-dupe, keep order
     if not ids:
         return {}
 
@@ -628,7 +633,7 @@ def status_for_sub_tallies(
 
 
 def status(
-    sub_tally_id: int,
+    activity_id: int,
     owner_id: int,
     *,
     age: int | None = None,
@@ -636,7 +641,7 @@ def status(
 ) -> dict[str, Any]:
     """Derived progression status for a single sub-tally (see
     ``status_for_sub_tallies`` for semantics)."""
-    return status_for_sub_tallies([sub_tally_id], owner_id, age=age, now=now)[int(sub_tally_id)]
+    return status_for_sub_tallies([activity_id], owner_id, age=age, now=now)[int(activity_id)]
 
 
 def _build_status(
@@ -689,7 +694,7 @@ def _build_status(
 # ---------------------------------------------------------------------------
 
 
-def hero_field(sub_tally_id: int, owner_id: int) -> dict[str, Any]:
+def hero_field(activity_id: int, owner_id: int) -> dict[str, Any]:
     """Which field is the headline for a sub-tally, so renderers don't infer it.
 
     * ``count_mode == 'progression'`` → the **current level** is the hero
@@ -705,30 +710,30 @@ def hero_field(sub_tally_id: int, owner_id: int) -> dict[str, Any]:
         conn.execute("BEGIN")
         row = _db.fetch_one(
             conn,
-            "sub_tally",
+            "activity",
             owner_id,
             where="id = ?",
-            params=(sub_tally_id,),
+            params=(activity_id,),
             columns="id, count_mode, cached_count",
         )
 
     if row is None:
-        return {"sub_tally_id": int(sub_tally_id), "hero": None}
+        return {"activity_id": int(activity_id), "hero": None}
 
     if row["count_mode"] == "progression":
-        st = status(sub_tally_id, owner_id)
+        st = status(activity_id, owner_id)
         current_levels = [
             t["current_level"] for t in st["tracks"] if t.get("current_level") is not None
         ]
         return {
-            "sub_tally_id": row["id"],
+            "activity_id": row["id"],
             "hero": "level",
             "count_mode": "progression",
             "current_levels": current_levels,
         }
 
     return {
-        "sub_tally_id": row["id"],
+        "activity_id": row["id"],
         "hero": "count",
         "count_mode": "running",
         "count": row["cached_count"],

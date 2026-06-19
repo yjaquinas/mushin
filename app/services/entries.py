@@ -13,7 +13,7 @@ writing, so a payload can't reach across sub-tallies or tenants.
 
 Cache discipline
 ----------------
-``sub_tally`` carries ``cached_count``, ``cached_streak`` and ``last_entry_at``.
+``activity`` carries ``cached_count``, ``cached_streak`` and ``last_entry_at``.
 On every create/delete we rewrite all three **in the same transaction** as the
 entry write (explicit BEGIN/COMMIT; ``db.py`` opens with
 ``isolation_level=None``). ``recompute()`` rebuilds the identical values from the
@@ -21,27 +21,43 @@ actual entries as a drift guard.
 
 Streak rule
 -----------
-``cached_streak`` is the length of the run of **consecutive KST (Asia/Seoul)
-calendar days** that ends on the most-recent entry's day. Multiple entries on
-the same KST day count once. The streak is defined purely from stored entry
-timestamps — not from the current wall clock — so the incrementally-maintained
-value and ``recompute()`` always agree regardless of when either runs. (A
-renderer that wants "is the streak still live today?" derives that at read time
-by comparing ``last_entry_at``'s KST day to today; it is never cached, because a
-time-relative boolean would drift with no new entry.)
+``cached_streak`` is the length of the run of **consecutive calendar days in the
+caller-supplied timezone** that ends on the most-recent entry's day. Multiple
+entries on the same local day count once. The streak is defined purely from
+stored entry timestamps — not from the current wall clock — so the
+incrementally-maintained value and ``recompute()`` always agree regardless of
+when either runs. (A renderer that wants "is the streak still live today?"
+derives that at read time by comparing ``last_entry_at``'s local day to today;
+it is never cached, because a time-relative boolean would drift with no new
+entry.)
+
+Timezone
+--------
+Functions that key off a calendar day take a ``tz: ZoneInfo`` argument supplied
+explicitly by the caller (the web renderer looks up ``user.timezone``; this
+layer never does a DB lookup of its own). The day arithmetic is identical
+regardless of zone — only *which* zone defines "the day" changes.
 """
 
 from __future__ import annotations
 
+import re
 import sqlite3
 from datetime import UTC, date, datetime
 from typing import Any
 from zoneinfo import ZoneInfo
 
+import structlog
+
 from app.models import db
 from app.services import _db
 
-KST = ZoneInfo("Asia/Seoul")
+log = structlog.get_logger()
+
+# Default timezone for cache rebuilds invoked without a user-timezone context
+# (e.g. data import). The public mutators take ``tz`` explicitly; this is only
+# the bare-call fallback for the internal cache helpers.
+_DEFAULT_TZ = ZoneInfo("UTC")
 
 # Field kinds whose values live in entry_value (scalars), and which slot each
 # uses. Tag selections (kind 'tag_group') go to entry_tag instead; 'memo' lives
@@ -87,18 +103,18 @@ def _normalize_occurred_at(occurred_at: str | datetime | None) -> str:
     return occurred_at
 
 
-def _kst_day(occurred_at: str) -> date:
-    """Return the Asia/Seoul calendar day for an ISO8601 timestamp.
+def _local_day(occurred_at: str, tz: ZoneInfo) -> date:
+    """Return the calendar day of an ISO8601 timestamp in *tz*.
 
-    Naive timestamps (no offset) are interpreted as already being KST wall-clock
-    time — entries logged through the app store a tz-aware UTC instant, but a
-    backfill or test may pass a naive local string, and treating it as KST is the
-    least-surprising rule for a Korean-market app.
+    Naive timestamps (no offset) are interpreted as already being wall-clock time
+    in *tz* — entries logged through the app store a tz-aware UTC instant, but a
+    backfill or test may pass a naive local string, and treating it as local to
+    the caller's zone is the least-surprising rule.
     """
     dt = datetime.fromisoformat(occurred_at)
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=KST)
-    return dt.astimezone(KST).date()
+        dt = dt.replace(tzinfo=tz)
+    return dt.astimezone(tz).date()
 
 
 # ---------------------------------------------------------------------------
@@ -106,19 +122,25 @@ def _kst_day(occurred_at: str) -> date:
 # ---------------------------------------------------------------------------
 
 
-def _compute_cache(conn: sqlite3.Connection, sub_tally_id: int, owner_id: int) -> dict[str, Any]:
+def _compute_cache(
+    conn: sqlite3.Connection,
+    activity_id: int,
+    owner_id: int,
+    tz: ZoneInfo = _DEFAULT_TZ,
+) -> dict[str, Any]:
     """Compute count / streak / last_entry_at from the actual entries.
 
     This is the single source of truth used by both ``recompute()`` and the
     post-write cache refresh, so maintained values and recomputed values are
-    computed by the same code and cannot drift.
+    computed by the same code and cannot drift. *tz* defines which calendar day a
+    timestamp falls in for the streak run.
     """
     rows = _db.fetch_all(
         conn,
         "entry",
         owner_id,
-        where="sub_tally_id = ?",
-        params=(sub_tally_id,),
+        where="activity_id = ?",
+        params=(activity_id,),
         columns="occurred_at",
         order_by="occurred_at DESC",
     )
@@ -127,8 +149,8 @@ def _compute_cache(conn: sqlite3.Connection, sub_tally_id: int, owner_id: int) -
         return {"cached_count": 0, "cached_streak": 0, "last_entry_at": None}
 
     last_entry_at = rows[0]["occurred_at"]
-    # Distinct KST days, newest-first.
-    distinct_days = sorted({_kst_day(r["occurred_at"]) for r in rows}, reverse=True)
+    # Distinct local days, newest-first.
+    distinct_days = sorted({_local_day(r["occurred_at"], tz) for r in rows}, reverse=True)
     streak = 1
     for earlier, later in zip(distinct_days[1:], distinct_days, strict=False):
         if (later - earlier).days == 1:
@@ -143,12 +165,21 @@ def _compute_cache(conn: sqlite3.Connection, sub_tally_id: int, owner_id: int) -
     }
 
 
-def _refresh_cache(conn: sqlite3.Connection, sub_tally_id: int, owner_id: int) -> dict[str, Any]:
-    """Recompute and persist the sub-tally cache. Caller owns the transaction."""
-    cache = _compute_cache(conn, sub_tally_id, owner_id)
+def _refresh_cache(
+    conn: sqlite3.Connection,
+    activity_id: int,
+    owner_id: int,
+    tz: ZoneInfo = _DEFAULT_TZ,
+) -> dict[str, Any]:
+    """Recompute and persist the sub-tally cache. Caller owns the transaction.
+
+    *tz* defines the calendar day for the streak run (defaults to UTC for callers
+    that rebuild caches without a user-timezone context, e.g. data import).
+    """
+    cache = _compute_cache(conn, activity_id, owner_id, tz)
     _db.update(
         conn,
-        "sub_tally",
+        "activity",
         owner_id,
         assignments="cached_count = ?, cached_streak = ?, last_entry_at = ?",
         assignment_params=(
@@ -157,7 +188,7 @@ def _refresh_cache(conn: sqlite3.Connection, sub_tally_id: int, owner_id: int) -
             cache["last_entry_at"],
         ),
         where="id = ?",
-        params=(sub_tally_id,),
+        params=(activity_id,),
     )
     return cache
 
@@ -167,12 +198,12 @@ def _refresh_cache(conn: sqlite3.Connection, sub_tally_id: int, owner_id: int) -
 # ---------------------------------------------------------------------------
 
 
-def _field_defs_for(conn: sqlite3.Connection, sub_tally_id: int) -> dict[int, str]:
+def _field_defs_for(conn: sqlite3.Connection, activity_id: int) -> dict[int, str]:
     """Map field_def id -> kind for a sub-tally (field_def has no owner_id column;
-    ownership is enforced by joining through the owner-scoped sub_tally)."""
+    ownership is enforced by joining through the owner-scoped activity)."""
     rows = conn.execute(
-        "SELECT id, kind FROM field_def WHERE sub_tally_id = ?",
-        (sub_tally_id,),
+        "SELECT id, kind FROM field_def WHERE activity_id = ?",
+        (activity_id,),
     ).fetchall()
     return {r["id"]: r["kind"] for r in rows}
 
@@ -180,7 +211,7 @@ def _field_defs_for(conn: sqlite3.Connection, sub_tally_id: int) -> dict[int, st
 def _validate_and_collect(
     conn: sqlite3.Connection,
     owner_id: int,
-    sub_tally_id: int,
+    activity_id: int,
     payload: dict[str, Any],
 ) -> tuple[list[tuple[int, str]], list[tuple[int, float | None, str | None]]]:
     """Validate payload against the sub-tally recipe.
@@ -189,7 +220,7 @@ def _validate_and_collect(
     ``(tag_id,)`` selections and ``value_rows`` is a list of
     ``(field_def_id, num_value, text_value)``.
     """
-    field_kinds = _field_defs_for(conn, sub_tally_id)
+    field_kinds = _field_defs_for(conn, activity_id)
 
     # --- scalar values -----------------------------------------------------
     value_rows: list[tuple[int, float | None, str | None]] = []
@@ -197,7 +228,7 @@ def _validate_and_collect(
         fid = int(raw_fid)
         kind = field_kinds.get(fid)
         if kind is None:
-            raise PayloadError(f"field_def {fid} does not belong to sub_tally {sub_tally_id}")
+            raise PayloadError(f"field_def {fid} does not belong to activity {activity_id}")
         if kind not in _SCALAR_KINDS:
             raise PayloadError(
                 f"field_def {fid} has kind {kind!r}, which is not a scalar value field"
@@ -220,24 +251,170 @@ def _validate_and_collect(
                 f"""SELECT t.id FROM tag t
                        JOIN field_def fd ON fd.id = t.field_def_id
                       WHERE t.owner_id = ?
-                        AND fd.sub_tally_id = ?
+                        AND fd.activity_id = ?
                         AND t.id IN ({placeholders})""",  # noqa: S608 - placeholders are '?'
-                (owner_id, sub_tally_id, *tag_ids),
+                (owner_id, activity_id, *tag_ids),
             ).fetchall()
         }
         missing = set(tag_ids) - valid
         if missing:
             raise PayloadError(
-                f"tags {sorted(missing)} do not belong to sub_tally {sub_tally_id} / owner {owner_id}"
+                f"tags {sorted(missing)} do not belong to activity {activity_id} / owner {owner_id}"
             )
 
     tag_rows = [(tid,) for tid in tag_ids]
     return tag_rows, value_rows
 
 
-def _require_sub_tally(conn: sqlite3.Connection, owner_id: int, sub_tally_id: int) -> None:
-    if not _db.exists(conn, "sub_tally", owner_id, where="id = ?", params=(sub_tally_id,)):
-        raise SubTallyNotFoundError(f"sub_tally {sub_tally_id} not found for owner {owner_id}")
+def archive_tag(conn: sqlite3.Connection, *, owner_id: int, tag_id: int) -> bool:
+    """Soft-delete (archive) a tag, scoped to *owner_id*. Returns whether it happened.
+
+    Operates on an *already-open* connection — the caller owns the transaction
+    boundary (same convention as ``rename_activity`` in ``categories.py`` and the
+    ``_db`` helpers).
+
+    Ownership is verified by walking the chain ``tag → field_def → activity`` and
+    requiring ``activity.owner_id = owner_id``. A *tag_id* that doesn't exist, or
+    whose owning activity isn't *owner_id*'s, updates zero rows and returns
+    ``False`` without modifying anything. On a match, ``tag.archived_at`` is set to
+    UTC now (ISO8601) and ``True`` is returned.
+    """
+    cur = conn.execute(
+        """UPDATE tag
+              SET archived_at = ?
+            WHERE id = ?
+              AND archived_at IS NULL
+              AND field_def_id IN (
+                  SELECT fd.id
+                    FROM field_def fd
+                    JOIN activity st ON st.id = fd.activity_id
+                   WHERE st.owner_id = ?
+              )""",
+        (_now_iso(), tag_id, owner_id),
+    )
+    archived = cur.rowcount > 0
+
+    log.info(
+        "entries.archive_tag",
+        owner_id=owner_id,
+        tag_id=tag_id,
+        archived=archived,
+    )
+    return archived
+
+
+# ---------------------------------------------------------------------------
+# Hashtag tag input (text -> resolved tag ids)
+# ---------------------------------------------------------------------------
+
+_HASHTAG_RE = re.compile(r"#([\w-]+)", re.UNICODE)
+
+
+def parse_hashtags(text: str) -> list[str]:
+    """Extract hashtag tokens from free text, normalized and de-duplicated.
+
+    Pure function (no DB access). Tokens follow ``#`` and may contain letters,
+    digits, underscores and hyphens — no spaces or other punctuation. Each token
+    is lowercased and stripped; the first occurrence of each distinct token wins
+    and subsequent duplicates are dropped (first-occurrence order preserved).
+    Empty, whitespace-only, or ``None`` input yields ``[]``.
+    """
+    if not text:
+        return []
+
+    seen: set[str] = set()
+    out: list[str] = []
+    for raw in _HASHTAG_RE.findall(text):
+        token = raw.lower().strip()
+        if not token or token in seen:
+            continue
+        seen.add(token)
+        out.append(token)
+    return out
+
+
+def find_or_create_tags(
+    conn: sqlite3.Connection,
+    *,
+    owner_id: int,
+    field_def_id: int,
+    names: list[str],
+) -> list[int]:
+    """Resolve tag *names* to tag ids under *owner_id* / *field_def_id*.
+
+    Operates on an *already-open* connection — the caller owns the transaction
+    boundary (same convention as ``archive_tag`` and ``rename_activity``).
+
+    For each name (case-insensitive) the lookup is three-phase, in order:
+
+    1. An **active** tag (``archived_at IS NULL``) with that name -> reuse its id.
+    2. Else an **archived** tag with that name -> revive it in place
+       (``archived_at = NULL``) so its ``entry_tag`` history is preserved, and
+       reuse its id.
+    3. Else INSERT a fresh tag (next ``sort_order`` for the field) and use the
+       new id.
+
+    Returns a list of tag ids in the same order as *names*. An empty *names*
+    list returns ``[]`` with no DB work.
+    """
+    if not names:
+        return []
+
+    ids: list[int] = []
+    created_count = 0
+    revived_count = 0
+    for name in names:
+        lowered = name.lower()
+
+        active = conn.execute(
+            "SELECT id FROM tag"
+            " WHERE owner_id = ? AND field_def_id = ? AND lower(name) = ?"
+            " AND archived_at IS NULL",
+            (owner_id, field_def_id, lowered),
+        ).fetchone()
+        if active is not None:
+            ids.append(active["id"])
+            continue
+
+        archived = conn.execute(
+            "SELECT id FROM tag"
+            " WHERE owner_id = ? AND field_def_id = ? AND lower(name) = ?"
+            " AND archived_at IS NOT NULL"
+            " ORDER BY id LIMIT 1",
+            (owner_id, field_def_id, lowered),
+        ).fetchone()
+        if archived is not None:
+            conn.execute(
+                "UPDATE tag SET archived_at = NULL WHERE id = ?",
+                (archived["id"],),
+            )
+            revived_count += 1
+            ids.append(archived["id"])
+            continue
+
+        cur = conn.execute(
+            "INSERT INTO tag (owner_id, field_def_id, name, sort_order)"
+            " VALUES (?, ?, ?,"
+            " (SELECT COALESCE(MAX(sort_order), -1) + 1 FROM tag WHERE field_def_id = ?))",
+            (owner_id, field_def_id, name, field_def_id),
+        )
+        created_count += 1
+        ids.append(cur.lastrowid)
+
+    log.info(
+        "entries.find_or_create_tags",
+        owner_id=owner_id,
+        field_def_id=field_def_id,
+        names_count=len(names),
+        created_count=created_count,
+        revived_count=revived_count,
+    )
+    return ids
+
+
+def _require_activity(conn: sqlite3.Connection, owner_id: int, activity_id: int) -> None:
+    if not _db.exists(conn, "activity", owner_id, where="id = ?", params=(activity_id,)):
+        raise SubTallyNotFoundError(f"activity {activity_id} not found for owner {owner_id}")
 
 
 # ---------------------------------------------------------------------------
@@ -269,8 +446,9 @@ def _hydrate(conn: sqlite3.Connection, owner_id: int, entry_row: sqlite3.Row) ->
     return {
         "id": entry_id,
         "owner_id": entry_row["owner_id"],
-        "sub_tally_id": entry_row["sub_tally_id"],
+        "activity_id": entry_row["activity_id"],
         "occurred_at": entry_row["occurred_at"],
+        "time_known": entry_row["time_known"],
         "memo": entry_row["memo"],
         "created_at": entry_row["created_at"],
         "updated_at": entry_row["updated_at"],
@@ -286,11 +464,14 @@ def _hydrate(conn: sqlite3.Connection, owner_id: int, entry_row: sqlite3.Row) ->
 
 def create(
     owner_id: int,
-    sub_tally_id: int,
+    activity_id: int,
     payload: dict[str, Any] | None = None,
     occurred_at: str | datetime | None = None,
+    *,
+    tz: ZoneInfo,
+    time_known: int = 1,
 ) -> dict[str, Any]:
-    """Create an entry under *sub_tally_id*, owned by *owner_id*.
+    """Create an entry under *activity_id*, owned by *owner_id*.
 
     *payload* shape::
 
@@ -301,8 +482,11 @@ def create(
         }
 
     *occurred_at* defaults to now (UTC ISO8601) and accepts a backfilled past
-    timestamp (ISO8601 string or ``datetime``). The entry write and the
-    ``sub_tally`` cache refresh happen in one transaction.
+    timestamp (ISO8601 string or ``datetime``). *tz* is the caller-supplied
+    timezone whose calendar day the streak run is computed in. *time_known*
+    is 1 when the caller supplied an exact time, 0 when only a date was given
+    (the ``T00:00:00`` midnight sentinel). The entry write and the
+    ``activity`` cache refresh happen in one transaction.
 
     Returns the hydrated entry dict.
     """
@@ -311,12 +495,13 @@ def create(
 
     with db.connect() as conn:
         conn.execute("BEGIN")
-        _require_sub_tally(conn, owner_id, sub_tally_id)
-        tag_rows, value_rows = _validate_and_collect(conn, owner_id, sub_tally_id, payload)
+        _require_activity(conn, owner_id, activity_id)
+        tag_rows, value_rows = _validate_and_collect(conn, owner_id, activity_id, payload)
 
         cur = conn.execute(
-            "INSERT INTO entry (owner_id, sub_tally_id, occurred_at, memo) VALUES (?, ?, ?, ?)",
-            (owner_id, sub_tally_id, occurred, payload.get("memo")),
+            "INSERT INTO entry (owner_id, activity_id, occurred_at, memo, time_known)"
+            " VALUES (?, ?, ?, ?, ?)",
+            (owner_id, activity_id, occurred, payload.get("memo"), time_known),
         )
         entry_id = cur.lastrowid
 
@@ -332,7 +517,7 @@ def create(
                 (entry_id, fid, num_value, text_value),
             )
 
-        _refresh_cache(conn, sub_tally_id, owner_id)
+        _refresh_cache(conn, activity_id, owner_id, tz)
 
         entry_row = _db.fetch_one(conn, "entry", owner_id, where="id = ?", params=(entry_id,))
         return _hydrate(conn, owner_id, entry_row)
@@ -348,15 +533,15 @@ def get(owner_id: int, entry_id: int) -> dict[str, Any]:
         return _hydrate(conn, owner_id, row)
 
 
-def list_for_sub_tally(
+def list_for_activity(
     owner_id: int,
-    sub_tally_id: int,
+    activity_id: int,
     *,
     limit: int | None = None,
 ) -> list[dict[str, Any]]:
     """List a sub-tally's entries newest-first, scoped to *owner_id*.
 
-    Uses ``ORDER BY occurred_at DESC`` so the ``idx_entry_subtally_time`` index
+    Uses ``ORDER BY occurred_at DESC`` so the ``idx_entry_activity_time`` index
     serves the scan.
     """
     with db.connect() as conn:
@@ -365,8 +550,8 @@ def list_for_sub_tally(
             conn,
             "entry",
             owner_id,
-            where="sub_tally_id = ?",
-            params=(sub_tally_id,),
+            where="activity_id = ?",
+            params=(activity_id,),
             order_by="occurred_at DESC, id DESC",
             limit=limit,
         )
@@ -379,8 +564,10 @@ def update(
     *,
     memo: str | None = None,
     occurred_at: str | datetime | None = None,
+    time_known: int | None = None,
     values: dict[int, Any] | None = None,
     tags: list[int] | None = None,
+    tz: ZoneInfo,
 ) -> dict[str, Any]:
     """Update an entry, scoped to *owner_id*. Bumps ``updated_at``.
 
@@ -389,19 +576,22 @@ def update(
     * ``memo`` / ``occurred_at`` — set when passed (pass ``occurred_at`` to
       re-backfill; ``memo`` is always applied as given, including ``None`` to
       clear).
+    * ``time_known`` — when provided (0 or 1), updates the time-precision flag
+      in the same write as ``occurred_at``.
     * ``values`` / ``tags`` — when provided, fully replace that entry's scalar
       values / tag selections (after the same recipe validation as create). When
       ``None``, they are left untouched.
 
     If ``occurred_at`` changes, the owning sub-tally's cache is refreshed in the
-    same transaction (the entry's KST day may shift, moving count/streak).
+    same transaction (the entry's local calendar day, in *tz*, may shift, moving
+    count/streak).
     """
     with db.connect() as conn:
         conn.execute("BEGIN")
         row = _db.fetch_one(conn, "entry", owner_id, where="id = ?", params=(entry_id,))
         if row is None:
             raise EntryNotFoundError(f"entry {entry_id} not found for owner {owner_id}")
-        sub_tally_id = row["sub_tally_id"]
+        activity_id = row["activity_id"]
 
         assignments = ["memo = ?", "updated_at = ?"]
         assignment_params: list[Any] = [memo, _now_iso()]
@@ -410,6 +600,9 @@ def update(
             assignments.insert(0, "occurred_at = ?")
             assignment_params.insert(0, _normalize_occurred_at(occurred_at))
             occurred_changed = True
+        if time_known is not None:
+            assignments.insert(0, "time_known = ?")
+            assignment_params.insert(0, time_known)
 
         _db.update(
             conn,
@@ -423,7 +616,7 @@ def update(
 
         if values is not None or tags is not None:
             sub_payload = {"values": values or {}, "tags": tags or []}
-            tag_rows, value_rows = _validate_and_collect(conn, owner_id, sub_tally_id, sub_payload)
+            tag_rows, value_rows = _validate_and_collect(conn, owner_id, activity_id, sub_payload)
             if values is not None:
                 conn.execute("DELETE FROM entry_value WHERE entry_id = ?", (entry_id,))
                 for fid, num_value, text_value in value_rows:
@@ -442,37 +635,40 @@ def update(
                     )
 
         if occurred_changed:
-            _refresh_cache(conn, sub_tally_id, owner_id)
+            _refresh_cache(conn, activity_id, owner_id, tz)
 
         fresh = _db.fetch_one(conn, "entry", owner_id, where="id = ?", params=(entry_id,))
         return _hydrate(conn, owner_id, fresh)
 
 
-def delete(owner_id: int, entry_id: int) -> bool:
+def delete(owner_id: int, entry_id: int, *, tz: ZoneInfo) -> bool:
     """Delete an entry, scoped to *owner_id*. Returns True if a row was removed.
 
-    The delete and the sub-tally cache refresh happen in one transaction.
-    entry_tag / entry_value rows cascade via FK.
+    The delete and the sub-tally cache refresh happen in one transaction (the
+    streak is recomputed in the caller-supplied timezone *tz*). entry_tag /
+    entry_value rows cascade via FK.
     """
     with db.connect() as conn:
         conn.execute("BEGIN")
         row = _db.fetch_one(
-            conn, "entry", owner_id, where="id = ?", params=(entry_id,), columns="sub_tally_id"
+            conn, "entry", owner_id, where="id = ?", params=(entry_id,), columns="activity_id"
         )
         if row is None:
             return False
-        sub_tally_id = row["sub_tally_id"]
+        activity_id = row["activity_id"]
 
         removed = _db.delete(conn, "entry", owner_id, where="id = ?", params=(entry_id,))
-        _refresh_cache(conn, sub_tally_id, owner_id)
+        _refresh_cache(conn, activity_id, owner_id, tz)
         return removed > 0
 
 
-def recompute(sub_tally_id: int, owner_id: int) -> dict[str, Any]:
+def recompute(activity_id: int, owner_id: int, *, tz: ZoneInfo) -> dict[str, Any]:
     """Rebuild ``cached_count`` / ``cached_streak`` / ``last_entry_at`` from the
     actual entries (drift guard). Returns the rebuilt values. Scoped to *owner_id*.
+
+    The streak run is computed in the caller-supplied timezone *tz*.
     """
     with db.connect() as conn:
         conn.execute("BEGIN")
-        _require_sub_tally(conn, owner_id, sub_tally_id)
-        return _refresh_cache(conn, sub_tally_id, owner_id)
+        _require_activity(conn, owner_id, activity_id)
+        return _refresh_cache(conn, activity_id, owner_id, tz)

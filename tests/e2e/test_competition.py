@@ -12,20 +12,24 @@ green on a plain dev machine / CI without a browser, mirroring
 
 Specs covered
 -------------
-1. Adding a match row in the 검도/시합 quick-add sub-form via the
-   "+ 경기 추가" button appends a new bout row without a full page reload, and
-   previously entered values in earlier rows survive the fragment swap.
+1. Adding a match row in the Kendo/Tournament quick-add sub-form via the
+   "+ Add match" button appends a new bout row without a full page reload,
+   and previously entered values in earlier rows survive the fragment swap.
+   Quick-add only lives on the sub-tally detail screen, so the spec navigates
+   there first.
 2. Submitting a tournament entry with multiple match rows (opponent, score,
    result) persists them and the entry's detail screen reflects the updated
    W/L/D record.
 3. The competition stats section (record, win rate, head-to-head) renders on
-   the 시합 sub-tally's detail screen and only there — not on a non-tournament
-   sub-tally's detail screen.
+   the Tournament sub-tally's detail screen and only there — not on a
+   non-tournament sub-tally's detail screen.
 """
 
 from __future__ import annotations
 
 import pytest
+
+from app import ui_strings
 
 pytestmark = pytest.mark.e2e
 
@@ -59,74 +63,76 @@ def page(browser):
 
 
 def _enter_as_guest(page) -> None:
-    """Land on the entry screen and tap "그냥 시작하기" to start a guest session."""
+    """Land on the entry screen and tap "Continue without an account" to start a guest session."""
     page.goto(BASE_URL + "/")
-    page.get_by_text("그냥 시작하기").click()
+    page.get_by_text(ui_strings.ENTRY_GUEST_LINK).click()
     page.wait_for_url(BASE_URL + "/home")
 
 
+def _open_detail(page, heading: str):
+    """Navigate from /home to a sub-tally's detail screen via its card link,
+    returning the detail-screen's `<article>` locator for that sub-tally."""
+    home_card = page.locator("article", has=page.get_by_role("heading", name=heading))
+    home_card.locator("a").first.click()
+    page.wait_for_url(f"{BASE_URL}/activities/*")
+    return page.locator("article", has=page.get_by_role("heading", name=heading))
+
+
 def test_add_match_row_appends_without_reload_and_keeps_values(page) -> None:
-    """Tapping "+ 경기 추가" appends a bout row via an HTMX fragment swap, and
-    a value typed into the first row survives the swap."""
+    """Tapping "+ Add match" appends a bout row via an HTMX fragment swap,
+    and a value typed into the first row survives the swap."""
     _enter_as_guest(page)
 
-    card = page.locator("article", has=page.get_by_role("heading", name="시합"))
-    card.get_by_role("button", name="기록하기").click()
+    _open_detail(page, "Tournament")
+    page.get_by_role("button", name=ui_strings.SUBTALLY_LOG_BUTTON).click()
 
-    sheet = page.locator("#log-sheet")
+    sheet = page.locator("#log-panel")
     opponent_input = sheet.locator('input[name^="match_opponent_"][name$="_0"]')
-    opponent_input.fill("김철수")
+    opponent_input.fill("Kim Chulsoo")
 
     navigated = {"count": 0}
     page.on("framenavigated", lambda _frame: navigated.__setitem__("count", navigated["count"] + 1))
 
-    sheet.get_by_text("+ 경기 추가").click()
+    sheet.get_by_text(ui_strings.MATCH_LIST_ADD_ROW).click()
 
     # A second row appears with its own opponent input.
-    page.wait_for_selector('#log-sheet input[name$="_1"][name^="match_opponent_"]')
+    page.wait_for_selector('#log-panel input[name$="_1"][name^="match_opponent_"]')
 
     # The first row's value survived the fragment swap.
-    assert sheet.locator('input[name^="match_opponent_"][name$="_0"]').input_value() == "김철수"
+    assert (
+        sheet.locator('input[name^="match_opponent_"][name$="_0"]').input_value() == "Kim Chulsoo"
+    )
     assert navigated["count"] == 0, "adding a match row should swap a fragment, not navigate"
 
 
 def test_submitting_tournament_entry_with_matches_updates_detail_record(page) -> None:
-    """Logging a 시합 entry with match rows persists them, and the detail
-    screen's record reflects the new bouts."""
+    """Logging a Tournament entry with match rows persists them, and the
+    detail screen's record reflects the new bouts."""
     _enter_as_guest(page)
 
-    card = page.locator("article", has=page.get_by_role("heading", name="시합"))
-    card.get_by_role("button", name="기록하기").click()
+    _open_detail(page, "Tournament")
+    page.get_by_role("button", name=ui_strings.SUBTALLY_LOG_BUTTON).click()
 
-    sheet = page.locator("#log-sheet")
-    sheet.locator('input[name^="match_opponent_"][name$="_0"]').fill("김철수")
+    sheet = page.locator("#log-panel")
+    sheet.locator('input[name^="match_opponent_"][name$="_0"]').fill("Kim Chulsoo")
     sheet.locator('input[name^="match_score_"][name$="_0"]').fill("2-1")
     sheet.locator('label:has(input[name^="match_result_"][value="win"])').first.click()
 
-    sheet.get_by_role("button", name="기록 남기기").click()
+    sheet.get_by_role("button", name=ui_strings.LOG_SUBMIT).click()
 
-    # Navigate to the 시합 detail screen via the card's title link.
-    page.get_by_role("link", name="시합").click()
-    page.wait_for_url(f"{BASE_URL}/sub-tallies/*")
-
-    # The W/L/D record now shows at least one win.
-    record = page.locator("text=전적").locator("..")
-    assert "김철수" in page.content()
-    assert record is not None
+    # The W/L/D record now shows at least one win, on the same detail screen.
+    page.wait_for_selector(f"text={ui_strings.STATS_TITLE}")
+    assert "Kim Chulsoo" in page.content()
 
 
 def test_competition_stats_only_on_tournament_detail(page) -> None:
-    """The 전적 (competition stats) section appears on the 시합 detail screen
-    and not on a non-tournament (수련) detail screen."""
+    """The Record (competition stats) section appears on the Tournament
+    detail screen and not on a non-tournament (Practice) detail screen."""
     _enter_as_guest(page)
 
-    tournament_card = page.locator("article", has=page.get_by_role("heading", name="시합"))
-    tournament_card.get_by_role("link", name="시합").click()
-    page.wait_for_url(f"{BASE_URL}/sub-tallies/*")
-    assert page.get_by_text("전적").count() > 0
+    _open_detail(page, "Tournament")
+    assert page.get_by_text(ui_strings.STATS_TITLE).count() > 0
 
     page.goto(BASE_URL + "/home")
-    practice_card = page.locator("article", has=page.get_by_role("heading", name="수련"))
-    practice_card.get_by_role("link", name="수련").click()
-    page.wait_for_url(f"{BASE_URL}/sub-tallies/*")
-    assert page.get_by_text("전적").count() == 0
+    _open_detail(page, "Practice")
+    assert page.get_by_text(ui_strings.STATS_TITLE).count() == 0

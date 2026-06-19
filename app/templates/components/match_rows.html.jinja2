@@ -8,7 +8,7 @@
   `match_score_{field.id}_{i}` / `match_result_{field.id}_{i}` for each row
   index in `rows` and persists via competition.add_matches.
 
-  Context: sub_tally_id, field (id, label), rows (list of
+  Context: activity_id, field (id, label), rows (list of
   {opponent, score, result} — result is "win" | "loss" | "draw" | "").
 #}
 <div id="match-rows-{{ field.id }}" class="flex flex-col gap-3">
@@ -75,7 +75,7 @@
 
             <button
                 type="button"
-                hx-post="/sub-tallies/{{ sub_tally_id }}/match-rows/{{ field.id }}/remove/{{ loop.index0 }}"
+                hx-post="/activities/{{ activity_id }}/match-rows/{{ field.id }}/remove/{{ loop.index0 }}"
                 hx-include="#match-rows-{{ field.id }}"
                 hx-target="#match-rows-{{ field.id }}"
                 hx-swap="outerHTML"
@@ -88,7 +88,7 @@
 
     <button
         type="button"
-        hx-post="/sub-tallies/{{ sub_tally_id }}/match-rows/{{ field.id }}/add"
+        hx-post="/activities/{{ activity_id }}/match-rows/{{ field.id }}/add"
         hx-include="#match-rows-{{ field.id }}"
         hx-target="#match-rows-{{ field.id }}"
         hx-swap="outerHTML"

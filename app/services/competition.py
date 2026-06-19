@@ -6,7 +6,7 @@ Python data structures (dicts / lists of dicts) that either renderer can consume
 
 The fact shape
 --------------
-A tournament is modelled as a ``sub_tally`` carrying a ``field_def`` of kind
+A tournament is modelled as a ``activity`` carrying a ``field_def`` of kind
 ``match_list``. Each *entry* under it (one tournament outing / day) can record
 many individual bouts. A bout is **not** scattered into ``entry_value``; it is a
 structured multi-column fact in its own ``match`` table — opponent, score, and a
@@ -58,17 +58,17 @@ class MatchPayloadError(ValueError):
 
 
 def _require_entry(conn: sqlite3.Connection, owner_id: int, entry_id: int) -> int:
-    """Assert *entry_id* belongs to *owner_id*; return its sub_tally_id.
+    """Assert *entry_id* belongs to *owner_id*; return its activity_id.
 
     Reads through the owner-scoped ``entry`` accessor so an entry owned by
     another tenant is indistinguishable from one that does not exist.
     """
     row = _db.fetch_one(
-        conn, "entry", owner_id, where="id = ?", params=(entry_id,), columns="sub_tally_id"
+        conn, "entry", owner_id, where="id = ?", params=(entry_id,), columns="activity_id"
     )
     if row is None:
         raise EntryNotFoundError(f"entry {entry_id} not found for owner {owner_id}")
-    return row["sub_tally_id"]
+    return row["activity_id"]
 
 
 def _normalize_rows(rows: Iterable[Mapping[str, Any]]) -> list[tuple[str, str, str, int]]:
@@ -195,18 +195,18 @@ def delete_matches(owner_id: int, entry_id: int) -> int:
 
 
 # ---------------------------------------------------------------------------
-# Stats (per sub_tally, owner-scoped, across its tournament entries' matches)
+# Stats (per activity, owner-scoped, across its tournament entries' matches)
 # ---------------------------------------------------------------------------
 
 
-def _scoped_matches_for_sub_tally(
-    conn: sqlite3.Connection, owner_id: int, sub_tally_id: int
+def _scoped_matches_for_activity(
+    conn: sqlite3.Connection, owner_id: int, activity_id: int
 ) -> list[sqlite3.Row]:
     """All match rows under a sub-tally's entries, owner-scoped on both sides.
 
     Joins ``match -> entry`` so a bout is only counted when *both* the match and
     its parent entry belong to *owner_id* and the entry sits under
-    *sub_tally_id*. Ordered oldest-first by the entry's ``occurred_at`` (then
+    *activity_id*. Ordered oldest-first by the entry's ``occurred_at`` (then
     ``sort_order``) so the results timeline is chronological.
     """
     return conn.execute(
@@ -217,14 +217,14 @@ def _scoped_matches_for_sub_tally(
           JOIN entry e ON e.id = m.entry_id
          WHERE m.owner_id = ?
            AND e.owner_id = ?
-           AND e.sub_tally_id = ?
+           AND e.activity_id = ?
          ORDER BY e.occurred_at ASC, m.sort_order ASC, m.id ASC
         """,
-        (owner_id, owner_id, sub_tally_id),
+        (owner_id, owner_id, activity_id),
     ).fetchall()
 
 
-def record(owner_id: int, sub_tally_id: int) -> dict[str, Any]:
+def record(owner_id: int, activity_id: int) -> dict[str, Any]:
     """W/L/D record + win rate for a tournament sub-tally, scoped to *owner_id*.
 
     Returns ``{wins, losses, draws, total, decided, win_rate}`` where ``decided``
@@ -234,7 +234,7 @@ def record(owner_id: int, sub_tally_id: int) -> dict[str, Any]:
     """
     with db.connect() as conn:
         conn.execute("BEGIN")
-        matches = _scoped_matches_for_sub_tally(conn, owner_id, sub_tally_id)
+        matches = _scoped_matches_for_activity(conn, owner_id, activity_id)
     return _record_from_matches(matches)
 
 
@@ -254,7 +254,7 @@ def _record_from_matches(matches: Sequence[sqlite3.Row]) -> dict[str, Any]:
     }
 
 
-def results_timeline(owner_id: int, sub_tally_id: int) -> list[dict[str, Any]]:
+def results_timeline(owner_id: int, activity_id: int) -> list[dict[str, Any]]:
     """Chronological list of bout results for a tournament sub-tally.
 
     Each item is ``{occurred_at, opponent, result, score}`` ordered oldest-first
@@ -263,7 +263,7 @@ def results_timeline(owner_id: int, sub_tally_id: int) -> list[dict[str, Any]]:
     """
     with db.connect() as conn:
         conn.execute("BEGIN")
-        matches = _scoped_matches_for_sub_tally(conn, owner_id, sub_tally_id)
+        matches = _scoped_matches_for_activity(conn, owner_id, activity_id)
         return [
             {
                 "occurred_at": m["occurred_at"],
@@ -275,7 +275,7 @@ def results_timeline(owner_id: int, sub_tally_id: int) -> list[dict[str, Any]]:
         ]
 
 
-def head_to_head(owner_id: int, sub_tally_id: int) -> list[dict[str, Any]]:
+def head_to_head(owner_id: int, activity_id: int) -> list[dict[str, Any]]:
     """W/L/D vs each opponent for a tournament sub-tally, scoped to *owner_id*.
 
     Groups every bout under the sub-tally by ``opponent`` — the same opponent met
@@ -285,7 +285,7 @@ def head_to_head(owner_id: int, sub_tally_id: int) -> list[dict[str, Any]]:
     """
     with db.connect() as conn:
         conn.execute("BEGIN")
-        matches = _scoped_matches_for_sub_tally(conn, owner_id, sub_tally_id)
+        matches = _scoped_matches_for_activity(conn, owner_id, activity_id)
 
     grouped: OrderedDict[str, list[sqlite3.Row]] = OrderedDict()
     for m in matches:

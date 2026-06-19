@@ -1,0 +1,21 @@
+{#
+  Single-week strip of `.cal-day`-styled cells, non-interactive (the history
+  log below already shows the period's entries day-by-day, so individual
+  day-cells don't drill in here).
+
+  Context: history (history.visual.days: [{"date","day","marked","today"}, x7]).
+#}
+<div class="grid grid-cols-7 gap-1">
+    {% for cell in history.visual.days %}
+        <div class="flex flex-col items-center gap-1">
+            <span class="text-caption font-medium text-text-muted">
+                {{ strings.CALENDAR_WEEKDAYS[loop.index0] }}
+            </span>
+            <span
+                class="cal-day{% if cell.marked %} cal-day--marked{% endif %}{% if cell.today %} cal-day--today{% endif %}"
+            >
+                {{ cell.day }}
+            </span>
+        </div>
+    {% endfor %}
+</div>

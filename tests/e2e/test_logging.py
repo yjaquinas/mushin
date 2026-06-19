@@ -13,7 +13,9 @@ Specs covered
 -------------
 1. Quick-add log updates the activity card's hero numeral via an HTMX
    fragment swap — no full page reload (e.g. assert no `load` navigation
-   event / the page's `<head>` script tags are not re-executed).
+   event / the page's `<head>` script tags are not re-executed). Quick-add
+   only lives on the sub-tally detail screen now, so the spec navigates
+   there first.
 2. A tag chip tap-selected before submit survives the fragment swap (the
    swapped-in card's quick-add sheet, if reopened, shows the same chip
    selected — per app.routes.web.create_log's `selected_tags` echo).
@@ -25,6 +27,8 @@ Specs covered
 from __future__ import annotations
 
 import pytest
+
+from app import ui_strings
 
 pytestmark = pytest.mark.e2e
 
@@ -58,28 +62,37 @@ def page(browser):
 
 
 def _enter_as_guest(page) -> None:
-    """Land on the entry screen and tap "그냥 시작하기" to start a guest session."""
+    """Land on the entry screen and tap "Continue without an account" to start a guest session."""
     page.goto(BASE_URL + "/")
-    page.get_by_text("그냥 시작하기").click()
+    page.get_by_text(ui_strings.ENTRY_GUEST_LINK).click()
     page.wait_for_url(BASE_URL + "/home")
 
 
+def _open_detail(page, heading: str):
+    """Navigate from /home to a sub-tally's detail screen via its card link,
+    returning the detail-screen's `<article>` locator for that sub-tally."""
+    home_card = page.locator("article", has=page.get_by_role("heading", name=heading))
+    home_card.locator("a").first.click()
+    page.wait_for_url(f"{BASE_URL}/activities/*")
+    return page.locator("article", has=page.get_by_role("heading", name=heading))
+
+
 def test_quick_add_updates_card_via_fragment_swap(page) -> None:
-    """Logging via the quick-add sheet bumps the card's hero numeral without
-    a full page reload."""
+    """On the sub-tally detail screen, logging via the quick-add panel bumps
+    the card's hero numeral without a full page reload."""
     _enter_as_guest(page)
 
-    # 검도 / 수련 is a `running`-mode sub-tally; its hero numeral is the
+    # Kendo / Practice is a `running`-mode sub-tally; its hero numeral is the
     # lifetime count.
-    card = page.locator("article", has=page.get_by_role("heading", name="수련"))
+    card = _open_detail(page, "Practice")
     before_text = card.inner_text()
 
     # Track full-page navigations: a fragment swap must NOT trigger one.
     navigated = {"count": 0}
     page.on("framenavigated", lambda _frame: navigated.__setitem__("count", navigated["count"] + 1))
 
-    card.get_by_role("button", name="기록하기").click()
-    page.locator("#log-sheet form").get_by_role("button", name="기록 남기기").click()
+    page.get_by_role("button", name=ui_strings.SUBTALLY_LOG_BUTTON).click()
+    page.locator("#log-panel form").get_by_role("button", name=ui_strings.LOG_SUBMIT).click()
 
     # The card re-renders in place (HTMX outerHTML swap on #card-{id}).
     page.wait_for_function(
@@ -97,23 +110,23 @@ def test_tag_selection_survives_fragment_swap(page) -> None:
     """A tag chip selected before submit remains selected after the swap."""
     _enter_as_guest(page)
 
-    card = page.locator("article", has=page.get_by_role("heading", name="수련"))
-    card.get_by_role("button", name="기록하기").click()
+    _open_detail(page, "Practice")
+    page.get_by_role("button", name=ui_strings.SUBTALLY_LOG_BUTTON).click()
 
-    sheet = page.locator("#log-sheet")
-    # Select the first chip in the first tag_group field ("기술").
-    first_chip_input = sheet.locator('input[name^="tags_"]').first
+    panel = page.locator("#log-panel")
+    # Select the first chip in the first tag_group field ("Technique").
+    first_chip_input = panel.locator('input[name^="tags_"]').first
     first_chip_label = first_chip_input.locator("xpath=..")
     chip_value = first_chip_input.get_attribute("value")
     first_chip_label.click()
     assert first_chip_input.is_checked()
 
-    sheet.get_by_role("button", name="기록 남기기").click()
+    panel.get_by_role("button", name=ui_strings.LOG_SUBMIT).click()
 
-    # Reopen the quick-add sheet on the swapped-in card; the same tag should
+    # Reopen the quick-add panel on the swapped-in card; the same tag should
     # still be checked (selected_tags echo, see create_log).
-    card.get_by_role("button", name="기록하기").click()
-    reopened_input = page.locator(f'#log-sheet input[value="{chip_value}"]')
+    page.get_by_role("button", name=ui_strings.SUBTALLY_LOG_BUTTON).click()
+    reopened_input = page.locator(f'#log-panel input[value="{chip_value}"]')
     assert reopened_input.is_checked()
 
 
@@ -124,10 +137,10 @@ def test_chips_wrap_at_360px_and_selected_state_has_non_color_signal(page) -> No
     `aria-pressed`)."""
     _enter_as_guest(page)
 
-    card = page.locator("article", has=page.get_by_role("heading", name="수련"))
-    card.get_by_role("button", name="기록하기").click()
+    _open_detail(page, "Practice")
+    page.get_by_role("button", name=ui_strings.SUBTALLY_LOG_BUTTON).click()
 
-    chip_group = page.locator("#log-sheet [id^='tag-group-']").first
+    chip_group = page.locator("#log-panel [id^='tag-group-']").first
     box = chip_group.bounding_box()
     assert box is not None
 
@@ -152,28 +165,74 @@ def test_chips_wrap_at_1_5x_font_scale(page) -> None:
     _enter_as_guest(page)
     page.evaluate("document.documentElement.style.fontSize = '150%'")
 
-    card = page.locator("article", has=page.get_by_role("heading", name="수련"))
-    card.get_by_role("button", name="기록하기").click()
+    _open_detail(page, "Practice")
+    page.get_by_role("button", name=ui_strings.SUBTALLY_LOG_BUTTON).click()
 
-    chip_group = page.locator("#log-sheet [id^='tag-group-']").first
+    chip_group = page.locator("#log-panel [id^='tag-group-']").first
     overflow_x = page.evaluate(
         "(el) => el.scrollWidth > el.clientWidth + 1", chip_group.element_handle()
     )
     assert not overflow_x, "tag chips must still wrap at 1.5x font scale"
 
 
-def test_level_bar_advances_on_log_for_progression_subtally(page) -> None:
-    """For a `progression`-mode sub-tally (e.g. 독서), logging an entry that
-    crosses a count-gate threshold advances the progress bar fill."""
+def test_adding_new_tag_keeps_panel_open_and_preserves_checked_tag(page) -> None:
+    """Using the tag_group "+ Add" control inside the inline log panel must
+    not collapse the panel, and must not lose a tag the user had already
+    checked.
+
+    Regression for the bug where the nested "+ Add" form's `htmx:afterRequest`
+    bubbled up to the outer log form and closed the whole panel, dropping any
+    previously-checked tags."""
     _enter_as_guest(page)
 
-    card = page.locator("article", has=page.get_by_role("heading", name="독서"))
+    _open_detail(page, "Practice")
+    trigger = page.locator('button[id^="log-trigger-"]')
+    trigger.click()
+
+    panel = page.locator("#log-panel")
+    panel.wait_for(state="visible")
+
+    # Select the first chip in the first tag_group field ("Technique").
+    first_chip_input = panel.locator('input[name^="tags_"]').first
+    first_chip_label = first_chip_input.locator("xpath=..")
+    chip_value = first_chip_input.get_attribute("value")
+    first_chip_label.click()
+    assert first_chip_input.is_checked()
+
+    # Open the "+ Add" control and add a new tag.
+    add_summary = panel.get_by_role("button", name=ui_strings.LOG_TAG_ADD_NEW).first
+    add_summary.click()
+    new_tag_input = panel.get_by_placeholder(ui_strings.LOG_TAG_ADD_PLACEHOLDER).first
+    new_tag_input.fill("Suriage Men")
+    panel.get_by_role("button", name=ui_strings.LOG_TAG_ADD_CONFIRM).first.click()
+
+    # Wait for the tag group fragment to refresh with the new tag.
+    page.wait_for_function(
+        "() => document.querySelector('#log-panel')?.innerText.includes('Suriage Men')"
+    )
+
+    # The panel is still expanded (the outer form's collapse handler must not
+    # have fired for the nested "+ Add" request).
+    assert panel.is_visible()
+    assert trigger.get_attribute("aria-expanded") == "true"
+
+    # The previously-checked tag is still checked after the swap.
+    reopened_input = panel.locator(f'input[value="{chip_value}"]')
+    assert reopened_input.is_checked()
+
+
+def test_level_bar_advances_on_log_for_progression_subtally(page) -> None:
+    """For a `progression`-mode sub-tally (e.g. Reading), logging an entry
+    that crosses a count-gate threshold advances the progress bar fill."""
+    _enter_as_guest(page)
+
+    card = _open_detail(page, "Reading")
     progress_fill = card.locator(".progress-fill")
 
     before_width = progress_fill.get_attribute("style") or ""
 
-    card.get_by_role("button", name="기록하기").click()
-    page.locator("#log-sheet form").get_by_role("button", name="기록 남기기").click()
+    page.get_by_role("button", name=ui_strings.SUBTALLY_LOG_BUTTON).click()
+    page.locator("#log-panel form").get_by_role("button", name=ui_strings.LOG_SUBMIT).click()
 
     page.wait_for_function(
         """(args) => {
@@ -181,4 +240,39 @@ def test_level_bar_advances_on_log_for_progression_subtally(page) -> None:
             return el && el.getAttribute('style') !== args.before;
         }""",
         arg={"sel": f"#{card.get_attribute('id')} .progress-fill", "before": before_width},
+    )
+
+
+def test_submitting_log_collapses_panel_and_updates_card(page) -> None:
+    """Expanding the inline log panel, filling and submitting the form
+    collapses the panel (`aria-expanded="false"`, `#log-panel` empty/hidden)
+    and updates the activity card's hero numeral / advance line."""
+    _enter_as_guest(page)
+
+    card = _open_detail(page, "Practice")
+    trigger = page.locator('button[id^="log-trigger-"]')
+    before_text = card.inner_text()
+
+    trigger.click()
+
+    panel = page.locator("#log-panel")
+    panel.wait_for(state="visible")
+    assert trigger.get_attribute("aria-expanded") == "true"
+
+    panel.locator("form").get_by_role("button", name=ui_strings.LOG_SUBMIT).click()
+
+    # The HX-Trigger: log-saved response collapses the panel.
+    page.wait_for_function(
+        "(id) => document.getElementById(id)?.getAttribute('aria-expanded') === 'false'",
+        arg=trigger.get_attribute("id"),
+    )
+    assert not panel.is_visible()
+
+    # The card re-renders with updated content (hero numeral / advance line).
+    page.wait_for_function(
+        """(args) => {
+            const el = document.querySelector(args.sel);
+            return el && el.innerText !== args.before;
+        }""",
+        arg={"sel": f"#{card.get_attribute('id')}", "before": before_text},
     )

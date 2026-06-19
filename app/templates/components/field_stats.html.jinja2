@@ -2,8 +2,34 @@
   Tag-frequency and scale-distribution sections, rendered for whichever
   fields exist on the sub-tally's recipe (see app.routes.web._build_field_stats_context).
 
-  Context: field_stats ({"tag_groups": [...], "scales": [...]}).
+  Context: field_stats ({"tag_groups": [...], "scales": [...], "period": str, "period_label": str}),
+           activity_id (int), is_owner (bool, default false).
+
+  When is_owner, the outer div uses Alpine to track the history period and HTMX to
+  refresh after a log or period change. Alpine's x-on:*.window catches history-period-changed
+  events fired via HX-Trigger on any element (they bubble to window); hx-on::config-request
+  injects the current period into every request from this element.
 #}
+{% if is_owner | default(false) %}
+<div
+    id="field-stats-{{ activity_id }}"
+    data-period="{{ field_stats.period | default('month') }}"
+    x-data
+    x-on:history-period-changed.window="
+        const p = $event.detail.period;
+        if (p !== 'all') {
+            $el.dataset.period = p;
+            htmx.trigger($el, 'needs-period-refresh');
+        }
+    "
+    hx-get="/activities/{{ activity_id }}/field-stats"
+    hx-trigger="log-saved from:body, needs-period-refresh"
+    hx-swap="outerHTML"
+    hx-on::config-request="event.detail.parameters['period'] = event.target.dataset.period"
+>
+{% else %}
+<div>
+{% endif %}
 {% if field_stats.tag_groups %}
 <section class="flex flex-col gap-3 rounded-card border border-border bg-surface-1 p-4">
     {% for group in field_stats.tag_groups %}
@@ -19,7 +45,7 @@
                             <span class="ms-1 text-text-muted">{{ tag.total }}</span>
                             {% if tag.this_period %}
                                 <span class="ms-1 text-caption text-text-muted">
-                                    ({{ strings.TAG_FREQUENCY_THIS_PERIOD_PREFIX }} {{ tag.this_period }})
+                                    ({{ field_stats.period_label }} {{ tag.this_period }})
                                 </span>
                             {% endif %}
                         </li>
@@ -55,3 +81,4 @@
     {% endfor %}
 </section>
 {% endif %}
+</div>

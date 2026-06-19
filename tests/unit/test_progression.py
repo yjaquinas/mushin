@@ -63,7 +63,7 @@ class Builder:
         c.execute("PRAGMA foreign_keys=ON")
         return c
 
-    def sub_tally(self, *, mode: str = "progression", name: str = "Grading") -> int:
+    def activity(self, *, mode: str = "progression", name: str = "Grading") -> int:
         c = self._conn()
         try:
             cat = c.execute(
@@ -71,16 +71,16 @@ class Builder:
                 (self.owner_id,),
             ).lastrowid
             sid = c.execute(
-                "INSERT INTO sub_tally (owner_id, category_id, name, count_mode)"
+                "INSERT INTO activity (owner_id, category_id, name, count_mode)"
                 " VALUES (?, ?, ?, ?)",
                 (self.owner_id, cat, name, mode),
             ).lastrowid
             self.level_field_id = c.execute(
-                "INSERT INTO field_def (sub_tally_id, kind, label) VALUES (?, 'level', '급/단')",
+                "INSERT INTO field_def (activity_id, kind, label) VALUES (?, 'level', '급/단')",
                 (sid,),
             ).lastrowid
             self.result_field_id = c.execute(
-                "INSERT INTO field_def (sub_tally_id, kind, label) VALUES (?, 'result', '합격')",
+                "INSERT INTO field_def (activity_id, kind, label) VALUES (?, 'result', '합격')",
                 (sid,),
             ).lastrowid
             return sid
@@ -91,7 +91,7 @@ class Builder:
         c = self._conn()
         try:
             return c.execute(
-                "INSERT INTO level (sub_tally_id, owner_id, track, ordinal, code, label)"
+                "INSERT INTO level (activity_id, owner_id, track, ordinal, code, label)"
                 " VALUES (?, ?, ?, ?, ?, ?)",
                 (sid, self.owner_id, track, ordinal, code, label),
             ).lastrowid
@@ -112,7 +112,7 @@ class Builder:
         c = self._conn()
         try:
             return c.execute(
-                "INSERT INTO level_rule (owner_id, sub_tally_id, from_level_id, to_level_id,"
+                "INSERT INTO level_rule (owner_id, activity_id, from_level_id, to_level_id,"
                 " gate_type, gate_value, min_age, prereq_level_id)"
                 " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 (
@@ -140,7 +140,7 @@ class Builder:
         c = self._conn()
         try:
             return c.execute(
-                "INSERT INTO entry (owner_id, sub_tally_id, occurred_at) VALUES (?, ?, ?)",
+                "INSERT INTO entry (owner_id, activity_id, occurred_at) VALUES (?, ?, ?)",
                 (self.owner_id, sid, occurred_at.isoformat()),
             ).lastrowid
         finally:
@@ -152,7 +152,7 @@ class Builder:
         c = self._conn()
         try:
             eid = c.execute(
-                "INSERT INTO entry (owner_id, sub_tally_id, occurred_at) VALUES (?, ?, ?)",
+                "INSERT INTO entry (owner_id, activity_id, occurred_at) VALUES (?, ?, ?)",
                 (self.owner_id, sid, occurred_at.isoformat()),
             ).lastrowid
             c.execute(
@@ -190,7 +190,7 @@ def _track(status: dict, track: str) -> dict:
 def test_time_gate_not_eligible_then_eligible_as_now_advances(test_db: Path) -> None:
     owner = _user(test_db)
     b = Builder(test_db, owner)
-    sid = b.sub_tally()
+    sid = b.activity()
     a = b.level(sid, track="dan", ordinal=1, code="a", label="A")
     bb = b.level(sid, track="dan", ordinal=2, code="b", label="B")
     b.rule(sid, from_level_id=a, to_level_id=bb, gate_type="time", gate_value=2.0)
@@ -212,7 +212,7 @@ def test_time_gate_not_eligible_then_eligible_as_now_advances(test_db: Path) -> 
 def test_count_gate_reports_remaining_and_flips(test_db: Path) -> None:
     owner = _user(test_db)
     b = Builder(test_db, owner)
-    sid = b.sub_tally(name="Reading")
+    sid = b.activity(name="Reading")
     t0 = b.level(sid, track="tier", ordinal=1, code="ibmun", label="입문")
     t1 = b.level(sid, track="tier", ordinal=2, code="chogup", label="초급")
     b.rule(sid, from_level_id=t0, to_level_id=t1, gate_type="count", gate_value=10)
@@ -240,7 +240,7 @@ def test_count_gate_reports_remaining_and_flips(test_db: Path) -> None:
 def test_event_gate_eligible_only_with_pass_after_current_level(test_db: Path) -> None:
     owner = _user(test_db)
     b = Builder(test_db, owner)
-    sid = b.sub_tally()
+    sid = b.activity()
     a = b.level(sid, track="dan", ordinal=1, code="a", label="A")
     bb = b.level(sid, track="dan", ordinal=2, code="b", label="B")
     b.rule(sid, from_level_id=a, to_level_id=bb, gate_type="event")
@@ -262,7 +262,7 @@ def test_event_gate_eligible_only_with_pass_after_current_level(test_db: Path) -
 def test_manual_gate_always_declarable(test_db: Path) -> None:
     owner = _user(test_db)
     b = Builder(test_db, owner)
-    sid = b.sub_tally()
+    sid = b.activity()
     a = b.level(sid, track="dan", ordinal=1, code="a", label="A")
     bb = b.level(sid, track="dan", ordinal=2, code="b", label="B")
     b.rule(sid, from_level_id=a, to_level_id=bb, gate_type="manual")
@@ -312,7 +312,7 @@ def _seed_dan_ladder(b: Builder, sid: int) -> dict[str, int]:
 def test_dan_current_grade_and_time_in_grade(test_db: Path) -> None:
     owner = _user(test_db)
     b = Builder(test_db, owner)
-    sid = b.sub_tally()
+    sid = b.activity()
     _seed_dan_ladder(b, sid)
     # Attained 4단 exactly 2 years before `now`.
     b.level_entry(sid, code="4dan", occurred_at=datetime(2022, 1, 1, tzinfo=KST))
@@ -333,7 +333,7 @@ def test_dan_current_grade_and_time_in_grade(test_db: Path) -> None:
 def test_dan_eligible_when_time_met(test_db: Path) -> None:
     owner = _user(test_db)
     b = Builder(test_db, owner)
-    sid = b.sub_tally()
+    sid = b.activity()
     _seed_dan_ladder(b, sid)
     # Attained 4단 4+ years ago → eligible for 5단 (no age gate on 5단).
     b.level_entry(sid, code="4dan", occurred_at=datetime(2019, 1, 1, tzinfo=KST))
@@ -348,7 +348,7 @@ def test_dan_eligible_when_time_met(test_db: Path) -> None:
 def test_dan_eligibility_date_countdown(test_db: Path) -> None:
     owner = _user(test_db)
     b = Builder(test_db, owner)
-    sid = b.sub_tally()
+    sid = b.activity()
     _seed_dan_ladder(b, sid)
     # 초단 needs 0.25y (3 months) at 1급, plus 만13세.
     b.level_entry(sid, code="1gup", occurred_at=datetime(2024, 1, 1, tzinfo=KST))
@@ -367,7 +367,7 @@ def test_dan_eligibility_date_countdown(test_db: Path) -> None:
 def test_dan_min_age_surfaced_when_age_unknown(test_db: Path) -> None:
     owner = _user(test_db)
     b = Builder(test_db, owner)
-    sid = b.sub_tally()
+    sid = b.activity()
     _seed_dan_ladder(b, sid)
     # Attained 7단 long ago → time gate to 8단 (10y) is met, but 8단 needs 만46세.
     b.level_entry(sid, code="7dan", occurred_at=datetime(2000, 1, 1, tzinfo=KST))
@@ -444,7 +444,7 @@ def _seed_kendo_full(b: Builder, sid: int) -> dict[str, int]:
 def test_shogo_yeonsa_requires_dan_prereq_cross_track(test_db: Path) -> None:
     owner = _user(test_db)
     b = Builder(test_db, owner)
-    sid = b.sub_tally()
+    sid = b.activity()
     _seed_kendo_full(b, sid)
 
     # Hold only 4단 (not 5단): 연사 prereq unmet regardless of time.
@@ -466,7 +466,7 @@ def test_shogo_yeonsa_requires_dan_prereq_cross_track(test_db: Path) -> None:
 def test_shogo_gyosa_or_path_via_6dan(test_db: Path) -> None:
     owner = _user(test_db)
     b = Builder(test_db, owner)
-    sid = b.sub_tally()
+    sid = b.activity()
     _seed_kendo_full(b, sid)
     now = datetime(2024, 1, 1, tzinfo=KST)
 
@@ -489,7 +489,7 @@ def test_shogo_gyosa_or_path_via_6dan(test_db: Path) -> None:
 def test_shogo_beomsa_dual_clock_and_age(test_db: Path) -> None:
     owner = _user(test_db)
     b = Builder(test_db, owner)
-    sid = b.sub_tally()
+    sid = b.activity()
     _seed_kendo_full(b, sid)
     now = datetime(2024, 1, 1, tzinfo=KST)
 
@@ -512,7 +512,7 @@ def test_shogo_beomsa_dual_clock_and_age(test_db: Path) -> None:
 
     # Break the 교사 clock (only 5 years held): dual-clock fails even at age 62.
     b2 = Builder(test_db, _user(test_db))
-    sid2 = b2.sub_tally()
+    sid2 = b2.activity()
     _seed_kendo_full(b2, sid2)
     b2.level_entry(sid2, code="8dan", occurred_at=datetime(2015, 1, 1, tzinfo=KST))
     b2.level_entry(sid2, code="gyosa", occurred_at=datetime(2020, 1, 1, tzinfo=KST))  # only 4y
@@ -549,7 +549,7 @@ def _seed_reading(b: Builder, sid: int) -> dict[str, int]:
 def test_reading_current_tier_and_count_to_next(test_db: Path) -> None:
     owner = _user(test_db)
     b = Builder(test_db, owner)
-    sid = b.sub_tally(name="Reading")
+    sid = b.activity(name="Reading")
     _seed_reading(b, sid)
     # Declared 초급 already; 30 books read total → between 중급(25) and 고급(50).
     b.level_entry(sid, code="ibmun", occurred_at=datetime(2024, 1, 1, tzinfo=KST))
@@ -577,10 +577,10 @@ def test_reading_current_tier_and_count_to_next(test_db: Path) -> None:
 def test_batched_status_no_n_plus_1(test_db: Path) -> None:
     owner = _user(test_db)
     b = Builder(test_db, owner)
-    sid1 = b.sub_tally()
+    sid1 = b.activity()
     _seed_dan_ladder(b, sid1)
     b.level_entry(sid1, code="2dan", occurred_at=datetime(2024, 1, 1, tzinfo=KST))
-    sid2 = b.sub_tally(name="Reading")
+    sid2 = b.activity(name="Reading")
     _seed_reading(b, sid2)
     b.level_entry(sid2, code="chogup", occurred_at=datetime(2024, 1, 1, tzinfo=KST))
 
@@ -593,7 +593,7 @@ def test_batched_status_no_n_plus_1(test_db: Path) -> None:
 def test_hero_field_progression_vs_running(test_db: Path) -> None:
     owner = _user(test_db)
     b = Builder(test_db, owner)
-    prog = b.sub_tally()
+    prog = b.activity()
     _seed_dan_ladder(b, prog)
     b.level_entry(prog, code="3dan", occurred_at=datetime(2024, 1, 1, tzinfo=KST))
 
@@ -601,7 +601,7 @@ def test_hero_field_progression_vs_running(test_db: Path) -> None:
     assert hero_prog["hero"] == "level"
     assert any(c["code"] == "3dan" for c in hero_prog["current_levels"])
 
-    run = b.sub_tally(mode="running", name="Practice")
+    run = b.activity(mode="running", name="Practice")
     b.plain_entry(run, occurred_at=datetime(2024, 1, 1, tzinfo=KST))
     # cached_count is maintained by entries.py; here it's 0 (we wrote raw), which
     # is fine — the hero CHOICE is what we assert, not the value.
@@ -613,11 +613,11 @@ def test_status_is_owner_scoped(test_db: Path) -> None:
     owner_a = _user(test_db)
     owner_b = _user(test_db)
     ba = Builder(test_db, owner_a)
-    sid = ba.sub_tally()
+    sid = ba.activity()
     _seed_dan_ladder(ba, sid)
     ba.level_entry(sid, code="3dan", occurred_at=datetime(2024, 1, 1, tzinfo=KST))
 
-    # Owner B asking about owner A's sub_tally id sees nothing of A's.
+    # Owner B asking about owner A's activity id sees nothing of A's.
     out = progression.status(sid, owner_b, now=NOW(1.0))
     assert out["tracks"] == []
     assert out["is_progression"] is False
@@ -626,7 +626,7 @@ def test_status_is_owner_scoped(test_db: Path) -> None:
 def test_no_levels_is_not_progression(test_db: Path) -> None:
     owner = _user(test_db)
     b = Builder(test_db, owner)
-    sid = b.sub_tally(mode="running", name="Practice")
+    sid = b.activity(mode="running", name="Practice")
     out = progression.status(sid, owner, now=NOW(1.0))
     assert out["is_progression"] is False
     assert out["tracks"] == []

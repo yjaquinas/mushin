@@ -5,7 +5,7 @@ insert rows — no per-activity code in the seeding loop. The shapes mirror the
 DB schema exactly:
 
   category
-    └── sub_tally (count_mode)
+    └── activity (count_mode)
           ├── field_def  (kind, label, sort_order)
           └── levels[]   (track, ordinal, code, label)
 
@@ -13,7 +13,7 @@ Level-rule specs live in ``LEVEL_RULES`` at the bottom of this module, keyed by
 category name + sub-tally name. ``seeding.seed_level_rules`` resolves the
 ``from_code``/``to_code``/``prereq_code`` fields to live row ids at seed time.
 
-v1 templates: 검도 (kendo) + 독서 (reading).
+v1 templates: Kendo + Reading.
 Deferred: cooking, knitting, travel.
 """
 
@@ -73,70 +73,70 @@ class CategorySpec(TypedDict):
 
 
 # ---------------------------------------------------------------------------
-# 검도 (kendo) — primary track: 1급 → 9단; parallel track: 연사/교사/범사
+# Kendo — primary track: 1st Kyu → 9th Dan; parallel track: Renshi/Kyoshi/Hanshi
 # ---------------------------------------------------------------------------
 #
-# KKA dan ladder codes follow the pattern used throughout: 1급 = "1gup";
-# 초단 (= 1단) = "chodan"; 2단–9단 = "2dan"–"9dan".
-# Shōgō codes: "yeonsа", "gyosa", "beomsа" (romanisation of 연사/교사/범사).
+# Dan ladder codes follow the pattern used throughout: "1kyu", "1dan"-"9dan".
+# Shōgō codes: "renshi", "kyoshi", "hanshi" — the traditional kendo teaching
+# titles, used here as generic terminology (no specific federation implied).
 #
 # Ordinals are contiguous and 1-based within each track so that the progression
 # engine can ORDER BY ordinal to walk the ladder.
 
 _KENDO_GRADING_LEVELS: list[LevelSpec] = [
     # --- Primary dan track ---------------------------------------------------
-    {"track": "dan", "ordinal": 1, "code": "1gup", "label": "1급"},
-    {"track": "dan", "ordinal": 2, "code": "chodan", "label": "초단"},
-    {"track": "dan", "ordinal": 3, "code": "2dan", "label": "2단"},
-    {"track": "dan", "ordinal": 4, "code": "3dan", "label": "3단"},
-    {"track": "dan", "ordinal": 5, "code": "4dan", "label": "4단"},
-    {"track": "dan", "ordinal": 6, "code": "5dan", "label": "5단"},
-    {"track": "dan", "ordinal": 7, "code": "6dan", "label": "6단"},
-    {"track": "dan", "ordinal": 8, "code": "7dan", "label": "7단"},
-    {"track": "dan", "ordinal": 9, "code": "8dan", "label": "8단"},
-    {"track": "dan", "ordinal": 10, "code": "9dan", "label": "9단"},
-    # --- Parallel shōgō / 칭호 track -----------------------------------------
+    {"track": "dan", "ordinal": 1, "code": "1kyu", "label": "1st Kyu"},
+    {"track": "dan", "ordinal": 2, "code": "1dan", "label": "1st Dan"},
+    {"track": "dan", "ordinal": 3, "code": "2dan", "label": "2nd Dan"},
+    {"track": "dan", "ordinal": 4, "code": "3dan", "label": "3rd Dan"},
+    {"track": "dan", "ordinal": 5, "code": "4dan", "label": "4th Dan"},
+    {"track": "dan", "ordinal": 6, "code": "5dan", "label": "5th Dan"},
+    {"track": "dan", "ordinal": 7, "code": "6dan", "label": "6th Dan"},
+    {"track": "dan", "ordinal": 8, "code": "7dan", "label": "7th Dan"},
+    {"track": "dan", "ordinal": 9, "code": "8dan", "label": "8th Dan"},
+    {"track": "dan", "ordinal": 10, "code": "9dan", "label": "9th Dan"},
+    # --- Parallel shōgō / honorific title track ------------------------------
     # Ordinals are independent of the dan track (separate track namespace).
-    {"track": "shogo", "ordinal": 1, "code": "yeonsa", "label": "연사"},
-    {"track": "shogo", "ordinal": 2, "code": "gyosa", "label": "교사"},
-    {"track": "shogo", "ordinal": 3, "code": "beomsa", "label": "범사"},
+    {"track": "shogo", "ordinal": 1, "code": "renshi", "label": "Renshi"},
+    {"track": "shogo", "ordinal": 2, "code": "kyoshi", "label": "Kyoshi"},
+    {"track": "shogo", "ordinal": 3, "code": "hanshi", "label": "Hanshi"},
 ]
 
 KENDO: CategorySpec = {
-    "name": "검도",
+    "name": "Kendo",
     "color": None,
     "sort_order": 0,
     "sub_tallies": [
         {
-            "name": "수련",  # practice
+            "name": "Practice",
             "count_mode": "running",
             "sort_order": 0,
             "field_defs": [
-                {"kind": "tag_group", "label": "기술", "sort_order": 0},
-                {"kind": "tag_group", "label": "장소", "sort_order": 1},
-                {"kind": "count", "label": "횟수", "sort_order": 2},
-                {"kind": "memo", "label": "메모", "sort_order": 3},
+                {"kind": "tag_group", "label": "Technique", "sort_order": 0},
+                {"kind": "tag_group", "label": "Location", "sort_order": 1},
+                {"kind": "count", "label": "Reps", "sort_order": 2},
+                {"kind": "memo", "label": "Memo", "sort_order": 3},
             ],
             "levels": [],
         },
         {
-            "name": "시합",  # tournament
+            "name": "Tournament",
             "count_mode": "running",
             "sort_order": 1,
             "field_defs": [
-                {"kind": "match_list", "label": "경기 목록", "sort_order": 0},
-                {"kind": "memo", "label": "메모", "sort_order": 1},
+                {"kind": "match_list", "label": "Match List", "sort_order": 0},
+                {"kind": "memo", "label": "Memo", "sort_order": 1},
             ],
             "levels": [],
         },
         {
-            "name": "심사",  # grading
+            "name": "Grading",
             "count_mode": "progression",
             "sort_order": 2,
             "field_defs": [
-                {"kind": "level", "label": "단위", "sort_order": 0},
-                {"kind": "result", "label": "결과", "sort_order": 1},
-                {"kind": "memo", "label": "메모", "sort_order": 2},
+                {"kind": "level", "label": "Rank", "sort_order": 0},
+                {"kind": "result", "label": "Result", "sort_order": 1},
+                {"kind": "memo", "label": "Memo", "sort_order": 2},
             ],
             "levels": _KENDO_GRADING_LEVELS,
         },
@@ -145,45 +145,45 @@ KENDO: CategorySpec = {
 
 
 # ---------------------------------------------------------------------------
-# 독서 (reading) — count-gated tier progression
+# Reading — count-gated tier progression
 # ---------------------------------------------------------------------------
 #
 # Reading tiers gate on the total number of books logged (gate_type='count').
 # Five tiers give meaningful milestones without overwhelming a new reader.
 #
 # Tier thresholds (confirmed by seed-author, referenced by Task 7 level_rules):
-#   입문 →  10 books
-#   초급 →  25 books
-#   중급 →  50 books
-#   고급 → 100 books
-#   달인 →  no upper limit (final tier)
+#   Beginner     →  10 books
+#   Novice       →  25 books
+#   Intermediate →  50 books
+#   Advanced     → 100 books
+#   Master       →  no upper limit (final tier)
 #
 # Ordinals are 1-based. Task 7 seeds the level_rule rows with gate_value equal
-# to the *threshold to reach that tier* (i.e. to enter 초급 you need 10 books).
+# to the *threshold to reach that tier* (i.e. to enter Novice you need 10 books).
 
 _READING_LEVELS: list[LevelSpec] = [
-    {"track": "tier", "ordinal": 1, "code": "ibmun", "label": "입문"},  # beginner
-    {"track": "tier", "ordinal": 2, "code": "chogup", "label": "초급"},  # elementary
-    {"track": "tier", "ordinal": 3, "code": "junggup", "label": "중급"},  # intermediate
-    {"track": "tier", "ordinal": 4, "code": "gogup", "label": "고급"},  # advanced
-    {"track": "tier", "ordinal": 5, "code": "dain", "label": "달인"},  # master
+    {"track": "tier", "ordinal": 1, "code": "beginner", "label": "Beginner"},
+    {"track": "tier", "ordinal": 2, "code": "novice", "label": "Novice"},
+    {"track": "tier", "ordinal": 3, "code": "intermediate", "label": "Intermediate"},
+    {"track": "tier", "ordinal": 4, "code": "advanced", "label": "Advanced"},
+    {"track": "tier", "ordinal": 5, "code": "master", "label": "Master"},
 ]
 
 READING: CategorySpec = {
-    "name": "독서",
+    "name": "Reading",
     "color": None,
     "sort_order": 1,
     "sub_tallies": [
         {
-            "name": "독서",  # single sub-tally (same name as category)
+            "name": "Reading",  # single sub-tally (same name as category)
             "count_mode": "progression",
             "sort_order": 0,
             "field_defs": [
-                {"kind": "count", "label": "페이지", "sort_order": 0},
-                {"kind": "tag_group", "label": "장르", "sort_order": 1},
-                {"kind": "tag_group", "label": "저자", "sort_order": 2},
-                {"kind": "level", "label": "단계", "sort_order": 3},
-                {"kind": "memo", "label": "메모", "sort_order": 4},
+                {"kind": "count", "label": "Pages", "sort_order": 0},
+                {"kind": "tag_group", "label": "Genre", "sort_order": 1},
+                {"kind": "tag_group", "label": "Author", "sort_order": 2},
+                {"kind": "level", "label": "Tier", "sort_order": 3},
+                {"kind": "memo", "label": "Memo", "sort_order": 4},
             ],
             "levels": _READING_LEVELS,
         },
@@ -201,7 +201,7 @@ V1_TEMPLATES: list[CategorySpec] = [KENDO, READING]
 # ---------------------------------------------------------------------------
 # Level-rule specs — Task 7
 #
-# Keyed by (category_name, sub_tally_name) → list[LevelRuleSpec].
+# Keyed by (category_name, activity_name) → list[LevelRuleSpec].
 #
 # Engine column contracts (from progression.py + test_progression.py fixtures):
 #
@@ -216,23 +216,24 @@ V1_TEMPLATES: list[CategorySpec] = [KENDO, READING]
 #   Multiple rules sharing the same to_level_id → OR-combined eligibility.
 #
 # Shōgō shape notes (matching engine test fixture _seed_kendo_full exactly):
-#   yeonsa:    from_code=None,   prereq_code='5dan',   time=3y
-#              clock: 5단 held ≥ 3y (from_level_id=NULL → clock = prereq_at)
-#   gyosa A:   from_code=None,   prereq_code='yeonsa', time=7y
-#              clock: 연사 held ≥ 7y
-#   gyosa B:   from_code=None,   prereq_code='6dan',   time=4y
-#              clock: 6단 held ≥ 4y  (also requires 연사 by ordinal — the
+#   renshi:    from_code=None,   prereq_code='5dan',   time=3y
+#              clock: 5th Dan held ≥ 3y (from_level_id=NULL → clock = prereq_at)
+#   kyoshi A:  from_code=None,   prereq_code='renshi', time=7y
+#              clock: Renshi held ≥ 7y
+#   kyoshi B:  from_code=None,   prereq_code='6dan',   time=4y
+#              clock: 6th Dan held ≥ 4y  (also requires Renshi by ordinal — the
 #              shogo-track current_level check means this path is only reached
-#              after 연사 is attained; the engine doesn't enforce a separate 연사
-#              prereq column on path B, matching the fixture)
-#   beomsa:    from_code='gyosa', prereq_code='8dan',  time=10y, min_age=60
-#              clock: 교사 held ≥ 10y; prereq: 8단 held (existence check only)
-#              LIMITATION: the 8단 ≥ 8y requirement stated in KKA regulations
-#              cannot be expressed as a separate "prereq held-for-N-years" in a
-#              single level_rule row. The engine has no such column; only the
-#              교사 ≥ 10y clock is enforced. This matches the engine's own test
-#              fixture (test_shogo_beomsa_dual_clock_and_age) which tests a user
-#              with 8단 9y + 교사 11y and passes — the "dual clock" in the test
+#              after Renshi is attained; the engine doesn't enforce a separate
+#              Renshi prereq column on path B, matching the fixture)
+#   hanshi:    from_code='kyoshi', prereq_code='8dan',  time=10y, min_age=60
+#              clock: Kyoshi held ≥ 10y; prereq: 8th Dan held (existence check only)
+#              LIMITATION: the "8th Dan held ≥ 8y" requirement found in some
+#              kendo grading regulations cannot be expressed as a separate
+#              "prereq held-for-N-years" in a single level_rule row. The engine
+#              has no such column; only the Kyoshi ≥ 10y clock is enforced. This
+#              matches the engine's own test fixture
+#              (test_shogo_beomsa_dual_clock_and_age) which tests a user with
+#              8th Dan 9y + Kyoshi 11y and passes — the "dual clock" in the test
 #              name refers to the two date-checks in the test scenario, not two
 #              separate engine-level time gates. A future engine enhancement can
 #              add a prereq_min_years column; for now we match the fixture shape.
@@ -240,19 +241,19 @@ V1_TEMPLATES: list[CategorySpec] = [KENDO, READING]
 
 LEVEL_RULES: dict[tuple[str, str], list[LevelRuleSpec]] = {
     # -------------------------------------------------------------------------
-    # 검도 / 심사 — KKA dan ladder (time gates) + shōgō prestige track
+    # Kendo / Grading — dan ladder (time gates) + shōgō prestige track
     # -------------------------------------------------------------------------
-    ("검도", "심사"): [
+    ("Kendo", "Grading"): [
         # Dan ladder — gate_type='time', gate_value=years at previous grade
-        # min_age is on the TARGET level per KKA 심사규정
+        # min_age is on the TARGET level
         {
-            "to_code": "chodan",
-            "from_code": "1gup",
+            "to_code": "1dan",
+            "from_code": "1kyu",
             "gate_type": "time",
             "gate_value": 0.25,
             "min_age": 13,
         },  # noqa: E501
-        {"to_code": "2dan", "from_code": "chodan", "gate_type": "time", "gate_value": 1.0},
+        {"to_code": "2dan", "from_code": "1dan", "gate_type": "time", "gate_value": 1.0},
         {
             "to_code": "3dan",
             "from_code": "2dan",
@@ -279,16 +280,17 @@ LEVEL_RULES: dict[tuple[str, str], list[LevelRuleSpec]] = {
             "min_age": 65,
         },  # noqa: E501
         # Shōgō track — from_code absent → clock runs from prereq attainment
-        # yeonsa: prereq 5단, 5단 held ≥ 3y
-        {"to_code": "yeonsa", "prereq_code": "5dan", "gate_type": "time", "gate_value": 3.0},
-        # gyosa path A (OR with path B): prereq 연사, 연사 held ≥ 7y
-        {"to_code": "gyosa", "prereq_code": "yeonsa", "gate_type": "time", "gate_value": 7.0},
-        # gyosa path B (OR with path A): prereq 6단, 6단 held ≥ 4y
-        {"to_code": "gyosa", "prereq_code": "6dan", "gate_type": "time", "gate_value": 4.0},
-        # beomsa: prereq 8단 (held check), clock from 교사 attainment ≥ 10y, age ≥ 60
+        # renshi: prereq 5th Dan, 5th Dan held ≥ 3y
+        {"to_code": "renshi", "prereq_code": "5dan", "gate_type": "time", "gate_value": 3.0},
+        # kyoshi path A (OR with path B): prereq Renshi, Renshi held ≥ 7y
+        {"to_code": "kyoshi", "prereq_code": "renshi", "gate_type": "time", "gate_value": 7.0},
+        # kyoshi path B (OR with path A): prereq 6th Dan, 6th Dan held ≥ 4y
+        {"to_code": "kyoshi", "prereq_code": "6dan", "gate_type": "time", "gate_value": 4.0},
+        # hanshi: prereq 8th Dan (held check), clock from Kyoshi
+        # attainment ≥ 10y, age ≥ 60
         {
-            "to_code": "beomsa",
-            "from_code": "gyosa",
+            "to_code": "hanshi",
+            "from_code": "kyoshi",
             "prereq_code": "8dan",
             "gate_type": "time",
             "gate_value": 10.0,
@@ -296,13 +298,28 @@ LEVEL_RULES: dict[tuple[str, str], list[LevelRuleSpec]] = {
         },  # noqa: E501
     ],
     # -------------------------------------------------------------------------
-    # 독서 — count-gated tier progression
+    # Reading — count-gated tier progression
     # gate_value = cumulative lifetime book count to reach that tier
     # -------------------------------------------------------------------------
-    ("독서", "독서"): [
-        {"to_code": "chogup", "from_code": "ibmun", "gate_type": "count", "gate_value": 10.0},
-        {"to_code": "junggup", "from_code": "chogup", "gate_type": "count", "gate_value": 25.0},
-        {"to_code": "gogup", "from_code": "junggup", "gate_type": "count", "gate_value": 50.0},
-        {"to_code": "dain", "from_code": "gogup", "gate_type": "count", "gate_value": 100.0},
+    ("Reading", "Reading"): [
+        {"to_code": "novice", "from_code": "beginner", "gate_type": "count", "gate_value": 10.0},
+        {
+            "to_code": "intermediate",
+            "from_code": "novice",
+            "gate_type": "count",
+            "gate_value": 25.0,
+        },
+        {
+            "to_code": "advanced",
+            "from_code": "intermediate",
+            "gate_type": "count",
+            "gate_value": 50.0,
+        },
+        {
+            "to_code": "master",
+            "from_code": "advanced",
+            "gate_type": "count",
+            "gate_value": 100.0,
+        },
     ],
 }

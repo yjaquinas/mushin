@@ -1,68 +1,17 @@
 {#
-  Tag chip-group for one tag_group field — wraps, >=44px targets, selected
-  state differs by shape/weight + a checkmark glyph (.chip--selected), not
-  color alone (see component-patterns / color-system skills).
-
-  Each chip is a checkbox so selection works as a normal form field
-  (`tags_<field_id>`) with no JS required; `.chip` / `.chip--selected` style
-  the label, and `aria-pressed` mirrors the checkbox state via Alpine.
-
-  Context: sub_tally_id, field (id, label, tags: [{id, name, selected}]).
-  Standalone re-renders (e.g. after "add tag") wrap themselves in the same
-  container id so an out-of-band swap can target `#tag-group-{field.id}`.
+  Notes field — free text with inline #tags. Replaces the separate memo and hashtag inputs.
+  Context: activity_id, field (id, label, hashtag_text).
+  hashtag_text: entry.memo verbatim on edit; "" for new entries.
 #}
-<div id="tag-group-{{ field.id }}" class="flex flex-col gap-2">
-    <span class="text-caption font-medium text-text-secondary">{{ field.label }}</span>
-    <div class="flex flex-wrap gap-2">
-        {% for tag in field.tags %}
-            <label
-                x-data="{ selected: {{ 'true' if tag.selected else 'false' }} }"
-                :class="{ 'chip--selected': selected }"
-                :aria-pressed="selected"
-                class="chip"
-            >
-                <input
-                    type="checkbox"
-                    name="tags_{{ field.id }}"
-                    value="{{ tag.id }}"
-                    class="sr-only"
-                    {% if tag.selected %}checked{% endif %}
-                    x-model="selected"
-                >
-                {{ tag.name }}
-            </label>
-        {% endfor %}
-
-        <details class="inline-flex">
-            <summary
-                class="chip list-none"
-                role="button"
-                aria-label="{{ strings.LOG_TAG_ADD_NEW }}"
-            >
-                {{ strings.LOG_TAG_ADD_NEW }}
-            </summary>
-            <form
-                hx-post="/sub-tallies/{{ sub_tally_id }}/tags"
-                hx-target="#tag-group-{{ field.id }}"
-                hx-swap="outerHTML"
-                class="mt-2 flex items-center gap-2"
-            >
-                <input type="hidden" name="field_def_id" value="{{ field.id }}">
-                <label class="sr-only" for="new-tag-{{ field.id }}">{{ strings.LOG_TAG_ADD_PLACEHOLDER }}</label>
-                <input
-                    type="text"
-                    id="new-tag-{{ field.id }}"
-                    name="name"
-                    placeholder="{{ strings.LOG_TAG_ADD_PLACEHOLDER }}"
-                    class="min-h-tap flex-1 rounded-input border border-border bg-surface-1 px-3 py-2 text-body text-text-primary focus-visible:outline-2"
-                >
-                <button
-                    type="submit"
-                    class="min-h-tap rounded-button border border-border bg-surface-1 px-3 text-body font-medium text-text-primary transition hover:bg-surface-2"
-                >
-                    {{ strings.LOG_TAG_ADD_CONFIRM }}
-                </button>
-            </form>
-        </details>
-    </div>
+<div class="flex flex-col gap-1">
+    <label for="notes-input-{{ field.id }}" class="text-caption font-medium text-text-secondary">
+        {{ strings.LOG_NOTES_LABEL }}
+    </label>
+    <textarea
+        id="notes-input-{{ field.id }}"
+        name="hashtags_{{ field.id }}"
+        rows="3"
+        placeholder="{{ strings.LOG_NOTES_PLACEHOLDER }}"
+        class="min-h-tap w-full rounded-input border border-border bg-surface-1 px-3 py-2 text-body text-text-primary focus-visible:outline-2 resize-none"
+    >{{ field.hashtag_text or '' }}</textarea>
 </div>

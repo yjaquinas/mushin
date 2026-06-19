@@ -3,7 +3,7 @@
 Acceptance criteria
 -------------------
 1. A fresh account seeded with ``seed_account(owner_id)`` has exactly two
-   categories — 검도 and 독서 — with the named sub-tallies, the correct
+   categories — Kendo and Reading — with the named sub-tallies, the correct
    field_def kinds, and the level rows on the expected tracks.
 2. Re-running ``seed_account`` is idempotent: counts are identical after a
    second call.
@@ -84,60 +84,60 @@ def test_two_categories_seeded(seeded_db):
     conn.close()
     names = [r["name"] for r in rows]
     assert len(names) == 2, f"Expected 2 categories, got {len(names)}: {names}"
-    assert "검도" in names
-    assert "독서" in names
+    assert "Kendo" in names
+    assert "Reading" in names
 
 
 def test_kendo_has_three_sub_tallies(seeded_db):
     db_path, owner_id = seeded_db
     conn = _raw(db_path)
     cat = conn.execute(
-        "SELECT id FROM category WHERE owner_id = ? AND name = '검도'",
+        "SELECT id FROM category WHERE owner_id = ? AND name = 'Kendo'",
         (owner_id,),
     ).fetchone()
-    assert cat is not None, "검도 category not found"
+    assert cat is not None, "Kendo category not found"
     rows = conn.execute(
-        "SELECT name, count_mode FROM sub_tally WHERE owner_id = ? AND category_id = ?"
+        "SELECT name, count_mode FROM activity WHERE owner_id = ? AND category_id = ?"
         " ORDER BY sort_order",
         (owner_id, cat["id"]),
     ).fetchall()
     conn.close()
     names = [r["name"] for r in rows]
     assert len(names) == 3, f"Expected 3 kendo sub-tallies, got {names}"
-    assert "수련" in names
-    assert "시합" in names
-    assert "심사" in names
+    assert "Practice" in names
+    assert "Tournament" in names
+    assert "Grading" in names
 
 
-def test_reading_has_one_sub_tally(seeded_db):
+def test_reading_has_one_activity(seeded_db):
     db_path, owner_id = seeded_db
     conn = _raw(db_path)
     cat = conn.execute(
-        "SELECT id FROM category WHERE owner_id = ? AND name = '독서'",
+        "SELECT id FROM category WHERE owner_id = ? AND name = 'Reading'",
         (owner_id,),
     ).fetchone()
-    assert cat is not None, "독서 category not found"
+    assert cat is not None, "Reading category not found"
     rows = conn.execute(
-        "SELECT name FROM sub_tally WHERE owner_id = ? AND category_id = ?",
+        "SELECT name FROM activity WHERE owner_id = ? AND category_id = ?",
         (owner_id, cat["id"]),
     ).fetchall()
     conn.close()
     assert len(rows) == 1, f"Expected 1 reading sub-tally, got {len(rows)}"
-    assert rows[0]["name"] == "독서"
+    assert rows[0]["name"] == "Reading"
 
 
-def _field_kinds_for(conn, owner_id: int, sub_tally_name: str, category_name: str) -> list[str]:
+def _field_kinds_for(conn, owner_id: int, activity_name: str, category_name: str) -> list[str]:
     """Return sorted field_def kinds for a named sub-tally."""
     row = conn.execute(
         """SELECT fd.kind
              FROM field_def fd
-             JOIN sub_tally st ON st.id = fd.sub_tally_id
+             JOIN activity st ON st.id = fd.activity_id
              JOIN category  c  ON c.id  = st.category_id
             WHERE c.owner_id = ?
               AND c.name     = ?
               AND st.name    = ?
             ORDER BY fd.sort_order""",
-        (owner_id, category_name, sub_tally_name),
+        (owner_id, category_name, activity_name),
     ).fetchall()
     return [r["kind"] for r in row]
 
@@ -145,59 +145,61 @@ def _field_kinds_for(conn, owner_id: int, sub_tally_name: str, category_name: st
 def test_practice_field_defs(seeded_db):
     db_path, owner_id = seeded_db
     conn = _raw(db_path)
-    kinds = _field_kinds_for(conn, owner_id, "수련", "검도")
+    kinds = _field_kinds_for(conn, owner_id, "Practice", "Kendo")
     conn.close()
-    assert kinds == ["tag_group", "tag_group", "count", "memo"], f"수련 field_defs wrong: {kinds}"
+    assert kinds == ["tag_group", "tag_group", "count", "memo"], (
+        f"Practice field_defs wrong: {kinds}"
+    )
 
 
 def test_tournament_field_defs(seeded_db):
     db_path, owner_id = seeded_db
     conn = _raw(db_path)
-    kinds = _field_kinds_for(conn, owner_id, "시합", "검도")
+    kinds = _field_kinds_for(conn, owner_id, "Tournament", "Kendo")
     conn.close()
-    assert kinds == ["match_list", "memo"], f"시합 field_defs wrong: {kinds}"
+    assert kinds == ["match_list", "memo"], f"Tournament field_defs wrong: {kinds}"
 
 
 def test_grading_field_defs(seeded_db):
     db_path, owner_id = seeded_db
     conn = _raw(db_path)
-    kinds = _field_kinds_for(conn, owner_id, "심사", "검도")
+    kinds = _field_kinds_for(conn, owner_id, "Grading", "Kendo")
     conn.close()
-    assert kinds == ["level", "result", "memo"], f"심사 field_defs wrong: {kinds}"
+    assert kinds == ["level", "result", "memo"], f"Grading field_defs wrong: {kinds}"
 
 
 def test_reading_field_defs(seeded_db):
     db_path, owner_id = seeded_db
     conn = _raw(db_path)
-    kinds = _field_kinds_for(conn, owner_id, "독서", "독서")
+    kinds = _field_kinds_for(conn, owner_id, "Reading", "Reading")
     conn.close()
     assert kinds == ["count", "tag_group", "tag_group", "level", "memo"], (
-        f"독서 field_defs wrong: {kinds}"
+        f"Reading field_defs wrong: {kinds}"
     )
 
 
 def test_kendo_dan_track_has_ten_levels(seeded_db):
-    """1급 + 초단 + 2단–9단 = 10 levels on the dan track."""
+    """1st Kyu + 1st Dan + 2nd Dan-9th Dan = 10 levels on the dan track."""
     db_path, owner_id = seeded_db
     conn = _raw(db_path)
     grading_st = conn.execute(
-        """SELECT st.id FROM sub_tally st
+        """SELECT st.id FROM activity st
              JOIN category c ON c.id = st.category_id
-            WHERE c.owner_id = ? AND c.name = '검도' AND st.name = '심사'""",
+            WHERE c.owner_id = ? AND c.name = 'Kendo' AND st.name = 'Grading'""",
         (owner_id,),
     ).fetchone()
     assert grading_st is not None
     rows = conn.execute(
         "SELECT code, label, ordinal FROM level"
-        " WHERE owner_id = ? AND sub_tally_id = ? AND track = 'dan'"
+        " WHERE owner_id = ? AND activity_id = ? AND track = 'dan'"
         " ORDER BY ordinal",
         (owner_id, grading_st["id"]),
     ).fetchall()
     conn.close()
     codes = [r["code"] for r in rows]
     assert len(codes) == 10, f"Expected 10 dan levels, got {len(codes)}: {codes}"
-    assert codes[0] == "1gup"
-    assert codes[1] == "chodan"
+    assert codes[0] == "1kyu"
+    assert codes[1] == "1dan"
     assert codes[-1] == "9dan"
 
 
@@ -205,42 +207,44 @@ def test_kendo_shogo_track_has_three_levels(seeded_db):
     db_path, owner_id = seeded_db
     conn = _raw(db_path)
     grading_st = conn.execute(
-        """SELECT st.id FROM sub_tally st
+        """SELECT st.id FROM activity st
              JOIN category c ON c.id = st.category_id
-            WHERE c.owner_id = ? AND c.name = '검도' AND st.name = '심사'""",
+            WHERE c.owner_id = ? AND c.name = 'Kendo' AND st.name = 'Grading'""",
         (owner_id,),
     ).fetchone()
     assert grading_st is not None
     rows = conn.execute(
         "SELECT code FROM level"
-        " WHERE owner_id = ? AND sub_tally_id = ? AND track = 'shogo'"
+        " WHERE owner_id = ? AND activity_id = ? AND track = 'shogo'"
         " ORDER BY ordinal",
         (owner_id, grading_st["id"]),
     ).fetchall()
     conn.close()
     codes = [r["code"] for r in rows]
-    assert codes == ["yeonsa", "gyosa", "beomsa"], f"Shōgō levels wrong: {codes}"
+    assert codes == ["renshi", "kyoshi", "hanshi"], f"Shōgō levels wrong: {codes}"
 
 
 def test_reading_tier_track_has_five_levels(seeded_db):
     db_path, owner_id = seeded_db
     conn = _raw(db_path)
     reading_st = conn.execute(
-        """SELECT st.id FROM sub_tally st
+        """SELECT st.id FROM activity st
              JOIN category c ON c.id = st.category_id
-            WHERE c.owner_id = ? AND c.name = '독서'""",
+            WHERE c.owner_id = ? AND c.name = 'Reading'""",
         (owner_id,),
     ).fetchone()
     assert reading_st is not None
     rows = conn.execute(
         "SELECT code FROM level"
-        " WHERE owner_id = ? AND sub_tally_id = ? AND track = 'tier'"
+        " WHERE owner_id = ? AND activity_id = ? AND track = 'tier'"
         " ORDER BY ordinal",
         (owner_id, reading_st["id"]),
     ).fetchall()
     conn.close()
     codes = [r["code"] for r in rows]
-    assert codes == ["ibmun", "chogup", "junggup", "gogup", "dain"], f"Reading tiers wrong: {codes}"
+    assert codes == ["beginner", "novice", "intermediate", "advanced", "master"], (
+        f"Reading tiers wrong: {codes}"
+    )
 
 
 def test_level_rules_seeded(seeded_db):
@@ -252,7 +256,7 @@ def test_level_rules_seeded(seeded_db):
         (owner_id,),
     ).fetchone()[0]
     conn.close()
-    # 9 dan rules + 4 shōgō rules (yeonsa=1, gyosa=2, beomsa=1) + 4 reading rules = 17
+    # 9 dan rules + 4 shōgō rules (renshi=1, kyoshi=2, hanshi=1) + 4 reading rules = 17
     assert count == 17, f"Expected 17 level_rules, got {count}"
 
 
@@ -264,7 +268,7 @@ def test_level_rules_seeded(seeded_db):
 def _row_counts(db_path: Path, owner_id: int) -> dict[str, int]:
     """Return row counts for the seeded tables, scoped to owner_id."""
     conn = _raw(db_path)
-    tables = ["category", "sub_tally", "level", "level_rule"]
+    tables = ["category", "activity", "level", "level_rule"]
     counts = {}
     for t in tables:
         counts[t] = conn.execute(
@@ -274,7 +278,7 @@ def _row_counts(db_path: Path, owner_id: int) -> dict[str, int]:
     # field_def has no owner_id column — count via join
     counts["field_def"] = conn.execute(
         """SELECT COUNT(*) FROM field_def fd
-             JOIN sub_tally st ON st.id = fd.sub_tally_id
+             JOIN activity st ON st.id = fd.activity_id
             WHERE st.owner_id = ?""",
         (owner_id,),
     ).fetchone()[0]

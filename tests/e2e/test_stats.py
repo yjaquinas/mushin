@@ -18,17 +18,20 @@ Specs covered
    grid of ``.heat-cell`` elements) — neither of which appears on the home
    screen.
 2. Tapping a marked calendar day swaps in that day's entries via HTMX
-   (fragment swap, no full navigation).
-3. The 검도/심사 (grading) detail screen shows the current dan stage and the
-   shōgō (칭호) parallel track; the 독서 (reading) detail screen shows the
-   current tier and a count-to-next requirement.
-4. Calendar day cells remain ≥44px tap targets and chips wrap (never
+   (fragment swap, no full navigation). Quick-add only lives on the detail
+   screen, so the spec logs from there.
+3. The Kendo/Grading detail screen shows the current dan stage ("Dan") and
+   the shōgō ("Title") parallel track; the Reading detail screen shows the
+   current tier ("Beginner") and a count-to-next requirement ("more to go").
+4. Calendar day cells remain >=44px tap targets and chips wrap (never
    horizontal scroll-hide) at 360px viewport width and 1.5x text scale.
 """
 
 from __future__ import annotations
 
 import pytest
+
+from app import ui_strings
 
 pytestmark = pytest.mark.e2e
 
@@ -62,24 +65,31 @@ def page(browser):
 
 
 def _enter_as_guest(page) -> None:
-    """Land on the entry screen and tap "그냥 시작하기" to start a guest session."""
+    """Land on the entry screen and tap "Continue without an account" to start a guest session."""
     page.goto(BASE_URL + "/")
-    page.get_by_text("그냥 시작하기").click()
+    page.get_by_text(ui_strings.ENTRY_GUEST_LINK).click()
     page.wait_for_url(BASE_URL + "/home")
 
 
+def _open_detail(page, heading: str):
+    """Navigate from /home to a sub-tally's detail screen via its card link,
+    returning the detail-screen's `<article>` locator for that sub-tally."""
+    home_card = page.locator("article", has=page.get_by_role("heading", name=heading))
+    home_card.locator("a").first.click()
+    page.wait_for_url(f"{BASE_URL}/activities/*")
+    return page.locator("article", has=page.get_by_role("heading", name=heading))
+
+
 def test_detail_screen_shows_calendar_and_heatmap(page) -> None:
-    """The 수련 detail screen shows the month calendar and trailing-year heatmap,
-    neither of which appears on the home screen."""
+    """The Practice detail screen shows the month calendar and trailing-year
+    heatmap, neither of which appears on the home screen."""
     _enter_as_guest(page)
 
     home_html = page.content()
     assert "heat-cell" not in home_html
     assert "cal-day" not in home_html
 
-    card = page.locator("article", has=page.get_by_role("heading", name="수련"))
-    card.get_by_role("link", name="수련").click()
-    page.wait_for_url(f"{BASE_URL}/sub-tallies/*")
+    _open_detail(page, "Practice")
 
     assert page.locator(".cal-day").count() > 0
     heatmap = page.locator('[role="img"]')
@@ -92,13 +102,10 @@ def test_tapping_marked_calendar_day_swaps_day_entries_fragment(page) -> None:
     day's entries without a full page reload."""
     _enter_as_guest(page)
 
-    card = page.locator("article", has=page.get_by_role("heading", name="수련"))
-    card.get_by_role("button", name="기록하기").click()
-    sheet = page.locator("#log-sheet")
-    sheet.get_by_role("button", name="기록 남기기").click()
-
-    card.get_by_role("link", name="수련").click()
-    page.wait_for_url(f"{BASE_URL}/sub-tallies/*")
+    _open_detail(page, "Practice")
+    page.get_by_role("button", name=ui_strings.SUBTALLY_LOG_BUTTON).click()
+    sheet = page.locator("#log-panel")
+    sheet.get_by_role("button", name=ui_strings.LOG_SUBMIT).click()
 
     navigated = {"count": 0}
     page.on("framenavigated", lambda _frame: navigated.__setitem__("count", navigated["count"] + 1))
@@ -106,43 +113,37 @@ def test_tapping_marked_calendar_day_swaps_day_entries_fragment(page) -> None:
     marked_day = page.locator(".cal-day--marked").first
     marked_day.click()
 
-    page.wait_for_selector("#calendar-day-detail :text('이날의 기록')")
+    page.wait_for_selector(f"#calendar-day-detail :text('{ui_strings.CALENDAR_DAY_ENTRIES_TITLE}')")
     assert navigated["count"] == 0, "tapping a calendar day should swap a fragment, not navigate"
 
 
 def test_kendo_grading_detail_shows_dan_and_shogo_track(page) -> None:
-    """The 검도/심사 detail screen shows the current dan stage and the
-    shōgō (칭호) parallel track section."""
+    """The Kendo/Grading detail screen shows the current dan stage ("Dan")
+    and the shōgō ("Title") parallel track section."""
     _enter_as_guest(page)
 
-    card = page.locator("article", has=page.get_by_role("heading", name="심사"))
-    card.get_by_role("link", name="심사").click()
-    page.wait_for_url(f"{BASE_URL}/sub-tallies/*")
+    _open_detail(page, "Grading")
 
-    assert page.get_by_text("단계").count() > 0
-    assert page.get_by_text("칭호").count() > 0
+    assert page.get_by_text(ui_strings.PROGRESSION_TRACK_DAN).count() > 0
+    assert page.get_by_text(ui_strings.PROGRESSION_TRACK_SHOGO).count() > 0
 
 
 def test_reading_detail_shows_tier_and_count_to_next(page) -> None:
-    """The 독서 detail screen shows the current tier and a count-to-next
-    requirement string."""
+    """The Reading detail screen shows the current tier ("Beginner") and a
+    count-to-next requirement string ("more to go")."""
     _enter_as_guest(page)
 
-    card = page.locator("article", has=page.get_by_role("heading", name="독서"))
-    card.get_by_role("link", name="독서").click()
-    page.wait_for_url(f"{BASE_URL}/sub-tallies/*")
+    _open_detail(page, "Reading")
 
-    assert page.get_by_text("입문").count() > 0
-    assert page.get_by_text("앞으로").count() > 0
+    assert page.get_by_text("Beginner").count() > 0
+    assert page.get_by_text(ui_strings.PROGRESSION_COUNT_REMAINING_UNIT.strip()).count() > 0
 
 
 def test_calendar_day_cells_meet_tap_target_at_360px(page) -> None:
     """At 360px viewport width, .cal-day cells stay at the >=44px tap minimum."""
     _enter_as_guest(page)
 
-    card = page.locator("article", has=page.get_by_role("heading", name="수련"))
-    card.get_by_role("link", name="수련").click()
-    page.wait_for_url(f"{BASE_URL}/sub-tallies/*")
+    _open_detail(page, "Practice")
 
     first_day = page.locator(".cal-day").first
     box = first_day.bounding_box()

@@ -4,14 +4,16 @@ No HTTP, no Jinja, no HXML. Every function takes ``owner_id`` as a required
 argument (multi-user isolation is non-negotiable) and returns plain Python data
 structures (dicts / lists of dicts) that either renderer can consume.
 
-KST is the calendar
--------------------
-Mushin is a Korean-market app: every "day", "week", "month", and "year" bucket
-is an **Asia/Seoul (KST) calendar** bucket. We reuse ``entries._kst_day`` so the
-day a timestamp falls in agrees exactly with the streak math in ``entries.py``
-(same-day entries collapse, midnight boundaries land on the same side). The
-"current period" boundaries are derived from the **current KST wall-clock day**,
-never cached, because a period boundary moves with time and no new entry.
+The user's local timezone is the calendar
+------------------------------------------
+Every "day", "week", "month", and "year" bucket is a calendar bucket **in the
+caller-supplied timezone** (``tz: ZoneInfo`` — the web renderer passes the user's
+``user.timezone``; this layer never looks it up). We reuse
+``entries._local_day`` so the day a timestamp falls in agrees exactly with the
+streak math in ``entries.py`` (same-day entries collapse, midnight boundaries
+land on the same side). The "current period" boundaries are derived from the
+**current wall-clock day in that timezone**, never cached, because a period
+boundary moves with time and no new entry.
 
 Scoping + batching
 ------------------
@@ -19,7 +21,7 @@ Counting / streak / heatmap functions read ``entry`` rows scoped to the owner.
 Field-level functions (tag-group, scale, count) read ``entry_value`` / ``tag`` /
 ``entry_tag`` joined back through the owner-scoped ``entry`` table so a value
 can never reach across tenants. ``counts_for_sub_tallies`` accepts a *list* of
-sub_tally ids and answers in **one** query (``WHERE sub_tally_id IN (...)``) to
+activity ids and answers in **one** query (``WHERE activity_id IN (...)``) to
 avoid N+1 fan-out when a category renders many sub-tallies at once.
 """
 
@@ -30,27 +32,28 @@ from collections import defaultdict
 from collections.abc import Iterable, Sequence
 from datetime import date, datetime, timedelta
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from app.models import db
-from app.services import _db
-from app.services.entries import KST, _kst_day
+from app.services import _db, entries
+from app.services.entries import _local_day
 
 # Trailing-window length for the contribution heatmap (inclusive of today).
 HEATMAP_DAYS = 365
 
 
 # ---------------------------------------------------------------------------
-# KST period boundaries (derived from the current wall clock, never cached)
+# Period boundaries (derived from the current wall clock in tz, never cached)
 # ---------------------------------------------------------------------------
 
 
-def _today_kst() -> date:
-    """The current Asia/Seoul calendar day."""
-    return datetime.now(KST).date()
+def _today_local(tz: ZoneInfo) -> date:
+    """The current calendar day in the caller-supplied timezone *tz*."""
+    return datetime.now(tz).date()
 
 
 def _week_start(day: date) -> date:
-    """Monday-anchored start of *day*'s ISO week (KST)."""
+    """Monday-anchored start of *day*'s ISO week."""
     return day - timedelta(days=day.weekday())
 
 
@@ -62,11 +65,47 @@ def _year_start(day: date) -> date:
     return day.replace(month=1, day=1)
 
 
-def _add_month(day: date) -> date:
-    """First day of the month after *day*'s month (for an exclusive upper bound)."""
-    if day.month == 12:
-        return day.replace(year=day.year + 1, month=1, day=1)
-    return day.replace(month=day.month + 1, day=1)
+def _add_month(day: date, n: int = 1) -> date:
+    """First day of the month *n* months from *day*'s month.
+
+    Day-of-month is normalized to 1 (the original semantics: used to build an
+    exclusive month-end bound). *n* may be negative to step backward.
+    """
+    # 0-based month index from year 0, shifted by n, then split back out.
+    total = (day.year * 12 + (day.month - 1)) + n
+    year, month0 = divmod(total, 12)
+    return date(year, month0 + 1, 1)
+
+
+def _add_week(day: date, n: int) -> date:
+    """The day *n* weeks from *day* (negative *n* steps backward)."""
+    return day + timedelta(weeks=n)
+
+
+def _add_year(day: date, n: int) -> date:
+    """The day *n* years from *day*, clamping Feb 29 to Feb 28 on non-leap years."""
+    try:
+        return day.replace(year=day.year + n)
+    except ValueError:
+        # day is Feb 29 and the target year is not a leap year.
+        return day.replace(year=day.year + n, day=28)
+
+
+def _shift_period(anchor: date, kind: str, n: int) -> date:
+    """Start date of the period *n* steps from the period containing *anchor*.
+
+    *kind* is ``"week"``, ``"month"``, or ``"year"``. The anchor is first
+    normalized to its period start (Monday / 1st / Jan 1), then shifted by *n*
+    periods (negative goes back, positive goes forward). All dates are local
+    calendar days (the caller decides the zone when it computes the anchor).
+    """
+    if kind == "week":
+        return _add_week(_week_start(anchor), n)
+    if kind == "month":
+        return _add_month(_month_start(anchor), n)
+    if kind == "year":
+        return _add_year(_year_start(anchor), n)
+    raise ValueError(f"unknown kind {kind!r}; expected week/month/year")
 
 
 # ---------------------------------------------------------------------------
@@ -74,8 +113,11 @@ def _add_month(day: date) -> date:
 # ---------------------------------------------------------------------------
 
 
-def _entry_days(conn: sqlite3.Connection, sub_tally_id: int, owner_id: int) -> list[date]:
-    """Every entry's KST day for a sub-tally, newest day first, with repeats.
+def _entry_days(
+    conn: sqlite3.Connection, activity_id: int, owner_id: int, tz: ZoneInfo
+) -> list[date]:
+    """Every entry's local day (in *tz*) for a sub-tally, newest day first, with
+    repeats.
 
     Repeats are preserved so callers that count occurrences (heatmap, period
     counts) see them; callers that want distinct days dedupe themselves.
@@ -84,12 +126,12 @@ def _entry_days(conn: sqlite3.Connection, sub_tally_id: int, owner_id: int) -> l
         conn,
         "entry",
         owner_id,
-        where="sub_tally_id = ?",
-        params=(sub_tally_id,),
+        where="activity_id = ?",
+        params=(activity_id,),
         columns="occurred_at",
         order_by="occurred_at DESC",
     )
-    return [_kst_day(r["occurred_at"]) for r in rows]
+    return [_local_day(r["occurred_at"], tz) for r in rows]
 
 
 # ---------------------------------------------------------------------------
@@ -115,7 +157,7 @@ def _count_buckets(days: Sequence[date], today: date) -> dict[str, Any]:
     lifetime = len(days)
 
     # Average per week over the span from the first entry to today (inclusive),
-    # measured in whole KST weeks (min 1 so a single day isn't divided to zero).
+    # measured in whole local weeks (min 1 so a single day isn't divided to zero).
     if lifetime:
         first_day = min(days)
         span_days = (today - first_day).days + 1
@@ -133,26 +175,28 @@ def _count_buckets(days: Sequence[date], today: date) -> dict[str, Any]:
     }
 
 
-def counts(sub_tally_id: int, owner_id: int) -> dict[str, Any]:
+def counts(activity_id: int, owner_id: int, *, tz: ZoneInfo) -> dict[str, Any]:
     """Count summary for one sub-tally: this week/month/year, lifetime, avg/week.
 
-    All windows are KST calendar windows anchored on the current KST day.
+    All windows are calendar windows in the caller-supplied timezone *tz*,
+    anchored on the current local day.
     """
     with db.connect() as conn:
         conn.execute("BEGIN")
-        days = _entry_days(conn, sub_tally_id, owner_id)
-    return _count_buckets(days, _today_kst())
+        days = _entry_days(conn, activity_id, owner_id, tz)
+    return _count_buckets(days, _today_local(tz))
 
 
 def counts_for_sub_tallies(
-    sub_tally_ids: Iterable[int], owner_id: int
+    activity_ids: Iterable[int], owner_id: int, *, tz: ZoneInfo
 ) -> dict[int, dict[str, Any]]:
     """Batched count summaries for many sub-tallies in **one** query (no N+1).
 
-    Returns ``{sub_tally_id: count_summary}`` for every requested id; ids with no
+    Returns ``{activity_id: count_summary}`` for every requested id; ids with no
     entries get a zeroed summary so the caller can render every tile uniformly.
+    All windows are anchored on the current local day in *tz*.
     """
-    ids = list(dict.fromkeys(int(s) for s in sub_tally_ids))  # de-dupe, keep order
+    ids = list(dict.fromkeys(int(s) for s in activity_ids))  # de-dupe, keep order
     if not ids:
         return {}
 
@@ -161,14 +205,14 @@ def counts_for_sub_tallies(
     with db.connect() as conn:
         conn.execute("BEGIN")
         rows = conn.execute(
-            "SELECT sub_tally_id, occurred_at FROM entry"  # noqa: S608 - placeholders are '?'
-            f" WHERE owner_id = ? AND sub_tally_id IN ({placeholders})",
+            "SELECT activity_id, occurred_at FROM entry"  # noqa: S608 - placeholders are '?'
+            f" WHERE owner_id = ? AND activity_id IN ({placeholders})",
             (owner_id, *ids),
         ).fetchall()
     for r in rows:
-        by_sub[r["sub_tally_id"]].append(_kst_day(r["occurred_at"]))
+        by_sub[r["activity_id"]].append(_local_day(r["occurred_at"], tz))
 
-    today = _today_kst()
+    today = _today_local(tz)
     return {sid: _count_buckets(days, today) for sid, days in by_sub.items()}
 
 
@@ -205,17 +249,17 @@ def _current_run(distinct_days_desc: Sequence[date]) -> int:
     return run
 
 
-def streaks(sub_tally_id: int, owner_id: int) -> dict[str, int]:
+def streaks(activity_id: int, owner_id: int, *, tz: ZoneInfo) -> dict[str, int]:
     """Current + longest streak for a sub-tally.
 
-    ``current`` matches ``entries.py``'s cached streak exactly: the run of
-    consecutive KST days ending on the most-recent entry day (defined purely from
-    stored timestamps, not the wall clock). ``longest`` is the maximum such run
-    over all history.
+    ``current`` matches ``entries.py``'s cached streak exactly when computed with
+    the same *tz*: the run of consecutive local days ending on the most-recent
+    entry day (defined purely from stored timestamps, not the wall clock).
+    ``longest`` is the maximum such run over all history.
     """
     with db.connect() as conn:
         conn.execute("BEGIN")
-        days = _entry_days(conn, sub_tally_id, owner_id)
+        days = _entry_days(conn, activity_id, owner_id, tz)
 
     distinct_desc = sorted(set(days), reverse=True)
     return {
@@ -225,37 +269,67 @@ def streaks(sub_tally_id: int, owner_id: int) -> dict[str, int]:
 
 
 # ---------------------------------------------------------------------------
-# Heatmap: dense trailing-365-day series, zero-filled, keyed by KST day
+# Heatmap: dense trailing-365-day series, zero-filled, keyed by local day
 # ---------------------------------------------------------------------------
 
 
-def heatmap(sub_tally_id: int, owner_id: int, *, days: int = HEATMAP_DAYS) -> list[dict[str, Any]]:
-    """A dense trailing-*days*-day series for a contribution heatmap.
+def heatmap_range(
+    activity_id: int, owner_id: int, start: date, end: date, *, tz: ZoneInfo
+) -> list[dict[str, Any]]:
+    """A dense, zero-filled day series over ``[start, end]`` inclusive.
 
-    Returns one bucket **per KST day**, oldest first, with *every* day in the
-    window present (zero-filled), so a renderer can lay out a fixed grid without
-    gap handling. Each bucket is ``{"date": "YYYY-MM-DD", "count": int}`` where
-    ``count`` is the number of entries that fell on that KST day. The window is
-    the *days* calendar days ending on (and including) today (KST).
+    Returns one bucket **per local day** (in *tz*), oldest first, with *every*
+    day in the range present (zero-filled), so a renderer can lay out a fixed
+    grid without gap handling. Each bucket is ``{"date": "YYYY-MM-DD", "count":
+    int}`` where ``count`` is the number of entries that fell on that local day.
+    If ``end`` is before ``start`` the series is empty.
     """
-    today = _today_kst()
-    start = today - timedelta(days=days - 1)
-
     with db.connect() as conn:
         conn.execute("BEGIN")
-        entry_days = _entry_days(conn, sub_tally_id, owner_id)
+        entry_days = _entry_days(conn, activity_id, owner_id, tz)
 
     counts_by_day: dict[date, int] = defaultdict(int)
     for d in entry_days:
-        if start <= d <= today:
+        if start <= d <= end:
             counts_by_day[d] += 1
 
     series: list[dict[str, Any]] = []
     cursor = start
-    while cursor <= today:
+    while cursor <= end:
         series.append({"date": cursor.isoformat(), "count": counts_by_day.get(cursor, 0)})
         cursor += timedelta(days=1)
     return series
+
+
+def heatmap(
+    activity_id: int, owner_id: int, *, tz: ZoneInfo, days: int = HEATMAP_DAYS
+) -> list[dict[str, Any]]:
+    """A dense trailing-*days*-day series for a contribution heatmap.
+
+    The window is the *days* calendar days ending on (and including) today
+    in *tz*. Thin wrapper over :func:`heatmap_range`.
+    """
+    today = _today_local(tz)
+    return heatmap_range(
+        activity_id, owner_id, today - timedelta(days=days - 1), today, tz=tz
+    )
+
+
+def period_entries(
+    activity_id: int, owner_id: int, start: date, end: date, *, tz: ZoneInfo
+) -> list[dict[str, Any]]:
+    """Hydrated entries whose local day (in *tz*) falls in ``[start, end]``,
+    newest-first.
+
+    Owner-scoped via :func:`entries.list_for_activity` (which only reads rows
+    for *owner_id*). Filtering is done in Python on the local day so the boundary
+    rule matches the rest of this module exactly. Sorted by ``occurred_at``
+    descending (newest first).
+    """
+    rows = entries.list_for_activity(owner_id, activity_id)
+    selected = [r for r in rows if start <= _local_day(r["occurred_at"], tz) <= end]
+    selected.sort(key=lambda r: r["occurred_at"], reverse=True)
+    return selected
 
 
 # ---------------------------------------------------------------------------
@@ -266,24 +340,24 @@ def heatmap(sub_tally_id: int, owner_id: int, *, days: int = HEATMAP_DAYS) -> li
 def _assert_field_kind(
     conn: sqlite3.Connection,
     owner_id: int,
-    sub_tally_id: int,
+    activity_id: int,
     field_def_id: int,
     expected: Iterable[str],
 ) -> str:
-    """Validate that *field_def_id* belongs to *sub_tally_id* (owned) and has an
+    """Validate that *field_def_id* belongs to *activity_id* (owned) and has an
     expected kind. Returns the kind. ``field_def`` has no owner_id column, so we
-    join through the owner-scoped sub_tally.
+    join through the owner-scoped activity.
     """
     row = conn.execute(
         """SELECT fd.kind AS kind
              FROM field_def fd
-             JOIN sub_tally st ON st.id = fd.sub_tally_id
-            WHERE fd.id = ? AND fd.sub_tally_id = ? AND st.owner_id = ?""",
-        (field_def_id, sub_tally_id, owner_id),
+             JOIN activity st ON st.id = fd.activity_id
+            WHERE fd.id = ? AND fd.activity_id = ? AND st.owner_id = ?""",
+        (field_def_id, activity_id, owner_id),
     ).fetchone()
     if row is None:
         raise FieldNotFoundError(
-            f"field_def {field_def_id} not found on sub_tally {sub_tally_id} for owner {owner_id}"
+            f"field_def {field_def_id} not found on activity {activity_id} for owner {owner_id}"
         )
     kind = row["kind"]
     expected_set = set(expected)
@@ -306,8 +380,9 @@ def _period_bounds(today: date, period: str) -> tuple[date, date, date]:
     """Return ``(this_start, last_start, this_end_exclusive)`` for a period.
 
     ``period`` is ``"week"``, ``"month"``, or ``"year"``. The "last" period is the
-    immediately preceding one of the same kind. All bounds are KST days; the
-    upper bound is exclusive (``this_end_exclusive`` = start of the next period).
+    immediately preceding one of the same kind. All bounds are local calendar
+    days (the caller's *today* fixes the zone); the upper bound is exclusive
+    (``this_end_exclusive`` = start of the next period).
     """
     if period == "week":
         this_start = _week_start(today)
@@ -327,40 +402,41 @@ def _period_bounds(today: date, period: str) -> tuple[date, date, date]:
 
 
 def tag_frequency(
-    sub_tally_id: int,
+    activity_id: int,
     owner_id: int,
     field_def_id: int,
     *,
+    tz: ZoneInfo,
     period: str = "month",
     top: int | None = None,
 ) -> dict[str, Any]:
     """Top tags for a tag-group field, with this-period-vs-last-period trend.
 
     Returns ``{"tags": [{tag_id, name, total, this_period, last_period, delta}, ...]}``
-    sorted by lifetime ``total`` descending. *period* is week/month/year; *top*
-    truncates the list if given. Counts are entries (an entry tagged with a tag
-    counts once for that tag).
+    sorted by lifetime ``total`` descending. *period* is week/month/year in the
+    caller-supplied timezone *tz*; *top* truncates the list if given. Counts are
+    entries (an entry tagged with a tag counts once for that tag).
     """
-    today = _today_kst()
+    today = _today_local(tz)
     this_start, last_start, this_end = _period_bounds(today, period)
 
     with db.connect() as conn:
         conn.execute("BEGIN")
-        _assert_field_kind(conn, owner_id, sub_tally_id, field_def_id, ("tag_group",))
+        _assert_field_kind(conn, owner_id, activity_id, field_def_id, ("tag_group",))
         rows = conn.execute(
             """SELECT t.id AS tag_id, t.name AS name, e.occurred_at AS occurred_at
                  FROM entry_tag et
                  JOIN entry e ON e.id = et.entry_id
                  JOIN tag t   ON t.id = et.tag_id
                 WHERE e.owner_id = ?
-                  AND e.sub_tally_id = ?
+                  AND e.activity_id = ?
                   AND t.field_def_id = ?""",
-            (owner_id, sub_tally_id, field_def_id),
+            (owner_id, activity_id, field_def_id),
         ).fetchall()
 
     agg: dict[int, dict[str, Any]] = {}
     for r in rows:
-        d = _kst_day(r["occurred_at"])
+        d = _local_day(r["occurred_at"], tz)
         entry = agg.setdefault(
             r["tag_id"],
             {
@@ -386,7 +462,7 @@ def tag_frequency(
 
 
 def scale_distribution(
-    sub_tally_id: int,
+    activity_id: int,
     owner_id: int,
     field_def_id: int,
 ) -> dict[str, Any]:
@@ -399,16 +475,16 @@ def scale_distribution(
     """
     with db.connect() as conn:
         conn.execute("BEGIN")
-        _assert_field_kind(conn, owner_id, sub_tally_id, field_def_id, ("scale",))
+        _assert_field_kind(conn, owner_id, activity_id, field_def_id, ("scale",))
         rows = conn.execute(
             """SELECT ev.num_value AS num_value
                  FROM entry_value ev
                  JOIN entry e ON e.id = ev.entry_id
                 WHERE e.owner_id = ?
-                  AND e.sub_tally_id = ?
+                  AND e.activity_id = ?
                   AND ev.field_def_id = ?
                   AND ev.num_value IS NOT NULL""",
-            (owner_id, sub_tally_id, field_def_id),
+            (owner_id, activity_id, field_def_id),
         ).fetchall()
 
     buckets: dict[float, int] = defaultdict(int)
@@ -426,10 +502,11 @@ def scale_distribution(
 
 
 def count_totals(
-    sub_tally_id: int,
+    activity_id: int,
     owner_id: int,
     field_def_id: int,
     *,
+    tz: ZoneInfo,
     period: str = "month",
 ) -> dict[str, Any]:
     """Totals + period trend for a count field.
@@ -437,23 +514,23 @@ def count_totals(
     Returns ``{"lifetime": x, "this_period": y, "last_period": z, "delta": y-z,
     "entries": n}`` where the totals **sum** the count field's values (not entry
     counts), ``entries`` is how many entries recorded the field, and the period
-    is week/month/year in KST.
+    is week/month/year in the caller-supplied timezone *tz*.
     """
-    today = _today_kst()
+    today = _today_local(tz)
     this_start, last_start, this_end = _period_bounds(today, period)
 
     with db.connect() as conn:
         conn.execute("BEGIN")
-        _assert_field_kind(conn, owner_id, sub_tally_id, field_def_id, ("count",))
+        _assert_field_kind(conn, owner_id, activity_id, field_def_id, ("count",))
         rows = conn.execute(
             """SELECT ev.num_value AS num_value, e.occurred_at AS occurred_at
                  FROM entry_value ev
                  JOIN entry e ON e.id = ev.entry_id
                 WHERE e.owner_id = ?
-                  AND e.sub_tally_id = ?
+                  AND e.activity_id = ?
                   AND ev.field_def_id = ?
                   AND ev.num_value IS NOT NULL""",
-            (owner_id, sub_tally_id, field_def_id),
+            (owner_id, activity_id, field_def_id),
         ).fetchall()
 
     lifetime = 0.0
@@ -462,7 +539,7 @@ def count_totals(
     n = 0
     for r in rows:
         v = r["num_value"]
-        d = _kst_day(r["occurred_at"])
+        d = _local_day(r["occurred_at"], tz)
         lifetime += v
         n += 1
         if this_start <= d < this_end:

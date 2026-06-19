@@ -12,50 +12,29 @@
         <p class="text-caption text-text-muted">{{ strings.ENTRY_TAGLINE }}</p>
     </header>
 
-    <div class="flex flex-col gap-3">
-        <button
-            type="button"
-            hx-post="/auth/guest"
-            hx-swap="none"
-            hx-on::after-request="if(event.detail.successful) window.location.href = '/home'"
-            class="min-h-tap w-full rounded-button bg-brand px-4 py-3 text-title font-semibold text-surface-1 transition focus-visible:outline-offset-2"
-        >
-            {{ strings.ENTRY_START_GUEST }}
-        </button>
-        <p class="text-center text-caption text-text-secondary">{{ strings.ENTRY_START_GUEST_SUB }}</p>
-        <p class="text-center text-micro text-text-muted">{{ strings.ENTRY_START_GUEST_NOTE }}</p>
-    </div>
+    {% include "components/auth_login_form.html.jinja2" with context %}
 
-    <div class="flex items-center gap-3 text-caption text-text-muted" role="separator" aria-label="{{ strings.ENTRY_DIVIDER }}">
-        <span class="h-px flex-1 bg-border"></span>
-        <span>{{ strings.ENTRY_DIVIDER }}</span>
-        <span class="h-px flex-1 bg-border"></span>
-    </div>
-
-    <div class="flex flex-col gap-3">
+    {% if demo_username %}
+    <p class="text-center text-caption text-text-muted">
         <a
-            href="/auth/kakao/authorize"
-            class="flex min-h-tap w-full items-center justify-center rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-primary transition hover:bg-surface-2"
-        >
-            {{ strings.ENTRY_SIGNIN_KAKAO }}
-        </a>
-        <a
-            href="/auth/google/authorize"
-            class="flex min-h-tap w-full items-center justify-center rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-primary transition hover:bg-surface-2"
-        >
-            {{ strings.ENTRY_SIGNIN_GOOGLE }}
-        </a>
-        <a
-            href="/auth/email"
-            class="flex min-h-tap w-full items-center justify-center rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-primary transition hover:bg-surface-2"
-        >
-            {{ strings.ENTRY_SIGNIN_EMAIL }}
-        </a>
-    </div>
+            href="/@{{ demo_username }}"
+            class="underline underline-offset-2 focus-visible:outline-offset-2"
+        >{{ strings.ENTRY_DEMO_LINK }}</a>
+    </p>
+    {% endif %}
 
     <p class="text-center text-micro text-text-muted">
         {{ strings.ENTRY_CONSENT_NOTICE }}
         <a href="/privacy" class="underline underline-offset-2 focus-visible:outline-offset-2">{{ strings.ENTRY_CONSENT_LINK_TEXT }}</a>{{ strings.ENTRY_CONSENT_SUFFIX }}
     </p>
 </section>
+{% endblock %}
+
+{% block footer %}
+<a
+    href="/privacy"
+    class="text-caption text-text-muted underline-offset-2 hover:underline focus-visible:outline-offset-2"
+>
+    {{ strings.FOOTER_PRIVACY }}
+</a>
 {% endblock %}
