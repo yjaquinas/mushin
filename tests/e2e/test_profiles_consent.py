@@ -86,6 +86,18 @@ def anon_page(browser):
     context.close()
 
 
+@pytest.fixture
+def other_page(browser):
+    """A second, separately-authenticated browser context — a logged-in
+    user who is NOT a fellow of the profile under test. Distinct from
+    ``anon_page`` (no session at all) and from ``page`` (the profile
+    owner's own session)."""
+    context = browser.new_context(viewport={"width": 360, "height": 800})
+    page = context.new_page()
+    yield page
+    context.close()
+
+
 def _unique_username(slug: str) -> str:
     """A username that's unique per test run, so reruns against the
     persistent dev DB never collide with a leftover row from a previous run.
@@ -189,7 +201,12 @@ def test_account_visibility_toggle_updates_share_link(page) -> None:
 def test_public_profile_shows_activities_with_no_write_affordances(page, anon_page) -> None:
     """A public account's profile, viewed with no session, lists activities
     with zero write affordances; clicking into one renders the read-only
-    detail view including memo text if present."""
+    detail view (including memo text if present) through the same merged
+    calendar the owner dashboard uses — which does have read-only GET
+    navigation buttons (period switch, prev/next, day-select), so the
+    detail-page assertion checks for the *absence of write* affordances
+    specifically (no <form>, no edit/delete/rename/log-trigger button or
+    URL), not literally zero buttons."""
     username = _unique_username("public")
     _signup(page, username)
     page.wait_for_url(BASE_URL + "/welcome-sharing")
@@ -206,7 +223,7 @@ def test_public_profile_shows_activities_with_no_write_affordances(page, anon_pa
     anon_page.goto(BASE_URL + f"/@{username}")
     assert anon_page.url == BASE_URL + f"/@{username}"
 
-    # No write affordances anywhere on the page.
+    # No write affordances anywhere on the profile page.
     assert anon_page.locator("button").count() == 0
     assert anon_page.locator("form").count() == 0
     assert anon_page.locator("input").count() == 0
@@ -218,10 +235,69 @@ def test_public_profile_shows_activities_with_no_write_affordances(page, anon_pa
         anon_page.wait_for_load_state("networkidle")
         assert f"/@{username}/" in anon_page.url
 
-        # Still zero write affordances on the detail page.
-        assert anon_page.locator("button").count() == 0
+        # No write-capable element anywhere on the detail page: no form,
+        # no input, and no button whose hx-get/hx-post targets an
+        # edit/delete/rename/log/match-row mutation route. The calendar's
+        # own read-only nav buttons (period switch, prev/next, day-select —
+        # all plain GETs against /activities/{id}/history) are expected and
+        # allowed here.
         assert anon_page.locator("form").count() == 0
         assert anon_page.locator("input").count() == 0
+        for attr in ("hx-post",):
+            assert anon_page.locator(f"[{attr}]").count() == 0
+        write_url_fragment = (
+            "[hx-get*='/edit'], [hx-get*='/delete'], [hx-get*='/rename'], "
+            "[hx-get*='/match-rows'], [hx-get*='/log-trigger'], #log-trigger"
+        )
+        assert anon_page.locator(write_url_fragment).count() == 0
+
+
+def test_public_profile_calendar_renders_for_logged_in_non_fellow(page, other_page) -> None:
+    """A public account's activity detail, viewed by a different, logged-in
+    user who is NOT a fellow, renders the same merged calendar (period
+    switcher + day-grouped log) the owner sees — with zero write
+    affordances. This is distinct from the anonymous-visitor case above:
+    the viewer here has an authenticated session, just not one with any
+    relationship to the profile owner."""
+    owner_username = _unique_username("calowner")
+    _signup(page, owner_username)
+    page.wait_for_url(BASE_URL + "/welcome-sharing")
+    page.locator("input[name='visibility'][value='public']").check()
+    page.get_by_role("button", name=ui_strings.VISIBILITY_CONSENT_SUBMIT).click()
+    page.wait_for_url(BASE_URL + f"/@{owner_username}")
+    # Ensure starter activities are seeded (lazy on first /@{username} visit).
+    page.goto(BASE_URL + f"/@{owner_username}")
+
+    # A second, unrelated account — logged in, but not a fellow of the owner.
+    other_username = _unique_username("nonfellow")
+    _signup(other_page, other_username)
+    other_page.wait_for_url(BASE_URL + "/welcome-sharing")
+    other_page.locator("input[name='visibility'][value='private']").check()
+    other_page.get_by_role("button", name=ui_strings.VISIBILITY_CONSENT_SUBMIT).click()
+    other_page.wait_for_url(BASE_URL + f"/@{other_username}")
+
+    # Now, still logged in as the second account, view the owner's profile.
+    other_page.goto(BASE_URL + f"/@{owner_username}")
+    activity_links = other_page.locator(f"a[href^='/@{owner_username}/']")
+    assert activity_links.count() > 0
+    activity_links.first.click()
+    other_page.wait_for_load_state("networkidle")
+    assert f"/@{owner_username}/" in other_page.url
+
+    # The merged calendar's read-only header is present (period switcher).
+    assert other_page.get_by_role("tab", name=ui_strings.HISTORY_PERIOD_MONTH).count() == 1
+    assert other_page.get_by_role("tab", name=ui_strings.HISTORY_PERIOD_WEEK).count() == 1
+
+    # No write affordance: no form/input anywhere, no edit/delete/rename/
+    # log-trigger button or URL.
+    assert other_page.locator("form").count() == 0
+    assert other_page.locator("input").count() == 0
+    assert other_page.locator("[hx-post]").count() == 0
+    write_url_fragment = (
+        "[hx-get*='/edit'], [hx-get*='/delete'], [hx-get*='/rename'], "
+        "[hx-get*='/match-rows'], [hx-get*='/log-trigger'], #log-trigger"
+    )
+    assert other_page.locator(write_url_fragment).count() == 0
 
 
 # ---------------------------------------------------------------------------

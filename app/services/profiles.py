@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import sqlite3
 from typing import Literal
+from urllib.parse import urlsplit
 
 Capability = Literal["owner", "blocked", "connected", "public", "limited"]
 
@@ -231,6 +232,38 @@ def canonical_activity_url(username: str, slug: str) -> str:
     Single source of truth for the activity URL prefix — renames touch one line.
     """
     return f"/@{username}/{slug}"
+
+
+def safe_next_path(value: str | None) -> str | None:
+    """Validate *value* as a same-origin relative path for a post-login redirect.
+
+    Returns the value unchanged when it is safe to redirect to, or ``None``
+    when it is missing or unsafe — callers must treat ``None`` as "no
+    redirect target" (fall back to the default landing page), never pass an
+    unsafe value through.
+
+    Pure, no DB/HTTP — this is the single place that decides what counts as
+    "same-origin relative path" so the rule can't drift between call sites.
+    Rejects:
+
+    - empty/``None``
+    - anything not starting with a single ``/`` (relative paths, bare
+      strings, ``javascript:`` etc. — none of those start with ``/``)
+    - scheme-relative URLs (``//evil.com/...``) — these parse as having no
+      scheme but a real ``netloc``, which is exactly the open-redirect shape
+      a leading ``/`` alone doesn't rule out
+    - any value that parses with a scheme or netloc at all (``https://...``,
+      ``http://...``) — defense in depth alongside the ``//`` check, since
+      ``urlsplit`` already exposes those independently
+    """
+    if not value:
+        return None
+    if not value.startswith("/") or value.startswith("//"):
+        return None
+    parts = urlsplit(value)
+    if parts.scheme or parts.netloc:
+        return None
+    return value
 
 
 def get_activity_for_owner(

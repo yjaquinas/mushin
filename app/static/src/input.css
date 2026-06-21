@@ -562,6 +562,7 @@
     position:        relative;
     min-width:       var(--spacing-tap);   /* ≥44 px tap target */
     min-height:      var(--spacing-tap);   /* ≥44 px tap target */
+    margin-inline:   auto;   /* centers the fixed-size button within its <td> */
     border-radius:   var(--radius-button);
     font-size:       var(--font-size-body);
     font-weight:     var(--font-weight-normal);

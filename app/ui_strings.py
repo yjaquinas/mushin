@@ -202,6 +202,7 @@ CALENDAR_WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 CALENDAR_DAY_ENTRIES_TITLE = "Entries on this day"
 CALENDAR_DAY_ENTRIES_EMPTY = "No entries on this day."
 CALENDAR_DAY_CLOSE = "Close"
+CALENDAR_BACK_TO_CALENDAR = "Calendar"
 
 # ---------------------------------------------------------------------------
 # History: period switcher + actual log

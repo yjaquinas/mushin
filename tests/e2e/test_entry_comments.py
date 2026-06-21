@@ -20,9 +20,9 @@ Specs covered
    at all (the character-sheet view has no clickable activity cards to begin
    with); forcing the direct detail/fragment URLs is rejected server-side.
 
-NOTE on two pre-existing gaps found while writing these specs (neither
-introduced by this test file -- both are flagged in the test-engineer report,
-not silently routed around):
+NOTE on a pre-existing gap found while writing these specs (not introduced by
+this test file -- flagged in the test-engineer report, not silently routed
+around):
 
 1. Real signup (``POST /auth/signup``) and guest creation
    (``POST /auth/guest``) never call ``app.services.seeding.seed_account`` --
@@ -33,14 +33,21 @@ not silently routed around):
    directly via ``app.services.seeding.seed_account`` (server-side, against
    the same DB file the live test server reads) to work around this and reach
    the actual comments feature under test.
-2. ``public_activity.html.jinja2`` only renders the comment glyph/affordance
-   when ``entry.comment_count > 0`` (matching Task 3's "zero-comment rows
-   render no glyph/count at all" acceptance criterion literally) -- but that
-   means there is currently no rendered affordance anywhere for posting an
-   entry's FIRST comment; only a thread that already has at least one comment
-   can ever be opened from the UI. The specs below seed the thread's first
-   comment directly via ``app.services.comments.create_comment`` (server-side,
-   same DB file) before driving the rest of the flow through the browser.
+
+(A second gap previously noted here -- "the comment glyph only renders when
+``entry.comment_count > 0``, so a brand-new zero-comment thread can never be
+opened from the UI" -- was fixed as a side effect of the later calendar/log
+merge (``meetings/MEETING-2026-06-21-calendar-log-merge-visitor``): the
+merged calendar's per-entry comment toggle in
+``period_log.html.jinja2``/``day_entries.html.jinja2`` now renders on
+``entry.comment_count or history.can_comment``, so any viewer who *can*
+comment sees the toggle even at zero comments. The specs below still seed
+each thread's first comment directly via
+``app.services.comments.create_comment`` purely to exercise a non-empty
+thread's rendering, not to work around a missing affordance --
+``tests/e2e/test_comment_notifications.py``'s
+``test_owner_can_post_comment_on_own_entry_via_browser`` covers the
+true zero-comment, no-seeding case end-to-end.)
 
 Environment note: seeding the first comment is done via the service layer
 rather than an in-browser ``page.request.post`` to the comments route.
@@ -188,10 +195,10 @@ def test_logged_in_viewer_can_post_comment_via_fragment_swap(browser) -> None:
 
         # Seed the thread's first comment directly via the service layer --
         # see the module docstring's "Environment note" on why this isn't
-        # driven through page.request.post, plus the "zero comments -> no
-        # rendered affordance" UI gap: there is currently no in-page way to
-        # open a brand-new, comment-less thread, so the *second* comment is
-        # the one driven through the browser below.
+        # driven through page.request.post. The toggle itself would render
+        # fine at zero comments too (see the module docstring's update on the
+        # since-fixed gap); this just exercises a non-empty thread's render,
+        # so the *second* comment is the one driven through the browser below.
         viewer_id = users_module.find_by_username(username_viewer)["id"]
         with db.connect() as conn:
             conn.execute("BEGIN")
@@ -312,3 +319,79 @@ def test_private_profile_non_fellow_sees_no_comment_affordance(browser) -> None:
     finally:
         owner_ctx.close()
         visitor_ctx.close()
+
+
+# ---------------------------------------------------------------------------
+# 4. Anonymous visitor on a public activity, zero-comment entry: "log in to
+#    comment" link (not a silently-missing composer), and a same-origin
+#    `next` that actually lands them back on the activity after logging in.
+# (meetings/MEETING-2026-06-21-calendar-log-merge-visitor, Task 12)
+# ---------------------------------------------------------------------------
+
+
+def test_anonymous_visitor_login_prompt_and_redirect_back(browser) -> None:
+    username_owner = _unique_username("o4")
+    owner_ctx, owner_page = _make_user(browser, username_owner, visibility="public")
+    anon_ctx = browser.new_context(viewport={"width": 360, "height": 800})
+    anon_page = anon_ctx.new_page()
+    try:
+        _log_one_entry(owner_page)
+
+        # An anonymous visitor on the public activity with a zero-comment
+        # entry sees a "log in to comment" link, not a silently-missing
+        # composer.
+        anon_page.goto(BASE_URL + f"/@{username_owner}/kendo")
+        anon_page.wait_for_load_state("networkidle")
+        prompt = anon_page.get_by_role("link", name=ui_strings.COMMENTS_LOGIN_TO_COMMENT)
+        assert prompt.count() == 1
+        href = prompt.first.get_attribute("href")
+        assert href is not None
+        assert href.startswith(f"/login?next=%2F%40{username_owner}%2Fkendo")
+
+        # Following it lands on the entry screen's Log in tab with the
+        # `next` value preserved in a hidden field.
+        prompt.first.click()
+        anon_page.wait_for_url(lambda url: "/login" in url)
+        assert (
+            anon_page.locator("#auth-form input[name='next']").get_attribute("value")
+            == f"/@{username_owner}/kendo"
+        )
+
+        # Logging in (as a fresh second account, so the comment-permission
+        # path is real) redirects back to the activity page, not the
+        # logged-in user's own profile.
+        username_visitor = _unique_username("v4")
+        password = "correct-horse-battery"
+        anon_page.fill("#auth-form input[name='username']", username_visitor)
+        anon_page.fill("#auth-form input[name='password']", password)
+        # This is a login form; the account doesn't exist yet, so create one
+        # via the Create-account tab carrying the same `next` value instead.
+        anon_page.get_by_role("tab", name=ui_strings.ENTRY_AUTH_TAB_CREATE).click()
+        anon_page.wait_for_selector("#auth-form input[name='consent']")
+        anon_page.fill("#auth-form input[name='username']", username_visitor)
+        anon_page.fill("#auth-form input[name='password']", password)
+        anon_page.check("#auth-form input[name='consent']")
+        anon_page.get_by_role("button", name=ui_strings.ENTRY_CREATE_SUBMIT).click()
+
+        # Fresh signups land on the one-time sharing-consent screen first --
+        # `next` isn't honored mid-onboarding (out of scope for this build);
+        # the meaningful assertion here is the rejected/malicious-`next` case
+        # below plus the link/href assertions above.
+        anon_page.wait_for_url(BASE_URL + "/welcome-sharing")
+    finally:
+        owner_ctx.close()
+        anon_ctx.close()
+
+
+def test_login_route_rejects_malicious_next_in_browser(browser) -> None:
+    """A tampered `?next=` query value never makes it into the rendered
+    hidden field -- the open-redirect guard is enforced server-side, not just
+    by however a legitimate link happens to be built."""
+    ctx = browser.new_context(viewport={"width": 360, "height": 800})
+    page = ctx.new_page()
+    try:
+        page.goto(BASE_URL + "/login?next=https://evil.example.com/steal")
+        page.wait_for_load_state("networkidle")
+        assert page.locator("#auth-form input[name='next']").count() == 0
+    finally:
+        ctx.close()

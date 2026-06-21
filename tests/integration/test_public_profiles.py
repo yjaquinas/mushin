@@ -200,7 +200,86 @@ async def test_activity_detail_renders_for_public_account_with_memo(
     assert "secret training notes" in body
 
 
+async def test_visitor_activity_detail_hero_suppresses_streak_caption(client: AsyncClient) -> None:
+    """The visitor hero zone (``public_activity.html.jinja2``'s
+    ``card_body(show_header=False, show_streak=False)``) doesn't repeat the
+    streak caption either — same dedup'd macro the owner detail page uses,
+    same suppression. The Summary card below still shows the streak once via
+    ``STREAK_CURRENT_LABEL``/``STREAK_LONGEST_LABEL``."""
+    from app.services import stats
+
+    owner_id = _create_account("herostreak1", visibility="public")
+    activity_id, slug = _first_activity(owner_id)
+    entries.create(owner_id, activity_id, {"tags": [], "values": {}, "memo": ""}, tz=_UTC)
+    current_streak = stats.streaks(activity_id, owner_id, tz=_UTC)["current"]
+
+    resp = await client.get(f"/@herostreak1/{slug}")
+    assert resp.status_code == 200
+    body = resp.text
+    # Hero-zone "Streak {n} days" caption (home card's exact wording) is
+    # absent — it would only appear via the suppressed show_streak branch.
+    assert f"Streak {current_streak} day" not in body
+    assert ui_strings.STREAK_CURRENT_LABEL in body
+    assert body.count(ui_strings.STREAK_CURRENT_LABEL) == 1
+    assert body.count(ui_strings.STREAK_LONGEST_LABEL) == 1
+
+
+async def test_activity_detail_renders_merged_calendar_for_visitor(client: AsyncClient) -> None:
+    """A public-account visitor sees the same merged calendar UI the owner
+    sees on /@{username}/{slug}: period switcher, prev/next, and the
+    day-grouped period log — via the shared components/history.html.jinja2
+    partial, not a separate hand-rolled list."""
+    owner_id = _create_account("calendarvis1", visibility="public")
+    activity_id, slug = _first_activity(owner_id)
+    entries.create(
+        owner_id, activity_id, {"tags": [], "values": {}, "memo": "logged today"}, tz=_UTC
+    )
+
+    resp = await client.get(f"/@calendarvis1/{slug}")
+    assert resp.status_code == 200
+    body = resp.text
+    # Period switcher tabs + prev/next nav (history.html.jinja2's header).
+    assert ui_strings.HISTORY_PERIOD_WEEK in body
+    assert ui_strings.HISTORY_PERIOD_MONTH in body
+    assert ui_strings.HISTORY_PERIOD_YEAR in body
+    assert ui_strings.HISTORY_PERIOD_ALL in body
+    # The logged entry's memo shows up via the merged log, not the deleted
+    # hand-rolled <ul>.
+    assert "logged today" in body
+    assert f'hx-get="/activities/{activity_id}/history' in body
+
+
+async def test_owner_preview_paths_render_merged_calendar(client: AsyncClient) -> None:
+    """Both ?as=stranger and ?as=connection owner-preview paths flow through
+    the same merged calendar view as a real visitor, at their respective
+    downgraded capability — never the owner dashboard's write affordances."""
+    owner_id = await _signup_and_set_visibility(client, "previewcal1", visibility="public")
+    activity_id, slug = _first_activity(owner_id)
+    entries.create(
+        owner_id, activity_id, {"tags": [], "values": {}, "memo": "preview memo"}, tz=_UTC
+    )
+
+    for preview in ("stranger", "connection"):
+        resp = await client.get(f"/@previewcal1/{slug}?as={preview}")
+        assert resp.status_code == 200
+        body = resp.text
+        assert ui_strings.HISTORY_PERIOD_MONTH in body
+        assert "preview memo" in body
+        assert "<form" not in body
+        assert "/edit" not in body
+        assert "/delete" not in body
+        assert "/rename" not in body
+
+
 async def test_activity_detail_has_no_write_affordances(client: AsyncClient) -> None:
+    """The merged calendar (components/history.html.jinja2) renders read-only
+    navigation (period switch, prev/next, day-select — all GETs against
+    /activities/{id}/history, which 401s for a non-owner anyway), but zero
+    write affordances: no POST, no entry edit/delete URL, no rename, no log
+    form/trigger, no match-row mutation. Asserting on the absent *strings*
+    (not just invisible buttons) per .claude/rules/web-templates.md's
+    context-shape safety boundary — a template bug can't resurrect a write
+    control if the URL substring it would need was never emitted at all."""
     owner_id = _create_account("nowrites2", visibility="public")
     _, slug = _first_activity(owner_id)
 
@@ -208,11 +287,23 @@ async def test_activity_detail_has_no_write_affordances(client: AsyncClient) -> 
     assert resp.status_code == 200
     body = resp.text
     assert "hx-post" not in body
-    assert "hx-get" not in body
     assert "<form" not in body
-    assert "/log" not in body
-    # No link back into the session-only owner dashboard.
-    assert "/activities/" not in body
+    # No entry edit/delete, rename, log-trigger, or match-row mutation URL.
+    assert "/edit" not in body
+    assert "/delete" not in body
+    assert "/delete-confirm" not in body
+    assert "/rename" not in body
+    assert 'hx-get="/activities/' not in body or "/history" in body
+    assert "/log-panel" not in body
+    assert 'id="log-trigger-' not in body
+    assert "/match-rows/" not in body
+    # The only /activities/{id}/... URLs present are the read-only history
+    # fragment GETs (period switch, prev/next, day-select) — never a write.
+    import re
+
+    activities_urls = re.findall(r'/activities/\d+/[^"\'\s?]*', body)
+    assert activities_urls, "expected at least the read-only /history URLs"
+    assert all(url.endswith("/history") for url in activities_urls)
 
 
 # ---------------------------------------------------------------------------
@@ -532,6 +623,111 @@ async def test_blocking_viewer_also_cannot_see_blocker(client: AsyncClient) -> N
 
 
 # ---------------------------------------------------------------------------
+# GET /activities/{id}/history — the fragment behind every interactive
+# control inside the merged calendar (period tabs, prev/next, day-select),
+# shared verbatim by the owner dashboard and the read-only visitor view.
+# ---------------------------------------------------------------------------
+
+
+async def test_history_fragment_anonymous_visitor_public_activity_gets_readonly_fragment(
+    client: AsyncClient,
+) -> None:
+    """An anonymous (no session) visitor hitting the history fragment route
+    for a PUBLIC activity gets a real 200 fragment back — not 401. Before
+    this fix the route assumed visitor==owner always; that assumption is
+    gone now that the merged calendar is shared with read-only viewers."""
+    owner_id = _create_account("histanon1", visibility="public")
+    activity_id, _ = _first_activity(owner_id)
+    entries.create(
+        owner_id, activity_id, {"tags": [], "values": {}, "memo": "anon-visible"}, tz=_UTC
+    )
+
+    client.cookies.clear()
+    resp = await client.get(f"/activities/{activity_id}/history?period=month")
+    assert resp.status_code == 200
+    body = resp.text
+    assert "anon-visible" in body
+    # Read-only: no write affordances anywhere in the fragment.
+    assert "hx-post" not in body
+    assert "<form" not in body
+    assert "/edit" not in body
+    assert "/delete" not in body
+
+
+async def test_history_fragment_connected_fellow_private_activity_gets_readonly_fragment(
+    client: AsyncClient,
+) -> None:
+    """A connected fellow hitting the history fragment route for a PRIVATE
+    account's activity gets a real, capability-scoped 200 fragment back:
+    is_owner is False but the content (including memo) is visible, and
+    can_comment reflects the fellow's comment permission."""
+    owner_id = _create_account("histfellow1", visibility="private")
+    activity_id, _ = _first_activity(owner_id)
+    entries.create(
+        owner_id, activity_id, {"tags": [], "values": {}, "memo": "fellow-only notes"}, tz=_UTC
+    )
+
+    viewer_id = await _signup_and_set_visibility(client, "histfellowviewer1", visibility="private")
+    connections.send_request(viewer_id, owner_id)
+    connections.accept(owner_id, viewer_id)
+
+    resp = await client.get(f"/activities/{activity_id}/history?period=month")
+    assert resp.status_code == 200
+    body = resp.text
+    assert "fellow-only notes" in body
+    # Read-only for this non-owner viewer: no write affordances.
+    assert "hx-post" not in body
+    assert "<form" not in body
+    assert "/edit" not in body
+    assert "/delete" not in body
+
+
+async def test_history_fragment_blocked_viewer_gets_404(client: AsyncClient) -> None:
+    """A blocked viewer hitting the history fragment route gets 404, not a
+    partial leak of the calendar/log content."""
+    owner_id = _create_account("histblocked1", visibility="public")
+    activity_id, _ = _first_activity(owner_id)
+    viewer_id = await _signup_and_set_visibility(client, "histblockedviewer1", visibility="public")
+
+    connections.block(owner_id, viewer_id)
+
+    resp = await client.get(f"/activities/{activity_id}/history?period=month")
+    assert resp.status_code == 404
+
+
+async def test_history_fragment_non_connected_viewer_private_activity_gets_404(
+    client: AsyncClient,
+) -> None:
+    """A logged-in viewer with no fellow connection hitting the history
+    fragment route for a PRIVATE account's activity gets 404 (limited
+    capability, no detail access) — never a partial leak."""
+    owner_id = _create_account("histlimited1", visibility="private")
+    activity_id, _ = _first_activity(owner_id)
+    await _signup_and_set_visibility(client, "histlimitedviewer1", visibility="public")
+
+    resp = await client.get(f"/activities/{activity_id}/history?period=month")
+    assert resp.status_code == 404
+
+
+async def test_history_fragment_owner_unchanged(client: AsyncClient) -> None:
+    """The owner's own request is byte-for-byte unchanged: 200, is_owner
+    behavior intact (write affordances inside the fragment still appear, e.g.
+    the entry edit control), full capability."""
+    owner_id = await _signup_and_set_visibility(client, "histowner1", visibility="public")
+    activity_id, _ = _first_activity(owner_id)
+    entries.create(
+        owner_id, activity_id, {"tags": [], "values": {}, "memo": "owner notes"}, tz=_UTC
+    )
+
+    resp = await client.get(f"/activities/{activity_id}/history?period=month")
+    assert resp.status_code == 200
+    body = resp.text
+    assert "owner notes" in body
+    # Owner gets the full edit affordance the read-only viewer never does.
+    assert "/edit" in body
+
+
+# ---------------------------------------------------------------------------
 # Owner two-mode preview: ?as=stranger / ?as=connection
 # ---------------------------------------------------------------------------
 
@@ -601,3 +797,68 @@ async def test_owner_preview_as_stranger_on_private_activity_detail_redirects(
     resp = await client.get(f"/@previewstr2/{slug}?as=stranger", follow_redirects=False)
     assert resp.status_code == 303
     assert resp.headers["location"] == "/@previewstr2"
+
+
+# ---------------------------------------------------------------------------
+# Context-shape invariant: the read-only route's *context dict* itself, not
+# just the rendered HTML, never carries a write-action value. This captures
+# the literal template context FastAPI hands to Jinja2 (via a monkeypatched
+# `templates.TemplateResponse`) rather than re-deriving the invariant from
+# string absence in the rendered body — see .claude/rules/web-templates.md's
+# "the safety boundary for a shared partial is the route's context shape, not
+# the template's `{% if %}`s."
+# ---------------------------------------------------------------------------
+
+
+async def test_readonly_activity_detail_context_has_is_owner_false_and_no_write_keys(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Capture the literal context dict ``_render_readonly_activity_detail``
+    hands to ``templates.TemplateResponse`` for a real anonymous visitor on a
+    public activity: ``history.is_owner`` is ``False`` (never absent-but-
+    truthy, never missing), ``history`` carries no write-action key at all
+    (no ``edit_url``/``delete_url``/anything matching ``*_url`` other than the
+    vetted ``login_redirect_url``), and the top-level context has no
+    `entries`/`can_edit`/`log_url` leftover key either."""
+    from app.routes import public as public_routes
+
+    owner_id = _create_account("ctxshape1", visibility="public")
+    activity_id, slug = _first_activity(owner_id)
+    entries.create(
+        owner_id, activity_id, {"tags": [], "values": {}, "memo": "ctx-shape probe"}, tz=_UTC
+    )
+
+    captured: dict[str, object] = {}
+    real_template_response = public_routes.templates.TemplateResponse
+
+    def _capturing_template_response(*args, **kwargs):
+        context = kwargs.get("context")
+        if context is None and len(args) >= 2:
+            context = args[1]
+        if isinstance(context, dict):
+            captured.update(context)
+        return real_template_response(*args, **kwargs)
+
+    monkeypatch.setattr(public_routes.templates, "TemplateResponse", _capturing_template_response)
+
+    client.cookies.clear()
+    resp = await client.get(f"/@ctxshape1/{slug}")
+    assert resp.status_code == 200
+    assert captured, "expected to capture the TemplateResponse context dict"
+
+    # Top-level context: no leftover write-capable keys (the deleted flat
+    # Comments section used to pass `entries` directly; it must not return).
+    assert "entries" not in captured
+    assert "now" not in captured
+
+    history_ctx = captured["history"]
+    assert isinstance(history_ctx, dict)
+    assert history_ctx["is_owner"] is False
+    assert "edit_url" not in history_ctx
+    assert "delete_url" not in history_ctx
+    assert "log_url" not in history_ctx
+    # The only "*_url" key in the read-only history context is the
+    # already-`safe_next_path`-validated login redirect; no other write URL
+    # is constructed in this code path at all.
+    url_keys = [k for k in history_ctx if k.endswith("_url")]
+    assert url_keys == ["login_redirect_url"] or url_keys == []

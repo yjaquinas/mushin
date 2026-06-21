@@ -41,7 +41,11 @@
         </div>
     </header>
 
-    {# 2. Hero zone: chrome-less numeral + progress + advance line #}
+    {# 2. Hero zone: chrome-less numeral + progress + advance line. The page's
+       own <h1> above covers the header, and the streak already appears once
+       in stats_summary.html.jinja2 below — hero_only suppresses both in the
+       shared card_body() macro so neither repeats. #}
+    {% set hero_only = true %}
     {% include "components/activity_card.html.jinja2" with context %}
 
     {# 3. Log button + panel — below the hero, action follows context #}
@@ -80,55 +84,6 @@
     <section class="flex flex-col gap-3 rounded-card border border-border bg-surface-1 p-4">
         {% include "components/history.html.jinja2" with context %}
     </section>
-
-    {# 7b. Comments — per-entry affordance, mirrors the read-only
-       public_activity.html.jinja2 thread/composer. ``?c={entry_id}`` (from a
-       notification click-through) auto-expands that one slot via
-       hx-trigger="load"; every other slot stays collapsed until tapped. #}
-    {% if entries %}
-    <section class="flex flex-col gap-3 rounded-card border border-border bg-surface-1 p-4">
-        <h2 class="text-title font-semibold text-text-primary">{{ strings.HISTORY_LOG_TITLE }}</h2>
-        <ul class="flex flex-col gap-2">
-            {% for entry in entries %}
-                <li class="flex flex-col gap-1">
-                    <div class="flex items-start justify-between gap-2">
-                        <span class="text-body text-text-primary">
-                            <span class="text-caption text-text-muted">
-                                {{- entry.occurred_at[:10] -}}
-                                {%- if entry.time_known == 1 %}
-                                    {{ entry.occurred_at | format_entry_time }}
-                                {%- endif %}
-                            </span>
-                            {% if entry.memo %}
-                                <span class="ms-2">{{ entry.memo }}</span>
-                            {% endif %}
-                        </span>
-                        {% if entry.comment_count or can_comment %}
-                        <button
-                            type="button"
-                            aria-label="{{ strings.COMMENTS_TOGGLE_ARIA }}"
-                            hx-get="/@{{ username }}/{{ slug }}/entries/{{ entry.id }}/comments"
-                            hx-target="#comment-slot-{{ entry.id }}"
-                            hx-swap="innerHTML"
-                            class="min-h-tap flex shrink-0 items-center gap-1 rounded px-1 text-caption text-text-muted transition hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-                        >{{ icon('message-circle', size=16) }}{% if entry.comment_count %}<span>{{ strings.COMMENTS_COUNT_LABEL.format(count=entry.comment_count) }}</span>{% endif %}</button>
-                        {% endif %}
-                    </div>
-                    {% if expand_comment_entry_id == entry.id %}
-                    <div
-                        id="comment-slot-{{ entry.id }}"
-                        hx-get="/@{{ username }}/{{ slug }}/entries/{{ entry.id }}/comments"
-                        hx-trigger="load"
-                        hx-swap="innerHTML"
-                    ></div>
-                    {% else %}
-                    <div id="comment-slot-{{ entry.id }}"></div>
-                    {% endif %}
-                </li>
-            {% endfor %}
-        </ul>
-    </section>
-    {% endif %}
 
     {# 8. Field stats — analytics tail, correctly last #}
     {% include "components/field_stats.html.jinja2" with context %}

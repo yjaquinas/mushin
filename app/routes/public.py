@@ -41,6 +41,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from typing import Annotated, Any
+from urllib.parse import quote
 
 from fastapi import APIRouter, Cookie, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -60,6 +61,7 @@ from app.routes.web import (
     _format_entry_time,
     _home_url_context,
     _list_sub_tallies,
+    _resolve_comment_deep_link,
     _theme_context,
     consent_gate_redirect,
 )
@@ -282,31 +284,13 @@ async def public_activity(
             has_match_list = any(fd["kind"] == "match_list" for fd in field_defs)
             card = _build_card_context(conn, owner_id, sub_row, tz=tz)
 
-            # Per-entry comment affordance — same data the read-only path
-            # threads onto `entries` (`_comment_counts_for_entries`) plus the
-            # owner's own `can_comment` flag (owner capability always grants
-            # comment permission via `can_comment_on_entry`).
-            entry_rows = entries.list_for_activity(owner_id, activity_id)
-            counts = _comment_counts_for_entries(conn, [e["id"] for e in entry_rows])
-            for e in entry_rows:
-                e["comment_count"] = counts.get(e["id"], 0)
+            # Owner capability always grants comment permission via
+            # `can_comment_on_entry`; threaded into `_build_history_context`
+            # below so the merged calendar's per-entry comment toggles render
+            # for the owner.
             can_comment = profiles.can_comment_on_entry(
                 conn, current_user_id=current_uid, profile_user=user, activity_id=activity_id
             )
-
-            # `?c={entry_id}` auto-expands that entry's comment slot on load
-            # (used by a notification click-through). Silently ignored — no
-            # error, no 500 — when missing/non-numeric/unknown/cross-activity;
-            # falls back to all slots collapsed.
-            expand_comment_entry_id: int | None = None
-            raw_c = request.query_params.get("c")
-            if raw_c is not None:
-                try:
-                    candidate_id = int(raw_c)
-                except ValueError:
-                    candidate_id = None
-                if candidate_id is not None and any(e["id"] == candidate_id for e in entry_rows):
-                    expand_comment_entry_id = candidate_id
 
         # ------------------------------------------------------------------
         # Branch 1b — owner previewing as a downgraded viewer class.
@@ -360,6 +344,15 @@ async def public_activity(
     # closed before building the heavier context from services).
     # ------------------------------------------------------------------
     today = datetime.now(UTC).date()
+
+    # `?c={entry_id}` (a notification click-through) pre-selects that entry's
+    # calendar day and pre-expands its comment thread. Silently ignored — no
+    # error, no 500 — when missing/non-numeric/unknown/cross-activity.
+    deep_link = _resolve_comment_deep_link(
+        request.query_params.get("c"), activity_id=activity_id, owner_id=owner_id, tz=tz
+    )
+    expand_comment_entry_id, selected_day = deep_link if deep_link is not None else (None, None)
+
     owner_context: dict[str, Any] = {
         "card": card,
         "show_nudge": False,
@@ -379,15 +372,22 @@ async def public_activity(
     owner_context["counts"] = stats.counts(activity_id, owner_id, tz=tz)
     owner_context["streaks"] = stats.streaks(activity_id, owner_id, tz=tz)
     owner_context["history"] = _build_history_context(
-        activity_id, owner_id, period="month", anchor=today, tz=tz
+        activity_id,
+        owner_id,
+        period="month",
+        anchor=selected_day or today,
+        tz=tz,
+        selected=selected_day,
+        is_owner=True,
+        can_comment=can_comment,
+        username=username,
+        slug=slug,
+        expand_comment_entry_id=expand_comment_entry_id,
     )
     owner_context["field_stats"] = _build_field_stats_context(
         activity_id, owner_id, field_defs, tz=tz
     )
     owner_context["progression"] = _build_progression_context(activity_id, owner_id)
-    owner_context["entries"] = entry_rows
-    owner_context["can_comment"] = can_comment
-    owner_context["expand_comment_entry_id"] = expand_comment_entry_id
     owner_context["username"] = username
     owner_context["slug"] = slug
 
@@ -469,20 +469,12 @@ def _render_readonly_activity_detail(
     context["streaks"] = stats.streaks(activity_id, owner_id, tz=tz)
     context["progression"] = _build_progression_context(activity_id, owner_id)
     context["field_stats"] = _build_field_stats_context(activity_id, owner_id, field_defs, tz=tz)
-    # Read-only chronological log, newest first, including memo text
-    # (repo-wide.md: memos are visible to a fellow, or to anyone on a public
-    # account, by the account owner's own choice).
-    entry_rows = entries.list_for_activity(owner_id, activity_id)
-    counts = _comment_counts_for_entries(conn, [e["id"] for e in entry_rows])
-    for e in entry_rows:
-        e["comment_count"] = counts.get(e["id"], 0)
-    context["entries"] = entry_rows
-    context["now"] = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M")
+
     # Real (non-preview) visitor only — a preview render never grants a
     # comment-write affordance, since posting "as" a downgraded persona
     # while actually authenticated as the owner would be a confusing,
     # capability-bypassing surface.
-    context["can_comment"] = bool(
+    can_comment = bool(
         profile_user is not None
         and profiles.can_comment_on_entry(
             conn,
@@ -490,6 +482,47 @@ def _render_readonly_activity_detail(
             profile_user=profile_user,
             activity_id=activity_id,
         )
+    )
+    context["can_comment"] = can_comment
+
+    # An anonymous (no session) real visitor — never the owner's
+    # ?as=stranger/?as=connection preview, which calls this function with no
+    # `profile_user` at all — on an activity already cleared as readable here
+    # (this branch only runs for connected/public/preview capabilities; a
+    # blocked/limited viewer 404s/redirects in `public_activity` before this
+    # function is ever reached) gets a same-origin `/login?next=...` link
+    # instead of a silently-missing composer. `safe_next_path` is the only
+    # thing that decides "safe" here, so this can never become an open
+    # redirect even though `request.url.path` is otherwise untrusted input.
+    login_redirect_url = None
+    is_anonymous_real_visitor = profile_user is not None and current_user_id is None
+    if is_anonymous_real_visitor:
+        target = profiles.safe_next_path(request.url.path)
+        login_redirect_url = f"/login?next={quote(target or '', safe='')}"
+    context["login_redirect_url"] = login_redirect_url
+
+    # Merged calendar/log view — the same `components/history.html.jinja2`
+    # partial the owner dashboard renders (per .claude/rules/web-templates.md,
+    # this shared-partial sharing is sanctioned; the safety boundary is this
+    # route's context shape, not the template's `{% if %}`s). `is_owner` is
+    # explicitly `False` and NO write-action context key (entry edit/delete
+    # URL, log-new-entry trigger, etc.) is constructed or present anywhere in
+    # this read-only path — `_build_history_context` itself takes no such
+    # argument, and `is_owner=False` here is what suppresses the edit pencil
+    # in `period_log.html.jinja2`/`day_entries.html.jinja2`.
+    today = datetime.now(UTC).date()
+    context["activity_id"] = activity_id
+    context["history"] = _build_history_context(
+        activity_id,
+        owner_id,
+        period="month",
+        anchor=today,
+        tz=tz,
+        is_owner=False,
+        can_comment=can_comment,
+        username=username,
+        slug=slug,
+        login_redirect_url=login_redirect_url,
     )
 
     return templates.TemplateResponse(
@@ -502,29 +535,6 @@ def _render_readonly_activity_detail(
 # ---------------------------------------------------------------------------
 # Entry comments — collapsed per-entry affordance + thread fragment
 # ---------------------------------------------------------------------------
-
-
-def _comment_counts_for_entries(conn: Any, entry_ids: list[int]) -> dict[int, int]:
-    """Map ``entry_id -> visible comment count`` for *entry_ids*.
-
-    A plain count of non-soft-deleted comments — no capability re-check here,
-    because this is only ever used to render the collapsed affordance on the
-    SAME read-only detail page a viewer has already been cleared to see (the
-    route gates the whole page via ``can_view_activity_detail`` before this
-    runs). The thread fragment itself (``list_comments``) re-checks live on
-    every expand, so a stale count here is, at worst, an affordance that opens
-    to an empty list — never a leak of comment content.
-    """
-    if not entry_ids:
-        return {}
-    placeholders = ",".join("?" for _ in entry_ids)
-    rows = conn.execute(
-        f"SELECT entry_id, COUNT(*) AS n FROM comment"
-        f" WHERE entry_id IN ({placeholders}) AND deleted_at IS NULL"
-        f" GROUP BY entry_id",
-        tuple(entry_ids),
-    ).fetchall()
-    return {r["entry_id"]: r["n"] for r in rows}
 
 
 def _resolve_entry_for_comments(

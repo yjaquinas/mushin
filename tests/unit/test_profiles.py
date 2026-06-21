@@ -249,3 +249,55 @@ def test_get_activity_for_owner_returns_archived_row(tmp_path: Path):
     conn.close()
     assert result is not None
     assert result["archived_at"] is not None
+
+
+# ---------------------------------------------------------------------------
+# safe_next_path — the single authority for "is this a safe post-login
+# redirect target" (no open-redirect). Pure function, no DB.
+# ---------------------------------------------------------------------------
+
+
+def test_safe_next_path_accepts_plain_relative_path():
+    assert profiles.safe_next_path("/@yuki/kendo") == "/@yuki/kendo"
+
+
+def test_safe_next_path_accepts_root():
+    assert profiles.safe_next_path("/") == "/"
+
+
+def test_safe_next_path_rejects_none():
+    assert profiles.safe_next_path(None) is None
+
+
+def test_safe_next_path_rejects_empty_string():
+    assert profiles.safe_next_path("") is None
+
+
+def test_safe_next_path_rejects_path_without_leading_slash():
+    assert profiles.safe_next_path("evil.com/@yuki") is None
+
+
+def test_safe_next_path_rejects_scheme_relative_double_slash():
+    """``//evil.com/...`` has no scheme but a real netloc — browsers treat it
+    as "same scheme as the current page", making it a classic open-redirect
+    shape that a bare ``startswith("/")`` check alone would miss."""
+    assert profiles.safe_next_path("//evil.com/@yuki") is None
+
+
+def test_safe_next_path_rejects_absolute_http_url():
+    assert profiles.safe_next_path("http://evil.com/@yuki") is None
+
+
+def test_safe_next_path_rejects_absolute_https_url():
+    assert profiles.safe_next_path("https://evil.com/@yuki") is None
+
+
+def test_safe_next_path_rejects_bare_backslash_prefix():
+    """``\\\\evil.com`` (no leading ``/``) fails the leading-slash check —
+    the same rejection path as any other string that doesn't start with
+    ``/``, regardless of what a client might do with backslashes."""
+    assert profiles.safe_next_path("\\\\evil.com") is None
+
+
+def test_safe_next_path_preserves_query_string():
+    assert profiles.safe_next_path("/@yuki/kendo?c=5") == "/@yuki/kendo?c=5"

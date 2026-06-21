@@ -3,14 +3,38 @@
   first. Each entry row has a stable .entry-row wrapper so the edit-in-place
   flow can swap it via hx-target="closest .entry-row" / hx-swap="outerHTML".
 
-  The pencil edit button is shown only when is_owner is truthy.
+  The pencil edit button is shown only when history.is_owner is true.
+
+  The comment toggle + #comment-slot-{{ entry.id }} mirrors the affordance
+  formerly in web/activity_detail.html.jinja2's standalone Comments section
+  (since folded into this shared log). It renders only when there's
+  something to show (an existing count, or the viewer can add one) AND the
+  activity has a public URL — history.username/history.slug are None for a
+  guest-owned activity, which has no `/@{username}/{slug}` route to hit.
+
+  An anonymous (no session) visitor on an otherwise-readable activity has
+  history.can_comment=False (can_comment_on_entry requires a session) AND no
+  existing comment_count, so neither branch above would render anything —
+  that's the silently-missing-composer gap this build fixes. When
+  history.login_redirect_url is set (only ever built on the already-
+  capability-cleared read-only path; see app/routes/public.py and
+  app/routes/web.py::activity_history), an entry with zero comments shows a
+  "log in to comment" link to it instead. An entry that already has
+  comments still shows the normal read-only toggle (reading stays open to
+  anonymous visitors; only posting is gated).
 
   Context:
-    history        — history context (history.log: [{"day": "YYYY-MM-DD", "entries": [...]}])
+    history        — history context (history.log: [{"day": "YYYY-MM-DD", "entries": [...]}]);
+                     history.is_owner, history.can_comment, history.username,
+                     history.slug, history.login_redirect_url are passed
+                     straight through from app.routes.web._build_history_context.
     activity_id   int    — owning sub-tally (needed for edit-route URLs)
-    is_owner       bool   — True when the current session user owns this sub-tally
+
+  Per-entry markup lives in the shared components/_entry_row.html.jinja2
+  macro (also used by day_entries.html.jinja2 and the edit/cancel-edit
+  swap-back fragment) so all three render the identical row shape.
 #}
-{% from "components/_icon.html.jinja2" import icon %}
+{% from "components/_entry_row.html.jinja2" import entry_row %}
 
 <div class="flex flex-col gap-3">
     {% if not history.log %}
@@ -21,26 +45,16 @@
                 <p class="text-caption font-medium text-text-muted">{{ day_group.day }}</p>
                 <ul class="flex flex-col gap-1">
                     {% for entry in day_group.entries %}
-                        <li class="entry-row flex items-center justify-between gap-2">
-                            <span class="text-body text-text-primary">
-                                <span class="text-caption text-text-muted">
-                                    {%- if entry.time_known == 1 -%}
-                                        {{ entry.occurred_at | format_entry_time }}
-                                    {%- endif -%}
-                                </span>
-                                {%- if entry.memo %}<span class="{% if entry.time_known == 1 %}ms-2{% endif %}">{{ entry.memo }}</span>{% endif %}
-                            </span>
-                            {% if is_owner %}
-                                <button
-                                    type="button"
-                                    aria-label="{{ strings.ENTRY_EDIT }}"
-                                    hx-get="/activities/{{ activity_id }}/entries/{{ entry.id }}/edit"
-                                    hx-target="closest .entry-row"
-                                    hx-swap="outerHTML"
-                                    class="min-h-tap min-w-tap flex shrink-0 items-center justify-center rounded text-text-muted transition hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-                                >{{ icon('pencil', size=16) }}</button>
-                            {% endif %}
-                        </li>
+                        {{ entry_row(
+                            entry,
+                            activity_id,
+                            is_owner=history.is_owner,
+                            can_comment=history.can_comment,
+                            username=history.username,
+                            slug=history.slug,
+                            expand_comment_entry_id=history.expand_comment_entry_id,
+                            login_redirect_url=history.login_redirect_url,
+                        ) }}
                     {% endfor %}
                 </ul>
             </div>

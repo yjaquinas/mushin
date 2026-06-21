@@ -1,0 +1,92 @@
+{#
+  Shared single-entry-row macro: the time/memo line, the owner-gated edit
+  pencil, and the comment toggle + its #comment-slot-{{ entry.id }} target.
+
+  This is the one canonical row shape used by:
+    - components/period_log.html.jinja2 (the full chronological log)
+    - components/day_entries.html.jinja2 (the day-detail panel)
+    - the read-only fragment returned by app/routes/web.py's
+      ``_render_entry_row`` (the update/cancel-edit swap-back target)
+
+  Before this macro existed, each of the three call sites carried its own
+  copy of this markup, and the swap-back fragment's copy had drifted to
+  predate the calendar/comments merge entirely — losing the comment toggle
+  on every edit/cancel. Now there is exactly one place this markup lives.
+
+  period_log.html.jinja2 and day_entries.html.jinja2 used to mint two
+  different comment-slot id prefixes (`comment-slot-` vs
+  `day-entries-comment-slot-`) to dodge a duplicate-id collision from a time
+  when both partials could render simultaneously. Since the Task 5 restruc-
+  ture they're mutually exclusive (only one body state renders at a time),
+  so that risk is gone and both now use the plain canonical
+  `comment-slot-{{ entry.id }}` form — which is also what this macro emits,
+  and what the route's swap-back fragment needs to match.
+
+  Parameters (all plain, non-namespaced — callers holding a ``history``
+  dict pass ``history.is_owner`` etc. through positionally/by keyword; the
+  macro itself doesn't know about ``history``):
+    entry                     dict        — hydrated entry; comment_count
+                                             must already be set (0 if none).
+    activity_id               int         — owning activity (edit-route URLs)
+    is_owner                  bool        — pencil edit shown only when true
+    can_comment               bool        — comment toggle shown when this or
+                                             entry.comment_count is truthy
+    username                  str | None  — comment toggle suppressed
+    slug                      str | None    entirely when either is None
+    expand_comment_entry_id   int | None  — optional ``?c=`` deep-link target;
+                                             matching entry's toggle gets an
+                                             extra `load` trigger so its
+                                             thread auto-expands on render.
+    login_redirect_url        str | None  — optional already-validated
+                                             `/login?next=...` URL; an entry
+                                             with zero comments shows a
+                                             "log in to comment" link instead
+                                             of nothing when set.
+#}
+{% from "components/_icon.html.jinja2" import icon %}
+
+{% macro entry_row(entry, activity_id, is_owner=False, can_comment=False, username=None, slug=None, expand_comment_entry_id=None, login_redirect_url=None) %}
+<li class="entry-row flex flex-col gap-1">
+    <div class="flex items-center justify-between gap-2">
+        <span class="text-body text-text-primary">
+            <span class="text-caption text-text-muted">
+                {%- if entry.time_known == 1 -%}
+                    {{ entry.occurred_at | format_entry_time }}
+                {%- endif -%}
+            </span>
+            {%- if entry.memo %}<span class="{% if entry.time_known == 1 %}ms-2{% endif %}">{{ entry.memo }}</span>{% endif %}
+        </span>
+        <span class="flex shrink-0 items-center gap-1">
+            {% if (entry.comment_count or can_comment) and username is not none and slug is not none %}
+                <button
+                    type="button"
+                    aria-label="{{ strings.COMMENTS_TOGGLE_ARIA }}"
+                    hx-get="/@{{ username }}/{{ slug }}/entries/{{ entry.id }}/comments"
+                    hx-target="#comment-slot-{{ entry.id }}"
+                    hx-swap="innerHTML"
+                    {% if expand_comment_entry_id == entry.id %}hx-trigger="click, load"{% endif %}
+                    class="min-h-tap flex shrink-0 items-center gap-1 rounded px-1 text-caption text-text-muted transition hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                >{{ icon('message-circle', size=16) }}{% if entry.comment_count %}<span>{{ strings.COMMENTS_COUNT_LABEL.format(count=entry.comment_count) }}</span>{% endif %}</button>
+            {% elif not entry.comment_count and login_redirect_url %}
+                <a
+                    href="{{ login_redirect_url }}"
+                    class="min-h-tap flex shrink-0 items-center gap-1 rounded px-1 text-caption text-text-muted underline-offset-2 transition hover:text-text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                >{{ icon('message-circle', size=16) }}<span>{{ strings.COMMENTS_LOGIN_TO_COMMENT }}</span></a>
+            {% endif %}
+            {% if is_owner %}
+                <button
+                    type="button"
+                    aria-label="{{ strings.ENTRY_EDIT }}"
+                    hx-get="/activities/{{ activity_id }}/entries/{{ entry.id }}/edit"
+                    hx-target="closest .entry-row"
+                    hx-swap="outerHTML"
+                    class="min-h-tap min-w-tap flex shrink-0 items-center justify-center rounded text-text-muted transition hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                >{{ icon('pencil', size=16) }}</button>
+            {% endif %}
+        </span>
+    </div>
+    {% if (entry.comment_count or can_comment) and username is not none and slug is not none %}
+        <div id="comment-slot-{{ entry.id }}"></div>
+    {% endif %}
+</li>
+{% endmacro %}

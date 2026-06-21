@@ -1,9 +1,11 @@
 {#
-  Single-week strip of `.cal-day`-styled cells, non-interactive (the history
-  log below already shows the period's entries day-by-day, so individual
-  day-cells don't drill in here).
+  Single-week strip of `.cal-day`-styled cells. Tapping a cell selects that
+  day and swaps in its entries inline, the same affordance as month view's
+  day cells (components/history.html.jinja2's month branch) -- same
+  hx-get/hx-target/hx-swap shape, parameterized for period=week.
 
-  Context: history (history.visual.days: [{"date","day","marked","today"}, x7]).
+  Context: activity_id, history (history.anchor, history.visual.days:
+  [{"date","day","marked","today","selected"}, x7]).
 #}
 <div class="grid grid-cols-7 gap-1">
     {% for cell in history.visual.days %}
@@ -11,11 +13,15 @@
             <span class="text-caption font-medium text-text-muted">
                 {{ strings.CALENDAR_WEEKDAYS[loop.index0] }}
             </span>
-            <span
-                class="cal-day{% if cell.marked %} cal-day--marked{% endif %}{% if cell.today %} cal-day--today{% endif %}"
+            <button
+                type="button"
+                class="cal-day{% if cell.marked %} cal-day--marked{% endif %}{% if cell.today %} cal-day--today{% endif %}{% if cell.selected %} cal-day--selected{% endif %}"
+                hx-get="/activities/{{ activity_id }}/history?period=week&anchor={{ history.anchor }}&day={{ cell.date }}"
+                hx-target="#history-{{ activity_id }}"
+                hx-swap="outerHTML"
             >
                 {{ cell.day }}
-            </span>
+            </button>
         </div>
     {% endfor %}
 </div>

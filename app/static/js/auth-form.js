@@ -4,9 +4,14 @@
 // hx-swap="none" so a successful response can redirect without HTMX trying to
 // swap a JSON body into the page. On success, the response body carries a
 // `redirect_url` (the user's canonical /@{username} profile); we navigate there,
-// falling back to /home only if the field is missing. On failure (4xx), the endpoint's
-// `{"detail": "..."}` body is shown inline in the form's #auth-error element
-// without losing the entered username (the form itself is never swapped).
+// falling back to /home only if the field is missing. A form-local hidden
+// `next` field (set server-side only by GET /login, already validated as a
+// same-origin path by profiles.safe_next_path) takes priority over
+// `redirect_url` when present, so a visitor who hit "log in to comment" lands
+// back on the activity they were reading rather than their own profile. On
+// failure (4xx), the endpoint's `{"detail": "..."}` body is shown inline in
+// the form's #auth-error element without losing the entered username (the
+// form itself is never swapped).
 //
 // Timezone: on submit we stamp the browser's IANA timezone into a hidden
 // `timezone` field so signup / guest-creation / login POSTs carry it. The
@@ -53,6 +58,15 @@ window.MushinAuth = {
       } catch {
         // Non-JSON success body — fall back to /home.
       }
+
+      const form = event.detail.elt;
+      const nextField = form && typeof form.querySelector === "function"
+        ? form.querySelector('input[name="next"]')
+        : null;
+      if (nextField && nextField.value) {
+        redirectUrl = nextField.value;
+      }
+
       window.location.href = redirectUrl;
       return;
     }

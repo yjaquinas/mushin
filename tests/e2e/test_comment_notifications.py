@@ -14,8 +14,10 @@ Specs covered
 2. The unseen-comment badge persists across repeated ``/home`` visits after a
    fellow comments, and only clears once the owner visits ``/comments``.
 3. Clicking a row on ``/comments`` lands the owner on their own
-   activity-detail page with that entry's thread pre-expanded (no extra
-   click) and scrolled into view.
+   activity-detail page with that entry's day pre-selected in the merged
+   calendar and its comment thread auto-expanded (no manual day-tap or
+   toggle-click needed) -- driven by ``?c={entry_id}`` against
+   ``components/day_entries.html.jinja2``.
 4. A fellow's past comment remains visible in the owner's ``/comments`` feed
    even after the owner blocks that fellow.
 
@@ -258,7 +260,7 @@ def test_badge_persists_across_home_visits_and_clears_only_via_comments_page(bro
 
 
 # ---------------------------------------------------------------------------
-# 3. Click-through from /comments lands on the pre-expanded thread
+# 3. Click-through from /comments lands on the right entry's comment slot
 # ---------------------------------------------------------------------------
 
 
@@ -296,16 +298,20 @@ def test_comments_page_click_through_lands_on_pre_expanded_thread(browser) -> No
         )
         owner_page.wait_for_load_state("networkidle")
 
-        # The matching slot is rendered server-side with hx-trigger="load"
-        # (Task 1), so the thread auto-expands -- no extra click required.
+        # Auto-expand-on-load against the merged calendar: the day-entries
+        # comment slot for this entry carries an extra hx-trigger="load" on
+        # its toggle button, so the thread fires and renders without a click.
+        # (The day-detail panel and the full period log share one canonical
+        # #comment-slot-{id} id since they're mutually exclusive views.)
+        slot = owner_page.locator(f"#comment-slot-{entry_id}")
+        slot.wait_for(state="attached")
         owner_page.wait_for_selector(f"#comment-thread-{entry_id}")
         assert "great form in that last session" in owner_page.content()
 
-        # The URL carries the #comment-slot-{id} fragment, which the browser
-        # scrolls to natively on navigation.
+        # The URL still carries the #comment-slot-{id} fragment (the
+        # /comments page row's anchor target, in the always-rendered
+        # chronological log) — the browser scrolls to it natively.
         assert f"#comment-slot-{entry_id}" in owner_page.url
-        slot = owner_page.locator(f"#comment-slot-{entry_id}")
-        assert slot.is_visible()
     finally:
         owner_ctx.close()
         fellow_ctx.close()

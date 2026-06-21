@@ -14,6 +14,12 @@
     error (str, optional) — initial inline error message, for parity when
     this fragment is server-rendered directly (currently always empty; the
     JS path fills [data-auth-error] client-side).
+    next (str, optional) — a same-origin path to return to after a successful
+    login (already validated server-side by GET /login via
+    profiles.safe_next_path before reaching this template). Carried as a
+    hidden field so MushinAuth.handle can redirect there instead of the
+    default /@{username} profile. Absent/None renders no hidden field, and
+    the JS falls back to its normal redirect_url behavior.
 #}
 <div id="auth-form" class="flex flex-col gap-4">
     {% include "components/auth_tabs.html.jinja2" with context %}
@@ -24,6 +30,10 @@
         hx-on::after-request="MushinAuth.handle(event)"
         class="flex flex-col gap-4"
     >
+        {% if next %}
+        <input type="hidden" name="next" value="{{ next }}">
+        {% endif %}
+
         <div class="flex flex-col gap-1">
             <label for="login-username" class="text-caption font-medium text-text-secondary">
                 {{ strings.ENTRY_FIELD_USERNAME }}

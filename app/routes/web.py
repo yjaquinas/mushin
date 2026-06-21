@@ -32,6 +32,7 @@ import sqlite3
 from collections import defaultdict
 from datetime import UTC, date, datetime, timedelta
 from typing import Annotated, Any
+from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Cookie, Form, Query, Request
@@ -392,6 +393,59 @@ def _entries_on_day(
     return [e for e in rows if entries._local_day(e["occurred_at"], tz) == day]
 
 
+def _resolve_comment_deep_link(
+    raw_c: str | None, *, activity_id: int, owner_id: int, tz: ZoneInfo
+) -> tuple[int, date] | None:
+    """Resolve a ``?c={entry_id}`` query param to ``(entry_id, local_day)``.
+
+    Used by a notification click-through to land the viewer on the right
+    calendar day with that entry's comment thread pre-expanded. Returns
+    ``None`` — silently, no error — when *raw_c* is missing, non-numeric, or
+    resolves to an entry that doesn't exist or belongs to a different
+    activity/owner; the caller falls back to no day selected and no expand,
+    matching the old flat-list ``?c=`` behavior this replaces.
+    """
+    if raw_c is None:
+        return None
+    try:
+        entry_id = int(raw_c)
+    except ValueError:
+        return None
+    try:
+        entry = entries.get(owner_id, entry_id)
+    except EntryNotFoundError:
+        return None
+    if entry["activity_id"] != activity_id:
+        return None
+    return entry_id, entries._local_day(entry["occurred_at"], tz)
+
+
+def _decorate_comment_counts(
+    log: list[dict[str, Any]], day_entries: list[dict[str, Any]] | None
+) -> None:
+    """Mutate ``log``'s and ``day_entries``' entry dicts in place, adding ``comment_count``.
+
+    Opens its own connection — this module's other history helpers (e.g.
+    ``entries.list_for_activity``, ``stats.period_entries``) already each open
+    their own short-lived connection rather than share one with the caller, and
+    no caller of ``_build_history_context`` holds a connection open across the
+    call (both ``activity_detail`` callers explicitly close their connection
+    first) — so opening one more short transaction here matches the existing
+    pattern instead of threading a connection through every helper.
+    """
+    all_entries: list[dict[str, Any]] = [e for group in log for e in group["entries"]]
+    if day_entries is not None:
+        all_entries.extend(day_entries)
+    if not all_entries:
+        return
+    entry_ids = [e["id"] for e in all_entries]
+    with db.connect() as conn:
+        conn.execute("BEGIN")
+        counts = comments.counts_for_entries(conn, entry_ids)
+    for e in all_entries:
+        e["comment_count"] = counts.get(e["id"], 0)
+
+
 def _build_history_context(
     activity_id: int,
     owner_id: int,
@@ -400,6 +454,12 @@ def _build_history_context(
     anchor: date,
     tz: ZoneInfo,
     selected: date | None = None,
+    is_owner: bool = False,
+    can_comment: bool = False,
+    username: str | None = None,
+    slug: str | None = None,
+    expand_comment_entry_id: int | None = None,
+    login_redirect_url: str | None = None,
 ) -> dict[str, Any]:
     """History view context for *period* (``week``/``month``/``year``/``all``) at *anchor*.
 
@@ -409,8 +469,37 @@ def _build_history_context(
     ``log`` groups the period's entries by local day (in *tz*), newest day first,
     for the chronological log.
 
-    *selected*, when given (month period only), flags the matching calendar cell
-    and populates ``selected_day``/``day_entries`` with that day's detail.
+    *selected*, when given (``week`` or ``month`` period — ``year``'s heatmap
+    cells deliberately have no day-select), flags the matching cell/day and
+    populates ``selected_day``/``day_entries`` with that day's detail.
+
+    Every entry dict in ``log`` and ``day_entries`` carries a ``comment_count``
+    key (via ``comments.counts_for_entries``), so a template can render the
+    comment affordance without a separate per-entry lookup.
+
+    *is_owner*, *can_comment*, *username*, *slug* are passed straight through
+    into the returned context unchanged — this function does no capability
+    checking of its own (that's the caller's job, via
+    ``app/services/profiles.py``). *username*/*slug* are ``None`` when the
+    activity has no public URL (e.g. a guest-owned account); pass ``None``
+    faithfully rather than substituting a fallback — templates are responsible
+    for suppressing comment affordances when either is ``None``.
+
+    *expand_comment_entry_id*, when given, is a ``?c={entry_id}`` deep-link
+    target (see ``_resolve_comment_deep_link``) — the caller is responsible
+    for validating it belongs to this activity/owner and for setting
+    *selected* to the day that contains it. Passed straight through into the
+    returned context; ``components/day_entries.html.jinja2`` auto-expands the
+    matching entry's comment slot on render when it equals an entry's id.
+
+    *login_redirect_url*, when given, is an already-validated (via
+    ``profiles.safe_next_path``) ``/login?next=...`` URL for an anonymous
+    viewer who can read this activity but can't comment (``can_comment`` is
+    ``False`` precisely because there's no session — see
+    ``profiles.can_comment_on_entry``). Passed straight through; the caller
+    is responsible for only ever constructing it on the already-capability-
+    cleared read-only path, never for a blocked/limited viewer (who never
+    reaches this function at all).
     """
     if period == "all":
         all_rows = entries.list_for_activity(owner_id, activity_id)
@@ -421,6 +510,7 @@ def _build_history_context(
             {"day": day.isoformat(), "entries": day_entries}
             for day, day_entries in sorted(by_day.items(), reverse=True)
         ]
+        _decorate_comment_counts(log, None)
         return {
             "period": "all",
             "anchor": anchor.isoformat(),
@@ -433,6 +523,12 @@ def _build_history_context(
             "end": None,
             "selected_day": None,
             "day_entries": None,
+            "is_owner": is_owner,
+            "can_comment": can_comment,
+            "username": username,
+            "slug": slug,
+            "expand_comment_entry_id": expand_comment_entry_id,
+            "login_redirect_url": login_redirect_url,
         }
 
     start = stats._shift_period(anchor, period, 0)
@@ -461,6 +557,7 @@ def _build_history_context(
                     "day": cursor.day,
                     "marked": cursor in marked_days,
                     "today": cursor == today,
+                    "selected": cursor == selected,
                 }
             )
             cursor += timedelta(days=1)
@@ -492,6 +589,8 @@ def _build_history_context(
         _entries_on_day(activity_id, owner_id, selected, tz=tz) if selected is not None else None
     )
 
+    _decorate_comment_counts(log, day_entries)
+
     return {
         "period": period,
         "anchor": anchor.isoformat(),
@@ -504,6 +603,12 @@ def _build_history_context(
         "end": end.isoformat(),
         "selected_day": selected_day,
         "day_entries": day_entries,
+        "is_owner": is_owner,
+        "can_comment": can_comment,
+        "username": username,
+        "slug": slug,
+        "expand_comment_entry_id": expand_comment_entry_id,
+        "login_redirect_url": login_redirect_url,
     }
 
 
@@ -587,9 +692,38 @@ async def index(
         return templates.TemplateResponse(
             request=request,
             name="web/entry.html.jinja2",
-            context={"active": "login", "demo_username": demo_username},
+            context={"active": "login", "demo_username": demo_username, "next": None},
         )
     return await _render_home(request, user)
+
+
+@router.get("/login", response_class=HTMLResponse, response_model=None)
+async def login(
+    request: Request,
+    next: str | None = None,  # noqa: A002 - query-param name is part of the public URL contract
+    session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
+) -> HTMLResponse | RedirectResponse:
+    """Dedicated login entry point that preserves a post-login redirect target.
+
+    ``?next=`` is the page the visitor was trying to act on (e.g. an
+    anonymous comment attempt on a public activity) — validated via
+    ``profiles.safe_next_path`` so an attacker-supplied value can never become
+    an open redirect; an unsafe or missing value silently falls back to no
+    redirect target rather than erroring. A caller already logged in is sent
+    straight to the (validated) target, or their home/profile if there is
+    none — there's nothing to log into here.
+    """
+    safe_next = profiles.safe_next_path(next)
+    user = _current_user(session)
+    if user is not None:
+        return RedirectResponse(url=safe_next or _home_url_for(user), status_code=303)
+
+    demo_username = os.getenv("DEMO_PROFILE_USERNAME", "")
+    return templates.TemplateResponse(
+        request=request,
+        name="web/entry.html.jinja2",
+        context={"active": "login", "demo_username": demo_username, "next": safe_next},
+    )
 
 
 @router.get("/auth/login-form", response_class=HTMLResponse)
@@ -1138,11 +1272,30 @@ async def activity_detail(
         context["head_to_head"] = []
 
     today = datetime.now(UTC).date()
+
+    # `?c={entry_id}` (a notification click-through) pre-selects that entry's
+    # calendar day and pre-expands its comment thread. Silently ignored — no
+    # error, no 500 — when missing/non-numeric/unknown/cross-activity.
+    deep_link = _resolve_comment_deep_link(
+        request.query_params.get("c"), activity_id=activity_id, owner_id=owner_id, tz=tz
+    )
+    expand_comment_entry_id, selected_day = deep_link if deep_link is not None else (None, None)
+
     context["activity_id"] = activity_id
     context["counts"] = stats.counts(activity_id, owner_id, tz=tz)
     context["streaks"] = stats.streaks(activity_id, owner_id, tz=tz)
     context["history"] = _build_history_context(
-        activity_id, owner_id, period="month", anchor=today, tz=tz
+        activity_id,
+        owner_id,
+        period="month",
+        anchor=selected_day or today,
+        tz=tz,
+        selected=selected_day,
+        is_owner=True,
+        can_comment=True,
+        username=username,
+        slug=sub_row["slug"],
+        expand_comment_entry_id=expand_comment_entry_id,
     )
     context["field_stats"] = _build_field_stats_context(activity_id, owner_id, field_defs, tz=tz)
     context["progression"] = _build_progression_context(activity_id, owner_id)
@@ -1344,12 +1497,29 @@ async def activity_history(
 
     *day*, when given, selects a calendar cell (month period) and includes
     that day's entries in the returned fragment.
+
+    Shared by the owner dashboard AND every interactive control inside the
+    same ``components/history.html.jinja2`` partial rendered read-only on
+    ``/@{username}/{slug}`` (period tabs, prev/next nav, day-select taps, the
+    "Calendar" back-control) — so the viewer here is not assumed to be the
+    activity's owner. The activity's real owner is resolved from
+    ``activity_id`` alone, then ``profiles.viewer_capability`` /
+    ``can_view_activity_detail`` (the same fail-closed authority
+    ``app/routes/public.py`` uses for the initial page load) decides whether
+    *this* viewer — owner, fellow, public visitor, or anonymous — may see it
+    at all. A denied viewer (blocked, or limited-without-detail-access) gets
+    404, matching the no-existence-oracle behavior the rest of the read-only
+    surface uses; this never reveals whether the activity exists to someone
+    who isn't allowed to know.
+
+    Owner behavior is unchanged byte-for-byte: ``is_owner=True``,
+    ``can_comment=True``, username/slug from the owner's own row. A non-owner
+    viewer gets ``is_owner=False`` and ``can_comment`` from
+    ``can_comment_on_entry`` (always ``False`` for an anonymous viewer, since
+    that helper requires a session) — and, per the context-shape safety rule,
+    no write-action context key is ever constructed for a non-owner response.
     """
-    user = _current_user(session)
-    if user is None:
-        return HTMLResponse(status_code=401)
-    owner_id = int(user["id"])
-    tz = users.get_user_timezone(owner_id)
+    current_uid = sessions.read_uid(session)
 
     if period not in ("week", "month", "year", "all"):
         return HTMLResponse(status_code=400)
@@ -1372,16 +1542,93 @@ async def activity_history(
 
     with db.connect() as conn:
         conn.execute("BEGIN")
-        if not _db.exists(conn, "activity", owner_id, where="id = ?", params=(activity_id,)):
+        owner_row = conn.execute(
+            """SELECT u.id, u.username, u.visibility, u.auth_provider, u.consent_seen_at,
+                      st.slug AS activity_slug
+                 FROM activity st
+                 JOIN user u ON u.id = st.owner_id
+                WHERE st.id = ?""",
+            (activity_id,),
+        ).fetchone()
+        if owner_row is None:
             return HTMLResponse(status_code=404)
 
+        profile_user = {
+            "id": owner_row["id"],
+            "username": owner_row["username"],
+            "visibility": owner_row["visibility"],
+            "auth_provider": owner_row["auth_provider"],
+            "consent_seen_at": owner_row["consent_seen_at"],
+        }
+        owner_id = int(profile_user["id"])
+
+        cap = profiles.viewer_capability(
+            conn, current_user_id=current_uid, profile_user=profile_user
+        )
+        is_owner = cap == "owner"
+
+        if not is_owner and not profiles.can_view_activity_detail(
+            conn, current_user_id=current_uid, profile_user=profile_user
+        ):
+            # "blocked" or "limited" (non-connected visitor on a non-public
+            # account) — fail closed, no existence oracle.
+            return HTMLResponse(status_code=404)
+
+        can_comment = (
+            True
+            if is_owner
+            else profiles.can_comment_on_entry(
+                conn,
+                current_user_id=current_uid,
+                profile_user=profile_user,
+                activity_id=activity_id,
+            )
+        )
+
+    tz = users.get_user_timezone(owner_id)
+    username = profile_user["username"]
+    slug = owner_row["activity_slug"]
+
+    # Anonymous (no session) real visitor on an already-cleared-readable
+    # activity (blocked/limited 404s above before this point) — same
+    # "log in to comment" prompt the initial page load gets
+    # (`public.py::_render_readonly_activity_detail`), threaded through this
+    # interactive fragment route too, since a visitor can reach a fresh
+    # period/day swap without ever re-loading the full page. `next` points at
+    # the canonical activity page (not this fragment URL, which isn't a
+    # navigable page on its own), built from `username`/`slug` rather than
+    # `request.url.path` — both are already-trusted server-derived strings, so
+    # `safe_next_path` here is defense in depth, not the primary guarantee.
+    login_redirect_url = None
+    if not is_owner and current_uid is None and username is not None and slug is not None:
+        target = profiles.safe_next_path(profiles.canonical_activity_url(username, slug))
+        login_redirect_url = f"/login?next={quote(target or '', safe='')}"
+
     history_ctx = _build_history_context(
-        activity_id, owner_id, period=period, anchor=anchor_date, tz=tz, selected=selected_date
+        activity_id,
+        owner_id,
+        period=period,
+        anchor=anchor_date,
+        tz=tz,
+        selected=selected_date,
+        is_owner=is_owner,
+        can_comment=can_comment,
+        username=username,
+        slug=slug,
+        login_redirect_url=login_redirect_url,
     )
     response = templates.TemplateResponse(
         request=request,
         name="components/history.html.jinja2",
-        context={"activity_id": activity_id, "history": history_ctx, "is_owner": True},
+        context={
+            "activity_id": activity_id,
+            "history": history_ctx,
+            "is_owner": is_owner,
+            "can_comment": can_comment,
+            "username": username,
+            "slug": slug,
+            "login_redirect_url": login_redirect_url,
+        },
     )
     if period != "all":
         response.headers["HX-Trigger"] = json.dumps({"history-period-changed": {"period": period}})
@@ -1497,13 +1744,45 @@ def _build_edit_fields_context(
 def _render_entry_row(
     request: Any,
     activity_id: int,
+    owner_id: int,
     entry: dict[str, Any],
 ) -> HTMLResponse:
-    """Return the read-only entry row fragment after a successful edit or cancel."""
+    """Return the read-only entry row fragment after a successful edit or cancel.
+
+    is_owner/can_comment are always True here (only the owner ever reaches
+    the edit/cancel-edit routes — same reasoning as activity_detail's
+    owner-only branch). username/slug are looked up the same way
+    activity_detail does, via the session user's username and
+    profiles.get_activity_for_owner's slug, so the comment toggle keeps its
+    `/@{username}/{slug}/...` URL after the swap. entry["comment_count"] is
+    decorated via comments.counts_for_entries — the same helper
+    _decorate_comment_counts uses for the full history context — rather
+    than a fresh query, so the toggle's live count matches what the rest of
+    the calendar/log shows.
+    """
+    user = users.get_user(owner_id)
+    username = user.get("username") if user is not None else None
+
+    with db.connect() as conn:
+        conn.execute("BEGIN")
+        activity_row = profiles.get_activity_for_owner(
+            conn, activity_id=activity_id, owner_id=owner_id
+        )
+        slug = activity_row["slug"] if activity_row is not None else None
+        counts = comments.counts_for_entries(conn, [entry["id"]])
+
+    entry = dict(entry)
+    entry["comment_count"] = counts.get(entry["id"], 0)
+
     return templates.TemplateResponse(
         request=request,
         name="components/entry_row.html.jinja2",
-        context={"activity_id": activity_id, "entry": entry},
+        context={
+            "activity_id": activity_id,
+            "entry": entry,
+            "username": username,
+            "slug": slug,
+        },
     )
 
 
@@ -1577,7 +1856,7 @@ async def cancel_entry_edit(
     if entry["activity_id"] != activity_id:
         return HTMLResponse(status_code=404)
 
-    return _render_entry_row(request, activity_id, entry)
+    return _render_entry_row(request, activity_id, owner_id, entry)
 
 
 @router.post(
@@ -1670,7 +1949,7 @@ async def update_entry(
         tz=tz,
     )
 
-    return _render_entry_row(request, activity_id, updated)
+    return _render_entry_row(request, activity_id, owner_id, updated)
 
 
 # ---------------------------------------------------------------------------

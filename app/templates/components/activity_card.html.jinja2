@@ -5,14 +5,30 @@
 
   Context: `card` (see app.routes.web._build_card_context), and optionally
   `show_nudge` / `nudge_level_id` for the guest upgrade nudge.
+
+  The non-linked branch below (``card.linked == False``) is shared by the
+  home/post-log-fragment swap (keeps its header + streak) and
+  activity_detail.html.jinja2's hero zone, which `{% include %}`s this file
+  with `hero_only = true` in its context to suppress both — the page's own
+  <h1> already covers the header, and the streak already appears once in
+  stats_summary.html.jinja2 below, so neither repeats. `hero_only` defaults
+  to false (unset) so the home/log-fragment swap is unaffected.
+
+  public_activity.html.jinja2 imports `card_body()` directly instead (its
+  hero zone has its own bespoke <article>/<header> markup, not this file's
+  `{% if card.linked %}` wrapper), passing show_header=False, show_streak=False
+  for the same reason.
 #}
-{% macro card_body() %}
+{% set hero_only = hero_only | default(false) %}
+{% macro card_body(show_header=True, show_streak=True) %}
+    {% if show_header %}
     <header class="flex flex-col gap-0.5">
         {% if card.show_breadcrumb %}
         <span class="text-caption text-text-muted">{{ card.category_name }}</span>
         {% endif %}
         <h2 class="text-title font-medium text-text-secondary">{{ card.name }}</h2>
     </header>
+    {% endif %}
 
     {# Hero numeral — the single dominant figure on the card. #}
     <p class="text-hero-numeral font-semibold leading-tight text-brand{% if card.bumped %} hero--bumped{% endif %}">
@@ -34,12 +50,14 @@
     {% endif %}
 
     {# Advance line — demoted caption, never competes with the hero numeral. #}
+    {% if card.advance_line or (show_streak and card.streak) %}
     <p class="text-caption text-text-muted">
         {% if card.advance_line %}{{ card.advance_line }}{% endif %}
-        {% if card.streak %}
+        {% if show_streak and card.streak %}
             <span class="ms-2">{{ strings.HOME_STREAK_LABEL }} {{ card.streak }}{{ strings.HOME_STREAK_DAYS_UNIT }}</span>
         {% endif %}
     </p>
+    {% endif %}
 {% endmacro %}
 
 {% if card.linked %}
@@ -56,27 +74,7 @@
     id="card-{{ card.id }}"
     class="flex flex-col gap-3 px-1"
 >
-    <p class="text-hero-numeral font-semibold leading-tight text-brand{% if card.bumped %} hero--bumped{% endif %}">
-        {% if card.count_mode == "progression" %}
-            {{ card.hero_label or "—" }}
-        {% else %}
-            {{ card.hero_label }}<span class="text-title font-normal text-text-muted"> {{ strings.HOME_COUNT_UNIT }}</span>
-        {% endif %}
-    </p>
-    {% if card.progress is not none %}
-    <div class="progress-track" role="progressbar" aria-valuenow="{{ card.progress.percent }}" aria-valuemin="0" aria-valuemax="100">
-        <div
-            class="progress-fill{% if card.progress.leveled %} progress-fill--leveled{% endif %}"
-            style="width: {{ card.progress.percent }}%"
-        ></div>
-    </div>
-    {% endif %}
-    <p class="text-caption text-text-muted">
-        {% if card.advance_line %}{{ card.advance_line }}{% endif %}
-        {% if card.streak %}
-            <span class="ms-2">{{ strings.HOME_STREAK_LABEL }} {{ card.streak }}{{ strings.HOME_STREAK_DAYS_UNIT }}</span>
-        {% endif %}
-    </p>
+    {{ card_body(show_header=not hero_only, show_streak=not hero_only) }}
 </article>
 {% endif %}
 

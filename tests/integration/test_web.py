@@ -1325,6 +1325,63 @@ async def test_detail_streak_matches_stats_service(client: AsyncClient) -> None:
     assert f"{expected['longest']}{strings_module.STREAK_DAYS_UNIT}" in resp.text
 
 
+def _hero_streak_caption(streak: int) -> str:
+    """The exact text the hero-zone advance-line caption renders for a given
+    streak value — ``"{HOME_STREAK_LABEL} {n}{HOME_STREAK_DAYS_UNIT}"`` inside
+    ``activity_card.html.jinja2``'s ``<span class="ms-2">``. Built from the
+    label + days-unit together (not the bare ``HOME_STREAK_LABEL`` alone)
+    because ``STATS_STREAKS_LABEL`` ("Streaks") on the Summary card contains
+    ``HOME_STREAK_LABEL`` ("Streak") as a substring."""
+    return f"{strings_module.HOME_STREAK_LABEL} {streak}{strings_module.HOME_STREAK_DAYS_UNIT}"
+
+
+async def test_home_card_hero_keeps_streak_caption(client: AsyncClient) -> None:
+    """The home card's advance-line caption still carries the streak caption
+    (label + count + unit) — the dedup macro's ``show_streak`` default is
+    ``True`` for the linked (home-card) branch, since home has no nearby
+    Summary card repeating it (Task 13's "home card unaffected")."""
+    owner_id = await _guest_login(client)
+    seeding.seed_account(owner_id)
+    activity_id = _practice_activity_id(owner_id)
+
+    from app.services import entries as entries_service
+
+    entries_service.create(owner_id, activity_id, {}, tz=_UTC)
+    expected_streak = stats.streaks(activity_id, owner_id, tz=_UTC)["current"]
+
+    resp = await client.get("/home")
+    assert resp.status_code == 200
+    assert _hero_streak_caption(expected_streak) in resp.text
+
+
+async def test_detail_hero_suppresses_streak_caption_but_summary_card_keeps_it_once(
+    client: AsyncClient,
+) -> None:
+    """The activity-detail hero zone (the dedup'd ``card_body(show_streak=...)``
+    macro, ``hero_only=True``) no longer repeats the streak caption: the
+    hero-style "Streak {n} days" caption is entirely absent from the detail
+    page, while the Summary card's own (differently-labeled) current/longest
+    streak still renders exactly once via ``STREAK_CURRENT_LABEL``/
+    ``STREAK_LONGEST_LABEL`` (Task 13 build-plan item)."""
+    owner_id = await _guest_login(client)
+    seeding.seed_account(owner_id)
+    activity_id = _practice_activity_id(owner_id)
+
+    from app.services import entries as entries_service
+
+    entries_service.create(owner_id, activity_id, {}, tz=_UTC)
+    expected_streak = stats.streaks(activity_id, owner_id, tz=_UTC)["current"]
+
+    resp = await client.get(f"/activities/{activity_id}")
+    assert resp.status_code == 200
+    body = resp.text
+    # Hero-zone streak caption (home card's exact wording) never appears here.
+    assert _hero_streak_caption(expected_streak) not in body
+    # The Summary card's streak labels appear exactly once each.
+    assert body.count(strings_module.STREAK_CURRENT_LABEL) == 1
+    assert body.count(strings_module.STREAK_LONGEST_LABEL) == 1
+
+
 async def test_history_context_week_anchor_math(web_db: Path) -> None:
     from datetime import date
 
@@ -1400,6 +1457,202 @@ async def test_history_context_log_groups_entries_by_day_newest_first(
     assert len(ctx["log"][0]["entries"]) == 1
 
 
+async def test_history_context_week_selected_populates_day_entries(
+    client: AsyncClient,
+) -> None:
+    """*selected* support extends to ``period="week"`` (Task 3 build-plan item),
+    not just ``month`` — same ``_entries_on_day`` call, same return shape."""
+    from app.routes.web import _build_history_context
+    from app.services import entries as entries_service
+
+    owner_id = await _guest_login(client)
+    seeding.seed_account(owner_id)
+    activity_id = _practice_activity_id(owner_id)
+
+    today = stats._today_local(_UTC)
+    entries_service.create(owner_id, activity_id, {}, tz=_UTC)
+
+    ctx = _build_history_context(
+        activity_id=activity_id,
+        owner_id=owner_id,
+        period="week",
+        anchor=today,
+        tz=_UTC,
+        selected=today,
+    )
+    assert ctx["selected_day"] == today.isoformat()
+    assert ctx["day_entries"] is not None
+    assert len(ctx["day_entries"]) == 1
+
+
+async def test_history_context_week_selected_with_no_entries_is_empty_not_none(
+    web_db: Path,
+) -> None:
+    """A selected day with no entries returns an empty list, distinguishing
+    "selected, nothing logged" from "nothing selected" (``None``)."""
+    from datetime import date
+
+    from app.routes.web import _build_history_context
+
+    ctx = _build_history_context(
+        activity_id=1,
+        owner_id=1,
+        period="week",
+        anchor=date(2026, 6, 8),
+        tz=_UTC,
+        selected=date(2026, 6, 9),
+    )
+    assert ctx["selected_day"] == "2026-06-09"
+    assert ctx["day_entries"] == []
+
+
+async def test_history_context_decorates_log_entries_with_comment_count(
+    client: AsyncClient,
+) -> None:
+    """Every entry in ``log`` carries a ``comment_count`` key, derived from
+    ``comments.counts_for_entries`` — not a leftover/missing key."""
+    from app.routes.web import _build_history_context
+    from app.services import entries as entries_service
+
+    owner_id = await _guest_login(client)
+    seeding.seed_account(owner_id)
+    activity_id = _practice_activity_id(owner_id)
+
+    entry = entries_service.create(owner_id, activity_id, {}, tz=_UTC)
+
+    with db.connect() as conn:
+        conn.execute("BEGIN")
+        comments_service.create_comment(conn, entry["id"], author_id=owner_id, body="nice work")
+
+    today = stats._today_local(_UTC)
+    ctx = _build_history_context(
+        activity_id=activity_id, owner_id=owner_id, period="month", anchor=today, tz=_UTC
+    )
+    logged_entry = ctx["log"][0]["entries"][0]
+    assert logged_entry["comment_count"] == 1
+
+
+async def test_history_context_decorates_day_entries_with_comment_count(
+    client: AsyncClient,
+) -> None:
+    """``day_entries`` (the selected-day detail list) also carries
+    ``comment_count`` per entry, not just the day-grouped ``log``."""
+    from app.routes.web import _build_history_context
+    from app.services import entries as entries_service
+
+    owner_id = await _guest_login(client)
+    seeding.seed_account(owner_id)
+    activity_id = _practice_activity_id(owner_id)
+
+    entry = entries_service.create(owner_id, activity_id, {}, tz=_UTC)
+
+    with db.connect() as conn:
+        conn.execute("BEGIN")
+        comments_service.create_comment(conn, entry["id"], author_id=owner_id, body="great")
+        comments_service.create_comment(conn, entry["id"], author_id=owner_id, body="great again")
+
+    today = stats._today_local(_UTC)
+    ctx = _build_history_context(
+        activity_id=activity_id,
+        owner_id=owner_id,
+        period="month",
+        anchor=today,
+        tz=_UTC,
+        selected=today,
+    )
+    assert ctx["day_entries"][0]["comment_count"] == 2
+
+
+async def test_history_context_no_entries_skips_comment_lookup(web_db: Path) -> None:
+    """An empty log/day_entries doesn't blow up the comment-count decoration
+    (no entry ids to look up)."""
+    from datetime import date
+
+    from app.routes.web import _build_history_context
+
+    ctx = _build_history_context(
+        activity_id=1, owner_id=1, period="all", anchor=date(2026, 6, 8), tz=_UTC
+    )
+    assert ctx["log"] == []
+
+
+async def test_history_context_passes_through_new_kwargs_unchanged(web_db: Path) -> None:
+    """*is_owner*/*can_comment*/*username*/*slug* pass straight through into
+    the returned context, faithfully including ``None`` (e.g. a guest-owned
+    activity with no public URL) — this function does no suppression itself."""
+    from datetime import date
+
+    from app.routes.web import _build_history_context
+
+    ctx = _build_history_context(
+        activity_id=1,
+        owner_id=1,
+        period="week",
+        anchor=date(2026, 6, 8),
+        tz=_UTC,
+        is_owner=True,
+        can_comment=True,
+        username="alice",
+        slug="practice",
+    )
+    assert ctx["is_owner"] is True
+    assert ctx["can_comment"] is True
+    assert ctx["username"] == "alice"
+    assert ctx["slug"] == "practice"
+
+    ctx_defaults = _build_history_context(
+        activity_id=1, owner_id=1, period="all", anchor=date(2026, 6, 8), tz=_UTC
+    )
+    assert ctx_defaults["is_owner"] is False
+    assert ctx_defaults["can_comment"] is False
+    assert ctx_defaults["username"] is None
+    assert ctx_defaults["slug"] is None
+
+
+async def test_history_route_week_day_tap_selects_cell_and_renders_entries(
+    client: AsyncClient,
+) -> None:
+    """Tapping a day in week view (Task 4 build-plan item) renders the same
+    day-entries affordance as month view: the day-detail body state replaces
+    the week strip entirely (Task 5) and the day's entries are rendered via
+    the shared ``day_entries.html.jinja2`` partial."""
+    from app.services import entries as entries_service
+
+    owner_id = await _guest_login(client)
+    seeding.seed_account(owner_id)
+    activity_id = _practice_activity_id(owner_id)
+
+    entries_service.create(owner_id, activity_id, {"memo": "week tap test"}, tz=_UTC)
+
+    today = stats._today_local(_UTC)
+    resp = await client.get(
+        f"/activities/{activity_id}/history?period=week&anchor={today.isoformat()}"
+        f"&day={today.isoformat()}"
+    )
+    assert resp.status_code == 200
+    # The week strip's own .cal-day cells are gone once a day is selected --
+    # only the back-control + that day's entries remain.
+    assert "cal-day--selected" not in resp.text
+    assert strings_module.CALENDAR_DAY_ENTRIES_TITLE in resp.text
+    assert "week tap test" in resp.text
+    assert strings_module.CALENDAR_BACK_TO_CALENDAR in resp.text
+
+
+async def test_history_route_week_day_tap_button_targets_week_period(
+    client: AsyncClient,
+) -> None:
+    """The week strip's day cells are real ``hx-get`` buttons parameterized
+    for ``period=week`` (not month) -- the gap this task closes."""
+    owner_id = await _guest_login(client)
+    seeding.seed_account(owner_id)
+    activity_id = _practice_activity_id(owner_id)
+
+    resp = await client.get(f"/activities/{activity_id}/history?period=week")
+    assert resp.status_code == 200
+    assert f"/activities/{activity_id}/history?period=week&anchor=" in resp.text
+    assert f'hx-target="#history-{activity_id}"' in resp.text
+
+
 async def test_history_route_day_grouping_uses_owners_stored_timezone(
     client: AsyncClient,
 ) -> None:
@@ -1439,9 +1692,29 @@ async def test_history_route_day_grouping_uses_owners_stored_timezone(
     assert "2026-06-14" in resp.text
 
 
-async def test_history_route_requires_auth(client: AsyncClient) -> None:
+async def test_history_route_unknown_activity_anonymous_returns_404(client: AsyncClient) -> None:
+    """No session, unknown activity id: 404, not 401 — this route now serves
+    non-owner viewers too (per the read-only calendar parity fix), so an
+    unauthenticated request is just another viewer the capability helper has
+    to resolve; with no activity to resolve an owner from, it fails closed to
+    404 rather than leaking a stale "you must be logged in" 401 that implied
+    the activity might exist for *someone* logged in."""
     resp = await client.get("/activities/1/history?period=week")
-    assert resp.status_code == 401
+    assert resp.status_code == 404
+
+
+async def test_history_route_private_activity_anonymous_returns_404(client: AsyncClient) -> None:
+    """No session, a real activity owned by a private (non-public) account:
+    404 — the anonymous viewer fails ``can_view_activity_detail`` (limited),
+    so this fails closed exactly like the page-load route does for `limited`
+    detail requests, never leaking entry data."""
+    owner_id = await _guest_login(client)
+    seeding.seed_account(owner_id)
+    activity_id = _practice_activity_id(owner_id)
+    await client.post("/auth/logout")
+
+    resp = await client.get(f"/activities/{activity_id}/history?period=week")
+    assert resp.status_code == 404
 
 
 async def test_history_route_unknown_activity_returns_404(client: AsyncClient) -> None:
@@ -1645,21 +1918,6 @@ async def test_owner_view_zero_comment_entries_render_no_count_glyph(
     assert "<span>" not in button_markup
 
 
-async def test_owner_view_c_param_expands_matching_entry_slot_on_load(
-    client: AsyncClient,
-) -> None:
-    owner_id = await _signup_with_username(client, "owner_comment3")
-    slug, entry_id = _make_activity_with_entry(owner_id)
-
-    resp = await client.get(f"/@owner_comment3/{slug}?c={entry_id}")
-    assert resp.status_code == 200
-    # The matching slot carries hx-trigger="load" so it auto-expands without
-    # a client click.
-    assert f'id="comment-slot-{entry_id}"' in resp.text
-    assert 'hx-trigger="load"' in resp.text
-    assert f"/entries/{entry_id}/comments" in resp.text
-
-
 async def test_owner_view_invalid_c_param_falls_back_to_collapsed(
     client: AsyncClient,
 ) -> None:
@@ -1686,6 +1944,43 @@ async def test_owner_view_cross_activity_c_param_is_ignored(client: AsyncClient)
     resp = await client.get(f"/@owner_comment5/{slug_a}?c={entry_b_id}")
     assert resp.status_code == 200
     assert 'hx-trigger="load"' not in resp.text
+
+
+async def test_owner_view_c_param_for_past_month_entry_selects_day_and_expands(
+    client: AsyncClient,
+) -> None:
+    """``?c={entry_id}`` for an entry logged in a past month lands the owner
+
+    on that month (not the current one), with that day pre-selected in the
+    calendar and that entry's comment-thread toggle carrying the extra
+    ``load`` trigger so it auto-expands — no manual day-tap needed.
+    """
+    owner_id = await _signup_with_username(client, "owner_comment6")
+    result = categories.create_activity(owner_id, name="Running")
+    activity_id = result["activity_id"]
+
+    past_day = "2026-03-14"
+    entry = entries.create(owner_id, activity_id, occurred_at=f"{past_day}T09:00:00", tz=_UTC)
+    entry_id = entry["id"]
+    with db.connect() as conn:
+        conn.execute("BEGIN")
+        slug = conn.execute("SELECT slug FROM activity WHERE id = ?", (activity_id,)).fetchone()[
+            "slug"
+        ]
+
+    resp = await client.get(f"/@owner_comment6/{slug}?c={entry_id}")
+    assert resp.status_code == 200
+    # Landed on March 2026 (the entry's month), not the current month.
+    assert "2026.03" in resp.text
+    # The day-detail body state renders -- the month grid is gone entirely
+    # (Task 5: a selected day replaces the grid, it doesn't coexist with it),
+    # and the back-control + this day's detail panel are present instead.
+    assert "cal-day--selected" not in resp.text
+    assert strings_module.CALENDAR_BACK_TO_CALENDAR in resp.text
+    assert f"{strings_module.CALENDAR_DAY_ENTRIES_TITLE} — {past_day}" in resp.text
+    # The day-entries comment toggle for this entry auto-fires on load.
+    assert f'id="comment-slot-{entry_id}"' in resp.text
+    assert 'hx-trigger="click, load"' in resp.text
 
 
 # ---------------------------------------------------------------------------
@@ -2673,13 +2968,14 @@ async def test_comments_page_row_links_to_owner_activity_detail_with_c_param(
     assert expected_href in resp.text
 
     # Follow the link the row points to: lands on the owner's own
-    # activity-detail page with that entry's thread pre-expanded (verifies
-    # Task 1's ?c= integration end to end rather than trusting it blind).
+    # activity-detail page, on the merged calendar, with that entry's day
+    # pre-selected and its comment thread pre-expanded via an extra
+    # hx-trigger="load" on the day-entries comment toggle.
     detail_resp = await client.get(f"/@{username}/{slug}?c={entry_id}")
     assert detail_resp.status_code == 200
     assert f'id="comment-slot-{entry_id}"' in detail_resp.text
     assert f'hx-get="/@{username}/{slug}/entries/{entry_id}/comments"' in detail_resp.text
-    assert 'hx-trigger="load"' in detail_resp.text
+    assert 'hx-trigger="click, load"' in detail_resp.text
 
 
 async def test_comments_page_excludes_soft_deleted_and_self_comments(

@@ -253,6 +253,57 @@ def test_owner_can_comment_on_own_entry(tmp_path: Path):
 
 
 # ---------------------------------------------------------------------------
+# counts_for_entries — plain per-entry count, excludes soft-deleted
+# ---------------------------------------------------------------------------
+
+
+def _make_comment(
+    conn: sqlite3.Connection, entry_id: int, author_id: int, *, deleted: bool = False
+) -> int:
+    cur = conn.execute(
+        "INSERT INTO comment (entry_id, author_id, body, created_at, deleted_at)"
+        " VALUES (?, ?, 'hi', '2026-06-16T00:00:00Z', ?)",
+        (entry_id, author_id, "2026-06-16T01:00:00Z" if deleted else None),
+    )
+    conn.commit()
+    return cur.lastrowid
+
+
+def test_counts_for_entries_empty_list_returns_empty_dict(tmp_path: Path):
+    conn = _raw(_make_db(tmp_path))
+    assert comments.counts_for_entries(conn, []) == {}
+    conn.close()
+
+
+def test_counts_for_entries_groups_per_entry(tmp_path: Path):
+    conn = _raw(_make_db(tmp_path))
+    owner = _make_user(conn, username="o")
+    activity_id = _make_activity(conn, owner)
+    e1 = _make_entry(conn, owner, activity_id)
+    e2 = _make_entry(conn, owner, activity_id)
+    e3 = _make_entry(conn, owner, activity_id)
+    _make_comment(conn, e1, owner)
+    _make_comment(conn, e1, owner)
+    _make_comment(conn, e2, owner)
+    # e3 has no comments -> absent from the map (callers .get(..., 0)).
+    counts = comments.counts_for_entries(conn, [e1, e2, e3])
+    assert counts == {e1: 2, e2: 1}
+    conn.close()
+
+
+def test_counts_for_entries_excludes_soft_deleted(tmp_path: Path):
+    conn = _raw(_make_db(tmp_path))
+    owner = _make_user(conn, username="o")
+    activity_id = _make_activity(conn, owner)
+    e1 = _make_entry(conn, owner, activity_id)
+    _make_comment(conn, e1, owner)
+    _make_comment(conn, e1, owner, deleted=True)
+    counts = comments.counts_for_entries(conn, [e1])
+    assert counts == {e1: 1}
+    conn.close()
+
+
+# ---------------------------------------------------------------------------
 # 3. list_comments — hide-not-delete: revoked viewer gets [], owner still sees it
 # ---------------------------------------------------------------------------
 

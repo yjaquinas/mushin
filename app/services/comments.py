@@ -73,6 +73,29 @@ def _entry_profile_context(conn: sqlite3.Connection, entry_id: int) -> tuple[int
     return row["activity_id"], profile_user
 
 
+def counts_for_entries(conn: sqlite3.Connection, entry_ids: list[int]) -> dict[int, int]:
+    """Map ``entry_id -> visible comment count`` for *entry_ids*.
+
+    A plain count of non-soft-deleted comments — no capability re-check here,
+    because this is only ever used to render the collapsed affordance on a
+    detail page a viewer has already been cleared to see (the route gates the
+    whole page via ``can_view_activity_detail`` before this runs). The thread
+    fragment itself (``list_comments``) re-checks live on every expand, so a
+    stale count here is, at worst, an affordance that opens to an empty list —
+    never a leak of comment content.
+    """
+    if not entry_ids:
+        return {}
+    placeholders = ",".join("?" for _ in entry_ids)
+    rows = conn.execute(
+        f"SELECT entry_id, COUNT(*) AS n FROM comment"
+        f" WHERE entry_id IN ({placeholders}) AND deleted_at IS NULL"
+        f" GROUP BY entry_id",
+        tuple(entry_ids),
+    ).fetchall()
+    return {r["entry_id"]: r["n"] for r in rows}
+
+
 def list_comments(
     conn: sqlite3.Connection, entry_id: int, *, viewer_id: int | None
 ) -> list[dict[str, Any]]:

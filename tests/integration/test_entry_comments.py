@@ -159,6 +159,111 @@ async def test_public_activity_page_shows_glyph_for_permitted_viewer_at_zero_com
 
 
 # ---------------------------------------------------------------------------
+# Anonymous (no session) visitor on a public activity, zero-comment entry:
+# "log in to comment" prompt instead of a silently-missing composer.
+# (meetings/MEETING-2026-06-21-calendar-log-merge-visitor, Task 12)
+# ---------------------------------------------------------------------------
+
+
+async def test_anonymous_visitor_sees_login_prompt_on_zero_comment_entry(
+    client_a: AsyncClient, client_c: AsyncClient
+) -> None:
+    owner_id = await _signup(client_a, "anon_owner1", visibility="public")
+    slug, _entry_id = _make_activity_with_entry(owner_id)
+
+    # client_c never signed up -- genuinely anonymous.
+    page_resp = await client_c.get(f"/@anon_owner1/{slug}")
+    assert page_resp.status_code == 200
+    assert ui_strings.COMMENTS_LOGIN_TO_COMMENT in page_resp.text
+
+    # The login link carries a same-origin `next` back to this activity.
+    assert f"/login?next=%2F%40anon_owner1%2F{slug}" in page_resp.text
+
+
+async def test_anonymous_visitor_still_sees_existing_comment_toggle(
+    client_a: AsyncClient, client_b: AsyncClient, client_c: AsyncClient
+) -> None:
+    """An entry that already has a comment keeps the normal read-only toggle
+    for an anonymous visitor -- only *posting* is gated, never reading."""
+    owner_id = await _signup(client_a, "anon_owner2", visibility="public")
+    slug, entry_id = _make_activity_with_entry(owner_id)
+    await _signup(client_b, "anon_commenter2")
+
+    comment_url = _comments_url("anon_owner2", slug, entry_id)
+    post_resp = await client_b.post(comment_url, data={"body": "already here"})
+    assert post_resp.status_code == 200
+
+    page_resp = await client_c.get(f"/@anon_owner2/{slug}")
+    assert page_resp.status_code == 200
+    assert f"/entries/{entry_id}/comments" in page_resp.text
+
+
+async def test_anonymous_visitor_history_fragment_also_gets_login_prompt(
+    client_a: AsyncClient, client_c: AsyncClient
+) -> None:
+    """The interactive history-fragment route (period switch/day-tap), not
+    just the initial page load, threads the same login prompt for an
+    anonymous viewer."""
+    owner_id = await _signup(client_a, "anon_owner3", visibility="public")
+    slug, _entry_id = _make_activity_with_entry(owner_id)
+
+    with db.connect() as conn:
+        conn.execute("BEGIN")
+        activity_id = conn.execute(
+            "SELECT id FROM activity WHERE owner_id = ? AND slug = ?", (owner_id, slug)
+        ).fetchone()["id"]
+
+    resp = await client_c.get(f"/activities/{activity_id}/history?period=month")
+    assert resp.status_code == 200
+    assert ui_strings.COMMENTS_LOGIN_TO_COMMENT in resp.text
+    assert f"/login?next=%2F%40anon_owner3%2F{slug}" in resp.text
+
+
+async def test_login_route_rejects_malicious_next_double_slash(client_a: AsyncClient) -> None:
+    resp = await client_a.get("/login", params={"next": "//evil.com/@anon_owner1"})
+    assert resp.status_code == 200
+    assert 'name="next"' not in resp.text
+
+
+async def test_login_route_rejects_malicious_next_absolute_url(client_a: AsyncClient) -> None:
+    resp = await client_a.get("/login", params={"next": "https://evil.com/@anon_owner1"})
+    assert resp.status_code == 200
+    assert 'name="next"' not in resp.text
+
+
+async def test_login_route_accepts_safe_next_and_threads_it_into_the_form(
+    client_a: AsyncClient,
+) -> None:
+    resp = await client_a.get("/login", params={"next": "/@someone/kendo"})
+    assert resp.status_code == 200
+    assert 'name="next" value="/@someone/kendo"' in resp.text
+
+
+async def test_login_route_already_logged_in_redirects_to_safe_next(
+    client_a: AsyncClient,
+) -> None:
+    await _signup(client_a, "already_logged_in1")
+    resp = await client_a.get(
+        "/login", params={"next": "/@already_logged_in1"}, follow_redirects=False
+    )
+    assert resp.status_code == 303
+    assert resp.headers["location"] == "/@already_logged_in1"
+
+
+async def test_login_route_already_logged_in_rejects_malicious_next(
+    client_a: AsyncClient,
+) -> None:
+    owner_id = await _signup(client_a, "already_logged_in2")
+    resp = await client_a.get(
+        "/login", params={"next": "https://evil.com/x"}, follow_redirects=False
+    )
+    assert resp.status_code == 303
+    # Falls back to the user's own profile, never the malicious target.
+    user = users.get_user(owner_id)
+    assert resp.headers["location"] == f"/@{user['username']}"
+
+
+# ---------------------------------------------------------------------------
 # Public profile + logged-out (no session)
 # ---------------------------------------------------------------------------
 
