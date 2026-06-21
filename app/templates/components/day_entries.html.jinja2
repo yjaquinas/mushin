@@ -1,9 +1,11 @@
 {#
-  A day's entries — swapped into #calendar-day-detail when a .cal-day is
-  tapped (see app.routes.web.calendar_day).
+  A day's entries — included into the month-view #calendar-day-detail div
+  when a .cal-day is tapped (see app.routes.web._build_history_context and
+  components/history.html.jinja2's month branch).
 
   Context: day ("YYYY-MM-DD"), entries (hydrated entry dicts: id, occurred_at,
-  memo, values, tags).
+  time_known, memo, values, tags). The day is already selected/shown in the
+  heading, so only the time (when known) is shown per entry, not the date.
 #}
 <div class="flex flex-col gap-2 rounded-card border border-border bg-surface-2 p-3">
     <h4 class="text-body font-medium text-text-primary">
@@ -15,9 +17,13 @@
         <ul class="flex flex-col gap-1">
             {% for entry in entries %}
                 <li class="text-body text-text-primary">
-                    <span class="text-caption text-text-muted">{{ entry.occurred_at }}</span>
+                    <span class="text-caption text-text-muted">
+                        {%- if entry.time_known == 1 -%}
+                            {{ entry.occurred_at | format_entry_time }}
+                        {%- endif -%}
+                    </span>
                     {% if entry.memo %}
-                        <span class="ms-2">{{ entry.memo }}</span>
+                        <span class="{% if entry.time_known == 1 %}ms-2{% endif %}">{{ entry.memo }}</span>
                     {% endif %}
                 </li>
             {% endfor %}

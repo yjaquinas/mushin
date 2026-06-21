@@ -496,9 +496,14 @@
    *     alone (colorblind + bright-sun safe).
    *   .cal-day--today  — the current day. Signaled by an outline ring
    *     (shape), distinct from the marked-day dot and from focus-visible.
+   *   .cal-day--selected — the day whose entries are currently showing in
+   *     the detail panel below the grid (#calendar-day-detail). Signaled
+   *     by a background fill plus a weight change — a third, independent
+   *     channel from the marked-day dot and the today ring.
    *
-   * .cal-day--marked and .cal-day--today may combine on the same cell;
-   * the dot and the ring are independent affordances and both render.
+   * .cal-day--marked, .cal-day--today, and .cal-day--selected may all
+   * combine on the same cell; the dot, the ring, and the fill are
+   * independent affordances that layer without colliding.
    */
   .cal-day {
     display:         flex;
@@ -534,6 +539,13 @@
     height:          0.25rem;  /* 4 px */
     border-radius:   9999px;
     background:      var(--color-accent);
+  }
+
+  /* Selected: a background fill + weight change marks the day whose entries
+   * are showing in the detail panel below the grid. */
+  .cal-day--selected {
+    background:      var(--color-surface-2);
+    font-weight:     var(--font-weight-semibold);
   }
 
   /* Today: an outline ring distinguishes the current day by shape, separate

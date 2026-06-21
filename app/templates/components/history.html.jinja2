@@ -114,10 +114,10 @@
                                 {% if day is not none %}
                                     <button
                                         type="button"
-                                        class="cal-day{% if day.marked %} cal-day--marked{% endif %}{% if day.today %} cal-day--today{% endif %}"
-                                        hx-get="/activities/{{ activity_id }}/calendar/day/{{ day.date }}"
-                                        hx-target="#calendar-day-detail"
-                                        hx-swap="innerHTML"
+                                        class="cal-day{% if day.marked %} cal-day--marked{% endif %}{% if day.today %} cal-day--today{% endif %}{% if day.selected %} cal-day--selected{% endif %}"
+                                        hx-get="/activities/{{ activity_id }}/history?period=month&anchor={{ history.anchor }}{% if not day.selected %}&day={{ day.date }}{% endif %}"
+                                        hx-target="#history-{{ activity_id }}"
+                                        hx-swap="outerHTML"
                                     >
                                         {{ day.day }}
                                     </button>
@@ -129,7 +129,11 @@
             </tbody>
         </table>
 
-        <div id="calendar-day-detail"></div>
+        {% if history.selected_day is not none %}
+            {% with day = history.selected_day, entries = history.day_entries %}
+                {% include "components/day_entries.html.jinja2" %}
+            {% endwith %}
+        {% endif %}
     {% elif history.period == "week" %}
         {% include "components/week_strip.html.jinja2" with context %}
     {% elif history.period == "year" %}

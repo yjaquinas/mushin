@@ -306,7 +306,13 @@ def _month_bounds(year: int, month: int) -> tuple[date, date]:
 
 
 def _build_calendar_context(
-    activity_id: int, owner_id: int, *, year: int, month: int, tz: ZoneInfo
+    activity_id: int,
+    owner_id: int,
+    *,
+    year: int,
+    month: int,
+    tz: ZoneInfo,
+    selected: date | None = None,
 ) -> dict[str, Any]:
     """Month-grid context: weeks of ``.cal-day`` cells, marked + today flags.
 
@@ -316,6 +322,10 @@ def _build_calendar_context(
     month (one query via ``entries.list_for_activity`` would over-fetch, so we
     use ``stats.heatmap`` only when the month is within the trailing 365 days;
     otherwise we read entries directly).
+
+    *selected*, when given, flags the matching cell's ``selected`` key so the
+    template can render ``.cal-day--selected`` on it. Defaults to ``None``
+    (no cell selected) for callers that don't track a tapped day.
     """
     first, last = _month_bounds(year, month)
     today = datetime.now(UTC).date()
@@ -341,6 +351,7 @@ def _build_calendar_context(
                 "day": cursor.day,
                 "marked": cursor in marked_days,
                 "today": cursor == today,
+                "selected": cursor == selected,
             }
         )
         if len(week) == 7:
@@ -382,7 +393,13 @@ def _entries_on_day(
 
 
 def _build_history_context(
-    activity_id: int, owner_id: int, *, period: str, anchor: date, tz: ZoneInfo
+    activity_id: int,
+    owner_id: int,
+    *,
+    period: str,
+    anchor: date,
+    tz: ZoneInfo,
+    selected: date | None = None,
 ) -> dict[str, Any]:
     """History view context for *period* (``week``/``month``/``year``/``all``) at *anchor*.
 
@@ -391,6 +408,9 @@ def _build_history_context(
     no visual and no prev/next navigation — only the full day-grouped log.
     ``log`` groups the period's entries by local day (in *tz*), newest day first,
     for the chronological log.
+
+    *selected*, when given (month period only), flags the matching calendar cell
+    and populates ``selected_day``/``day_entries`` with that day's detail.
     """
     if period == "all":
         all_rows = entries.list_for_activity(owner_id, activity_id)
@@ -411,6 +431,8 @@ def _build_history_context(
             "next_anchor": None,
             "start": None,
             "end": None,
+            "selected_day": None,
+            "day_entries": None,
         }
 
     start = stats._shift_period(anchor, period, 0)
@@ -419,7 +441,12 @@ def _build_history_context(
 
     if period == "month":
         visual: dict[str, Any] = _build_calendar_context(
-            activity_id, owner_id, year=start.year, month=start.month, tz=tz
+            activity_id,
+            owner_id,
+            year=start.year,
+            month=start.month,
+            tz=tz,
+            selected=selected,
         )
         label = f"{start.year}.{start.month:02d}"
     elif period == "week":
@@ -460,6 +487,11 @@ def _build_history_context(
     prev_anchor = stats._shift_period(anchor, period, -1).isoformat()
     next_anchor = stats._shift_period(anchor, period, 1).isoformat()
 
+    selected_day = selected.isoformat() if selected is not None else None
+    day_entries = (
+        _entries_on_day(activity_id, owner_id, selected, tz=tz) if selected is not None else None
+    )
+
     return {
         "period": period,
         "anchor": anchor.isoformat(),
@@ -470,6 +502,8 @@ def _build_history_context(
         "next_anchor": next_anchor,
         "start": start.isoformat(),
         "end": end.isoformat(),
+        "selected_day": selected_day,
+        "day_entries": day_entries,
     }
 
 
@@ -1297,83 +1331,20 @@ async def delete_category(
     return response
 
 
-# ---------------------------------------------------------------------------
-# Calendar fragments (month navigation + day drill-down)
-# ---------------------------------------------------------------------------
-
-
-@router.get("/activities/{activity_id}/calendar", response_class=HTMLResponse)
-async def calendar_month(
-    request: Request,
-    activity_id: int,
-    year: int,
-    month: int,
-    session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
-) -> HTMLResponse:
-    """Render the month-calendar fragment for *year*-*month* (HTMX swap target)."""
-    user = _current_user(session)
-    if user is None:
-        return HTMLResponse(status_code=401)
-    owner_id = int(user["id"])
-    tz = users.get_user_timezone(owner_id)
-
-    if not (1 <= month <= 12):
-        return HTMLResponse(status_code=400)
-
-    with db.connect() as conn:
-        conn.execute("BEGIN")
-        if not _db.exists(conn, "activity", owner_id, where="id = ?", params=(activity_id,)):
-            return HTMLResponse(status_code=404)
-
-    calendar_ctx = _build_calendar_context(activity_id, owner_id, year=year, month=month, tz=tz)
-    return templates.TemplateResponse(
-        request=request,
-        name="components/calendar.html.jinja2",
-        context={"activity_id": activity_id, "calendar": calendar_ctx},
-    )
-
-
-@router.get("/activities/{activity_id}/calendar/day/{day}", response_class=HTMLResponse)
-async def calendar_day(
-    request: Request,
-    activity_id: int,
-    day: str,
-    session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
-) -> HTMLResponse:
-    """Render the entries logged on *day* (``YYYY-MM-DD``) as an HTMX fragment."""
-    user = _current_user(session)
-    if user is None:
-        return HTMLResponse(status_code=401)
-    owner_id = int(user["id"])
-    tz = users.get_user_timezone(owner_id)
-
-    try:
-        target_day = date.fromisoformat(day)
-    except ValueError:
-        return HTMLResponse(status_code=400)
-
-    with db.connect() as conn:
-        conn.execute("BEGIN")
-        if not _db.exists(conn, "activity", owner_id, where="id = ?", params=(activity_id,)):
-            return HTMLResponse(status_code=404)
-
-    day_entries = _entries_on_day(activity_id, owner_id, target_day, tz=tz)
-    return templates.TemplateResponse(
-        request=request,
-        name="components/day_entries.html.jinja2",
-        context={"day": day, "entries": day_entries},
-    )
-
-
 @router.get("/activities/{activity_id}/history", response_class=HTMLResponse)
 async def activity_history(
     request: Request,
     activity_id: int,
     period: str,
     anchor: str | None = None,
+    day: str | None = None,
     session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
 ) -> HTMLResponse:
-    """Render the history fragment (visual + log) for *period* at *anchor*."""
+    """Render the history fragment (visual + log) for *period* at *anchor*.
+
+    *day*, when given, selects a calendar cell (month period) and includes
+    that day's entries in the returned fragment.
+    """
     user = _current_user(session)
     if user is None:
         return HTMLResponse(status_code=401)
@@ -1391,13 +1362,21 @@ async def activity_history(
         except ValueError:
             return HTMLResponse(status_code=400)
 
+    if day is None:
+        selected_date = None
+    else:
+        try:
+            selected_date = date.fromisoformat(day)
+        except ValueError:
+            return HTMLResponse(status_code=400)
+
     with db.connect() as conn:
         conn.execute("BEGIN")
         if not _db.exists(conn, "activity", owner_id, where="id = ?", params=(activity_id,)):
             return HTMLResponse(status_code=404)
 
     history_ctx = _build_history_context(
-        activity_id, owner_id, period=period, anchor=anchor_date, tz=tz
+        activity_id, owner_id, period=period, anchor=anchor_date, tz=tz, selected=selected_date
     )
     response = templates.TemplateResponse(
         request=request,
