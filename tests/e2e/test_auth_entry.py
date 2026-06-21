@@ -1,10 +1,11 @@
 """Playwright E2E specs for the entry-screen auth toggle (Task 6,
 auth-entry-flow).
 
-These specs are driven through the **Playwright MCP**, not a bundled
-Playwright runner (see .claude/rules/tests.md). They are written ahead of
-being run by an agent with MCP browser tools attached, and follow the same
-skip/fixture pattern as ``tests/e2e/test_logging.py``.
+These are real `pytest` + `playwright.sync_api` specs (see
+.claude/rules/tests.md) -- not agent-driven via the `playwright-cli` skill.
+They're currently dormant (`playwright` was never added as a project
+dependency), following the same skip/fixture pattern as
+``tests/e2e/test_logging.py``.
 
 Specs covered
 -------------
@@ -25,13 +26,14 @@ from app import ui_strings
 pytestmark = pytest.mark.e2e
 
 # Skip the whole module when there's no Playwright browser available (plain
-# `uv run pytest` on a dev machine / CI without a browser install). When run
-# under the Playwright MCP, the MCP supplies its own browser/session and these
-# specs are exercised by an agent driving the `mcp__playwright__*` tools
-# directly rather than importing `playwright` here.
+# `uv run pytest` on a dev machine / CI without a browser install -- the
+# `playwright` pip package was never added as a dependency). This is a real
+# pytest + playwright.sync_api spec, unrelated to the agent-driven
+# `playwright-cli` skill; it'll start running once `playwright` + a browser
+# are installed.
 playwright_sync_api = pytest.importorskip(
     "playwright.sync_api",
-    reason="Playwright is not installed; e2e specs run via the Playwright MCP",
+    reason="Playwright is not installed; this dormant pytest-playwright spec is unrelated to the playwright-cli skill",
 )
 
 BASE_URL = "http://127.0.0.1:8000"
@@ -90,6 +92,12 @@ def test_clicking_create_account_tab_swaps_form_without_navigation(page) -> None
     assert navigated["count"] == 0, "tab switch should swap a fragment, not navigate"
 
 
+@pytest.mark.skip(
+    reason="Guest mode is retired (2026-06-16, see CLAUDE.md) -- 'Continue "
+    "without an account' is no longer reachable from the entry screen, so "
+    "this guest-then-upgrade flow can no longer be driven from the UI. "
+    "Login-with-existing-credentials is otherwise covered by other specs."
+)
 def test_login_with_guest_upgraded_credentials_redirects_to_home(page) -> None:
     """A guest upgraded to username/password can log back in via the Log in
     tab, landing on its canonical /@{username} profile (the JSON success
@@ -120,8 +128,14 @@ def test_login_with_guest_upgraded_credentials_redirects_to_home(page) -> None:
     page.wait_for_url(BASE_URL + f"/@{username}")
 
 
+@pytest.mark.skip(
+    reason="Guest mode is retired (2026-06-16, see CLAUDE.md) -- 'Continue "
+    "without an account' is no longer reachable from the entry screen. "
+    "Existing guest rows still drain via the reaper timer, but no new "
+    "guest session can be started, so this spec has nothing left to assert."
+)
 def test_continue_without_account_still_starts_guest_session(page) -> None:
-    """"Continue without an account" still mints a guest session and lands on /home."""
+    """ "Continue without an account" still mints a guest session and lands on /home."""
     page.goto(BASE_URL + "/")
     page.get_by_text(ui_strings.ENTRY_GUEST_LINK).click()
     page.wait_for_url(BASE_URL + "/home")

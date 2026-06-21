@@ -41,7 +41,7 @@ Path-scoped: loads when Claude is editing `app/**` or `tests/**`. Fill in the co
 
 - pytest for unit and integration tests.
 - Integration tests use `httpx.AsyncClient` against the FastAPI app.
-- E2E tests use Playwright via the Playwright MCP.
+- E2E tests use Playwright via the `playwright-cli` skill (Bash-invoked, not MCP).
 - New features land with tests — see `tests.md` rule.
 
 ## Project-specific additions

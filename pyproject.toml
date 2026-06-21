@@ -49,7 +49,7 @@ testpaths = ["tests"]
 asyncio_mode = "auto"
 addopts = "-ra --strict-markers"
 markers = [
-    "e2e: Playwright specs driven via the Playwright MCP (require a browser; not run by plain `uv run pytest`).",
+    "e2e: pytest + playwright.sync_api specs (require a browser; not run by plain `uv run pytest`, unrelated to the playwright-cli skill).",
 ]
 
 [build-system]

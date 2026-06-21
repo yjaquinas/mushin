@@ -35,7 +35,7 @@ Visit `http://localhost:8000`.
 uv run pytest
 ```
 
-End-to-end tests use Playwright via MCP — see `tests/e2e/`.
+End-to-end tests use Playwright via the `playwright-cli` skill — see `tests/e2e/`.
 
 ## Deploy
 

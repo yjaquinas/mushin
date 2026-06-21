@@ -11,7 +11,7 @@ Path-scoped: loads when Claude is editing or generating tests. Fill in project-s
 
 - `tests/unit/` — fast tests for pure functions and small units.
 - `tests/integration/` — tests that touch the FastAPI app, database, or filesystem.
-- `tests/e2e/` — Playwright tests driven through the Playwright MCP.
+- `tests/e2e/` — Playwright tests driven through the `playwright-cli` skill.
 - `tests/conftest.py` — shared fixtures (DB setup/teardown, test client, etc.).
 
 ## Test naming
@@ -29,7 +29,7 @@ Path-scoped: loads when Claude is editing or generating tests. Fill in project-s
 
 - Integration tests use `httpx.AsyncClient` against the FastAPI app directly (no network).
 - DB fixtures create a fresh SQLite at `./tests/fixtures/test.db` or use `:memory:`. Never run tests against the dev database.
-- E2E tests use the Playwright MCP — not a bundled Playwright. This avoids shipping a headless browser inside the project repo.
+- E2E tests use the `playwright-cli` skill (Bash-invoked `playwright-cli` commands, not the Playwright MCP). Snapshots land on disk under `.playwright-cli/` and are read on demand instead of being pushed into context.
 
 ## What gets a test
 
@@ -41,4 +41,4 @@ Path-scoped: loads when Claude is editing or generating tests. Fill in project-s
 ## Project-specific additions
 
 - Every build-plan task is gated by tests for its acceptance criteria before it's "done."
-- Required suites: domain unit tests (counting, streaks, stats, progression eligibility including the dan/shōgō gates); a **multi-user isolation test** asserting no query returns another `owner_id`'s rows; Playwright flows for signup/login, quick-add, tag tap-select surviving fragment swap, and the level-bar advancing on log.
+- Required suites: domain unit tests (counting, streaks, stats, progression eligibility including the dan/shōgō gates); a **multi-user isolation test** asserting no query returns another `owner_id`'s rows; Playwright flows for signup/login, quick-add, a `#hashtag` typed in the notes field surviving the fragment swap into the tag-frequency section, and the level-bar advancing on log.

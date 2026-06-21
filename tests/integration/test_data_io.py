@@ -19,6 +19,7 @@ from pathlib import Path
 import pytest
 from httpx import ASGITransport, AsyncClient
 
+from app import ui_strings
 from app.main import app
 from app.models import db
 from app.models.migrate import run_migrations
@@ -52,6 +53,21 @@ async def _guest_login(client: AsyncClient) -> int:
     resp = await client.post("/auth/guest")
     assert resp.status_code == 200
     return int(resp.json()["user_id"])
+
+
+def _strip_ids(data: dict) -> dict:
+    """Drop every primary/foreign-key field from an export ``data`` block.
+
+    Import remaps rows to fresh primary keys, and both accounts are now seeded
+    at signup (so their key ranges differ), making absolute-id comparison across
+    accounts meaningless. Stripping all ``*_id``/``id`` fields leaves the
+    id-independent content — exactly what "the same data carried over" means.
+    """
+
+    def scrub(row: dict) -> dict:
+        return {k: v for k, v in row.items() if k != "id" and not k.endswith("_id")}
+
+    return {table: [scrub(row) for row in rows] for table, rows in data.items()}
 
 
 async def _signup_login(client: AsyncClient, email: str, password: str) -> int:
@@ -198,8 +214,12 @@ async def test_import_oversized_file_rejected(client: AsyncClient) -> None:
         "/import",
         files={"file": ("mushin-export.json", huge_payload, "application/json")},
     )
-    assert resp.status_code == 400
+    # 200, not 400: this response IS the re-rendered dialog fragment with the
+    # error shown inline (htmx 2's default responseHandling only swaps 2xx
+    # responses -- see app.routes.data_io._import_error_response).
+    assert resp.status_code == 200
     assert "hx-redirect" not in resp.headers
+    assert ui_strings.IMPORT_DATA_ERROR_TOO_LARGE in resp.text
     assert portability.export_data(uid)["data"] == before["data"]
 
 
@@ -211,8 +231,9 @@ async def test_import_rejects_non_json_content_type(client: AsyncClient) -> None
         "/import",
         files={"file": ("mushin-export.txt", b"not json", "text/plain")},
     )
-    assert resp.status_code == 400
+    assert resp.status_code == 200
     assert "hx-redirect" not in resp.headers
+    assert ui_strings.IMPORT_DATA_ERROR_INVALID_FILE in resp.text
     assert portability.export_data(uid)["data"] == before["data"]
 
 
@@ -224,8 +245,9 @@ async def test_import_rejects_malformed_json(client: AsyncClient) -> None:
         "/import",
         files={"file": ("mushin-export.json", b"{not valid json", "application/json")},
     )
-    assert resp.status_code == 400
+    assert resp.status_code == 200
     assert "hx-redirect" not in resp.headers
+    assert ui_strings.IMPORT_DATA_ERROR_INVALID_FILE in resp.text
     assert portability.export_data(uid)["data"] == before["data"]
 
 
@@ -238,7 +260,7 @@ async def test_import_rejects_invalid_schema_version(client: AsyncClient) -> Non
         "/import",
         files={"file": ("mushin-export.json", json.dumps(bad_payload), "application/json")},
     )
-    assert resp.status_code == 400
+    assert resp.status_code == 200
     assert "hx-redirect" not in resp.headers
     # The validation message (table/version info, no row content) is surfaced.
     assert "schema_version" in resp.text
@@ -269,8 +291,12 @@ async def test_import_owner_id_comes_from_session_not_payload(client: AsyncClien
     # canonical profile, not /home.
     assert import_resp.headers["hx-redirect"] == "/@owner_b"
 
-    # uid_b now has uid_a's data shape, but still scoped to uid_b.
-    assert portability.export_data(uid_b)["data"] == snapshot_a["data"]
+    # uid_b now has uid_a's data shape, but still scoped to uid_b. Both accounts
+    # are seeded with the starter templates at signup, so their primary keys live
+    # in different auto-increment ranges; import deliberately remaps to fresh
+    # keys. Compare the id-independent content (what "carried over" means) rather
+    # than absolute ids.
+    assert _strip_ids(portability.export_data(uid_b)["data"]) == _strip_ids(snapshot_a["data"])
     # uid_a's own data is untouched.
     assert portability.export_data(uid_a)["data"] == snapshot_a["data"]
 

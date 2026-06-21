@@ -1,9 +1,9 @@
 """Playwright E2E specs for the export/import data-portability feature.
 
-These specs are driven through the **Playwright MCP**, not a bundled
-Playwright runner (see .claude/rules/tests.md — "E2E tests use the Playwright
-MCP — not a bundled Playwright"). They are written ahead of being run by an
-agent with MCP browser tools attached.
+These are real `pytest` + `playwright.sync_api` specs (see
+.claude/rules/tests.md) -- not agent-driven via the `playwright-cli` skill.
+They're currently dormant: `playwright` was never added as a project
+dependency, so `pytest.importorskip` skips this module.
 
 Marked ``e2e`` (registered in pyproject.toml) and skipped outright when no
 Playwright browser/MCP session is available, so `uv run pytest tests/` stays
@@ -33,6 +33,7 @@ open/close, download, redirect).
 from __future__ import annotations
 
 import json
+import uuid
 
 import pytest
 
@@ -41,13 +42,14 @@ from app import ui_strings
 pytestmark = pytest.mark.e2e
 
 # Skip the whole module when there's no Playwright browser available (plain
-# `uv run pytest` on a dev machine / CI without a browser install). When run
-# under the Playwright MCP, the MCP supplies its own browser/session and these
-# specs are exercised by an agent driving the `mcp__playwright__*` tools
-# directly rather than importing `playwright` here.
+# `uv run pytest` on a dev machine / CI without a browser install -- the
+# `playwright` pip package was never added as a dependency). This is a real
+# pytest + playwright.sync_api spec, unrelated to the agent-driven
+# `playwright-cli` skill; it'll start running once `playwright` + a browser
+# are installed.
 playwright_sync_api = pytest.importorskip(
     "playwright.sync_api",
-    reason="Playwright is not installed; e2e specs run via the Playwright MCP",
+    reason="Playwright is not installed; this dormant pytest-playwright spec is unrelated to the playwright-cli skill",
 )
 
 BASE_URL = "http://127.0.0.1:8000"
@@ -69,18 +71,41 @@ def page(browser):
     context.close()
 
 
-def _enter_as_guest(page) -> None:
-    """Land on the entry screen and tap "Continue without an account" to start a guest session."""
+def _unique_username(slug: str) -> str:
+    """A username that's unique per test run, so reruns against the
+    persistent dev DB never collide with a leftover row from a previous run.
+    Usernames are capped at 20 chars (``app.auth.routes._normalize_username``),
+    so keep *slug* short (<=4 chars) -- "e2d" (3) + slug + 13 hex chars stays
+    within the cap."""
+    return f"e2d{slug}{uuid.uuid4().hex[:13]}"
+
+
+def _signup(page, username: str, password: str = "correct-horse-battery") -> None:
+    """Land on the entry screen, switch to "Create account", and submit a new
+    username/password signup with consent checked, then complete the
+    one-time sharing-consent screen to reach the dashboard. A fresh
+    username/password signup now seeds the same starter templates a guest
+    used to get (``app.auth.routes._lazy_seed``)."""
     page.goto(BASE_URL + "/")
-    page.get_by_text(ui_strings.ENTRY_GUEST_LINK).click()
-    page.wait_for_url(BASE_URL + "/home")
+    page.get_by_role("tab", name=ui_strings.ENTRY_AUTH_TAB_CREATE).click()
+    page.wait_for_selector("#auth-form input[name='consent']")
+    page.fill("#auth-form input[name='username']", username)
+    page.fill("#auth-form input[name='password']", password)
+    page.check("#auth-form input[name='consent']")
+    page.get_by_role("button", name=ui_strings.ENTRY_CREATE_SUBMIT).click()
+
+    page.wait_for_url(BASE_URL + "/welcome-sharing")
+    page.get_by_role("button", name=ui_strings.VISIBILITY_CONSENT_SUBMIT).click()
+    page.wait_for_url(BASE_URL + f"/@{username}")
+
+    page.goto(BASE_URL + "/home")
 
 
 def test_export_link_downloads_valid_json_snapshot(page, tmp_path) -> None:
     """Clicking the footer "Export my data" link downloads
     ``mushin-export.json``, whose contents are valid JSON with
     ``schema_version`` and ``data`` keys."""
-    _enter_as_guest(page)
+    _signup(page, _unique_username("a"))
 
     with page.expect_download() as download_info:
         page.get_by_role("link", name=ui_strings.FOOTER_EXPORT_DATA).click()
@@ -100,7 +125,7 @@ def test_import_dialog_shows_warning_and_cancel_closes_without_changes(page) -> 
     """Opening the import dialog shows the focus-trapped confirm dialog with
     a file input and a warning that current data will be replaced; canceling
     closes it without making any changes."""
-    _enter_as_guest(page)
+    _signup(page, _unique_username("b"))
 
     page.get_by_role("button", name=ui_strings.FOOTER_IMPORT_DATA).click()
 
@@ -127,9 +152,9 @@ def test_import_dialog_shows_warning_and_cancel_closes_without_changes(page) -> 
 def test_import_valid_export_redirects_to_home(page, tmp_path) -> None:
     """Uploading a valid exported JSON file and confirming triggers
     ``HX-Redirect: /home`` (observed as a navigation to /home)."""
-    _enter_as_guest(page)
+    _signup(page, _unique_username("c"))
 
-    # Round-trip: export the current guest's own data first, so the upload
+    # Round-trip: export the current account's own data first, so the upload
     # is guaranteed to pass validation against the live schema.
     with page.expect_download() as download_info:
         page.get_by_role("link", name=ui_strings.FOOTER_EXPORT_DATA).click()
@@ -151,7 +176,7 @@ def test_import_valid_export_redirects_to_home(page, tmp_path) -> None:
 def test_import_invalid_file_shows_inline_error_and_keeps_dialog_open(page, tmp_path) -> None:
     """Uploading an invalid file (wrong ``schema_version``) keeps the dialog
     open with an inline error message, per ``IMPORT_DATA_ERROR_*`` strings."""
-    _enter_as_guest(page)
+    _signup(page, _unique_username("d"))
 
     bad_export_path = tmp_path / "bad-export.json"
     bad_export_path.write_text(json.dumps({"schema_version": 999, "data": {}}))
@@ -175,7 +200,7 @@ def test_import_invalid_file_shows_inline_error_and_keeps_dialog_open(page, tmp_
 def test_import_non_json_file_shows_invalid_file_error(page, tmp_path) -> None:
     """Uploading a non-JSON file is rejected with
     ``IMPORT_DATA_ERROR_INVALID_FILE`` and the dialog stays open."""
-    _enter_as_guest(page)
+    _signup(page, _unique_username("e"))
 
     not_json_path = tmp_path / "notes.txt"
     not_json_path.write_text("not json")

@@ -1,9 +1,9 @@
 """Playwright E2E specs for the home/activity-card visual-polish pass (Task 6).
 
-These specs are driven through the **Playwright MCP**, not a bundled
-Playwright runner (see .claude/rules/tests.md — "E2E tests use the Playwright
-MCP — not a bundled Playwright"). They are written ahead of being run by an
-agent with MCP browser tools attached.
+These are real `pytest` + `playwright.sync_api` specs (see
+.claude/rules/tests.md) -- not agent-driven via the `playwright-cli` skill.
+They're currently dormant: `playwright` was never added as a project
+dependency, so `pytest.importorskip` skips this module.
 
 Marked ``e2e`` (registered in pyproject.toml) and skipped outright when no
 Playwright browser/MCP session is available, so `uv run pytest tests/` stays
@@ -41,6 +41,8 @@ Specs covered
 
 from __future__ import annotations
 
+import uuid
+
 import pytest
 
 from app import ui_strings
@@ -48,13 +50,14 @@ from app import ui_strings
 pytestmark = pytest.mark.e2e
 
 # Skip the whole module when there's no Playwright browser available (plain
-# `uv run pytest` on a dev machine / CI without a browser install). When run
-# under the Playwright MCP, the MCP supplies its own browser/session and these
-# specs are exercised by an agent driving the `mcp__playwright__*` tools
-# directly rather than importing `playwright` here.
+# `uv run pytest` on a dev machine / CI without a browser install -- the
+# `playwright` pip package was never added as a dependency). This is a real
+# pytest + playwright.sync_api spec, unrelated to the agent-driven
+# `playwright-cli` skill; it'll start running once `playwright` + a browser
+# are installed.
 playwright_sync_api = pytest.importorskip(
     "playwright.sync_api",
-    reason="Playwright is not installed; e2e specs run via the Playwright MCP",
+    reason="Playwright is not installed; this dormant pytest-playwright spec is unrelated to the playwright-cli skill",
 )
 
 BASE_URL = "http://127.0.0.1:8000"
@@ -76,35 +79,87 @@ def page(browser):
     context.close()
 
 
-def _enter_as_guest(page) -> None:
-    """Land on the entry screen and tap "Get started" to start a guest session."""
+def _unique_username(slug: str) -> str:
+    """A username that's unique per test run, so reruns against the
+    persistent dev DB never collide with a leftover row from a previous run.
+    Usernames are capped at 20 chars (``app.auth.routes._normalize_username``),
+    so keep *slug* short (<=4 chars) -- "e2v" (3) + slug + 13 hex chars stays
+    within the cap."""
+    return f"e2v{slug}{uuid.uuid4().hex[:13]}"
+
+
+def _signup(page, username: str, password: str = "correct-horse-battery") -> None:
+    """Land on the entry screen, switch to "Create account", and submit a new
+    username/password signup with consent checked, then complete the
+    one-time sharing-consent screen to reach the dashboard. A fresh
+    username/password signup now seeds the same starter templates a guest
+    used to get (``app.auth.routes._lazy_seed``)."""
     page.goto(BASE_URL + "/")
-    page.get_by_text("Get started").click()
-    page.wait_for_url(BASE_URL + "/home")
+    page.get_by_role("tab", name=ui_strings.ENTRY_AUTH_TAB_CREATE).click()
+    page.wait_for_selector("#auth-form input[name='consent']")
+    page.fill("#auth-form input[name='username']", username)
+    page.fill("#auth-form input[name='password']", password)
+    page.check("#auth-form input[name='consent']")
+    page.get_by_role("button", name=ui_strings.ENTRY_CREATE_SUBMIT).click()
+
+    page.wait_for_url(BASE_URL + "/welcome-sharing")
+    page.get_by_role("button", name=ui_strings.VISIBILITY_CONSENT_SUBMIT).click()
+    page.wait_for_url(BASE_URL + f"/@{username}")
+
+    page.goto(BASE_URL + "/home")
+
+
+def _open_detail(page, heading: str):
+    """Navigate from /home to a sub-tally's detail screen via its card link,
+    returning the detail-screen's hero `<article>` locator for that sub-tally.
+
+    The card links to ``/activities/{id}``, which 301-redirects to the
+    canonical ``/@{username}/{slug}`` URL for any account with a username
+    (every signup in this module has one). Wait for navigation away from
+    /home generically rather than for one specific URL shape.
+
+    The detail screen's hero card is deliberately "chrome-less" (see
+    ``components/activity_card.html.jinja2``'s unlinked branch) -- it has no
+    heading of its own, since the page's own ``<h1>`` already names the
+    activity. So scope by the stable ``#card-{id}`` id (read off the /home
+    card before navigating) rather than by heading, which only exists on
+    /home's linked card.
+    """
+    home_card = page.locator("article", has=page.get_by_role("heading", name=heading))
+    card_id = home_card.get_attribute("id")
+    home_card.locator("a").first.click()
+    page.wait_for_url(lambda url: not url.endswith("/home"))
+    page.wait_for_load_state("load")
+    return page.locator(f"#{card_id}")
 
 
 def test_home_masthead_links_to_home(page) -> None:
-    """The sitewide masthead above <main> links to /home and shows both the
-    Hangul and Hanja wordmarks."""
-    _enter_as_guest(page)
+    """The sitewide masthead above <main> links to the signed-in user's
+    canonical profile URL (``home_url`` -- ``/@{username}`` for any account
+    with a username, never the bare ``/home`` path) and shows both the
+    English and Hanja wordmarks (``ui_strings.APP_NAME`` /
+    ``APP_NAME_HANJA`` -- copy was translated to English; there is no
+    Hangul wordmark)."""
+    username = _unique_username("a")
+    _signup(page, username)
 
-    masthead = page.locator('a[href="/home"]').first
-    assert "무심" in masthead.inner_text()
-    assert "無心" in masthead.inner_text()
+    masthead = page.locator(f'a[href="/@{username}"]').first
+    assert ui_strings.APP_NAME in masthead.inner_text()
+    assert ui_strings.APP_NAME_HANJA in masthead.inner_text()
 
 
 def test_empty_state_shows_glyph_and_gloss_for_fresh_guest(page) -> None:
-    """A fresh guest with zero sub-tallies sees the 無心 glyph, HOME_EMPTY,
+    """A fresh account with zero sub-tallies sees the 無心 glyph, HOME_EMPTY,
     and APP_GLOSS — not the old bare-paragraph empty state.
 
-    Note: onboarding lazy-seeds the kendo + reading templates "on first
-    entry" per the domain model, so a brand-new guest's /home may already
-    have cards. If seeding has already happened by the time /home renders,
-    this spec is a no-op (the empty-state branch is unreachable for that
-    guest) — but if the empty branch *is* rendered, it must use the new
-    markup, never the old bare <p>.
+    Note: onboarding lazy-seeds the kendo + reading templates on a fresh
+    signup, so a brand-new account's /home may already have cards. If
+    seeding has already happened by the time /home renders, this spec is a
+    no-op (the empty-state branch is unreachable for that account) — but if
+    the empty branch *is* rendered, it must use the new markup, never the
+    old bare <p>.
     """
-    _enter_as_guest(page)
+    _signup(page, _unique_username("b"))
 
     empty_glyph = page.locator('span[aria-hidden="true"]', has_text="無心")
     if empty_glyph.count() == 0:
@@ -117,17 +172,13 @@ def test_empty_state_shows_glyph_and_gloss_for_fresh_guest(page) -> None:
     assert page.get_by_text("No-mind. Just show up, and watch it add up.").count() > 0
 
 
-def test_activity_cards_render_icon_and_single_hero_numeral(page) -> None:
-    """Each activity card renders an <svg aria-hidden="true"> icon in the
-    label row, and the hero numeral is the only element on the card with
-    `text-brand`."""
-    _enter_as_guest(page)
+def test_activity_cards_render_single_hero_numeral(page) -> None:
+    """The hero numeral is the only element on an activity card with
+    `text-brand` -- cards no longer carry a per-activity icon in the label
+    row (decluttered to name + hero numeral only)."""
+    _signup(page, _unique_username("c"))
 
-    card = page.locator("article", has=page.get_by_role("heading", name="Practice"))
-
-    # An aria-hidden svg icon is present in the card's label row.
-    icon_svg = card.locator('header svg[aria-hidden="true"]')
-    assert icon_svg.count() >= 1
+    card = page.locator("article", has=page.get_by_role("heading", name="Kendo"))
 
     # The hero numeral is the only `text-brand` element on the card.
     brand_elements = card.locator(".text-brand")
@@ -140,20 +191,16 @@ def test_log_bumps_hero_numeral_with_micro_moment_class(page) -> None:
     """On the sub-tally detail screen, submitting the quick-add log form
     returns a card fragment whose hero numeral has `hero--bumped`, while the
     initial page load's card does not."""
-    _enter_as_guest(page)
+    _signup(page, _unique_username("d"))
 
-    home_card = page.locator("article", has=page.get_by_role("heading", name="Practice"))
-    home_card.locator("a").first.click()
-    page.wait_for_url(f"{BASE_URL}/activities/*")
-
-    card = page.locator("article", has=page.get_by_role("heading", name="Practice"))
+    card = _open_detail(page, "Kendo")
     hero = card.locator(".text-hero-numeral")
 
     # Initial page load: no `hero--bumped` class.
     initial_class = hero.get_attribute("class") or ""
     assert "hero--bumped" not in initial_class
 
-    card.get_by_role("button", name=ui_strings.SUBTALLY_LOG_BUTTON).click()
+    page.get_by_role("button", name=ui_strings.SUBTALLY_LOG_BUTTON).click()
     page.locator("#log-panel form").get_by_role("button", name=ui_strings.LOG_SUBMIT).click()
 
     # Wait for the fragment swap, then check the new hero numeral's class.
@@ -177,19 +224,15 @@ def test_log_bumps_hero_numeral_with_micro_moment_class(page) -> None:
 def test_progress_fill_width_changes_after_log(page) -> None:
     """For a progression-mode sub-tally (e.g. Reading), `.progress-fill`'s
     inline `width` style reflects the new percentage after logging."""
-    _enter_as_guest(page)
+    _signup(page, _unique_username("e"))
 
-    home_card = page.locator("article", has=page.get_by_role("heading", name="Reading"))
-    home_card.locator("a").first.click()
-    page.wait_for_url(f"{BASE_URL}/activities/*")
-
-    card = page.locator("article", has=page.get_by_role("heading", name="Reading"))
+    card = _open_detail(page, "Reading")
     progress_fill = card.locator(".progress-fill")
 
     before_style = progress_fill.get_attribute("style") or ""
 
-    card.get_by_role("button", name=ui_strings.SUBTALLY_LOG_BUTTON).click()
-    page.locator("#log-sheet form").get_by_role("button", name=ui_strings.LOG_SUBMIT).click()
+    page.get_by_role("button", name=ui_strings.SUBTALLY_LOG_BUTTON).click()
+    page.locator("#log-panel form").get_by_role("button", name=ui_strings.LOG_SUBMIT).click()
 
     page.wait_for_function(
         """(args) => {
@@ -208,11 +251,9 @@ def test_log_panel_focuses_on_expand_and_collapses_on_submit(page) -> None:
     focus inside #log-panel; a successful submit collapses the panel
     (aria-expanded -> "false"), and the submit button has
     hx-disabled-elt="this"."""
-    _enter_as_guest(page)
+    _signup(page, _unique_username("f"))
 
-    home_card = page.locator("article", has=page.get_by_role("heading", name="Practice"))
-    home_card.locator("a").first.click()
-    page.wait_for_url(f"{BASE_URL}/activities/*")
+    _open_detail(page, "Kendo")
 
     trigger = page.locator('button[id^="log-trigger-"]')
     trigger.click()
@@ -246,11 +287,11 @@ def test_theme_toggle_cycles_and_persists_across_reload(page) -> None:
     reflecting the active theme as `data-theme` on `<html>` (absent for
     "system"), and the choice survives a page reload via the
     `mushin_theme` cookie."""
-    _enter_as_guest(page)
+    _signup(page, _unique_username("g"))
 
     toggle = page.locator("button[hx-post='/preferences/theme']")
 
-    # Fresh guest: no `mushin_theme` cookie yet -> "system" -> no
+    # Fresh account: no `mushin_theme` cookie yet -> "system" -> no
     # `data-theme` attribute on <html>.
     assert page.locator("html").get_attribute("data-theme") is None
 
@@ -283,12 +324,14 @@ def test_theme_toggle_cycles_and_persists_across_reload(page) -> None:
 
 
 def test_home_cards_have_no_action_button_and_link_to_detail(page) -> None:
-    """On /home, every card is a single <a> link to /activities/{id} and
-    has no visible quick-add action button (`#log-trigger-{id}` is absent —
-    quick-add only lives on the detail screen)."""
-    _enter_as_guest(page)
+    """On /home, every card is a single <a> link to /activities/{id} (which
+    301-redirects to the canonical ``/@{username}/{slug}`` for any account
+    with a username) and has no visible quick-add action button
+    (`#log-trigger-{id}` is absent — quick-add only lives on the detail
+    screen)."""
+    _signup(page, _unique_username("h"))
 
-    card = page.locator("article", has=page.get_by_role("heading", name="Practice"))
+    card = page.locator("article", has=page.get_by_role("heading", name="Kendo"))
     card_id = card.get_attribute("id")
     activity_id = card_id.split("-")[-1]
 
@@ -302,20 +345,23 @@ def test_home_cards_have_no_action_button_and_link_to_detail(page) -> None:
     assert link.first.get_attribute("href") == f"/activities/{activity_id}"
 
     link.first.click()
-    page.wait_for_url(f"{BASE_URL}/activities/{activity_id}")
+    page.wait_for_url(lambda url: not url.endswith("/home"))
 
 
 def test_new_category_card_is_clickable_without_reload(page) -> None:
-    """After POST /categories appends a new card to #cards on /home, the new
+    """After POST /activities appends a new card to #cards on /home, the new
     card is `linked=True` (clickable, no action button) immediately, with no
     reload needed."""
-    _enter_as_guest(page)
+    _signup(page, _unique_username("i"))
 
     before_count = page.locator("#cards > article").count()
 
-    page.locator("#cards").locator('button[hx-get="/categories/new"]').click()
+    page.locator("#cards").locator('button[hx-get="/activities/new"]').click()
 
-    sheet = page.locator("#sheet")
+    # #sheet itself is a plain wrapper div around a `position: fixed` dialog,
+    # so it collapses to zero height in layout -- Playwright's visibility
+    # check needs the dialog element itself, not the wrapper.
+    sheet = page.locator("#sheet [role='dialog']")
     sheet.wait_for(state="visible")
 
     name_input = sheet.locator('input[name="name"]')
@@ -324,7 +370,7 @@ def test_new_category_card_is_clickable_without_reload(page) -> None:
     navigated = {"count": 0}
     page.on("framenavigated", lambda _frame: navigated.__setitem__("count", navigated["count"] + 1))
 
-    sheet.locator("form").get_by_role("button", name=ui_strings.CATEGORY_FORM_SUBMIT).click()
+    sheet.locator("form").get_by_role("button", name=ui_strings.ACTIVITY_FORM_SUBMIT).click()
 
     page.wait_for_function(
         "(before) => document.querySelectorAll('#cards > article').length > before",
@@ -341,4 +387,4 @@ def test_new_category_card_is_clickable_without_reload(page) -> None:
     assert link.count() == 1
 
     link.first.click()
-    page.wait_for_url(f"{BASE_URL}/activities/*")
+    page.wait_for_url(lambda url: not url.endswith("/home"))

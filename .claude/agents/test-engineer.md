@@ -16,7 +16,7 @@ working.
 
 - `tests/unit/` (pure functions, services), `tests/integration/` (FastAPI app +
   DB via `httpx.AsyncClient`, no network), `tests/e2e/` (Playwright via the
-  Playwright MCP), `tests/conftest.py` (shared fixtures).
+  `playwright-cli` skill), `tests/conftest.py` (shared fixtures).
 - Files `test_{module}.py`; functions `test_{behavior}` (describe behavior, not
   implementation). DB fixtures use a fresh SQLite (`:memory:` or
   `tests/fixtures/test.db`) — **never the dev database**.

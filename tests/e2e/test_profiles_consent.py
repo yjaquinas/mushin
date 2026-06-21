@@ -1,11 +1,11 @@
 """Playwright E2E specs for the visibility-consent screen and public-profile
 routes (Phase 1, Tasks 3-6, sub-tally-url-naming).
 
-These specs are driven through the **Playwright MCP**, not a bundled
-Playwright runner (see .claude/rules/tests.md — "E2E tests use the Playwright
-MCP — not a bundled Playwright"). They are written ahead of being run by an
-agent with MCP browser tools attached, following the same skip/fixture
-pattern as ``tests/e2e/test_logging.py`` and ``tests/e2e/test_auth_entry.py``.
+These are real `pytest` + `playwright.sync_api` specs (see
+.claude/rules/tests.md) -- not agent-driven via the `playwright-cli` skill.
+They're currently dormant (`playwright` was never added as a project
+dependency), following the same skip/fixture pattern as
+``tests/e2e/test_logging.py`` and ``tests/e2e/test_auth_entry.py``.
 
 Marked ``e2e`` (registered in pyproject.toml) and skipped outright when no
 Playwright browser/MCP session is available, so `uv run pytest tests/` stays
@@ -38,6 +38,8 @@ Specs covered
 
 from __future__ import annotations
 
+import uuid
+
 import pytest
 
 from app import ui_strings
@@ -45,13 +47,14 @@ from app import ui_strings
 pytestmark = pytest.mark.e2e
 
 # Skip the whole module when there's no Playwright browser available (plain
-# `uv run pytest` on a dev machine / CI without a browser install). When run
-# under the Playwright MCP, the MCP supplies its own browser/session and these
-# specs are exercised by an agent driving the `mcp__playwright__*` tools
-# directly rather than importing `playwright` here.
+# `uv run pytest` on a dev machine / CI without a browser install -- the
+# `playwright` pip package was never added as a dependency). This is a real
+# pytest + playwright.sync_api spec, unrelated to the agent-driven
+# `playwright-cli` skill; it'll start running once `playwright` + a browser
+# are installed.
 playwright_sync_api = pytest.importorskip(
     "playwright.sync_api",
-    reason="Playwright is not installed; e2e specs run via the Playwright MCP",
+    reason="Playwright is not installed; this dormant pytest-playwright spec is unrelated to the playwright-cli skill",
 )
 
 BASE_URL = "http://127.0.0.1:8000"
@@ -83,6 +86,15 @@ def anon_page(browser):
     context.close()
 
 
+def _unique_username(slug: str) -> str:
+    """A username that's unique per test run, so reruns against the
+    persistent dev DB never collide with a leftover row from a previous run.
+    Usernames are capped at 20 chars (``app.auth.routes._normalize_username``),
+    so keep *slug* short (<=7 chars): "e2c" (3) + slug + 8 hex chars stays
+    within the cap."""
+    return f"e2c{slug}{uuid.uuid4().hex[:8]}"
+
+
 def _signup(page, username: str, password: str = "correct-horse-battery") -> None:
     """Land on the entry screen, switch to "Create account", and submit a
     new username/password signup with consent checked."""
@@ -96,10 +108,20 @@ def _signup(page, username: str, password: str = "correct-horse-battery") -> Non
 
 
 def _enter_as_guest(page) -> None:
-    """Land on the entry screen and tap "Continue without an account" to start a guest session."""
+    """Start a guest session directly via ``POST /guest`` and land on /home.
+
+    Guest account *creation* is no longer reachable from the UI (the
+    "Continue without an account" entry-screen link was removed — see
+    project CLAUDE.md, guest mode retired 2026-06-16) -- but the backend
+    route (``app.auth.routes.guest_start``) still exists for the
+    guest-create-on-interaction model and the drain window. Call it directly
+    via ``page.request`` (shares cookies with *page*'s browser context) to
+    exercise genuinely guest-specific behavior, like this module's
+    guest-bypass spec below.
+    """
     page.goto(BASE_URL + "/")
-    page.get_by_text(ui_strings.ENTRY_GUEST_LINK).click()
-    page.wait_for_url(BASE_URL + "/home")
+    page.request.post(BASE_URL + "/auth/guest")
+    page.goto(BASE_URL + "/home")
 
 
 # ---------------------------------------------------------------------------
@@ -112,7 +134,7 @@ def test_signup_lands_on_consent_screen_before_home(page) -> None:
     profile, with "Private" pre-selected; submitting redirects straight to
     the canonical /@{username} profile, and revisiting /home afterward
     renders the dashboard in place — never back to /welcome-sharing."""
-    username = "e2econsentuser"
+    username = _unique_username("consent")
     _signup(page, username)
 
     page.wait_for_url(BASE_URL + "/welcome-sharing")
@@ -139,7 +161,7 @@ def test_signup_lands_on_consent_screen_before_home(page) -> None:
 def test_account_visibility_toggle_updates_share_link(page) -> None:
     """Toggling visibility to "public" on /account updates the rendered
     share-link text to reference /@{username}."""
-    username = "e2etoggleuser"
+    username = _unique_username("toggle")
     _signup(page, username)
     page.wait_for_url(BASE_URL + "/welcome-sharing")
     page.get_by_role("button", name=ui_strings.VISIBILITY_CONSENT_SUBMIT).click()
@@ -168,7 +190,7 @@ def test_public_profile_shows_activities_with_no_write_affordances(page, anon_pa
     """A public account's profile, viewed with no session, lists activities
     with zero write affordances; clicking into one renders the read-only
     detail view including memo text if present."""
-    username = "e2epublicuser"
+    username = _unique_username("public")
     _signup(page, username)
     page.wait_for_url(BASE_URL + "/welcome-sharing")
     page.locator("input[name='visibility'][value='public']").check()
@@ -211,7 +233,7 @@ def test_private_profile_shows_character_sheet_not_clickable(page, anon_page) ->
     """A private account's /@{username} shows the character sheet (activity
     names/levels, cards not clickable) when viewed with no session, and
     forcing the activity-detail URL redirects back to the profile."""
-    username = "e2eprivateuser"
+    username = _unique_username("private")
     _signup(page, username)
     page.wait_for_url(BASE_URL + "/welcome-sharing")
     # Private is pre-selected; submit as-is.

@@ -74,3 +74,9 @@ meetings/*
 
 # Playwright MCP debug artifacts (console logs, page snapshots)
 .playwright-mcp/
+
+# playwright-cli session/snapshot data
+.playwright/
+.playwright-cli/
+
+todo.txt

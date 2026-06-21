@@ -1,9 +1,9 @@
 """Playwright E2E specs for the quick-add log flow + character-sheet home (Task 6).
 
-These specs are driven through the **Playwright MCP**, not a bundled
-Playwright runner (see .claude/rules/tests.md — "E2E tests use the Playwright
-MCP — not a bundled Playwright"). They are written ahead of being run by an
-agent with MCP browser tools attached.
+These are real `pytest` + `playwright.sync_api` specs (see
+.claude/rules/tests.md) -- not agent-driven via the `playwright-cli` skill.
+They're currently dormant: `playwright` was never added as a project
+dependency, so `pytest.importorskip` skips this module.
 
 Marked ``e2e`` (registered in pyproject.toml) and skipped outright when no
 Playwright browser/MCP session is available, so `uv run pytest tests/` stays
@@ -16,15 +16,16 @@ Specs covered
    event / the page's `<head>` script tags are not re-executed). Quick-add
    only lives on the sub-tally detail screen now, so the spec navigates
    there first.
-2. A tag chip tap-selected before submit survives the fragment swap (the
-   swapped-in card's quick-add sheet, if reopened, shows the same chip
-   selected — per app.routes.web.create_log's `selected_tags` echo).
-3. Chip rendering: chips wrap onto multiple lines (never horizontal-scroll)
-   at a 360px viewport, and the selected state is visibly distinguished by
-   shape/weight + a glyph (not color alone) at 1.5x font scale.
+2. A `#hashtag` typed into the free-text notes field before submit is parsed
+   and persisted, and surfaces in the tag-frequency section once the
+   `log-saved` fragment refresh fires (see `components/field_stats.html.jinja2`).
+3. The notes textarea wraps long text (never horizontal-scroll) at a 360px
+   viewport and at a 1.5x font scale.
 """
 
 from __future__ import annotations
+
+import uuid
 
 import pytest
 
@@ -33,13 +34,14 @@ from app import ui_strings
 pytestmark = pytest.mark.e2e
 
 # Skip the whole module when there's no Playwright browser available (plain
-# `uv run pytest` on a dev machine / CI without a browser install). When run
-# under the Playwright MCP, the MCP supplies its own browser/session and these
-# specs are exercised by an agent driving the `mcp__playwright__*` tools
-# directly rather than importing `playwright` here.
+# `uv run pytest` on a dev machine / CI without a browser install -- the
+# `playwright` pip package was never added as a dependency). This is a real
+# pytest + playwright.sync_api spec, unrelated to the agent-driven
+# `playwright-cli` skill; it'll start running once `playwright` + a browser
+# are installed.
 playwright_sync_api = pytest.importorskip(
     "playwright.sync_api",
-    reason="Playwright is not installed; e2e specs run via the Playwright MCP",
+    reason="Playwright is not installed; this dormant pytest-playwright spec is unrelated to the playwright-cli skill",
 )
 
 BASE_URL = "http://127.0.0.1:8000"
@@ -61,30 +63,68 @@ def page(browser):
     context.close()
 
 
-def _enter_as_guest(page) -> None:
-    """Land on the entry screen and tap "Continue without an account" to start a guest session."""
+def _unique_username(slug: str) -> str:
+    """A username that's unique per test run, so reruns against the
+    persistent dev DB never collide with a leftover row from a previous run.
+    Usernames are capped at 20 chars (``app.auth.routes._normalize_username``),
+    so keep *slug* short (<=4 chars) -- "e2l" (3) + slug + 13 hex chars stays
+    within the cap."""
+    return f"e2l{slug}{uuid.uuid4().hex[:13]}"
+
+
+def _signup(page, username: str, password: str = "correct-horse-battery") -> None:
+    """Land on the entry screen, switch to "Create account", and submit a new
+    username/password signup with consent checked, then complete the
+    one-time sharing-consent screen to reach the dashboard. A fresh
+    username/password signup now seeds the same starter templates a guest
+    used to get (``app.auth.routes._lazy_seed``)."""
     page.goto(BASE_URL + "/")
-    page.get_by_text(ui_strings.ENTRY_GUEST_LINK).click()
-    page.wait_for_url(BASE_URL + "/home")
+    page.get_by_role("tab", name=ui_strings.ENTRY_AUTH_TAB_CREATE).click()
+    page.wait_for_selector("#auth-form input[name='consent']")
+    page.fill("#auth-form input[name='username']", username)
+    page.fill("#auth-form input[name='password']", password)
+    page.check("#auth-form input[name='consent']")
+    page.get_by_role("button", name=ui_strings.ENTRY_CREATE_SUBMIT).click()
+
+    page.wait_for_url(BASE_URL + "/welcome-sharing")
+    page.get_by_role("button", name=ui_strings.VISIBILITY_CONSENT_SUBMIT).click()
+    page.wait_for_url(BASE_URL + f"/@{username}")
+
+    page.goto(BASE_URL + "/home")
 
 
 def _open_detail(page, heading: str):
     """Navigate from /home to a sub-tally's detail screen via its card link,
-    returning the detail-screen's `<article>` locator for that sub-tally."""
+    returning the detail-screen's hero `<article>` locator for that sub-tally.
+
+    The card links to ``/activities/{id}``, which 301-redirects to the
+    canonical ``/@{username}/{slug}`` URL for any account with a username
+    (every signup in this module has one). Wait for navigation away from
+    /home generically rather than for one specific URL shape.
+
+    The detail screen's hero card is deliberately "chrome-less" (see
+    ``components/activity_card.html.jinja2``'s unlinked branch) -- it has no
+    heading of its own, since the page's own ``<h1>`` already names the
+    activity. So scope by the stable ``#card-{id}`` id (read off the /home
+    card before navigating) rather than by heading, which only exists on
+    /home's linked card.
+    """
     home_card = page.locator("article", has=page.get_by_role("heading", name=heading))
+    card_id = home_card.get_attribute("id")
     home_card.locator("a").first.click()
-    page.wait_for_url(f"{BASE_URL}/activities/*")
-    return page.locator("article", has=page.get_by_role("heading", name=heading))
+    page.wait_for_url(lambda url: not url.endswith("/home"))
+    page.wait_for_load_state("load")
+    return page.locator(f"#{card_id}")
 
 
 def test_quick_add_updates_card_via_fragment_swap(page) -> None:
     """On the sub-tally detail screen, logging via the quick-add panel bumps
     the card's hero numeral without a full page reload."""
-    _enter_as_guest(page)
+    _signup(page, _unique_username("a"))
 
-    # Kendo / Practice is a `running`-mode sub-tally; its hero numeral is the
-    # lifetime count.
-    card = _open_detail(page, "Practice")
+    # Kendo is a `running`-mode activity; its hero numeral is the lifetime
+    # count.
+    card = _open_detail(page, "Kendo")
     before_text = card.inner_text()
 
     # Track full-page navigations: a fragment swap must NOT trigger one.
@@ -106,125 +146,72 @@ def test_quick_add_updates_card_via_fragment_swap(page) -> None:
     assert navigated["count"] == 0, "logging should swap a fragment, not navigate"
 
 
-def test_tag_selection_survives_fragment_swap(page) -> None:
-    """A tag chip selected before submit remains selected after the swap."""
-    _enter_as_guest(page)
+def test_hashtag_in_notes_survives_fragment_swap_and_appears_in_tag_frequency(page) -> None:
+    """A `#hashtag` typed into the free-text notes field is parsed and
+    persisted on submit, and shows up in the tag-frequency section, which
+    auto-refreshes via the `log-saved` HX-Trigger fired alongside the
+    hero-card fragment swap (see `components/field_stats.html.jinja2`)."""
+    _signup(page, _unique_username("b"))
 
-    _open_detail(page, "Practice")
+    _open_detail(page, "Kendo")
     page.get_by_role("button", name=ui_strings.SUBTALLY_LOG_BUTTON).click()
 
     panel = page.locator("#log-panel")
-    # Select the first chip in the first tag_group field ("Technique").
-    first_chip_input = panel.locator('input[name^="tags_"]').first
-    first_chip_label = first_chip_input.locator("xpath=..")
-    chip_value = first_chip_input.get_attribute("value")
-    first_chip_label.click()
-    assert first_chip_input.is_checked()
+    notes_input = panel.locator('textarea[name^="hashtags_"]').first
+    notes_input.fill("Good randori today #suriagemen")
 
     panel.get_by_role("button", name=ui_strings.LOG_SUBMIT).click()
 
-    # Reopen the quick-add panel on the swapped-in card; the same tag should
-    # still be checked (selected_tags echo, see create_log).
-    page.get_by_role("button", name=ui_strings.SUBTALLY_LOG_BUTTON).click()
-    reopened_input = page.locator(f'#log-panel input[value="{chip_value}"]')
-    assert reopened_input.is_checked()
+    # field-stats refreshes off the same `log-saved` trigger as the hero-card
+    # swap, so the new tag's frequency chip appears without a reload.
+    page.wait_for_selector("text=suriagemen")
 
 
-def test_chips_wrap_at_360px_and_selected_state_has_non_color_signal(page) -> None:
-    """At a 360px viewport, tag chips wrap onto multiple lines (never
-    horizontal-scroll), and the selected state is distinguished by more than
-    color alone (shape/weight + a glyph via `.chip--selected` /
-    `aria-pressed`)."""
-    _enter_as_guest(page)
+def test_notes_textarea_wraps_long_text_at_360px(page) -> None:
+    """At a 360px viewport, the free-text notes field wraps long input
+    (never horizontal-scroll) -- it's a plain `<textarea>`, not a row of
+    tap-select chips, so there's no separate selected-state signal to check."""
+    _signup(page, _unique_username("c"))
 
-    _open_detail(page, "Practice")
+    _open_detail(page, "Kendo")
     page.get_by_role("button", name=ui_strings.SUBTALLY_LOG_BUTTON).click()
 
-    chip_group = page.locator("#log-panel [id^='tag-group-']").first
-    box = chip_group.bounding_box()
-    assert box is not None
-
-    # No horizontal overflow at 360px.
-    overflow_x = page.evaluate(
-        "(el) => el.scrollWidth > el.clientWidth + 1", chip_group.element_handle()
+    notes_input = page.locator('#log-panel textarea[name^="hashtags_"]').first
+    notes_input.fill(
+        "A very long line of notes text that should wrap onto several lines "
+        "inside the textarea rather than overflowing it horizontally #randori"
     )
-    assert not overflow_x, "tag chips must wrap, not horizontal-scroll, at 360px"
 
-    # Select a chip and confirm the selected-state class + aria-pressed flip
-    # (shape/weight + glyph signal, not color alone).
-    first_chip_input = chip_group.locator('input[type="checkbox"]').first
-    first_chip_label = first_chip_input.locator("xpath=..")
-    first_chip_label.click()
-    assert first_chip_label.get_attribute("aria-pressed") == "true"
-    class_attr = first_chip_label.get_attribute("class") or ""
-    assert "chip--selected" in class_attr
+    overflow_x = page.evaluate(
+        "(el) => el.scrollWidth > el.clientWidth + 1", notes_input.element_handle()
+    )
+    assert not overflow_x, "the notes textarea must wrap, not horizontal-scroll, at 360px"
 
 
-def test_chips_wrap_at_1_5x_font_scale(page) -> None:
-    """Chip wrapping holds up at a 1.5x browser font-scale (zoom)."""
-    _enter_as_guest(page)
+def test_notes_textarea_wraps_at_1_5x_font_scale(page) -> None:
+    """Notes-textarea wrapping holds up at a 1.5x browser font-scale (zoom)."""
+    _signup(page, _unique_username("d"))
     page.evaluate("document.documentElement.style.fontSize = '150%'")
 
-    _open_detail(page, "Practice")
+    _open_detail(page, "Kendo")
     page.get_by_role("button", name=ui_strings.SUBTALLY_LOG_BUTTON).click()
 
-    chip_group = page.locator("#log-panel [id^='tag-group-']").first
+    notes_input = page.locator('#log-panel textarea[name^="hashtags_"]').first
+    notes_input.fill(
+        "A very long line of notes text that should wrap onto several lines "
+        "inside the textarea rather than overflowing it horizontally #randori"
+    )
+
     overflow_x = page.evaluate(
-        "(el) => el.scrollWidth > el.clientWidth + 1", chip_group.element_handle()
+        "(el) => el.scrollWidth > el.clientWidth + 1", notes_input.element_handle()
     )
-    assert not overflow_x, "tag chips must still wrap at 1.5x font scale"
-
-
-def test_adding_new_tag_keeps_panel_open_and_preserves_checked_tag(page) -> None:
-    """Using the tag_group "+ Add" control inside the inline log panel must
-    not collapse the panel, and must not lose a tag the user had already
-    checked.
-
-    Regression for the bug where the nested "+ Add" form's `htmx:afterRequest`
-    bubbled up to the outer log form and closed the whole panel, dropping any
-    previously-checked tags."""
-    _enter_as_guest(page)
-
-    _open_detail(page, "Practice")
-    trigger = page.locator('button[id^="log-trigger-"]')
-    trigger.click()
-
-    panel = page.locator("#log-panel")
-    panel.wait_for(state="visible")
-
-    # Select the first chip in the first tag_group field ("Technique").
-    first_chip_input = panel.locator('input[name^="tags_"]').first
-    first_chip_label = first_chip_input.locator("xpath=..")
-    chip_value = first_chip_input.get_attribute("value")
-    first_chip_label.click()
-    assert first_chip_input.is_checked()
-
-    # Open the "+ Add" control and add a new tag.
-    add_summary = panel.get_by_role("button", name=ui_strings.LOG_TAG_ADD_NEW).first
-    add_summary.click()
-    new_tag_input = panel.get_by_placeholder(ui_strings.LOG_TAG_ADD_PLACEHOLDER).first
-    new_tag_input.fill("Suriage Men")
-    panel.get_by_role("button", name=ui_strings.LOG_TAG_ADD_CONFIRM).first.click()
-
-    # Wait for the tag group fragment to refresh with the new tag.
-    page.wait_for_function(
-        "() => document.querySelector('#log-panel')?.innerText.includes('Suriage Men')"
-    )
-
-    # The panel is still expanded (the outer form's collapse handler must not
-    # have fired for the nested "+ Add" request).
-    assert panel.is_visible()
-    assert trigger.get_attribute("aria-expanded") == "true"
-
-    # The previously-checked tag is still checked after the swap.
-    reopened_input = panel.locator(f'input[value="{chip_value}"]')
-    assert reopened_input.is_checked()
+    assert not overflow_x, "the notes textarea must still wrap at 1.5x font scale"
 
 
 def test_level_bar_advances_on_log_for_progression_subtally(page) -> None:
     """For a `progression`-mode sub-tally (e.g. Reading), logging an entry
     that crosses a count-gate threshold advances the progress bar fill."""
-    _enter_as_guest(page)
+    _signup(page, _unique_username("f"))
 
     card = _open_detail(page, "Reading")
     progress_fill = card.locator(".progress-fill")
@@ -247,9 +234,9 @@ def test_submitting_log_collapses_panel_and_updates_card(page) -> None:
     """Expanding the inline log panel, filling and submitting the form
     collapses the panel (`aria-expanded="false"`, `#log-panel` empty/hidden)
     and updates the activity card's hero numeral / advance line."""
-    _enter_as_guest(page)
+    _signup(page, _unique_username("g"))
 
-    card = _open_detail(page, "Practice")
+    card = _open_detail(page, "Kendo")
     trigger = page.locator('button[id^="log-trigger-"]')
     before_text = card.inner_text()
 

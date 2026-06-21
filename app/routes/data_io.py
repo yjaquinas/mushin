@@ -103,10 +103,15 @@ async def import_data(
 
 
 def _import_error_response(request: Request, message: str) -> HTMLResponse:
-    """Re-render the import dialog fragment with *message* shown inline."""
+    """Re-render the import dialog fragment with *message* shown inline.
+
+    Status 200, not 400: this fragment IS the error UI, swapped in place by
+    htmx. htmx 2's default `responseHandling` only swaps 2xx responses, so a
+    4xx here would leave the dialog showing its stale pre-submit content with
+    the error silently dropped.
+    """
     return templates.TemplateResponse(
         request=request,
         name="components/import_data_dialog.html.jinja2",
         context={"import_error": message, "open_on_error": True},
-        status_code=400,
     )
