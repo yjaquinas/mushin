@@ -32,16 +32,8 @@ jobs:
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           PROJECT: "mushin"
-          DOMAIN: "mushin.aqnas.xyz"
         run: |
-          ssh deploy@$SSH_HOST <<EOF
-            set -euo pipefail
-            cd /opt/$PROJECT/$PROJECT
-            git fetch --prune
-            git reset --hard origin/main
-            UV_CACHE_DIR=/opt/$PROJECT/.uv-cache /usr/local/bin/uv sync --frozen
-            sudo /bin/systemctl restart $PROJECT
-          EOF
+          ssh deploy@$SSH_HOST "cd /opt/$PROJECT/$PROJECT && bash deploy/run.sh"
 
       - name: Health check
         env:
