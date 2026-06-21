@@ -1,0 +1,65 @@
+{#
+  Comment notification history (GET /comments) — the dedicated page the
+  unseen-comment badge actually points to. Visiting THIS page (not home)
+  is what advances the comments_seen_at watermark; see app/routes/web.py.
+
+  Context:
+    comments        list[dict] — see app.services.comments.list_comments_for_owner
+                      (comment_id, body, created_at, author_username,
+                       author_display_name, entry_id, activity_id,
+                       activity_name, activity_slug, is_new), newest first
+    username         str — the current (owner) user's username, for building
+                      the click-through link to their own activity detail
+    has_more         bool — render the "show older" link when true
+    next_before_id   int | None — cursor for the "show older" link
+#}
+{% extends "web/base.html.jinja2" %}
+
+{% block title %}{{ strings.COMMENTS_PAGE_TITLE }} · {{ strings.APP_NAME }}{% endblock %}
+
+{% block content %}
+<header class="flex items-center gap-2 py-2">
+    <h1 class="text-title font-semibold text-text-primary">{{ strings.COMMENTS_PAGE_TITLE }}</h1>
+</header>
+
+{% if not comments %}
+<p class="py-8 text-center text-body text-text-secondary">{{ strings.COMMENTS_PAGE_EMPTY }}</p>
+{% else %}
+<ul class="flex flex-col gap-2">
+    {% for comment in comments %}
+    <li>
+        <a
+            href="/@{{ username }}/{{ comment.activity_slug }}?c={{ comment.entry_id }}#comment-slot-{{ comment.entry_id }}"
+            class="flex min-h-tap flex-col gap-1 rounded-card border border-border bg-surface-1 p-3 transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+        >
+            <div class="flex items-baseline justify-between gap-2">
+                <span class="text-caption font-medium text-text-secondary">
+                    {{ comment.activity_name }}
+                </span>
+                <span class="flex items-center gap-2 text-caption text-text-muted">
+                    {% if comment.is_new %}
+                    <span
+                        aria-label="{{ strings.COMMENTS_PAGE_NEW_BADGE_ARIA }}"
+                        class="h-2 w-2 rounded-full bg-brand"
+                    ></span>
+                    {% endif %}
+                    {{ comment.created_at[:10] }}
+                </span>
+            </div>
+            <p class="line-clamp-1 text-body text-text-primary">
+                <span class="font-medium text-text-secondary">{{ comment.author_display_name or comment.author_username }}</span>
+                <span class="ms-1">{{ comment.body }}</span>
+            </p>
+        </a>
+    </li>
+    {% endfor %}
+</ul>
+
+{% if has_more %}
+<a
+    href="/comments?before_id={{ next_before_id }}"
+    class="flex min-h-tap items-center justify-center text-body text-text-secondary underline-offset-2 hover:underline focus-visible:outline-offset-2"
+>{{ strings.COMMENTS_PAGE_SHOW_OLDER }}</a>
+{% endif %}
+{% endif %}
+{% endblock %}

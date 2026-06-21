@@ -1003,3 +1003,232 @@ def test_migration_0010_deleting_user_cascades_connection_and_block_at_sql_level
         assert result[0] == "ok"
     finally:
         conn.close()
+
+
+# ---------------------------------------------------------------------------
+# 7. Migration 0012: entry comments + comments_seen_at watermark
+# ---------------------------------------------------------------------------
+
+
+def test_migration_0012_applies_and_comment_table_exists_with_expected_columns(
+    tmp_path: Path,
+) -> None:
+    db_path = fresh_db(tmp_path)
+    conn = raw_conn(db_path)
+    try:
+        applied = {row[0] for row in conn.execute("SELECT filename FROM _migrations").fetchall()}
+        assert "0012_entry_comments.sql" in applied
+
+        tables = {
+            row[0]
+            for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
+        }
+        assert "comment" in tables
+
+        cols = {row[1]: row for row in conn.execute("PRAGMA table_info(comment)").fetchall()}
+        for expected_col in ("id", "entry_id", "author_id", "body", "created_at", "deleted_at"):
+            assert expected_col in cols, f"comment.{expected_col} missing"
+
+        # NOT NULL expectations (notnull flag is column index 3).
+        assert cols["entry_id"][3] == 1
+        assert cols["author_id"][3] == 1
+        assert cols["body"][3] == 1
+        assert cols["created_at"][3] == 1
+        assert cols["deleted_at"][3] == 0, "deleted_at should be nullable"
+
+        # Index on (entry_id, created_at) for the comment-thread list query.
+        index_names = {
+            row[0]
+            for row in conn.execute("SELECT name FROM sqlite_master WHERE type='index'").fetchall()
+        }
+        assert "idx_comment_entry_created" in index_names
+    finally:
+        conn.close()
+
+
+def test_migration_0012_comment_foreign_keys_cascade_on_delete(tmp_path: Path) -> None:
+    """PRAGMA foreign_key_list confirms both FKs are declared ON DELETE CASCADE."""
+    db_path = fresh_db(tmp_path)
+    conn = raw_conn(db_path)
+    try:
+        fk_rows = conn.execute("PRAGMA foreign_key_list(comment)").fetchall()
+        fks_by_table = {row["table"]: row for row in fk_rows}
+
+        assert "entry" in fks_by_table
+        assert fks_by_table["entry"]["on_delete"].upper() == "CASCADE"
+
+        assert "user" in fks_by_table
+        assert fks_by_table["user"]["on_delete"].upper() == "CASCADE"
+    finally:
+        conn.close()
+
+
+def test_migration_0012_body_check_constraint_rejects_blank_comment(tmp_path: Path) -> None:
+    db_path = fresh_db(tmp_path)
+    conn = sqlite3.connect(str(db_path), isolation_level=None)
+    conn.execute("PRAGMA foreign_keys=ON")
+    try:
+        cur = conn.execute("INSERT INTO user (auth_provider) VALUES ('email')")
+        uid = cur.lastrowid
+        cur = conn.execute(
+            "INSERT INTO category (owner_id, name, sort_order) VALUES (?, 'C', 0)",
+            (uid,),
+        )
+        cat_id = cur.lastrowid
+        cur = conn.execute(
+            "INSERT INTO activity (owner_id, category_id, name, count_mode, sort_order)"
+            " VALUES (?, ?, 'S', 'running', 0)",
+            (uid, cat_id),
+        )
+        activity_id = cur.lastrowid
+        cur = conn.execute(
+            "INSERT INTO entry (owner_id, activity_id, occurred_at)"
+            " VALUES (?, ?, '2026-06-19T09:00:00')",
+            (uid, activity_id),
+        )
+        entry_id = cur.lastrowid
+        conn.commit()
+
+        with pytest.raises(sqlite3.IntegrityError):
+            conn.execute(
+                "INSERT INTO comment (entry_id, author_id, body) VALUES (?, ?, ?)",
+                (entry_id, uid, "   "),
+            )
+    finally:
+        conn.close()
+
+
+def test_migration_0012_deleting_author_cascades_comment(tmp_path: Path) -> None:
+    """Deleting the comment's author (a different user than the entry owner)
+    removes the comment via ON DELETE CASCADE on author_id."""
+    db_path = fresh_db(tmp_path)
+    conn = sqlite3.connect(str(db_path), isolation_level=None)
+    conn.execute("PRAGMA foreign_keys=ON")
+    try:
+        cur = conn.execute("INSERT INTO user (auth_provider) VALUES ('email')")
+        owner_id = cur.lastrowid
+        cur = conn.execute("INSERT INTO user (auth_provider) VALUES ('email')")
+        author_id = cur.lastrowid
+
+        cur = conn.execute(
+            "INSERT INTO category (owner_id, name, sort_order) VALUES (?, 'C', 0)",
+            (owner_id,),
+        )
+        cat_id = cur.lastrowid
+        cur = conn.execute(
+            "INSERT INTO activity (owner_id, category_id, name, count_mode, sort_order)"
+            " VALUES (?, ?, 'S', 'running', 0)",
+            (owner_id, cat_id),
+        )
+        activity_id = cur.lastrowid
+        cur = conn.execute(
+            "INSERT INTO entry (owner_id, activity_id, occurred_at)"
+            " VALUES (?, ?, '2026-06-19T09:00:00')",
+            (owner_id, activity_id),
+        )
+        entry_id = cur.lastrowid
+
+        cur = conn.execute(
+            "INSERT INTO comment (entry_id, author_id, body) VALUES (?, ?, 'Nice work!')",
+            (entry_id, author_id),
+        )
+        comment_id = cur.lastrowid
+        conn.commit()
+
+        # Sanity: comment exists before deletion.
+        assert (
+            conn.execute("SELECT COUNT(*) FROM comment WHERE id=?", (comment_id,)).fetchone()[0]
+            == 1
+        )
+
+        # Delete the author (not the entry owner) -- the comment must cascade.
+        conn.execute("DELETE FROM user WHERE id=?", (author_id,))
+        conn.commit()
+
+        assert (
+            conn.execute("SELECT COUNT(*) FROM comment WHERE id=?", (comment_id,)).fetchone()[0]
+            == 0
+        )
+
+        # The entry and its owner are untouched.
+        assert conn.execute("SELECT COUNT(*) FROM entry WHERE id=?", (entry_id,)).fetchone()[0] == 1
+        assert conn.execute("SELECT COUNT(*) FROM user WHERE id=?", (owner_id,)).fetchone()[0] == 1
+    finally:
+        conn.close()
+
+
+def test_migration_0012_deleting_entry_owner_cascades_entry_and_comment(tmp_path: Path) -> None:
+    """Deleting the entry owner cascades entry -> comment (entry_id FK), even
+    when the comment's author is a different (still-existing) user."""
+    db_path = fresh_db(tmp_path)
+    conn = sqlite3.connect(str(db_path), isolation_level=None)
+    conn.execute("PRAGMA foreign_keys=ON")
+    try:
+        cur = conn.execute("INSERT INTO user (auth_provider) VALUES ('email')")
+        owner_id = cur.lastrowid
+        cur = conn.execute("INSERT INTO user (auth_provider) VALUES ('email')")
+        author_id = cur.lastrowid
+
+        cur = conn.execute(
+            "INSERT INTO category (owner_id, name, sort_order) VALUES (?, 'C', 0)",
+            (owner_id,),
+        )
+        cat_id = cur.lastrowid
+        cur = conn.execute(
+            "INSERT INTO activity (owner_id, category_id, name, count_mode, sort_order)"
+            " VALUES (?, ?, 'S', 'running', 0)",
+            (owner_id, cat_id),
+        )
+        activity_id = cur.lastrowid
+        cur = conn.execute(
+            "INSERT INTO entry (owner_id, activity_id, occurred_at)"
+            " VALUES (?, ?, '2026-06-19T09:00:00')",
+            (owner_id, activity_id),
+        )
+        entry_id = cur.lastrowid
+
+        cur = conn.execute(
+            "INSERT INTO comment (entry_id, author_id, body) VALUES (?, ?, 'Nice work!')",
+            (entry_id, author_id),
+        )
+        comment_id = cur.lastrowid
+        conn.commit()
+
+        # Delete the entry owner -- entry cascades, and the comment must
+        # follow via its entry_id FK even though its author still exists.
+        conn.execute("DELETE FROM user WHERE id=?", (owner_id,))
+        conn.commit()
+
+        assert conn.execute("SELECT COUNT(*) FROM entry WHERE id=?", (entry_id,)).fetchone()[0] == 0
+        assert (
+            conn.execute("SELECT COUNT(*) FROM comment WHERE id=?", (comment_id,)).fetchone()[0]
+            == 0
+        )
+
+        # The comment's author account is untouched.
+        assert conn.execute("SELECT COUNT(*) FROM user WHERE id=?", (author_id,)).fetchone()[0] == 1
+
+        result = conn.execute("PRAGMA integrity_check").fetchone()
+        assert result[0] == "ok"
+    finally:
+        conn.close()
+
+
+def test_migration_0012_adds_comments_seen_at_column_defaulting_null(tmp_path: Path) -> None:
+    """user.comments_seen_at exists and defaults to NULL, matching the
+    consent_seen_at watermark pattern from 0005."""
+    db_path = fresh_db(tmp_path)
+    conn = raw_conn(db_path)
+    try:
+        cols = {row[1] for row in conn.execute("PRAGMA table_info(user)").fetchall()}
+        assert "comments_seen_at" in cols
+
+        conn2 = sqlite3.connect(str(db_path), isolation_level=None)
+        conn2.execute("PRAGMA foreign_keys=ON")
+        cur = conn2.execute("INSERT INTO user (auth_provider) VALUES ('email')")
+        uid = cur.lastrowid
+        row = conn2.execute("SELECT comments_seen_at FROM user WHERE id=?", (uid,)).fetchone()
+        assert row[0] is None
+        conn2.close()
+    finally:
+        conn.close()

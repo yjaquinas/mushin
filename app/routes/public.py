@@ -42,7 +42,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Cookie, Request
+from fastapi import APIRouter, Cookie, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
@@ -63,7 +63,10 @@ from app.routes.web import (
     _theme_context,
     consent_gate_redirect,
 )
+from app.services import comments as comments_service
 from app.services import competition, connections, entries, profiles, stats
+from app.services.comments import CommentNotFoundError, CommentPermissionError
+from app.services.entries import EntryNotFoundError
 
 router = APIRouter()
 
@@ -279,6 +282,32 @@ async def public_activity(
             has_match_list = any(fd["kind"] == "match_list" for fd in field_defs)
             card = _build_card_context(conn, owner_id, sub_row, tz=tz)
 
+            # Per-entry comment affordance — same data the read-only path
+            # threads onto `entries` (`_comment_counts_for_entries`) plus the
+            # owner's own `can_comment` flag (owner capability always grants
+            # comment permission via `can_comment_on_entry`).
+            entry_rows = entries.list_for_activity(owner_id, activity_id)
+            counts = _comment_counts_for_entries(conn, [e["id"] for e in entry_rows])
+            for e in entry_rows:
+                e["comment_count"] = counts.get(e["id"], 0)
+            can_comment = profiles.can_comment_on_entry(
+                conn, current_user_id=current_uid, profile_user=user, activity_id=activity_id
+            )
+
+            # `?c={entry_id}` auto-expands that entry's comment slot on load
+            # (used by a notification click-through). Silently ignored — no
+            # error, no 500 — when missing/non-numeric/unknown/cross-activity;
+            # falls back to all slots collapsed.
+            expand_comment_entry_id: int | None = None
+            raw_c = request.query_params.get("c")
+            if raw_c is not None:
+                try:
+                    candidate_id = int(raw_c)
+                except ValueError:
+                    candidate_id = None
+                if candidate_id is not None and any(e["id"] == candidate_id for e in entry_rows):
+                    expand_comment_entry_id = candidate_id
+
         # ------------------------------------------------------------------
         # Branch 1b — owner previewing as a downgraded viewer class.
         # ------------------------------------------------------------------
@@ -315,7 +344,15 @@ async def public_activity(
                 )
 
             return _render_readonly_activity_detail(
-                request, conn, username, slug, owner_id, activity_id, tz=tz
+                request,
+                conn,
+                username,
+                slug,
+                owner_id,
+                activity_id,
+                tz=tz,
+                current_user_id=current_uid,
+                profile_user=user,
             )
 
     # ------------------------------------------------------------------
@@ -348,6 +385,11 @@ async def public_activity(
         activity_id, owner_id, field_defs, tz=tz
     )
     owner_context["progression"] = _build_progression_context(activity_id, owner_id)
+    owner_context["entries"] = entry_rows
+    owner_context["can_comment"] = can_comment
+    owner_context["expand_comment_entry_id"] = expand_comment_entry_id
+    owner_context["username"] = username
+    owner_context["slug"] = slug
 
     # Public-notice strip — only when the account is public so the owner
     # knows the page (including notes) is visible to anyone with the link.
@@ -385,6 +427,8 @@ def _render_readonly_activity_detail(
     activity_id: int,
     *,
     tz: Any,
+    current_user_id: int | None = None,
+    profile_user: Any = None,
 ) -> HTMLResponse:
     """Build + render the read-only ``public_activity.html.jinja2`` response.
 
@@ -428,11 +472,273 @@ def _render_readonly_activity_detail(
     # Read-only chronological log, newest first, including memo text
     # (repo-wide.md: memos are visible to a fellow, or to anyone on a public
     # account, by the account owner's own choice).
-    context["entries"] = entries.list_for_activity(owner_id, activity_id)
+    entry_rows = entries.list_for_activity(owner_id, activity_id)
+    counts = _comment_counts_for_entries(conn, [e["id"] for e in entry_rows])
+    for e in entry_rows:
+        e["comment_count"] = counts.get(e["id"], 0)
+    context["entries"] = entry_rows
     context["now"] = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M")
+    # Real (non-preview) visitor only — a preview render never grants a
+    # comment-write affordance, since posting "as" a downgraded persona
+    # while actually authenticated as the owner would be a confusing,
+    # capability-bypassing surface.
+    context["can_comment"] = bool(
+        profile_user is not None
+        and profiles.can_comment_on_entry(
+            conn,
+            current_user_id=current_user_id,
+            profile_user=profile_user,
+            activity_id=activity_id,
+        )
+    )
 
     return templates.TemplateResponse(
         request=request,
         name="web/public_activity.html.jinja2",
         context=context,
     )
+
+
+# ---------------------------------------------------------------------------
+# Entry comments — collapsed per-entry affordance + thread fragment
+# ---------------------------------------------------------------------------
+
+
+def _comment_counts_for_entries(conn: Any, entry_ids: list[int]) -> dict[int, int]:
+    """Map ``entry_id -> visible comment count`` for *entry_ids*.
+
+    A plain count of non-soft-deleted comments — no capability re-check here,
+    because this is only ever used to render the collapsed affordance on the
+    SAME read-only detail page a viewer has already been cleared to see (the
+    route gates the whole page via ``can_view_activity_detail`` before this
+    runs). The thread fragment itself (``list_comments``) re-checks live on
+    every expand, so a stale count here is, at worst, an affordance that opens
+    to an empty list — never a leak of comment content.
+    """
+    if not entry_ids:
+        return {}
+    placeholders = ",".join("?" for _ in entry_ids)
+    rows = conn.execute(
+        f"SELECT entry_id, COUNT(*) AS n FROM comment"
+        f" WHERE entry_id IN ({placeholders}) AND deleted_at IS NULL"
+        f" GROUP BY entry_id",
+        tuple(entry_ids),
+    ).fetchall()
+    return {r["entry_id"]: r["n"] for r in rows}
+
+
+def _resolve_entry_for_comments(
+    conn: Any, username: str, slug: str, entry_id: int, current_uid: int | None
+) -> tuple[dict, int, int, dict] | HTMLResponse:
+    """Shared lookup + visibility gate for both comment routes.
+
+    Returns ``(user, owner_id, activity_id, entry)`` on success, or an
+    ``HTMLResponse`` (404) the caller should return directly. Mirrors the
+    branch order in ``public_activity``: unknown username/slug/entry, a
+    cross-activity entry id, or a viewer who fails
+    ``can_view_activity_detail`` (limited/blocked) all 404 here rather than
+    leaking anything about the entry's existence — this is a fragment route,
+    not a navigable page, so there's no profile to redirect back to.
+    """
+    user = profiles.get_public_user(conn, username)
+    if user is None:
+        return HTMLResponse(status_code=404)
+    owner_id = int(user["id"])
+    activity_id = profiles.resolve_activity_slug(conn, owner_id, slug)
+    if activity_id is None:
+        return HTMLResponse(status_code=404)
+
+    if not profiles.can_view_activity_detail(conn, current_user_id=current_uid, profile_user=user):
+        return HTMLResponse(status_code=404)
+
+    try:
+        entry = entries.get(owner_id, entry_id)
+    except EntryNotFoundError:
+        return HTMLResponse(status_code=404)
+    if entry["activity_id"] != activity_id:
+        return HTMLResponse(status_code=404)
+
+    return user, owner_id, activity_id, entry
+
+
+def _render_comment_thread(
+    request: Request,
+    conn: Any,
+    *,
+    username: str,
+    slug: str,
+    owner_id: int,
+    activity_id: int,
+    entry_id: int,
+    current_uid: int | None,
+    user: dict,
+) -> HTMLResponse:
+    """Build + render the comment-thread fragment for *entry_id*."""
+    rows = comments_service.list_comments(conn, entry_id, viewer_id=current_uid)
+    can_comment = profiles.can_comment_on_entry(
+        conn, current_user_id=current_uid, profile_user=user, activity_id=activity_id
+    )
+    context = {
+        "activity_id": activity_id,
+        "username": username,
+        "slug": slug,
+        "entry_id": entry_id,
+        "entry_owner_id": owner_id,
+        "comments": rows,
+        "can_comment": can_comment,
+        "viewer_logged_in": current_uid is not None,
+        "current_user_id": current_uid,
+    }
+    return templates.TemplateResponse(
+        request=request,
+        name="components/comment_thread.html.jinja2",
+        context=context,
+    )
+
+
+@router.get(
+    "/@{username}/{slug}/entries/{entry_id}/comments",
+    response_class=HTMLResponse,
+    response_model=None,
+)
+async def get_entry_comments(
+    request: Request,
+    username: str,
+    slug: str,
+    entry_id: int,
+    session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
+) -> HTMLResponse:
+    """Render the comment-thread fragment for *entry_id* (HTMX swap target).
+
+    404s for an unknown username/slug/entry, a cross-activity entry id, or a
+    viewer who fails ``can_view_activity_detail`` (limited/blocked) — same
+    visibility authority the activity-detail route uses, never inlined. The
+    composer only appears in the rendered markup when
+    ``profiles.can_comment_on_entry`` is true for the current viewer; a
+    logged-out viewer on an otherwise-visible entry gets the read-only list
+    plus a "log in to comment" link.
+    """
+    current_uid = sessions.read_uid(session)
+    with db.connect() as conn:
+        conn.execute("BEGIN")
+        resolved = _resolve_entry_for_comments(conn, username, slug, entry_id, current_uid)
+        if isinstance(resolved, HTMLResponse):
+            return resolved
+        user, owner_id, activity_id, _entry = resolved
+        return _render_comment_thread(
+            request,
+            conn,
+            username=username,
+            slug=slug,
+            owner_id=owner_id,
+            activity_id=activity_id,
+            entry_id=entry_id,
+            current_uid=current_uid,
+            user=user,
+        )
+
+
+@router.post(
+    "/@{username}/{slug}/entries/{entry_id}/comments",
+    response_class=HTMLResponse,
+    response_model=None,
+)
+async def post_entry_comment(
+    request: Request,
+    username: str,
+    slug: str,
+    entry_id: int,
+    body: Annotated[str, Form()],
+    session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
+) -> HTMLResponse:
+    """Create a comment on *entry_id*, then return the refreshed thread fragment.
+
+    Server-side gate, independent of anything the client sent: re-checks
+    ``can_comment_on_entry`` (which itself requires a real session) before
+    writing. An unauthorized POST — no session, a non-fellow on a private
+    profile, a blocked viewer — gets 403, never a silent no-op and never a
+    write. An empty/whitespace-only body is rejected the same way
+    ``create_comment`` itself rejects it (422), so a tampered client can't
+    bypass the textarea's ``required`` attribute either.
+    """
+    current_uid = sessions.read_uid(session)
+    with db.connect() as conn:
+        conn.execute("BEGIN")
+        resolved = _resolve_entry_for_comments(conn, username, slug, entry_id, current_uid)
+        if isinstance(resolved, HTMLResponse):
+            return resolved
+        user, owner_id, activity_id, _entry = resolved
+
+        if not profiles.can_comment_on_entry(
+            conn, current_user_id=current_uid, profile_user=user, activity_id=activity_id
+        ):
+            return HTMLResponse(status_code=403)
+
+        try:
+            comments_service.create_comment(conn, entry_id, author_id=current_uid, body=body)
+        except ValueError:
+            return HTMLResponse(status_code=422)
+
+        return _render_comment_thread(
+            request,
+            conn,
+            username=username,
+            slug=slug,
+            owner_id=owner_id,
+            activity_id=activity_id,
+            entry_id=entry_id,
+            current_uid=current_uid,
+            user=user,
+        )
+
+
+@router.post(
+    "/@{username}/{slug}/entries/{entry_id}/comments/{comment_id}/delete",
+    response_class=HTMLResponse,
+    response_model=None,
+)
+async def delete_entry_comment(
+    request: Request,
+    username: str,
+    slug: str,
+    entry_id: int,
+    comment_id: int,
+    session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
+) -> HTMLResponse:
+    """Soft-delete *comment_id*, then return the refreshed thread fragment.
+
+    Restricted server-side to the comment's author or the entry's owner —
+    ``soft_delete_comment`` itself raises ``CommentPermissionError`` for
+    anyone else, which we map to 403 (never a silent no-op). A session is
+    required (anonymous can't author or own anything); an unknown/already-
+    deleted comment 404s.
+    """
+    current_uid = sessions.read_uid(session)
+    if current_uid is None:
+        return HTMLResponse(status_code=401)
+
+    with db.connect() as conn:
+        conn.execute("BEGIN")
+        resolved = _resolve_entry_for_comments(conn, username, slug, entry_id, current_uid)
+        if isinstance(resolved, HTMLResponse):
+            return resolved
+        user, owner_id, activity_id, _entry = resolved
+
+        try:
+            comments_service.soft_delete_comment(conn, comment_id, requester_id=current_uid)
+        except CommentNotFoundError:
+            return HTMLResponse(status_code=404)
+        except CommentPermissionError:
+            return HTMLResponse(status_code=403)
+
+        return _render_comment_thread(
+            request,
+            conn,
+            username=username,
+            slug=slug,
+            owner_id=owner_id,
+            activity_id=activity_id,
+            entry_id=entry_id,
+            current_uid=current_uid,
+            user=user,
+        )

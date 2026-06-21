@@ -1552,6 +1552,143 @@ async def test_home_does_not_render_heavy_stats(client: AsyncClient) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Owner-view comment affordance on /@{username}/{slug}
+# (meetings/MEETING-2026-06-20-comment-notifications/3-BUILD-PLAN.md, Task 1)
+# ---------------------------------------------------------------------------
+
+
+async def _signup_with_username(client: AsyncClient, username: str) -> int:
+    """Sign up a username/password account and clear its one-time consent gate.
+
+    Returns the owner_id. Mirrors ``tests/integration/test_entry_comments.py``'s
+    ``_signup`` helper (kept local here since that module isn't shared/imported
+    across test files).
+    """
+    resp = await client.post(
+        "/auth/signup",
+        data={"username": username, "password": "correct-horse", "consent": "true"},
+    )
+    assert resp.status_code == 200, resp.text
+    owner_id = int(resp.json()["user_id"])
+    from app.auth import users as users_module
+
+    users_module.set_visibility_consent(owner_id, "private")
+    return owner_id
+
+
+def _make_activity_with_entry(owner_id: int, *, name: str = "Running") -> tuple[str, int]:
+    """Create a fresh activity + one entry for *owner_id*; return (slug, entry_id)."""
+    from app.services import entries as entries_service
+
+    result = categories.create_activity(owner_id, name=name)
+    activity_id = result["activity_id"]
+    entry = entries_service.create(owner_id, activity_id, tz=_UTC)
+    with db.connect() as conn:
+        conn.execute("BEGIN")
+        slug = conn.execute("SELECT slug FROM activity WHERE id = ?", (activity_id,)).fetchone()[
+            "slug"
+        ]
+    return slug, entry["id"]
+
+
+async def test_owner_view_shows_comment_affordance_and_can_post_on_own_entry(
+    client: AsyncClient,
+) -> None:
+    owner_id = await _signup_with_username(client, "owner_comment1")
+    slug, entry_id = _make_activity_with_entry(owner_id)
+
+    resp = await client.get(f"/@owner_comment1/{slug}")
+    assert resp.status_code == 200
+    # Zero-comment entry still renders the toggle affordance (can_comment is
+    # True for the owner), so the composer is reachable for the first comment.
+    assert f"/entries/{entry_id}/comments" in resp.text
+    assert f'id="comment-slot-{entry_id}"' in resp.text
+
+    comments_url = f"/@owner_comment1/{slug}/entries/{entry_id}/comments"
+    get_resp = await client.get(comments_url)
+    assert get_resp.status_code == 200
+    assert "<form" in get_resp.text
+    assert "<textarea" in get_resp.text
+
+    post_resp = await client.post(comments_url, data={"body": "noting my own progress"})
+    assert post_resp.status_code == 200
+    assert "noting my own progress" in post_resp.text
+
+    # Reloading the page now shows a non-zero comment count.
+    second_page = await client.get(f"/@owner_comment1/{slug}")
+    assert second_page.status_code == 200
+    assert strings_module.COMMENTS_COUNT_LABEL.format(count=1) in second_page.text
+
+
+async def test_owner_view_zero_comment_entries_render_no_count_glyph(
+    client: AsyncClient,
+) -> None:
+    """Zero-comment entries must not show a count — the affordance itself
+    renders (so the owner can start a thread), but the count ``<span>`` is
+    absent from markup for that entry (the toggle button renders bare,
+    glyph-only, with no inner count span at all when ``comment_count`` is
+    zero — ``COMMENTS_COUNT_LABEL`` is just ``"{count}"``, too generic to
+    assert on directly without colliding with unrelated digits elsewhere on
+    the page, e.g. the htmx CDN script tag's version pin)."""
+    owner_id = await _signup_with_username(client, "owner_comment2")
+    slug, entry_id = _make_activity_with_entry(owner_id)
+
+    resp = await client.get(f"/@owner_comment2/{slug}")
+    assert resp.status_code == 200
+    # The toggle button is present (can_comment is True for the owner)...
+    assert f"/entries/{entry_id}/comments" in resp.text
+    # ...but it carries no inner <span> (the count span only renders when
+    # comment_count is truthy) — assert by isolating the button's own markup.
+    button_start = resp.text.index(f"/entries/{entry_id}/comments")
+    button_end = resp.text.index("</button>", button_start)
+    button_markup = resp.text[button_start:button_end]
+    assert "<span>" not in button_markup
+
+
+async def test_owner_view_c_param_expands_matching_entry_slot_on_load(
+    client: AsyncClient,
+) -> None:
+    owner_id = await _signup_with_username(client, "owner_comment3")
+    slug, entry_id = _make_activity_with_entry(owner_id)
+
+    resp = await client.get(f"/@owner_comment3/{slug}?c={entry_id}")
+    assert resp.status_code == 200
+    # The matching slot carries hx-trigger="load" so it auto-expands without
+    # a client click.
+    assert f'id="comment-slot-{entry_id}"' in resp.text
+    assert 'hx-trigger="load"' in resp.text
+    assert f"/entries/{entry_id}/comments" in resp.text
+
+
+async def test_owner_view_invalid_c_param_falls_back_to_collapsed(
+    client: AsyncClient,
+) -> None:
+    owner_id = await _signup_with_username(client, "owner_comment4")
+    slug, entry_id = _make_activity_with_entry(owner_id)
+
+    # Non-numeric value.
+    resp = await client.get(f"/@owner_comment4/{slug}?c=not-a-number")
+    assert resp.status_code == 200
+    assert 'hx-trigger="load"' not in resp.text
+
+    # Unknown entry id.
+    resp2 = await client.get(f"/@owner_comment4/{slug}?c=999999")
+    assert resp2.status_code == 200
+    assert 'hx-trigger="load"' not in resp2.text
+
+
+async def test_owner_view_cross_activity_c_param_is_ignored(client: AsyncClient) -> None:
+    owner_id = await _signup_with_username(client, "owner_comment5")
+    slug_a, _entry_a_id = _make_activity_with_entry(owner_id, name="Running")
+    _slug_b, entry_b_id = _make_activity_with_entry(owner_id, name="Reading log")
+
+    # entry_b_id belongs to a different activity than slug_a's.
+    resp = await client.get(f"/@owner_comment5/{slug_a}?c={entry_b_id}")
+    assert resp.status_code == 200
+    assert 'hx-trigger="load"' not in resp.text
+
+
+# ---------------------------------------------------------------------------
 # Hardcoded-copy guard (English/US pivot — no Hangul anywhere in app-facing
 # source; templates/ui_strings.py stay English-only)
 # ---------------------------------------------------------------------------
@@ -2425,3 +2562,166 @@ async def test_delete_edit_form_has_delete_button(client: AsyncClient) -> None:
 
     assert s.ENTRY_DELETE in text
     assert f'hx-get="/activities/{activity_id}/entries/{entry_id}/delete-confirm"' in text
+
+
+# ---------------------------------------------------------------------------
+# GET /comments — dedicated notification history (separate watermark from
+# GET /home). See meetings/MEETING-2026-06-20-comment-notifications.
+# ---------------------------------------------------------------------------
+
+
+def _make_activity_with_entry_for(owner_id: int, *, name: str = "Running") -> tuple[str, int, int]:
+    """Create a fresh activity + one entry for *owner_id*.
+
+    Returns (slug, activity_id, entry_id).
+    """
+    result = categories.create_activity(owner_id, name=name)
+    activity_id = result["activity_id"]
+    entry = entries.create(owner_id, activity_id, tz=_UTC)
+    with db.connect() as conn:
+        conn.execute("BEGIN")
+        slug = conn.execute("SELECT slug FROM activity WHERE id = ?", (activity_id,)).fetchone()[
+            "slug"
+        ]
+    return slug, activity_id, entry["id"]
+
+
+def _post_comment(entry_id: int, *, author_id: int, body: str = "nice work") -> int:
+    with db.connect() as conn:
+        conn.execute("BEGIN")
+        comment_id = comments_service.create_comment(conn, entry_id, author_id=author_id, body=body)
+    return comment_id
+
+
+async def test_comments_page_redirects_when_logged_out(client: AsyncClient) -> None:
+    resp = await client.get("/comments")
+    assert resp.status_code == 303
+    assert resp.headers["location"] == "/"
+
+
+async def test_home_visits_do_not_change_comments_seen_at_or_clear_badge(
+    client: AsyncClient, client2: AsyncClient
+) -> None:
+    owner_id = await _guest_login(client)
+    commenter_id = await _guest_login(client2)
+    _, _, entry_id = _make_activity_with_entry_for(owner_id)
+    _post_comment(entry_id, author_id=commenter_id)
+
+    with db.connect() as conn:
+        conn.execute("BEGIN")
+        before = conn.execute(
+            "SELECT comments_seen_at FROM user WHERE id = ?", (owner_id,)
+        ).fetchone()["comments_seen_at"]
+    assert before is None
+
+    for _ in range(3):
+        resp = await client.get("/home")
+        assert resp.status_code == 200
+        assert f'aria-label="{strings_module.COMMENTS_UNSEEN_ARIA}"' in resp.text
+
+    with db.connect() as conn:
+        conn.execute("BEGIN")
+        after = conn.execute(
+            "SELECT comments_seen_at FROM user WHERE id = ?", (owner_id,)
+        ).fetchone()["comments_seen_at"]
+    assert after is None
+
+
+async def test_comments_page_advances_watermark_and_renders_pre_visit_new_state(
+    client: AsyncClient, client2: AsyncClient
+) -> None:
+    owner_id = await _guest_login(client)
+    commenter_id = await _guest_login(client2)
+    _, _, entry_id = _make_activity_with_entry_for(owner_id)
+
+    # A comment posted before any /comments visit (watermark is NULL) should
+    # render as "new" on the first visit -- it predates this visit but there
+    # was no prior watermark to have already cleared it.
+    _post_comment(entry_id, author_id=commenter_id, body="first comment")
+
+    resp = await client.get("/comments")
+    assert resp.status_code == 200
+    assert "first comment" in resp.text
+
+    with db.connect() as conn:
+        conn.execute("BEGIN")
+        watermark_after_first_visit = conn.execute(
+            "SELECT comments_seen_at FROM user WHERE id = ?", (owner_id,)
+        ).fetchone()["comments_seen_at"]
+    assert watermark_after_first_visit is not None
+
+    # Home now reflects 0 unseen.
+    home_resp = await client.get("/home")
+    assert home_resp.status_code == 200
+    assert f'aria-label="{strings_module.COMMENTS_UNSEEN_ARIA}"' not in home_resp.text
+
+
+async def test_comments_page_row_links_to_owner_activity_detail_with_c_param(
+    client: AsyncClient, client2: AsyncClient
+) -> None:
+    owner_id = await _create_named_account(client, "linktest_owner1")
+    users_module.set_visibility_consent(owner_id, "public")
+    commenter_id = await _guest_login(client2)
+    slug, _, entry_id = _make_activity_with_entry_for(owner_id)
+    _post_comment(entry_id, author_id=commenter_id)
+
+    username = "linktest_owner1"
+
+    resp = await client.get("/comments")
+    assert resp.status_code == 200
+    expected_href = f'href="/@{username}/{slug}?c={entry_id}#comment-slot-{entry_id}"'
+    assert expected_href in resp.text
+
+    # Follow the link the row points to: lands on the owner's own
+    # activity-detail page with that entry's thread pre-expanded (verifies
+    # Task 1's ?c= integration end to end rather than trusting it blind).
+    detail_resp = await client.get(f"/@{username}/{slug}?c={entry_id}")
+    assert detail_resp.status_code == 200
+    assert f'id="comment-slot-{entry_id}"' in detail_resp.text
+    assert f'hx-get="/@{username}/{slug}/entries/{entry_id}/comments"' in detail_resp.text
+    assert 'hx-trigger="load"' in detail_resp.text
+
+
+async def test_comments_page_excludes_soft_deleted_and_self_comments(
+    client: AsyncClient, client2: AsyncClient
+) -> None:
+    owner_id = await _guest_login(client)
+    commenter_id = await _guest_login(client2)
+    _, _, entry_id = _make_activity_with_entry_for(owner_id)
+
+    # Owner's own comment on their own entry -- never a notification.
+    _post_comment(entry_id, author_id=owner_id, body="my own note to self")
+
+    # A comment that gets soft-deleted before the owner ever visits /comments.
+    deleted_id = _post_comment(entry_id, author_id=commenter_id, body="will be deleted")
+    with db.connect() as conn:
+        conn.execute("BEGIN")
+        comments_service.soft_delete_comment(conn, deleted_id, requester_id=commenter_id)
+
+    _post_comment(entry_id, author_id=commenter_id, body="this one stays")
+
+    resp = await client.get("/comments")
+    assert resp.status_code == 200
+    assert "my own note to self" not in resp.text
+    assert "will be deleted" not in resp.text
+    assert "this one stays" in resp.text
+
+
+async def test_comments_page_empty_state_when_no_comments(client: AsyncClient) -> None:
+    owner_id = await _guest_login(client)
+    _make_activity_with_entry_for(owner_id)
+
+    resp = await client.get("/comments")
+    assert resp.status_code == 200
+    assert strings_module.COMMENTS_PAGE_EMPTY in resp.text
+
+
+async def test_home_badge_links_to_comments_page(client: AsyncClient, client2: AsyncClient) -> None:
+    owner_id = await _guest_login(client)
+    commenter_id = await _guest_login(client2)
+    _, _, entry_id = _make_activity_with_entry_for(owner_id)
+    _post_comment(entry_id, author_id=commenter_id)
+
+    resp = await client.get("/home")
+    assert resp.status_code == 200
+    assert 'href="/comments"' in resp.text

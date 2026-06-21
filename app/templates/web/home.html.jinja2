@@ -4,8 +4,15 @@
 
 {% block content %}
 {% from "components/_icon.html.jinja2" import icon %}
-<header class="flex items-center py-2">
+<header class="flex items-center gap-2 py-2">
     <h1 class="text-title font-semibold text-text-primary">{{ strings.HOME_TITLE }}</h1>
+    {% if unseen_comments %}
+    <a
+        href="/comments"
+        aria-label="{{ strings.COMMENTS_UNSEEN_ARIA }}"
+        class="flex min-h-tap min-w-tap items-center justify-center rounded-full bg-brand-subtle px-2 text-caption font-medium text-text-secondary transition hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+    >{{ icon('message-circle', size=14) }}<span class="ms-1">{{ strings.COMMENTS_UNSEEN_BADGE.format(count=unseen_comments) }}</span></a>
+    {% endif %}
 </header>
 
 {% include "components/fellows_section.html.jinja2" with context %}

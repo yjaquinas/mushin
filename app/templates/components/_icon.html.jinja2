@@ -121,6 +121,16 @@ viewBox 0 0 24 24). Unrecognized names fall back to `circle-dot`. #}
   <circle cx="11" cy="11" r="8"></circle>
   <path d="m21 21-4.3-4.3"></path>
 </svg>
+{%- elif name == 'message-circle' -%}
+<svg xmlns="http://www.w3.org/2000/svg" width="{{ size }}" height="{{ size }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <path d="M2.992 16.342A2 2 0 0 1 2 14.567v-3.299a8.094 8.094 0 0 1 .035-1.531c.328-3.21 2.97-5.75 6.282-6.071c1.453-.131 2.91-.131 4.363 0c3.312.321 5.954 2.861 6.282 6.071c.034.341.034.682.034 1.531c0 .849 0 1.19-.034 1.531c-.328 3.21-2.97 5.75-6.282 6.071c-1.453.131-2.91.131-4.363 0a8.6 8.6 0 0 1-1.534-.279c-.291-.075-.586-.097-.834.045L3.5 21l1.044-1.937c-.292-.55-1.122-1.084-1.552-1.72Z"></path>
+</svg>
+{%- elif name == 'trash' -%}
+<svg xmlns="http://www.w3.org/2000/svg" width="{{ size }}" height="{{ size }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <path d="M3 6h18"></path>
+  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path>
+  <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+</svg>
 {%- else -%}
 <svg xmlns="http://www.w3.org/2000/svg" width="{{ size }}" height="{{ size }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
   <circle cx="12" cy="12" r="10"></circle>

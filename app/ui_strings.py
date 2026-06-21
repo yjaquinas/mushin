@@ -553,6 +553,35 @@ SEARCH_TAGS_HEADING = "Tags"
 SEARCH_TAGS_EMPTY = "No public records with that tag yet."
 
 # ---------------------------------------------------------------------------
+# Entry comments
+# ---------------------------------------------------------------------------
+
+# Collapsed per-entry affordance — glyph + count, never shown at zero.
+# {count} interpolated by the template.
+COMMENTS_COUNT_LABEL = "{count}"
+COMMENTS_TOGGLE_ARIA = "Comments"
+
+COMMENTS_EMPTY = "No comments yet."
+COMMENTS_LOGIN_TO_COMMENT = "Log in to comment."
+
+COMMENTS_BODY_LABEL = "Add a comment"
+COMMENTS_BODY_PLACEHOLDER = "Say something"
+COMMENTS_SUBMIT = "Post"
+COMMENTS_DELETE = "Delete"
+
+# Quiet, content-free unseen-comment badge on home (mirrors REQUESTS_PENDING_BADGE).
+# {count} interpolated by the template.
+COMMENTS_UNSEEN_BADGE = "{count}"
+COMMENTS_UNSEEN_ARIA = "Unseen comments"
+
+# Dedicated notification-history page (GET /comments) — the only place the
+# unseen-comment watermark advances.
+COMMENTS_PAGE_TITLE = "Comments"
+COMMENTS_PAGE_EMPTY = "No comments yet."
+COMMENTS_PAGE_NEW_BADGE_ARIA = "New"
+COMMENTS_PAGE_SHOW_OLDER = "Show older"
+
+# ---------------------------------------------------------------------------
 # Misc / a11y
 # ---------------------------------------------------------------------------
 

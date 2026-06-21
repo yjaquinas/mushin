@@ -1,0 +1,85 @@
+{#
+  Comment thread fragment for a single entry — swapped in place below the
+  entry row by the collapsed comment-count affordance's hx-get, and re-swapped
+  after a post/delete.
+
+  Density is intentionally low (per copy-patterns): a flat list, no replies,
+  no reactions. The composer is rendered ONLY when `can_comment` is true for
+  the current viewer — never CSS-hidden, never present-but-disabled. A
+  logged-out viewer (on an otherwise-visible public entry) sees the list
+  read-only plus a plain inline "Log in to comment" link. A viewer who fails
+  `can_view_activity_detail` entirely never reaches this template at all (the
+  route 404s/redirects before rendering).
+
+  Context:
+    activity_id    int
+    entry_id       int
+    username       str   — profile owner's username (for the route URLs)
+    comments       list[dict] — see app.services.comments.list_comments
+                     (id, author_id, author_username, author_display_name,
+                      body, created_at), oldest first
+    can_comment    bool  — true iff profiles.can_comment_on_entry for this viewer
+    viewer_logged_in bool
+    current_user_id  int | None — for the per-comment delete affordance
+    entry_owner_id    int       — for the per-comment delete affordance
+#}
+{% from "components/_icon.html.jinja2" import icon %}
+<div id="comment-thread-{{ entry_id }}" class="flex flex-col gap-3 rounded-card border border-border bg-surface-2 p-3">
+    {% if not comments %}
+    <p class="text-caption text-text-muted">{{ strings.COMMENTS_EMPTY }}</p>
+    {% else %}
+    <ul class="flex flex-col gap-2">
+        {% for comment in comments %}
+        <li class="flex flex-col gap-0.5">
+            <div class="flex items-baseline justify-between gap-2">
+                <span class="text-caption font-medium text-text-secondary">
+                    {{ comment.author_display_name or comment.author_username }}
+                </span>
+                <span class="text-caption text-text-muted">{{ comment.created_at[:10] }}</span>
+            </div>
+            <div class="flex items-start justify-between gap-2">
+                <p class="text-body text-text-primary">{{ comment.body }}</p>
+                {% if current_user_id is not none and (current_user_id == comment.author_id or current_user_id == entry_owner_id) %}
+                <button
+                    type="button"
+                    aria-label="{{ strings.COMMENTS_DELETE }}"
+                    hx-post="/@{{ username }}/{{ slug }}/entries/{{ entry_id }}/comments/{{ comment.id }}/delete"
+                    hx-target="#comment-thread-{{ entry_id }}"
+                    hx-swap="outerHTML"
+                    class="min-h-tap min-w-tap flex shrink-0 items-center justify-center rounded text-text-muted transition hover:text-danger focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                >{{ icon('trash', size=14) }}<span class="sr-only">{{ strings.COMMENTS_DELETE }}</span></button>
+                {% endif %}
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+
+    {% if can_comment %}
+    <form
+        hx-post="/@{{ username }}/{{ slug }}/entries/{{ entry_id }}/comments"
+        hx-target="#comment-thread-{{ entry_id }}"
+        hx-swap="outerHTML"
+        class="flex flex-col gap-2"
+    >
+        <label for="comment-body-{{ entry_id }}" class="sr-only">{{ strings.COMMENTS_BODY_LABEL }}</label>
+        <textarea
+            id="comment-body-{{ entry_id }}"
+            name="body"
+            rows="2"
+            required
+            placeholder="{{ strings.COMMENTS_BODY_PLACEHOLDER }}"
+            class="w-full rounded-card border border-border bg-surface-1 p-2 text-body text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+        ></textarea>
+        <button
+            type="submit"
+            class="min-h-tap self-end rounded-button bg-brand px-4 text-body font-semibold text-on-brand transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+        >{{ strings.COMMENTS_SUBMIT }}</button>
+    </form>
+    {% elif not viewer_logged_in %}
+    <a
+        href="/"
+        class="text-caption text-text-muted underline-offset-2 hover:underline focus-visible:outline-offset-2"
+    >{{ strings.COMMENTS_LOGIN_TO_COMMENT }}</a>
+    {% endif %}
+</div>

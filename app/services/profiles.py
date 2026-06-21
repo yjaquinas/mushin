@@ -189,6 +189,34 @@ def can_view_activity_detail(
     ) in {"owner", "connected", "public"}
 
 
+def can_comment_on_entry(
+    conn: sqlite3.Connection,
+    *,
+    current_user_id: int | None,
+    profile_user: dict,
+    activity_id: int,
+) -> bool:
+    """Return ``True`` iff *current_user* may comment on an entry of *activity_id*.
+
+    Comment permission is **exactly** the existing entry-detail visibility plus
+    a login check — there is no separate comment-visibility tier. This helper
+    therefore does not reimplement any authorization logic: it delegates wholly
+    to ``can_view_activity_detail`` and only adds the "must be logged in"
+    requirement (an anonymous viewer may *read* a public profile's comments but
+    can never post one).
+
+    ``activity_id`` is accepted for signature symmetry with the route caller and
+    for forward-compatibility; the visibility decision itself is per-profile
+    (owner/fellow/public) and does not vary per activity. Fail-closed: any
+    ambiguity resolves to ``False``.
+    """
+    return current_user_id is not None and can_view_activity_detail(
+        conn,
+        current_user_id=current_user_id,
+        profile_user=profile_user,
+    )
+
+
 def canonical_profile_url(username: str) -> str:
     """Build the canonical public-profile URL for *username* (e.g. ``/@yuki``).
 
