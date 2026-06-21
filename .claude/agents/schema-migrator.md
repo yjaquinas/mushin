@@ -39,7 +39,7 @@ the one-person AQNAS studio. Favor simple and durable.
   `code`), not JSON. `level_rule` references `from_level_id`/`to_level_id`/
   `prereq_level_id` as real FKs. `config_json` holds only never-queried display
   metadata.
-- **Cache fields on `sub_tally`**: `cached_count`, `cached_streak`,
+- **Cache fields on `activity`**: `cached_count`, `cached_streak`,
   `last_entry_at` (domain-engineer maintains them in-transaction).
 - `user.auth_provider CHECK IN ('google','email','guest')`,
   `provider_id` NULL (guests), plus `last_active_at` for the guest-reaper.
@@ -47,9 +47,10 @@ the one-person AQNAS studio. Favor simple and durable.
   day/week-boundary calculations.
 - **`ON DELETE CASCADE` from `user`** so account/guest deletion is complete.
   `entry_tag` and `entry_value` use composite PKs.
-- Indexes from 0001: `entry(sub_tally_id, occurred_at DESC)`;
+- Indexes from 0001 (columns renamed `sub_tally_id` → `activity_id` in
+  migration 0009): `entry(activity_id, occurred_at DESC)`;
   partial indexes excluding archived rows (`… WHERE archived_at IS NULL`);
-  `match(entry_id)`; `level(sub_tally_id, track, ordinal)`; partial
+  `match(entry_id)`; `level(activity_id, track, ordinal)`; partial
   `user(last_active_at) WHERE auth_provider='guest'`.
 
 ## Working rules

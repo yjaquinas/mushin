@@ -34,7 +34,7 @@ working.
 - **Auth:** email auth, mocked Google callbacks, consent-required (signup +
   guest upgrade), guest-create-on-interaction, **upgrade preserves all data**,
   full-cascade deletion (account + guest).
-- **Cache consistency:** `sub_tally` cached count/streak equals `recompute()`.
+- **Cache consistency:** `activity` cached count/streak equals `recompute()`.
 - **Playwright flows:** signup/login, guest entry, quick-add log +
   fragment swap + tag persistence, the level-bar advancing on log; chip rendering
   at 360px / 1.5× font scale.

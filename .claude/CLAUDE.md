@@ -32,7 +32,7 @@ A `mobile-renderer` agent (HXML/Hyperview) will be added at Phase 5 (native pari
 
 ## Skills
 
-Project-scope skills live in `.claude/skills/`. Knowledge skills encoding project conventions: **data-model** and **copy-patterns** (created this meeting); **color-system**, **typography**, and **component-patterns** (stubs, filled as the UI lands). Command skills (`fix-issue`, `refactor`) are deferred until there's enough surface to warrant them.
+Project-scope skills live in `.claude/skills/`. Knowledge skills encoding project conventions: **data-model**, **copy-patterns**, and **color-system** (filled in, including the obsidian/cinnabar brand realignment); **typography** (still a stub) and **component-patterns** (partially filled), both completed as the rest of the UI lands. Command skills (`fix-issue`, `refactor`) are deferred until there's enough surface to warrant them.
 
 See `.claude/skills/README.md` for the full index.
 

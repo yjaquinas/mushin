@@ -1,8 +1,8 @@
 {#
   Import-my-data — quiet footer link opening a focus-trapped confirm dialog
   for uploading a previously-exported JSON file and replacing ALL of the
-  current account's data with its contents. Clones the
-  delete_data_dialog.html.jinja2 Alpine open/close + focus-trap pattern.
+  current account's data with its contents. Uses Alpine for open/close and
+  focus-trap (see web-templates.md for when Alpine is sanctioned).
 
   The form posts to /import (multipart/form-data) and targets this whole
   component (#import-data-dialog) so the route can re-render it in place

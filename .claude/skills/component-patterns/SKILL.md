@@ -120,24 +120,28 @@ Defined in `app/static/src/input.css`.
 - Defined once in `components/theme_toggle.html.jinja2`, included by
   `base.html.jinja2` on every page — no auth context required.
 
-## Delete-my-data dialog
+## Delete-my-data dialog (designed, not yet built)
 
-- A quiet text link in the footer, beside the Privacy Policy link
-  (`strings.FOOTER_DELETE_DATA`), opens a focus-trapped confirm dialog — the
-  app's one required data-deletion control.
-- Alpine-driven open/close, `@click.outside`, `@keydown.escape`, focus moves
-  to the cancel button on open — this is the **sanctioned Alpine exception**
-  (see `web-templates.md`).
-- Confirms via `hx-post="/auth/delete"`, `hx-swap="none"`, redirects to `/` on
-  success. States the consequence plainly per `copy-patterns` (factual,
+- **Not implemented.** `POST /auth/delete` exists in `app/auth/routes.py` and
+  fully cascades the account, but no template currently calls it — there is
+  no footer link, no confirm dialog, no entry point anywhere in the UI. The
+  string `strings.FOOTER_DELETE_DATA` ("Delete my data") is defined in
+  `ui_strings.py` but unused. The original confirm-dialog template
+  (`delete_data_dialog.html.jinja2`) was scaffolded once and later removed as
+  dead code without the route ever being wired to it.
+- Intended design, for whoever builds this next: a quiet text link in the
+  footer beside the Privacy Policy link, opening a focus-trapped confirm
+  dialog — Alpine-driven open/close, `@click.outside`, `@keydown.escape`,
+  focus to the cancel button on open (the **sanctioned Alpine exception**,
+  see `web-templates.md`, modeled on `import_data_dialog.html.jinja2`).
+  Confirms via `hx-post="/auth/delete"`, `hx-swap="none"`, redirects to `/`
+  on success. States the consequence plainly per `copy-patterns` (factual,
   user-initiated — no alarm framing).
-- Defined in `components/delete_data_dialog.html.jinja2`, included by
-  `base.html.jinja2` in the footer, on every page.
 
 ## Create-category / adopt card
 
 - "General log" is the default shape for a user-created category: one
-  `sub_tally` with `count_mode="running"` and `field_defs = {memo, tag_group}`.
+  `activity` with `count_mode="running"` and `field_defs = {memo, tag_group}`.
   No field-builder UI in v1.
 - Manual create (`/categories/new`): a short form — `name` (required) +
   `icon` picker (`categories.ICON_CHOICES`, default `circle-dot`). Submits to

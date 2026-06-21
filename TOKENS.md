@@ -15,6 +15,9 @@ change, only their values).
 
 Role families, defined once in `@theme`:
 
+- `brand` / `brand-subtle` / `on-brand` — the studio ink and the text/icon
+  color that sits on top of it. Unlike `obsidian`/`cinnabar` below, these
+  swap with theme like any other role token.
 - `surface-0/1/2` — background layers (canvas / card / inset).
 - `text-primary/secondary/muted` — text emphasis tiers.
 - `border` / `border-strong` — dividers and outlines.
@@ -45,13 +48,15 @@ never flip this default without an explicit decision recorded in a meeting.
 
 ## The two fixed-value exceptions
 
-`--color-obsidian` and `--color-cinnabar` (plus the older `--color-on-brand`
-pattern they follow) are declared **once**, only in `@theme`, and never
-overridden in either dark-mode block. They hold their literal hex value
-regardless of `data-theme` — for deliberate brand moments (a masthead band,
-a fixed brand glyph) where the color must stay constant rather than swap.
-Never use these as a substitute for the swapping `surface-*`/`accent` roles
-in ordinary UI; they're the exception, not the pattern.
+`--color-obsidian` and `--color-cinnabar` are declared **once**, only in
+`@theme`, and never overridden in either dark-mode block. They hold their
+literal hex value regardless of `data-theme` — for deliberate brand moments
+(a masthead band, a fixed brand glyph) where the color must stay constant
+rather than swap. Never use these as a substitute for the swapping
+`surface-*`/`accent` roles in ordinary UI; they're the exception, not the
+pattern. (`--color-on-brand` looks similar but is *not* one of these
+exceptions — it swaps between light and dark like any other role token; see
+`input.css`.)
 
 ## Why `accent-text` exists
 

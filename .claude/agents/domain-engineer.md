@@ -32,7 +32,7 @@ that any renderer can consume.
 - **Status is derived, not stored.** Compute current stage, time/progress-in-
   stage, and eligibility from the ordered `level` rows + the user's level entries
   + `level_rule`. Support all four gate types: `time`, `count`, `event`, `manual`.
-- **Batch per category** (`WHERE sub_tally_id IN (...)`) to avoid N+1 fan-out.
+- **Batch per category** (`WHERE activity_id IN (...)`) to avoid N+1 fan-out.
 - **Compute eligibility live — never cache a time-dependent bool** (a time-gate
   becomes eligible with no new entry). You may cache the *stage you're in*, not
   eligibility.
@@ -44,13 +44,14 @@ that any renderer can consume.
 
 ## Cache discipline
 
-- Maintain `cached_count` / `cached_streak` / `last_entry_at` on `sub_tally`
-  **inside the same transaction** as entry writes. Expose `recompute(sub_tally_id,
-  owner_id)` that rebuilds identical values from truth (drift guard).
+- Maintain `cached_count` / `cached_streak` / `last_entry_at` on `activity`
+  **inside the same transaction** as entry writes. Expose
+  `recompute(activity_id, owner_id, *, tz)` that rebuilds identical values
+  from truth (drift guard).
 
 ## Renderer seam
 
-- Expose a computed "which field is the hero" per sub-tally (level for
+- Expose a computed "which field is the hero" per activity (level for
   `progression`, count for `running`) so renderers don't infer hierarchy.
 
 ## Testing
