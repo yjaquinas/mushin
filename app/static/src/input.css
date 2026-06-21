@@ -5,7 +5,9 @@
  * One palette, renderer-agnostic: the same CSS custom-property names
  * map to Tailwind v4 utilities here and will map to HXML style
  * attributes when native parity lands (Phase 5). Never duplicate the
- * palette — read TOKENS.md for the naming contract.
+ * palette — see TOKENS.md at the repo root for the naming contract
+ * (role-token philosophy, light/dark swap convention, the two
+ * fixed-value exceptions).
  *
  * Token categories:
  *   --color-*        palette (see TOKENS.md §Palette)
@@ -14,6 +16,11 @@
  *   --font-weight-*  weight scale
  *   --radius-*       border-radius tokens
  *   --spacing-tap    minimum tap-target size (≥44 px, WCAG 2.5.5)
+ *
+ * Brand realignment (2026-06-19): the palette below is repainted to the
+ * aqnas-studio brand identity (obsidian / cinnabar / alabaster / slate).
+ * See the `color-system` skill for the full mapping rationale and the
+ * computed WCAG contrast ratios behind every choice here.
  */
 
 @import "tailwindcss";
@@ -22,45 +29,74 @@
   /* ── Palette ──────────────────────────────────────────────────────────── */
 
   /*
-   * Brand — a desaturated ink, not a punchy accent. Used for the app name,
-   * primary actions, and the hero numeral. Not pure black — slightly warm so
+   * Brand — the studio ink. Used for the app name, primary actions, and the
+   * hero numeral. Obsidian-based rather than pure black — slightly warm so
    * Korean glyphs render with weight on white.
    */
-  --color-brand:         #1a1a1a;
-  --color-brand-subtle:  #3d3d3d;
+  --color-brand:         #0F172A;
+  --color-brand-subtle:  #334155;
   --color-on-brand:      #ffffff;
+
+  /*
+   * Fixed, non-theme-swapping brand tokens. Unlike every other --color-*
+   * token below, these hold their literal hex value regardless of
+   * data-theme — for deliberate brand moments (masthead band, brand glyph)
+   * where the color must not flip with theme. Never a substitute for the
+   * swapping surface/accent roles in ordinary UI.
+   */
+  --color-obsidian:      #0F172A;
+  --color-cinnabar:      #E34234;
 
   /*
    * Surface — background layers. surface-0 is the canvas; surface-1 is the
    * card / sheet; surface-2 is an inset or pressed state.
+   * Light: alabaster family (surface-1 reads lightest at pure white,
+   * surface-2 reads darkest at alabaster-dim — see color-system skill for
+   * why a third tone was needed to keep that ordering distinct).
+   * Dark: obsidian / surface-dark family.
    */
-  --color-surface-0:     #f7f6f4;
-  --color-surface-1:     #ffffff;
-  --color-surface-2:     #eeece9;
+  --color-surface-0:     #F8FAFC;
+  --color-surface-1:     #FFFFFF;
+  --color-surface-2:     #F1F5F9;
 
   /*
    * Border — used for card outlines, dividers, chip outlines.
    */
-  --color-border:        #dedad5;
-  --color-border-strong: #b8b2aa;
+  --color-border:        #E2E8F0;
+  --color-border-strong: #7C8AA0;
 
   /*
    * Text roles — semantic aliases on top of the palette.
    * text-primary  : body copy and labels
    * text-secondary: demoted labels (sub-tally name on card, timestamps)
    * text-muted    : captions, placeholder copy, disabled states
+   *
+   * slate-mid (#64748B) carries text here, never raw slate (#94A3B8) in
+   * light mode — slate-on-alabaster-dim is ~2:1, far under the 4.5:1 text
+   * minimum. Reserve slate for borders/icons/disabled states only.
    */
-  --color-text-primary:   #1a1a1a;
-  --color-text-secondary: #5c5751;
-  --color-text-muted:     #9e9790;
+  --color-text-primary:   #0F172A;
+  --color-text-secondary: #475569;
+  --color-text-muted:     #64748B;
 
   /*
-   * Accent — a quiet ink-blue, used sparingly: selected chip outline,
-   * active progress bar fill, focused input border. Never used as a
-   * background fill that carries meaning alone.
+   * Accent — cinnabar, the studio's brand red. Used sparingly: selected
+   * chip outline/fill, active progress bar fill, focused input border,
+   * focus rings. Cinnabar's max possible contrast against any light
+   * surface is ~4.1:1 (it cannot reach 4.5:1 even on pure white) — so it
+   * is NEVER used as plain body-size text on a light surface. It clears
+   * the 3:1 non-text/large-text minimum, which is what borders, fills,
+   * icons, and focus rings require.
+   *
+   * --color-accent-text is a darkened cinnabar (same hue, same family —
+   * reads as "the accent") reserved for the rare case where accent-hued
+   * text is needed on a light surface (e.g. .chip--selected label) and
+   * must independently clear 4.5:1. Never use --color-accent itself for
+   * body-size text on a light surface.
    */
-  --color-accent:        #2e5b8a;
-  --color-accent-subtle: #e8eef5;
+  --color-accent:        #E34234;
+  --color-accent-subtle: #FBE7E4;
+  --color-accent-text:   #982015;
 
   /*
    * Level-up / success — a single, restrained green. Used only for the
@@ -72,30 +108,39 @@
 
   /*
    * Danger — account deletion, irreversible destructive actions only.
+   * Deliberately re-hued away from cinnabar's red family (hue ~5°) to a
+   * rust/burnt-orange (hue ~20°) so the two stay visually distinct without
+   * a side-by-side comparison, now that cinnabar owns "brand red" as the
+   * accent. Pairs with icon + label per the "never color alone" rule —
+   * that pairing is a template/component concern, this is just the color.
    */
-  --color-danger:        #b03a2e;
-  --color-danger-subtle: #fbeae8;
+  --color-danger:        #A6471C;
+  --color-danger-subtle: #FBEAE3;
 
   /*
    * Heatmap intensity ramp — used by the trailing-365-day contribution
    * heatmap. Five steps, monotonically increasing in both lightness and
-   * saturation toward --color-accent, so the ramp reads correctly even
-   * with hue removed (colorblind-safe). heat-0 is the explicit "no
-   * activity" cell and must stay visually distinct from heat-1 (a
-   * low-but-nonzero day) — it sits on surface-2, not white, so an empty
-   * cell never looks like a card background.
+   * saturation, colorblind-safe (lightness alone signals intensity). heat-0
+   * is the explicit "no activity" cell and must stay visually distinct from
+   * heat-1 (a low-but-nonzero day) — it sits on surface-2, not white, so an
+   * empty cell never looks like a card background.
+   *
+   * Decoupled from --color-accent (2026-06-19): accent is now cinnabar, a
+   * saturated red unsuited to a calm intensity ramp. The heat ramp keeps
+   * its own independent calm blue-toned hue family, anchored on surface-2,
+   * and terminates on a calm slate-blue — never on cinnabar.
    *
    * heat-0 : zero entries        (== --color-surface-2)
    * heat-1 : low activity
    * heat-2 : moderate activity
    * heat-3 : high activity
-   * heat-4 : busiest day(s)      (== --color-accent)
+   * heat-4 : busiest day(s)      (own calm hue, independent of accent)
    */
-  --color-heat-0: #eeece9; /* surface-2 — empty */
-  --color-heat-1: #d6e0ec;
-  --color-heat-2: #aec4dc;
-  --color-heat-3: #6f93b9;
-  --color-heat-4: #2e5b8a; /* accent — busiest */
+  --color-heat-0: #F1F5F9; /* surface-2 — empty */
+  --color-heat-1: #DCE7F2;
+  --color-heat-2: #B6CCE3;
+  --color-heat-3: #7FA3C9;
+  --color-heat-4: #3D6FA3; /* calm slate-blue — busiest, independent of accent */
 
   /* ── Type scale ───────────────────────────────────────────────────────── */
 
@@ -196,62 +241,64 @@
  */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --color-surface-0:     #1c1b1a;
-    --color-surface-1:     #262524;
-    --color-surface-2:     #322f2d;
+    --color-surface-0:     #0F172A;
+    --color-surface-1:     #1E293B;
+    --color-surface-2:     #2A3950;
 
-    --color-border:        #3d3a37;
-    --color-border-strong: #5c5751;
+    --color-border:        #334155;
+    --color-border-strong: #64748B;
 
-    --color-text-primary:   #f0eeec;
-    --color-text-secondary: #b8b2aa;
-    --color-text-muted:     #7d766f;
+    --color-text-primary:   #F8FAFC;
+    --color-text-secondary: #94A3B8;
+    --color-text-muted:     #7E8CA3;
 
-    --color-accent:        #7ba3cc;
-    --color-accent-subtle: #2a3a4d;
+    --color-accent:        #FF6B5B;
+    --color-accent-subtle: #3A2422;
+    --color-accent-text:   #FF6B5B; /* already clears 4.5:1 on dark surfaces */
 
     --color-level:         #5fae80;
     --color-level-subtle:  #1f3a2a;
 
-    --color-danger:        #e08a7d;
-    --color-danger-subtle: #3d2420;
+    --color-danger:        #E8855E;
+    --color-danger-subtle: #3D2A20;
 
-    --color-heat-0: #322f2d; /* surface-2 — empty */
-    --color-heat-1: #3a4350;
-    --color-heat-2: #4a5c70;
-    --color-heat-3: #5f7f9c;
-    --color-heat-4: #7ba3cc; /* accent — busiest */
+    --color-heat-0: #2A3950; /* surface-2 — empty */
+    --color-heat-1: #324568;
+    --color-heat-2: #3D5A87;
+    --color-heat-3: #4A75AC;
+    --color-heat-4: #5C92D6; /* calm slate-blue — busiest, independent of accent */
 
     --color-on-brand: #f0eeec;
   }
 }
 
 [data-theme="dark"] {
-  --color-surface-0:     #1c1b1a;
-  --color-surface-1:     #262524;
-  --color-surface-2:     #322f2d;
+  --color-surface-0:     #0F172A;
+  --color-surface-1:     #1E293B;
+  --color-surface-2:     #2A3950;
 
-  --color-border:        #3d3a37;
-  --color-border-strong: #5c5751;
+  --color-border:        #334155;
+  --color-border-strong: #64748B;
 
-  --color-text-primary:   #f0eeec;
-  --color-text-secondary: #b8b2aa;
-  --color-text-muted:     #7d766f;
+  --color-text-primary:   #F8FAFC;
+  --color-text-secondary: #94A3B8;
+  --color-text-muted:     #7E8CA3;
 
-  --color-accent:        #7ba3cc;
-  --color-accent-subtle: #2a3a4d;
+  --color-accent:        #FF6B5B;
+  --color-accent-subtle: #3A2422;
+  --color-accent-text:   #FF6B5B; /* already clears 4.5:1 on dark surfaces */
 
   --color-level:         #5fae80;
   --color-level-subtle:  #1f3a2a;
 
-  --color-danger:        #e08a7d;
-  --color-danger-subtle: #3d2420;
+  --color-danger:        #E8855E;
+  --color-danger-subtle: #3D2A20;
 
-  --color-heat-0: #322f2d; /* surface-2 — empty */
-  --color-heat-1: #3a4350;
-  --color-heat-2: #4a5c70;
-  --color-heat-3: #5f7f9c;
-  --color-heat-4: #7ba3cc; /* accent — busiest */
+  --color-heat-0: #2A3950; /* surface-2 — empty */
+  --color-heat-1: #324568;
+  --color-heat-2: #3D5A87;
+  --color-heat-3: #4A75AC;
+  --color-heat-4: #5C92D6; /* calm slate-blue — busiest, independent of accent */
 
   --color-on-brand: #f0eeec;
 }
@@ -331,7 +378,10 @@
     border-radius:   var(--radius-chip-selected);  /* shape change: pill */
     border-color:    var(--color-accent);
     background:      var(--color-accent-subtle);
-    color:           var(--color-accent);
+    /* accent-text, not accent: plain cinnabar tops out ~4.1:1 on a light
+     * surface and can't clear the 4.5:1 text minimum. accent-text is the
+     * same hue family, darkened to clear it. */
+    color:           var(--color-accent-text);
     font-weight:     var(--font-weight-semibold);  /* weight change */
   }
 

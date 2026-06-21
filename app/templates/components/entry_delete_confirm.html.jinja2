@@ -21,7 +21,7 @@
                 hx-post="/activities/{{ activity_id }}/entries/{{ entry.id }}/delete"
                 hx-target="closest .entry-row"
                 hx-swap="outerHTML"
-                class="min-h-tap rounded-button bg-red-600 px-4 text-body font-semibold text-white transition hover:bg-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                class="min-h-tap rounded-button bg-danger px-4 text-body font-semibold text-white transition hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
             >
                 {{ strings.ENTRY_DELETE_CONFIRM }}
             </button>

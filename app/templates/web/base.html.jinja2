@@ -11,30 +11,32 @@
     <script defer src="/static/js/auth-form.js"></script>
 </head>
 <body class="bg-surface-0 text-text-primary text-body min-h-screen">
-    <div class="mx-auto flex max-w-screen-sm items-baseline justify-between gap-2 px-4 pt-4">
-        <a
-            href="{{ home_url }}"
-            class="flex items-baseline gap-2 focus-visible:outline-offset-2"
-        >
-            <span class="text-title font-semibold text-brand">{{ strings.APP_NAME }}</span>
-            <span class="text-caption text-text-muted">{{ strings.APP_NAME_HANJA }}</span>
-        </a>
-        <div class="flex items-center gap-1">
-            {% block search_link %}
-            {% if home_url != "/" %}
+    <div class="bg-obsidian">
+        <div class="mx-auto flex max-w-screen-sm items-baseline justify-between gap-2 px-4 py-3">
             <a
-                href="/search"
-                aria-label="{{ strings.SEARCH_NAV_LABEL }}"
-                class="flex min-h-tap min-w-tap items-center justify-center rounded-button text-text-secondary transition hover:bg-surface-2 focus-visible:outline-offset-2"
+                href="{{ home_url }}"
+                class="flex items-baseline gap-2 focus-visible:outline-offset-2"
             >
-                {% from "components/_icon.html.jinja2" import icon %}
-                {{ icon("search", size=22) }}
+                <span class="text-title font-semibold text-on-brand">{{ strings.APP_NAME }}</span>
+                <span class="text-caption text-on-brand opacity-70">{{ strings.APP_NAME_HANJA }}</span>
             </a>
-            {% endif %}
-            {% endblock %}
-            {% block theme_toggle %}
-            {% include "components/theme_toggle.html.jinja2" with context %}
-            {% endblock %}
+            <div class="flex items-center gap-1 text-on-brand [&_a]:text-on-brand [&_a:hover]:bg-brand-subtle [&_button]:text-on-brand [&_button:hover]:bg-brand-subtle">
+                {% block search_link %}
+                {% if home_url != "/" %}
+                <a
+                    href="/search"
+                    aria-label="{{ strings.SEARCH_NAV_LABEL }}"
+                    class="flex min-h-tap min-w-tap items-center justify-center rounded-button transition hover:bg-brand-subtle focus-visible:outline-offset-2"
+                >
+                    {% from "components/_icon.html.jinja2" import icon %}
+                    {{ icon("search", size=22) }}
+                </a>
+                {% endif %}
+                {% endblock %}
+                {% block theme_toggle %}
+                {% include "components/theme_toggle.html.jinja2" with context %}
+                {% endblock %}
+            </div>
         </div>
     </div>
     <main class="mx-auto flex max-w-screen-sm flex-col gap-4 p-4">
