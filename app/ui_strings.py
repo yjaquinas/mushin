@@ -66,7 +66,7 @@ ENTRY_ERROR_GENERIC = "Something went wrong. Please try again."
 # Home (character sheet)
 # ---------------------------------------------------------------------------
 
-HOME_TITLE = "Your record"
+HOME_TITLE = "Your activities"
 HOME_EMPTY = "Nothing started yet."
 
 # ---------------------------------------------------------------------------
@@ -76,15 +76,15 @@ HOME_EMPTY = "Nothing started yet."
 HOME_EXAMPLES_HINT = "Try one of these, or make your own."
 HOME_EXAMPLE_ADD = "Add"
 HOME_START_FROM_SCRATCH = "or start from scratch"
-HOME_ADD_CATEGORY = "Add a category"
+HOME_ADD_ACTIVITY = "Add an activity"
 
-CATEGORY_NEW_TITLE = "New category"
-CATEGORY_FORM_NAME_LABEL = "Name"
-CATEGORY_FORM_NAME_PLACEHOLDER = "e.g. Workout"
-CATEGORY_FORM_ICON_LABEL = "Icon"
-CATEGORY_FORM_SUBMIT = "Create"
-CATEGORY_FORM_CANCEL = "Cancel"
-CATEGORY_FORM_NAME_REQUIRED = "Category name is required"
+ACTIVITY_NEW_TITLE = "New activity"
+ACTIVITY_FORM_NAME_LABEL = "Name"
+ACTIVITY_FORM_NAME_PLACEHOLDER = "e.g. Workout"
+ACTIVITY_FORM_ICON_LABEL = "Icon"
+ACTIVITY_FORM_SUBMIT = "Create"
+ACTIVITY_FORM_CANCEL = "Cancel"
+ACTIVITY_FORM_NAME_REQUIRED = "Activity name is required"
 
 # Hero numeral suffixes / labels
 HOME_LEVEL_PREFIX = ""  # the level label itself is the hero text
@@ -114,18 +114,8 @@ LOG_MEMO_PLACEHOLDER = "Optional description"
 LOG_COUNT_LABEL_SUFFIX = ""  # field_def.label is used directly
 LOG_SCALE_LABEL_SUFFIX = ""
 
-LOG_TAG_ADD_NEW = "+ Add tag"
-LOG_TAG_ADD_PLACEHOLDER = "New tag name"
-LOG_TAG_ADD_CONFIRM = "Add"
-LOG_TAG_ADD_CANCEL = "Cancel"
-LOG_TAG_PLACEHOLDER = "#waza #randori"
-
 LOG_NOTES_LABEL = "Notes"
 LOG_NOTES_PLACEHOLDER = "How'd it go? Add #tags anywhere."
-
-LOG_TAG_EDIT = "Edit tags"
-LOG_TAG_DONE = "Done"
-LOG_TAG_REMOVE = "Remove"  # aria-label for the × button
 
 LOG_SUCCESS_NOTICE = "Logged."
 
@@ -158,13 +148,13 @@ RENAME_LABEL = "Rename activity"
 RENAME_SAVE = "Save"
 RENAME_CANCEL = "Cancel"
 
-# Category delete (two-step confirm from rename form)
-CATEGORY_DELETE = "Delete activity"
-CATEGORY_DELETE_CONFIRM_BODY = (
+# Activity delete (two-step confirm from rename form)
+ACTIVITY_DELETE = "Delete activity"
+ACTIVITY_DELETE_CONFIRM_BODY = (
     "Delete this activity and everything in it — entries and notes. This can't be undone."
 )
-CATEGORY_DELETE_CONFIRM = "Delete activity"
-CATEGORY_DELETE_CANCEL = "Keep"
+ACTIVITY_DELETE_CONFIRM = "Delete activity"
+ACTIVITY_DELETE_CANCEL = "Keep"
 
 # ---------------------------------------------------------------------------
 # Competition stats (tournament sub-tallies with a match_list field)
@@ -320,13 +310,13 @@ FOOTER_DELETE_DATA = "Delete my data"
 
 # Delete-my-data confirm dialog (footer)
 DELETE_DATA_TITLE = "Delete all of your data?"
-DELETE_DATA_BODY = "This deletes every record kept under this device — categories, sub-tallies, entries, and memos. This can't be undone."
+DELETE_DATA_BODY = "This deletes every record kept under this device — activities, sub-tallies, entries, and memos. This can't be undone."
 DELETE_DATA_CONFIRM = "Delete my record"
 DELETE_DATA_CANCEL = "Go back"
 
 # Import-data confirm dialog (footer)
 IMPORT_DATA_TITLE = "Replace all data with this file?"
-IMPORT_DATA_BODY = "This replaces everything currently stored under this account — categories, sub-tallies, entries, and memos — with the contents of the uploaded file. This can't be undone."
+IMPORT_DATA_BODY = "This replaces everything currently stored under this account — activities, sub-tallies, entries, and memos — with the contents of the uploaded file. This can't be undone."
 IMPORT_DATA_FILE_LABEL = "Export file (.json)"
 IMPORT_DATA_CONFIRM = "Replace my data"
 IMPORT_DATA_CANCEL = "Go back"
@@ -406,7 +396,24 @@ ACCOUNT_VISIBILITY_SAVE = "Save"
 # exposure plainly: a fellow connection lifts the private gate in *both*
 # directions.
 SHARING_CONSENT_TITLE = "Connecting as fellows"
-SHARING_CONSENT_BODY = (
+
+# Send-side: shown before a request is sent — nothing has happened yet, so
+# this must not claim exposure has already occurred. States the request
+# itself is inert, then restates the real consequence of the other person
+# accepting later.
+SHARING_CONSENT_BODY_SEND = (
+    "Sending a request doesn't share anything yet — it just lets the other"
+    " person decide. If they accept, you'll each see the other's full"
+    " record — every activity, entry, and note — even the parts you keep"
+    " private. Free-text notes can hold anything you've written there,"
+    " including things you'd consider sensitive. You can remove the"
+    " connection anytime, which takes away that access in both directions"
+    " right away. You can also block someone instead, quietly."
+)
+
+# Accept-side: shown right before accepting, which is the actual moment the
+# exposure happens — the plain consequence statement applies as-is.
+SHARING_CONSENT_BODY_ACCEPT = (
     "Once you're fellows, you'll each see the other's full record — every"
     " activity, entry, and note — even the parts you keep private. Free-text"
     " notes can hold anything you've written there, including things you'd"
@@ -418,6 +425,7 @@ SHARING_CONSENT_PRIVACY_PREFIX = "See our"
 SHARING_CONSENT_PRIVACY_LINK_TEXT = "Privacy Policy"
 SHARING_CONSENT_PRIVACY_SUFFIX = "for the details."
 SHARING_CONSENT_CONFIRM = "Connect as fellows"
+SHARING_CONSENT_CONFIRM_ACCEPT = "Accept and connect"
 SHARING_CONSENT_CANCEL = "Not now"
 
 # ---------------------------------------------------------------------------

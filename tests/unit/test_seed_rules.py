@@ -69,14 +69,17 @@ def seeded(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
 
 
 def _grading_activity_id(conn: sqlite3.Connection, owner_id: int) -> int:
+    """Return the merged Kendo activity id — Task 3 collapsed the old
+    standalone Grading sub-tally into this single activity, which still
+    carries the level field_def and the full dan/shōgō ladder."""
     row = conn.execute(
         """SELECT st.id
              FROM activity st
              JOIN category c ON c.id = st.category_id
-            WHERE c.owner_id = ? AND c.name = 'Kendo' AND st.name = 'Grading'""",
+            WHERE c.owner_id = ? AND c.name = 'Kendo' AND st.name = 'Kendo'""",
         (owner_id,),
     ).fetchone()
-    assert row is not None, "Grading sub-tally not found"
+    assert row is not None, "Kendo activity not found"
     return row["id"]
 
 
@@ -163,7 +166,7 @@ def test_total_level_rule_count(seeded):
 
 
 def test_kendo_grading_has_13_rules(seeded):
-    """9 dan + 4 shōgō rules on the Grading sub-tally."""
+    """9 dan + 4 shōgō rules on the merged Kendo activity."""
     db_path, owner_id = seeded
     conn = _raw(db_path)
     sid = _grading_activity_id(conn, owner_id)

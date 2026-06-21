@@ -3,13 +3,13 @@
   (categories.ICON_CHOICES, default circle-dot). Shared by the full-page
   category_new.html.jinja2 and the HTMX sheet fragment category_sheet.html.jinja2.
 
-  Submits to POST /categories. On success the route returns the new
+  Submits to POST /activities. On success the route returns the new
   activity_card fragment for an HTMX swap into #cards, or a 303 to /home for
   the no-JS path.
 
   Context: icon_choices (categories.ICON_CHOICES), default_icon.
   Optional: hx_post/hx_target/hx_swap (embedded-sheet context — when unset,
-  renders a plain form posting to /categories for the standalone page).
+  renders a plain form posting to /activities for the standalone page).
   Optional: name_error (shown near the name field when present).
 #}
 {% from "components/_icon.html.jinja2" import icon %}
@@ -20,20 +20,20 @@
     hx-swap="{{ hx_swap }}"
     {% else %}
     method="post"
-    action="/categories"
+    action="/activities"
     {% endif %}
     class="flex flex-col gap-4"
 >
     <div class="flex flex-col gap-1">
         <label for="category-name" class="text-caption font-medium text-text-secondary">
-            {{ strings.CATEGORY_FORM_NAME_LABEL }}
+            {{ strings.ACTIVITY_FORM_NAME_LABEL }}
         </label>
         <input
             type="text"
             id="category-name"
             name="name"
             required
-            placeholder="{{ strings.CATEGORY_FORM_NAME_PLACEHOLDER }}"
+            placeholder="{{ strings.ACTIVITY_FORM_NAME_PLACEHOLDER }}"
             class="min-h-tap rounded-input border border-border bg-surface-1 px-3 py-2 text-body text-text-primary focus-visible:outline-2"
         >
         {% if name_error %}
@@ -43,7 +43,7 @@
 
     <fieldset class="flex flex-col gap-2" x-data="{ selectedIcon: '{{ default_icon }}' }">
         <legend class="text-caption font-medium text-text-secondary">
-            {{ strings.CATEGORY_FORM_ICON_LABEL }}
+            {{ strings.ACTIVITY_FORM_ICON_LABEL }}
         </legend>
         <div class="flex flex-wrap gap-2">
             {% for choice in icon_choices %}
@@ -72,6 +72,6 @@
         {% if hx_post is defined %}hx-disabled-elt="this"{% endif %}
         class="min-h-tap w-full rounded-button bg-brand px-4 py-3 text-title font-semibold text-surface-1 transition focus-visible:outline-offset-2 disabled:opacity-60"
     >
-        {{ strings.CATEGORY_FORM_SUBMIT }}
+        {{ strings.ACTIVITY_FORM_SUBMIT }}
     </button>
 </form>

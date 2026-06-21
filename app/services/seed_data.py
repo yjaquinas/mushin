@@ -4,16 +4,19 @@ Each template is a plain Python data structure that ``seeding.py`` iterates to
 insert rows — no per-activity code in the seeding loop. The shapes mirror the
 DB schema exactly:
 
-  category
-    └── activity (count_mode)
+  category (internal 1:1 wrapper, same name as its activity)
+    └── activity
           ├── field_def  (kind, label, sort_order)
           └── levels[]   (track, ordinal, code, label)
 
 Level-rule specs live in ``LEVEL_RULES`` at the bottom of this module, keyed by
-category name + sub-tally name. ``seeding.seed_level_rules`` resolves the
+``(category_name, activity_name)``. ``seeding.seed_level_rules`` resolves the
 ``from_code``/``to_code``/``prereq_code`` fields to live row ids at seed time.
 
-v1 templates: Kendo + Reading.
+v1 templates: Kendo + Reading. Each template is a single activity carrying a
+combined recipe — Kendo mixes a running practice log, a match-list, and the dan
++ shōgō level ladder on one entry stream. Hero/progression status is derived
+from the presence of a ``level``-kind ``field_def``, never from ``count_mode``.
 Deferred: cooking, knitting, travel.
 """
 
@@ -107,36 +110,30 @@ KENDO: CategorySpec = {
     "color": None,
     "sort_order": 0,
     "sub_tallies": [
+        # One activity, one entry stream. The old three-activity split
+        # (Practice / Tournament / Grading) collapses into a single recipe that
+        # mixes a running tag/count/memo log, a match-list, and the dan + shōgō
+        # level ladder. Hero/progression status is derived from the presence of
+        # the `level`-kind field_def below — `count_mode` is back-compat only.
+        # The activity shares its name with the category ("Kendo") so the card
+        # breadcrumb (category_name != name) stays suppressed.
         {
-            "name": "Practice",
-            "count_mode": "running",
+            "name": "Kendo",
+            # Derived value for back-compat columns only; nothing reads it to
+            # decide hero/progression (the `level` field_def does that).
+            "count_mode": "progression",
             "sort_order": 0,
             "field_defs": [
+                # Running practice log (from the old "Practice" activity).
                 {"kind": "tag_group", "label": "Technique", "sort_order": 0},
                 {"kind": "tag_group", "label": "Location", "sort_order": 1},
                 {"kind": "count", "label": "Reps", "sort_order": 2},
                 {"kind": "memo", "label": "Memo", "sort_order": 3},
-            ],
-            "levels": [],
-        },
-        {
-            "name": "Tournament",
-            "count_mode": "running",
-            "sort_order": 1,
-            "field_defs": [
-                {"kind": "match_list", "label": "Match List", "sort_order": 0},
-                {"kind": "memo", "label": "Memo", "sort_order": 1},
-            ],
-            "levels": [],
-        },
-        {
-            "name": "Grading",
-            "count_mode": "progression",
-            "sort_order": 2,
-            "field_defs": [
-                {"kind": "level", "label": "Rank", "sort_order": 0},
-                {"kind": "result", "label": "Result", "sort_order": 1},
-                {"kind": "memo", "label": "Memo", "sort_order": 2},
+                # Tournament results (from the old "Tournament" activity).
+                {"kind": "match_list", "label": "Match List", "sort_order": 4},
+                # Dan + shōgō grading ladder (from the old "Grading" activity).
+                {"kind": "level", "label": "Rank", "sort_order": 5},
+                {"kind": "result", "label": "Result", "sort_order": 6},
             ],
             "levels": _KENDO_GRADING_LEVELS,
         },
@@ -241,9 +238,10 @@ V1_TEMPLATES: list[CategorySpec] = [KENDO, READING]
 
 LEVEL_RULES: dict[tuple[str, str], list[LevelRuleSpec]] = {
     # -------------------------------------------------------------------------
-    # Kendo / Grading — dan ladder (time gates) + shōgō prestige track
+    # Kendo — dan ladder (time gates) + shōgō prestige track, on the single
+    # merged Kendo activity (activity_name == category_name == "Kendo").
     # -------------------------------------------------------------------------
-    ("Kendo", "Grading"): [
+    ("Kendo", "Kendo"): [
         # Dan ladder — gate_type='time', gate_value=years at previous grade
         # min_age is on the TARGET level
         {

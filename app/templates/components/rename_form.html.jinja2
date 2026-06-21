@@ -41,7 +41,7 @@
             >{{ strings.RENAME_CANCEL }}</button>
         </div>
         {% if error %}
-        <p class="text-caption text-red-600" role="alert">{{ error }}</p>
+        <p class="text-caption text-danger" role="alert">{{ error }}</p>
         {% endif %}
         <p class="text-caption text-text-muted">{{ strings.RENAME_SLUG_NOTICE }}</p>
     </form>
@@ -51,7 +51,7 @@
             hx-get="/activities/{{ activity_id }}/delete-confirm"
             hx-target="#rename-heading"
             hx-swap="outerHTML"
-            class="min-h-tap text-body text-red-600 transition hover:text-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-        >{{ strings.CATEGORY_DELETE }}</button>
+            class="min-h-tap text-body text-danger transition hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+        >{{ strings.ACTIVITY_DELETE }}</button>
     </div>
 </div>

@@ -28,10 +28,12 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app import ui_strings as strings_module
+from app.auth import users as users_module
 from app.main import app
 from app.models import db
 from app.models.migrate import run_migrations
-from app.services import categories, competition, seeding, stats
+from app.services import categories, competition, entries, seeding, stats
+from app.services import comments as comments_service
 
 # Default timezone used by tests that don't exercise timezone-specific
 # behavior directly.
@@ -60,11 +62,31 @@ async def client(web_db: Path) -> AsyncClient:
         yield ac
 
 
+@pytest.fixture
+async def client2(web_db: Path) -> AsyncClient:
+    """A second, independent client sharing the same DB (a different user)."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="https://test") as ac:
+        yield ac
+
+
 async def _guest_login(client: AsyncClient) -> int:
     """Mint a guest session and return its owner_id (user id)."""
     resp = await client.post("/auth/guest")
     assert resp.status_code == 200
     return int(resp.json()["user_id"])
+
+
+def _clear_seeded_data(owner_id: int) -> None:
+    """Remove an account's starter templates to exercise the empty-home state.
+
+    Fresh accounts are now seeded with the Kendo + Reading starter templates on
+    creation. A handful of tests assert the *empty* home UI, so they delete the
+    seeded categories (children cascade) to recreate a from-scratch account.
+    """
+    with db.connect() as conn:
+        conn.execute("BEGIN")
+        conn.execute("DELETE FROM category WHERE owner_id = ?", (owner_id,))
 
 
 # ---------------------------------------------------------------------------
@@ -234,7 +256,8 @@ async def test_home_renders_in_place_for_guest(client: AsyncClient) -> None:
 async def test_empty_home_shows_example_cards_and_start_from_scratch(
     client: AsyncClient,
 ) -> None:
-    await _guest_login(client)
+    owner_id = await _guest_login(client)
+    _clear_seeded_data(owner_id)
 
     resp = await client.get("/home")
     assert resp.status_code == 200
@@ -243,19 +266,19 @@ async def test_empty_home_shows_example_cards_and_start_from_scratch(
     assert strings_module.HOME_EMPTY in text
     for example in categories.EXAMPLE_CATEGORIES:
         assert example["name"] in text
-    assert 'href="/categories/new"' in text
+    assert 'href="/activities/new"' in text
     assert strings_module.HOME_START_FROM_SCRATCH in text
 
 
 async def test_new_category_form_renders(client: AsyncClient) -> None:
     await _guest_login(client)
 
-    resp = await client.get("/categories/new")
+    resp = await client.get("/activities/new")
     assert resp.status_code == 200
     text = resp.text
 
-    assert strings_module.CATEGORY_NEW_TITLE in text
-    assert strings_module.CATEGORY_FORM_NAME_LABEL in text
+    assert strings_module.ACTIVITY_NEW_TITLE in text
+    assert strings_module.ACTIVITY_FORM_NAME_LABEL in text
     for choice in categories.ICON_CHOICES:
         assert f'value="{choice}"' in text
 
@@ -263,7 +286,7 @@ async def test_new_category_form_renders(client: AsyncClient) -> None:
 async def test_new_category_form_hx_returns_sheet_fragment(client: AsyncClient) -> None:
     await _guest_login(client)
 
-    resp = await client.get("/categories/new", headers={"HX-Request": "true"})
+    resp = await client.get("/activities/new", headers={"HX-Request": "true"})
     assert resp.status_code == 200
     text = resp.text
 
@@ -274,7 +297,7 @@ async def test_new_category_form_hx_returns_sheet_fragment(client: AsyncClient) 
 
     # The category form is present: name input + icon picker.
     assert "<form" in text
-    assert strings_module.CATEGORY_FORM_NAME_LABEL in text
+    assert strings_module.ACTIVITY_FORM_NAME_LABEL in text
     assert 'id="category-name"' in text
     assert 'name="name"' in text
     for choice in categories.ICON_CHOICES:
@@ -282,7 +305,7 @@ async def test_new_category_form_hx_returns_sheet_fragment(client: AsyncClient) 
 
 
 async def test_new_category_form_redirects_when_logged_out(client: AsyncClient) -> None:
-    resp = await client.get("/categories/new", follow_redirects=False)
+    resp = await client.get("/activities/new", follow_redirects=False)
     assert resp.status_code == 303
     assert resp.headers["location"] == "/"
 
@@ -291,7 +314,7 @@ async def test_create_category_manual_returns_card_fragment(client: AsyncClient)
     owner_id = await _guest_login(client)
 
     resp = await client.post(
-        "/categories",
+        "/activities",
         data={"name": "Guitar", "icon": "music"},
         headers={"HX-Request": "true"},
     )
@@ -317,7 +340,7 @@ async def test_create_category_example_adopt(client: AsyncClient) -> None:
 
     example = categories.EXAMPLE_CATEGORIES[0]
     resp = await client.post(
-        "/categories",
+        "/activities",
         data={"name": example["name"], "icon": example["icon"]},
         headers={"HX-Request": "true"},
     )
@@ -342,7 +365,7 @@ async def test_create_category_via_sheet_hx_returns_activity_card_fragment(
     owner_id = await _guest_login(client)
 
     resp = await client.post(
-        "/categories",
+        "/activities",
         data={"name": "Calligraphy", "icon": "pen"},
         headers={"HX-Request": "true"},
     )
@@ -367,7 +390,7 @@ async def test_create_category_no_js_redirects_to_home(client: AsyncClient) -> N
     owner_id = await _guest_login(client)
 
     resp = await client.post(
-        "/categories",
+        "/activities",
         data={"name": "Plain Category"},
         follow_redirects=False,
     )
@@ -393,7 +416,7 @@ async def test_create_category_no_js_empty_name_rerenders_form_with_error(
     await _guest_login(client)
 
     resp = await client.post(
-        "/categories",
+        "/activities",
         data={"name": "   "},
         follow_redirects=False,
     )
@@ -401,8 +424,8 @@ async def test_create_category_no_js_empty_name_rerenders_form_with_error(
     text = resp.text
 
     # Re-renders the standalone category_new page (not a bare/bodiless 400).
-    assert strings_module.CATEGORY_NEW_TITLE in text
-    assert strings_module.CATEGORY_FORM_NAME_REQUIRED in text
+    assert strings_module.ACTIVITY_NEW_TITLE in text
+    assert strings_module.ACTIVITY_FORM_NAME_REQUIRED in text
     assert 'id="category-name"' in text
 
 
@@ -410,7 +433,7 @@ async def test_create_category_invalid_icon_falls_back_to_default(client: AsyncC
     owner_id = await _guest_login(client)
 
     resp = await client.post(
-        "/categories",
+        "/activities",
         data={"name": "Mystery", "icon": "not-a-real-icon"},
         headers={"HX-Request": "true"},
     )
@@ -427,7 +450,7 @@ async def test_create_category_invalid_icon_falls_back_to_default(client: AsyncC
 
 async def test_create_category_redirects_when_logged_out(client: AsyncClient) -> None:
     resp = await client.post(
-        "/categories",
+        "/activities",
         data={"name": "Nope"},
         follow_redirects=False,
     )
@@ -445,18 +468,19 @@ async def test_home_with_categories_shows_add_category_row_last_in_cards(
     assert resp.status_code == 200
     text = resp.text
 
-    assert strings_module.HOME_ADD_CATEGORY in text
+    assert strings_module.HOME_ADD_ACTIVITY in text
 
     cards_start = text.index('id="cards"')
     sheet_start = text.index('id="sheet"')
-    add_category_idx = text.index(strings_module.HOME_ADD_CATEGORY)
+    add_category_idx = text.index(strings_module.HOME_ADD_ACTIVITY)
     # The "Add a category" row sits inside #cards, after the existing cards
     # and before the #cards div closes (i.e. before the #sheet mount point).
     assert cards_start < add_category_idx < sheet_start
 
 
 async def test_empty_home_does_not_show_add_category_row(client: AsyncClient) -> None:
-    await _guest_login(client)
+    owner_id = await _guest_login(client)
+    _clear_seeded_data(owner_id)
 
     resp = await client.get("/home")
     assert resp.status_code == 200
@@ -471,7 +495,7 @@ async def test_empty_home_does_not_show_add_category_row(client: AsyncClient) ->
         assert example["name"] in text
     assert strings_module.HOME_START_FROM_SCRATCH in text
 
-    assert strings_module.HOME_ADD_CATEGORY not in text
+    assert strings_module.HOME_ADD_ACTIVITY not in text
 
 
 async def test_activity_card_falls_back_to_circle_dot_when_icon_null(
@@ -576,7 +600,7 @@ async def test_log_returns_fragment_and_increments_count(client: AsyncClient) ->
         activity_id = conn.execute(
             """SELECT st.id FROM activity st
                  JOIN category c ON c.id = st.category_id
-                WHERE st.owner_id = ? AND c.name = 'Kendo' AND st.name = 'Practice'""",
+                WHERE st.owner_id = ? AND c.name = 'Kendo' AND st.name = 'Kendo'""",
             (owner_id,),
         ).fetchone()["id"]
 
@@ -726,15 +750,12 @@ async def test_log_with_backfilled_past_date_sets_local_day(client: AsyncClient)
 
 
 def _tournament_ids(owner_id: int) -> tuple[int, int]:
-    """(activity_id, match_list field_def_id) for the seeded Kendo/Tournament tournament."""
+    """(activity_id, match_list field_def_id) for the seeded Kendo activity's
+    match-list field — Task 3 merged the old standalone Tournament activity
+    into the single Kendo activity, which still carries a match_list field_def."""
+    activity_id = _practice_activity_id(owner_id)
     with db.connect() as conn:
         conn.execute("BEGIN")
-        activity_id = conn.execute(
-            """SELECT st.id FROM activity st
-                 JOIN category c ON c.id = st.category_id
-                WHERE st.owner_id = ? AND c.name = 'Kendo' AND st.name = 'Tournament'""",
-            (owner_id,),
-        ).fetchone()["id"]
         field_def_id = conn.execute(
             "SELECT id FROM field_def WHERE activity_id = ? AND kind = 'match_list'",
             (activity_id,),
@@ -760,17 +781,12 @@ async def test_log_sheet_renders_match_sub_form_for_tournament(client: AsyncClie
 async def test_log_sheet_does_not_render_match_sub_form_for_non_tournament(
     client: AsyncClient,
 ) -> None:
+    # The merged Kendo activity always carries a match_list field_def now
+    # (Task 3), so the no-match-form fixture is the Reading activity, which
+    # has no match_list field_def at all.
     owner_id = await _guest_login(client)
     seeding.seed_account(owner_id)
-
-    with db.connect() as conn:
-        conn.execute("BEGIN")
-        activity_id = conn.execute(
-            """SELECT st.id FROM activity st
-                 JOIN category c ON c.id = st.category_id
-                WHERE st.owner_id = ? AND c.name = 'Kendo' AND st.name = 'Practice'""",
-            (owner_id,),
-        ).fetchone()["id"]
+    activity_id = _reading_activity_id(owner_id)
 
     resp = await client.get(
         f"/activities/{activity_id}/log",
@@ -908,7 +924,7 @@ def _technique_field_id(owner_id: int) -> tuple[int, int]:
         activity_id = conn.execute(
             """SELECT st.id FROM activity st
                  JOIN category c ON c.id = st.category_id
-                WHERE st.owner_id = ? AND c.name = 'Kendo' AND st.name = 'Practice'""",
+                WHERE st.owner_id = ? AND c.name = 'Kendo' AND st.name = 'Kendo'""",
             (owner_id,),
         ).fetchone()["id"]
         field_def_id = conn.execute(
@@ -1153,17 +1169,12 @@ async def test_detail_unknown_activity_returns_404(client: AsyncClient) -> None:
 
 
 async def test_non_tournament_detail_has_no_competition_stats(client: AsyncClient) -> None:
+    # The merged Kendo activity always carries a match_list field_def now
+    # (Task 3), so the no-competition-stats fixture is the Reading activity,
+    # which has no match_list field_def at all.
     owner_id = await _guest_login(client)
     seeding.seed_account(owner_id)
-
-    with db.connect() as conn:
-        conn.execute("BEGIN")
-        activity_id = conn.execute(
-            """SELECT st.id FROM activity st
-                 JOIN category c ON c.id = st.category_id
-                WHERE st.owner_id = ? AND c.name = 'Kendo' AND st.name = 'Practice'""",
-            (owner_id,),
-        ).fetchone()["id"]
+    activity_id = _reading_activity_id(owner_id)
 
     resp = await client.get(f"/activities/{activity_id}")
     assert resp.status_code == 200
@@ -1220,27 +1231,23 @@ async def test_tournament_detail_win_rate_none_with_no_bouts(client: AsyncClient
 
 
 def _practice_activity_id(owner_id: int) -> int:
-    """The seeded Kendo/Practice (running, non-progression) sub-tally id."""
+    """The seeded Kendo activity id (one activity, running log + match-list +
+    level ladder all on one entry stream — Task 3 collapsed the old
+    Practice/Tournament/Grading three-activity split into this single row)."""
     with db.connect() as conn:
         conn.execute("BEGIN")
         return conn.execute(
             """SELECT st.id FROM activity st
                  JOIN category c ON c.id = st.category_id
-                WHERE st.owner_id = ? AND c.name = 'Kendo' AND st.name = 'Practice'""",
+                WHERE st.owner_id = ? AND c.name = 'Kendo' AND st.name = 'Kendo'""",
             (owner_id,),
         ).fetchone()["id"]
 
 
 def _grading_activity_id(owner_id: int) -> int:
-    """The seeded Kendo/Grading (progression: dan + shogo tracks) sub-tally id."""
-    with db.connect() as conn:
-        conn.execute("BEGIN")
-        return conn.execute(
-            """SELECT st.id FROM activity st
-                 JOIN category c ON c.id = st.category_id
-                WHERE st.owner_id = ? AND c.name = 'Kendo' AND st.name = 'Grading'""",
-            (owner_id,),
-        ).fetchone()["id"]
+    """The seeded Kendo activity id (progression: dan + shogo tracks live on
+    the same merged activity as the running practice log)."""
+    return _practice_activity_id(owner_id)
 
 
 def _reading_activity_id(owner_id: int) -> int:
@@ -1936,13 +1943,13 @@ async def _create_named_account(client: AsyncClient, username: str = "renamer") 
 
 
 def _practice_activity_id_for(owner_id: int) -> int:
-    """Return the seeded Kendo/Practice sub-tally id for *owner_id*."""
+    """Return the seeded Kendo activity id for *owner_id*."""
     with db.connect() as conn:
         conn.execute("BEGIN")
         return conn.execute(
             """SELECT st.id FROM activity st
                  JOIN category c ON c.id = st.category_id
-                WHERE st.owner_id = ? AND c.name = 'Kendo' AND st.name = 'Practice'""",
+                WHERE st.owner_id = ? AND c.name = 'Kendo' AND st.name = 'Kendo'""",
             (owner_id,),
         ).fetchone()["id"]
 
@@ -1966,7 +1973,7 @@ async def test_rename_form_returns_fragment_with_current_name_prefilled(
     # The form posts to the rename endpoint.
     assert f'hx-post="/activities/{activity_id}/rename"' in text
     # Current name pre-fills the input.
-    assert 'value="Practice"' in text
+    assert 'value="Kendo"' in text
     # The slug-change notice is present.
     assert strings_module.RENAME_SLUG_NOTICE in text
     # Save and Cancel buttons.
@@ -2081,7 +2088,7 @@ async def test_rename_cancel_returns_plain_heading_fragment(client: AsyncClient)
     # Plain heading fragment — no form.
     assert "<!DOCTYPE html>" not in text
     assert "<form" not in text
-    assert "Practice" in text
+    assert "Kendo" in text
     assert 'id="rename-heading"' in text
     # The pencil button to re-open the form is present.
     assert f'hx-get="/activities/{activity_id}/rename-form"' in text
@@ -2246,13 +2253,69 @@ async def test_category_delete_confirm_returns_fragment(client: AsyncClient) -> 
     # Fragment, not a full page.
     assert "<!DOCTYPE html>" not in text
     # Confirm body text is present.
-    assert strings_module.CATEGORY_DELETE_CONFIRM_BODY in text
+    assert strings_module.ACTIVITY_DELETE_CONFIRM_BODY in text
     # Confirm button posts to the delete endpoint.
     assert f'hx-post="/activities/{activity_id}/delete"' in text
     # Cancel button restores the heading via the existing cancel-rename route.
     assert f'hx-get="/activities/{activity_id}/rename-form-cancel"' in text
     # The outer swap target is present.
     assert 'id="rename-heading"' in text
+
+
+async def test_category_delete_confirm_uses_danger_token_not_stock_red(
+    client: AsyncClient,
+) -> None:
+    """The destructive confirm button must use the `--color-danger` design
+    token (`bg-danger`/`text-danger`), not Tailwind's stock `red-*` palette.
+
+    `bg-red-600` (#dc2626, hue ~0deg) sits within ~5deg of hue of
+    `--color-accent` cinnabar (#E34234, hue ~4.8deg) -- the exact
+    danger-vs-accent red ambiguity the 2026-06-19 brand realignment
+    deliberately re-hued `--color-danger` (hue ~18.7deg) to avoid. This
+    confirm fragment renders inline on the activity-detail page, directly
+    above the cinnabar-accented progress bar / focus rings, so a stock red
+    button here reads as the same "warning red" as the brand accent.
+    """
+    owner_id = await _guest_login(client)
+    seeding.seed_account(owner_id)
+    activity_id = _practice_activity_id(owner_id)
+
+    resp = await client.get(
+        f"/activities/{activity_id}/delete-confirm",
+        headers={"HX-Request": "true"},
+    )
+    assert resp.status_code == 200
+    text = resp.text
+
+    assert "bg-red-" not in text, (
+        "category_delete_confirm fragment uses a stock Tailwind red-* "
+        "utility instead of the --color-danger token (bg-danger/text-danger)"
+    )
+    assert "text-red-" not in text
+
+
+async def test_entry_delete_confirm_uses_danger_token_not_stock_red(
+    client: AsyncClient,
+) -> None:
+    """Same invariant as the category delete-confirm: the per-entry delete
+    confirm button must use `--color-danger`, not stock Tailwind red."""
+    owner_id = await _guest_login(client)
+    seeding.seed_account(owner_id)
+    activity_id = _practice_activity_id(owner_id)
+    entry_id = _create_entry_for(owner_id, activity_id)
+
+    resp = await client.get(
+        f"/activities/{activity_id}/entries/{entry_id}/delete-confirm",
+        headers={"HX-Request": "true"},
+    )
+    assert resp.status_code == 200
+    text = resp.text
+
+    assert "bg-red-" not in text, (
+        "entry_delete_confirm fragment uses a stock Tailwind red-* utility "
+        "instead of the --color-danger token (bg-danger/text-danger)"
+    )
+    assert "text-red-" not in text
 
 
 async def test_category_delete_confirm_non_owner_returns_404(client: AsyncClient) -> None:
@@ -2341,7 +2404,7 @@ async def test_rename_form_shows_delete_activity_button(client: AsyncClient) -> 
     assert resp.status_code == 200
     text = resp.text
 
-    assert strings_module.CATEGORY_DELETE in text
+    assert strings_module.ACTIVITY_DELETE in text
     assert f'hx-get="/activities/{activity_id}/delete-confirm"' in text
 
 

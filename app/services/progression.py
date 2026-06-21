@@ -129,6 +129,52 @@ def _parse_ts(occurred_at: str) -> datetime:
 
 
 # ---------------------------------------------------------------------------
+# Hero-detection: "is this a progression activity?" — derived from field_defs
+# ---------------------------------------------------------------------------
+#
+# An activity is a progression tracker iff it carries at least one ``level``-kind
+# ``field_def`` — never a stored ``count_mode``. This is the single source of
+# truth for hero/progression detection; every call site routes through here (or
+# its batched sibling) rather than inspecting ``count_mode`` inline.
+
+
+def _activities_with_level_field(
+    conn: sqlite3.Connection, owner_id: int, activity_ids: list[int]
+) -> set[int]:
+    """Subset of *activity_ids* (owner-scoped) that hold a ``level``-kind field_def.
+
+    One query joining ``field_def -> activity`` so ownership is enforced on the
+    activity side (``field_def`` keys on ``activity_id`` only). Batched —
+    ``WHERE a.id IN (...)`` — so a many-card render is a single round-trip.
+    """
+    if not activity_ids:
+        return set()
+    placeholders = ",".join("?" for _ in activity_ids)
+    rows = conn.execute(
+        f"""SELECT DISTINCT a.id AS activity_id
+              FROM field_def fd
+              JOIN activity a ON a.id = fd.activity_id
+             WHERE a.owner_id = ?
+               AND a.id IN ({placeholders})
+               AND fd.kind = 'level'""",  # noqa: S608 - placeholders are '?'
+        (owner_id, *activity_ids),
+    ).fetchall()
+    return {r["activity_id"] for r in rows}
+
+
+def is_progression(activity_id: int, owner_id: int) -> bool:
+    """Whether *activity_id* (owner-scoped) is a progression tracker.
+
+    True iff the activity has at least one ``level``-kind ``field_def``. This is
+    the derived hero-detection predicate — callers must use this, never read
+    ``count_mode``.
+    """
+    with db.connect() as conn:
+        conn.execute("BEGIN")
+        return int(activity_id) in _activities_with_level_field(conn, owner_id, [int(activity_id)])
+
+
+# ---------------------------------------------------------------------------
 # Loading the three sources of truth (owner-scoped; batched)
 # ---------------------------------------------------------------------------
 
@@ -515,6 +561,14 @@ def _evaluate_track(
 ) -> dict[str, Any]:
     """Build the status block for a single track."""
     current = _current_by_track_from(track_levels, attained)
+    if current is None and track_levels and not rules_by_to.get(track_levels[0]["id"]):
+        # Nothing attained yet, and the lowest-ordinal level has no rule
+        # gating entry into it -- it's the natural starting rung (everyone
+        # begins here for free), not an unattained target. Treat it as the
+        # synthetic current level so the real next-target (the first
+        # rule-gated level above it) drives eligibility/progress, instead of
+        # asking the user to "attain" a level nothing gates.
+        current = track_levels[0]
     next_level = _next_level_in_track(track_levels, current)
 
     block: dict[str, Any] = {
@@ -695,16 +749,18 @@ def _build_status(
 
 
 def hero_field(activity_id: int, owner_id: int) -> dict[str, Any]:
-    """Which field is the headline for a sub-tally, so renderers don't infer it.
+    """Which field is the headline for an activity, so renderers don't infer it.
 
-    * ``count_mode == 'progression'`` → the **current level** is the hero
-      (``hero: "level"``), with the current level per track and its label.
-    * ``count_mode == 'running'`` → the **count** is the hero
-      (``hero: "count"``), with the cached lifetime count.
+    The choice is **derived from the recipe, not a stored mode**:
 
-    Returns a plain dict; raises ``SubTallyNotFoundError`` (from ``entries``) is
-    *not* used here — instead a missing sub-tally yields ``None`` fields so a
-    renderer degrades gracefully. The decision lives here, never in a template.
+    * the activity has a ``level``-kind ``field_def`` → the **current level** is
+      the hero (``hero: "level"``), with the current level per track.
+    * otherwise → the **count** is the hero (``hero: "count"``), with the cached
+      lifetime count.
+
+    ``count_mode`` is *not* consulted (it survives only as a back-compat column).
+    A missing activity yields ``hero: None`` so a renderer degrades gracefully.
+    The decision lives here, never in a template.
     """
     with db.connect() as conn:
         conn.execute("BEGIN")
@@ -714,13 +770,15 @@ def hero_field(activity_id: int, owner_id: int) -> dict[str, Any]:
             owner_id,
             where="id = ?",
             params=(activity_id,),
-            columns="id, count_mode, cached_count",
+            columns="id, cached_count",
+        )
+        if row is None:
+            return {"activity_id": int(activity_id), "hero": None}
+        progression_activity = row["id"] in _activities_with_level_field(
+            conn, owner_id, [row["id"]]
         )
 
-    if row is None:
-        return {"activity_id": int(activity_id), "hero": None}
-
-    if row["count_mode"] == "progression":
+    if progression_activity:
         st = status(activity_id, owner_id)
         current_levels = [
             t["current_level"] for t in st["tracks"] if t.get("current_level") is not None
@@ -728,13 +786,13 @@ def hero_field(activity_id: int, owner_id: int) -> dict[str, Any]:
         return {
             "activity_id": row["id"],
             "hero": "level",
-            "count_mode": "progression",
+            "is_progression": True,
             "current_levels": current_levels,
         }
 
     return {
         "activity_id": row["id"],
         "hero": "count",
-        "count_mode": "running",
+        "is_progression": False,
         "count": row["cached_count"],
     }

@@ -88,7 +88,9 @@ def test_two_categories_seeded(seeded_db):
     assert "Reading" in names
 
 
-def test_kendo_has_three_sub_tallies(seeded_db):
+def test_kendo_has_one_activity(seeded_db):
+    """Task 3 collapsed the old three-activity (Practice/Tournament/Grading)
+    Kendo shape into one activity carrying the combined recipe."""
     db_path, owner_id = seeded_db
     conn = _raw(db_path)
     cat = conn.execute(
@@ -103,10 +105,7 @@ def test_kendo_has_three_sub_tallies(seeded_db):
     ).fetchall()
     conn.close()
     names = [r["name"] for r in rows]
-    assert len(names) == 3, f"Expected 3 kendo sub-tallies, got {names}"
-    assert "Practice" in names
-    assert "Tournament" in names
-    assert "Grading" in names
+    assert names == ["Kendo"], f"Expected exactly one Kendo activity, got {names}"
 
 
 def test_reading_has_one_activity(seeded_db):
@@ -142,30 +141,24 @@ def _field_kinds_for(conn, owner_id: int, activity_name: str, category_name: str
     return [r["kind"] for r in row]
 
 
-def test_practice_field_defs(seeded_db):
+def test_kendo_field_defs(seeded_db):
+    """The single merged Kendo activity carries all 7 field_defs in order:
+    tag_group(Technique), tag_group(Location), count(Reps), memo, match_list,
+    level(Rank), result — combining the old Practice/Tournament/Grading recipes
+    onto one entry stream (Task 3)."""
     db_path, owner_id = seeded_db
     conn = _raw(db_path)
-    kinds = _field_kinds_for(conn, owner_id, "Practice", "Kendo")
+    kinds = _field_kinds_for(conn, owner_id, "Kendo", "Kendo")
     conn.close()
-    assert kinds == ["tag_group", "tag_group", "count", "memo"], (
-        f"Practice field_defs wrong: {kinds}"
-    )
-
-
-def test_tournament_field_defs(seeded_db):
-    db_path, owner_id = seeded_db
-    conn = _raw(db_path)
-    kinds = _field_kinds_for(conn, owner_id, "Tournament", "Kendo")
-    conn.close()
-    assert kinds == ["match_list", "memo"], f"Tournament field_defs wrong: {kinds}"
-
-
-def test_grading_field_defs(seeded_db):
-    db_path, owner_id = seeded_db
-    conn = _raw(db_path)
-    kinds = _field_kinds_for(conn, owner_id, "Grading", "Kendo")
-    conn.close()
-    assert kinds == ["level", "result", "memo"], f"Grading field_defs wrong: {kinds}"
+    assert kinds == [
+        "tag_group",
+        "tag_group",
+        "count",
+        "memo",
+        "match_list",
+        "level",
+        "result",
+    ], f"Kendo field_defs wrong: {kinds}"
 
 
 def test_reading_field_defs(seeded_db):
@@ -185,7 +178,7 @@ def test_kendo_dan_track_has_ten_levels(seeded_db):
     grading_st = conn.execute(
         """SELECT st.id FROM activity st
              JOIN category c ON c.id = st.category_id
-            WHERE c.owner_id = ? AND c.name = 'Kendo' AND st.name = 'Grading'""",
+            WHERE c.owner_id = ? AND c.name = 'Kendo' AND st.name = 'Kendo'""",
         (owner_id,),
     ).fetchone()
     assert grading_st is not None
@@ -209,7 +202,7 @@ def test_kendo_shogo_track_has_three_levels(seeded_db):
     grading_st = conn.execute(
         """SELECT st.id FROM activity st
              JOIN category c ON c.id = st.category_id
-            WHERE c.owner_id = ? AND c.name = 'Kendo' AND st.name = 'Grading'""",
+            WHERE c.owner_id = ? AND c.name = 'Kendo' AND st.name = 'Kendo'""",
         (owner_id,),
     ).fetchone()
     assert grading_st is not None

@@ -33,10 +33,7 @@
     {# Card body (no link wrapper, no log button — read-only) #}
     <article class="flex flex-col gap-3 rounded-card border border-border bg-surface-1 p-4">
         <header class="flex flex-col">
-            <span class="flex items-center gap-1 text-caption text-text-muted">
-                <span class="text-text-secondary">{{ icon(card.icon, size=20) }}</span>
-                {{ card.category_name }}
-            </span>
+            <span class="text-caption text-text-muted">{{ card.category_name }}</span>
             <h1 class="text-title font-medium text-text-secondary">{{ card.name }}</h1>
         </header>
 

@@ -26,20 +26,17 @@
         {% if card.show_breadcrumb %}
         <p class="text-caption text-text-muted">{{ card.category_name }}</p>
         {% endif %}
-        <div class="flex items-center gap-2">
-            <span class="shrink-0 text-text-secondary">{{ icon(card.icon, size=20) }}</span>
-            <div id="rename-heading">
-                <div class="flex items-center gap-2">
-                    <h1 class="text-title font-semibold text-text-primary">{{ card.name }}</h1>
-                    <button
-                        type="button"
-                        aria-label="{{ strings.RENAME_LABEL }}"
-                        hx-get="/activities/{{ card.id }}/rename-form"
-                        hx-target="#rename-heading"
-                        hx-swap="outerHTML"
-                        class="min-h-tap min-w-tap flex items-center justify-center rounded text-text-muted transition hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-                    >{{ icon('pencil', size=16) }}</button>
-                </div>
+        <div id="rename-heading">
+            <div class="flex items-center gap-2">
+                <h1 class="text-title font-semibold text-text-primary">{{ card.name }}</h1>
+                <button
+                    type="button"
+                    aria-label="{{ strings.RENAME_LABEL }}"
+                    hx-get="/activities/{{ card.id }}/rename-form"
+                    hx-target="#rename-heading"
+                    hx-swap="outerHTML"
+                    class="min-h-tap min-w-tap flex items-center justify-center rounded text-text-muted transition hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                >{{ icon('pencil', size=16) }}</button>
             </div>
         </div>
     </header>

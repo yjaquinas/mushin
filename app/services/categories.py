@@ -86,8 +86,8 @@ def _normalize_icon(icon: str | None) -> str:
     return DEFAULT_ICON
 
 
-def create_category(owner_id: int, *, name: str, icon: str | None = None) -> dict:
-    """Create a general-log category for *owner_id*.
+def create_activity(owner_id: int, *, name: str, icon: str | None = None) -> dict:
+    """Create a general-log activity for *owner_id*.
 
     In one transaction, inserts:
       * one ``category`` row (``owner_id``, ``name``, normalized ``icon``),

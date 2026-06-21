@@ -74,13 +74,11 @@ async def _logout(client: AsyncClient) -> None:
 
 
 def _owner_activity_id(owner_id: int) -> int:
-    """Return the Kendo/Practice activity id seeded under *owner_id*."""
+    """Return the seeded Kendo activity id for *owner_id*."""
     with db.connect() as conn:
         conn.execute("BEGIN")
         return conn.execute(
-            """SELECT st.id FROM activity st
-                 JOIN category c ON c.id = st.category_id
-                WHERE st.owner_id = ? AND c.name = 'Kendo' AND st.name = 'Practice'""",
+            "SELECT id FROM activity WHERE owner_id = ? AND name = 'Kendo'",
             (owner_id,),
         ).fetchone()["id"]
 

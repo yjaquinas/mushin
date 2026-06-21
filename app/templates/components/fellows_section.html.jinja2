@@ -1,8 +1,13 @@
 {#
-  Fellows section — a restrained block BELOW the activity cards, on both the
-  owner dashboard (home.html.jinja2) and the read-only profile
-  (public_profile.html.jinja2). Swappable as a whole fragment after any
-  connection action (see app.routes.web._render_fellows_section).
+  Fellows section — a restrained block ABOVE the activity cards (between the
+  H1 and #cards), on both the owner dashboard (home.html.jinja2) and the
+  read-only profile (public_profile.html.jinja2). Swappable as a whole
+  fragment after any connection action (see app.routes.web._render_fellows_section).
+
+  Renders nothing at all (no heading, no divider) when there's nothing to
+  show: owner view hides when `fellow_count == 0 and pending_count == 0`;
+  non-owner view hides when `fellow_count == 0` (pending_count is always 0
+  for a non-owner, so the same combined check is safe at both call sites).
 
   Names-vs-count rule: `fellows.show_fellow_names` is True only for the
   profile owner or a viewer who is themselves a mutual fellow of this
@@ -10,42 +15,63 @@
   here). Every other viewer sees only `fellows.fellow_count`, never a
   clickable name (so a private fellow can't be outed by association).
 
+  Initials rule: each chip shows 1-2 initials derived from `display_name` if
+  present (first letter of up to the first two words), otherwise the first
+  1-2 letters of `username`.
+
   Context: `fellows` (see app.routes.web._build_fellows_context) — keys
   `fellow_count`, `fellows` (list, only populated when show_fellow_names),
   `show_fellow_names`, `is_owner`, `incoming_requests`, `outgoing_requests`,
   `pending_count`. Optional `error` (str|None) — a calm inline message from
   a just-attempted action.
 #}
-<section id="fellows-section" class="flex flex-col gap-3 border-t border-border pt-4">
+{# The #fellows-section id must always exist, even when there's nothing to
+   show — it's the hx-swap target for connection actions
+   (app.routes.web._render_fellows_section); if the id disappeared along
+   with the content, the next swap after the last fellow/request leaves
+   would have nothing to land in. #}
+<div id="fellows-section">
+{% if fellows.fellow_count > 0 or fellows.pending_count > 0 or error %}
+<section class="flex flex-col gap-3 border-t border-border pt-4">
+    {% if fellows.fellow_count > 0 or fellows.pending_count > 0 %}
     <header class="flex flex-wrap items-center gap-2">
         <h2 class="text-title font-medium text-text-primary">{{ strings.FELLOWS_HEADING }}</h2>
-        {% if fellows.is_owner and fellows.pending_count > 0 %}
-        <span
-            class="inline-flex min-h-5 items-center rounded-full border border-border-strong px-2 text-caption font-medium text-text-secondary"
-            aria-label="{{ strings.REQUESTS_PENDING_BADGE.format(count=fellows.pending_count) }}"
-        >{{ strings.REQUESTS_PENDING_BADGE.format(count=fellows.pending_count) }}</span>
-        {% endif %}
     </header>
+    {% endif %}
 
     {% if error %}
     <p class="text-caption text-danger" role="alert">{{ error }}</p>
     {% endif %}
 
-    {% if fellows.show_fellow_names %}
+    {% if fellows.fellow_count == 0 and fellows.pending_count == 0 %}
+    {# Nothing left to show besides the error above (e.g. the last pending
+       request was just resolved) — skip the names/count/requests blocks
+       below, which all assume at least one of the counts is nonzero. #}
+    {% elif fellows.show_fellow_names %}
         {% if not fellows.fellows %}
         <p class="text-caption text-text-secondary">{{ strings.FELLOWS_EMPTY }}</p>
         {% else %}
-        <ul class="flex flex-col gap-1">
+        <ul class="flex gap-2 overflow-x-auto pb-1">
             {% for fellow in fellows.fellows %}
-            <li>
+            {% set fellow_label = fellow.display_name or fellow.username %}
+            {% set name_words = fellow.display_name.split() if fellow.display_name else [] %}
+            {% if name_words | length >= 2 %}
+                {% set initials = name_words[0][0] + name_words[1][0] %}
+            {% elif name_words %}
+                {% set initials = name_words[0][:2] %}
+            {% else %}
+                {% set initials = fellow.username[:2] %}
+            {% endif %}
+            <li class="shrink-0">
                 <a
                     href="/@{{ fellow.username }}"
-                    class="flex min-h-tap flex-wrap items-center gap-x-2 gap-y-0.5 rounded-card px-2 py-2 text-body text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                    class="flex min-h-tap w-16 flex-col items-center gap-1 rounded-card px-1 py-2 text-center transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
                 >
-                    <span class="font-medium">@{{ fellow.username }}</span>
-                    {% if fellow.display_name %}
-                    <span class="text-caption text-text-secondary">{{ fellow.display_name }}</span>
-                    {% endif %}
+                    <span
+                        class="flex h-10 w-10 min-h-tap min-w-tap items-center justify-center rounded-full border border-border-strong bg-surface-2 text-body font-semibold text-text-primary"
+                        aria-hidden="true"
+                    >{{ initials | upper }}</span>
+                    <span class="w-full truncate text-caption text-text-secondary">{{ fellow_label }}</span>
                 </a>
             </li>
             {% endfor %}
@@ -65,3 +91,5 @@
         {% include "components/requests_cluster.html.jinja2" with context %}
     {% endif %}
 </section>
+{% endif %}
+</div>

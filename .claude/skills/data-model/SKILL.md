@@ -1,44 +1,58 @@
 ---
 name: data-model
-description: Mushin's canonical data model — the category → sub-tally → entry hierarchy, the field_def/entry_value recipe pattern, count modes (running/progression), the four progression gate types, the derived-not-stored progression rule, levels-as-rows, the cache fields on sub_tally, and the mandatory owner_id/index conventions. Use whenever writing or reviewing migrations, services that read/write entries, stats, progression math, or template seeding.
+description: Mushin's canonical data model — the activity → entry model (category is an internal, invisible 1:1 wrapper, never a separate user-facing level), the field_def/entry_value recipe pattern, hero/progression status derived from field_defs (not a stored count_mode), the four progression gate types, the derived-not-stored progression rule, levels-as-rows, the cache fields on activity, and the mandatory owner_id/index conventions. Use whenever writing or reviewing migrations, services that read/write entries, stats, progression math, or template seeding.
 ---
 
 # Mushin data model
 
 The reference for how Mushin stores and queries data. Mushin is a personal
-progress tracker: **category (activity) → sub-tally → entry**. SQLite, raw SQL,
-WAL, `foreign_keys=ON`. Every owned row carries `owner_id`.
+progress tracker: **activity → entry** (`category` is an internal,
+automatically-created 1:1 wrapper behind every activity — never a separate
+user-facing level, never a second creation step). SQLite, raw SQL, WAL,
+`foreign_keys=ON`. Every owned row carries `owner_id`.
 
-## The three levels
+## The two levels
 
-- **category** — an activity domain, user-created (e.g. "Workout",
-  "Reading"). Carries `icon TEXT` (nullable, Lucide icon name from
-  `categories.ICON_CHOICES`; `NULL` falls back to `circle-dot`).
-- **sub_tally** — carries a recipe (its field set), a `count_mode`, and its own
-  cached count/streak/progression. A category has one or more; single-sub-tally
-  categories hide the layer in the UI. `sub_tally.slug TEXT` (unique per
-  `owner_id` where `archived_at IS NULL`, migration 0006) is the canonical URL
-  key for all **active** sub-tallies. `/@{username}/{slug}` is now the single
-  URL for an activity — the owner sees the editable dashboard view there; any
-  other visitor sees the public read-only view (or the private stub, per
-  `user.visibility`). `/activities/{id}` is retained only as the stable address
-  for **archived** sub-tallies (whose slugs are not guaranteed unique once
-  archived) and as the target for HTMX edit-mode fragment sub-routes (log,
-  calendar, history, tags, match-rows) which are internal endpoints, not
-  navigable URLs. When the owner renames an activity (`sub_tally.name`), the slug
-  is **re-derived from the new name** via `unique_slug(conn, owner_id, new_name)`
-  and updated atomically in the same transaction. The old slug becomes invalid
-  (404) — there is no redirect table. Users are warned before confirming the
-  rename. If URL stability is ever required, add a `sub_tally_slug_history` table;
-  don't add it speculatively.
-- **entry** — belongs to a sub-tally, has an editable `occurred_at` (defaults
-  now, backfillable), and holds the values its recipe defines.
+- **activity** — the thing a user tracks (e.g. "Workout", "Reading", "Kendo").
+  Carries a recipe (its `field_def` set), and its own cached count/streak.
+  `activity.slug TEXT` (unique per `owner_id` where `archived_at IS NULL`,
+  migration 0006) is the canonical URL key for all **active** activities.
+  `/@{username}/{slug}` is the single URL for an activity — the owner sees
+  the editable dashboard view there; any other visitor sees the public
+  read-only view (or the private stub, per `user.visibility`). `/activities/{id}`
+  is retained only as the stable address for **archived** activities (whose
+  slugs are not guaranteed unique once archived) and as the target for HTMX
+  edit-mode fragment sub-routes (log, calendar, history, tags, match-rows)
+  which are internal endpoints, not navigable URLs. When the owner renames an
+  activity, the slug is **re-derived from the new name** via
+  `unique_slug(conn, owner_id, new_name)` and updated atomically in the same
+  transaction. The old slug becomes invalid (404) — there is no redirect
+  table. Users are warned before confirming the rename. If URL stability is
+  ever required, add an `activity_slug_history` table; don't add it
+  speculatively.
+- **entry** — belongs to an activity, has an editable `occurred_at` (defaults
+  now, backfillable), and holds the values its recipe defines. An activity's
+  entry stream can mix entry shapes freely — a free-form tag/count/memo log,
+  a match-list result, and a level-up event can all be entries on the *same*
+  activity, because the recipe lives on `field_def`, not on the entry.
+- **category** — an internal row, 1:1 with an activity, created automatically
+  in the same transaction as the activity it belongs to
+  (`create_activity()` inserts both, sharing the same `name`). It is never
+  exposed as a separate creation step, never listed on its own, and never a
+  concept a user names independently of the activity. It exists at the
+  schema level so existing FK shape (`activity.category_id`) doesn't need to
+  change; nothing should ever branch on "does this category have more than
+  one activity" as steady-state behavior. Carries `icon TEXT` (nullable,
+  Lucide icon name from `categories.ICON_CHOICES`; `NULL` falls back to
+  `circle-dot`).
 
 ## The recipe: field_def + entry_value (EAV)
 
-- `field_def` rows on a sub_tally declare the recipe. `kind ∈ {tag_group, scale,
-  count, memo, match_list, level, result}`. Form-rendering and stats iterate
-  field defs — **no per-activity code**.
+- `field_def` rows on an activity declare the recipe. `kind ∈ {tag_group,
+  scale, count, memo, match_list, level, result}`. Form-rendering and stats
+  iterate field defs — **no per-activity code**. An activity can have any
+  combination of kinds; a `level`-kind field_def is what makes an activity a
+  progression tracker (see below) — it is not a separate mode.
 - `entry_value(entry_id, field_def_id)` (composite PK) holds scalar values:
   `num_value REAL` / `text_value TEXT`, with `CHECK(num_value IS NOT NULL OR
   text_value IS NOT NULL)`. Scalars only.
@@ -46,23 +60,33 @@ WAL, `foreign_keys=ON`. Every owned row carries `owner_id`.
   tag_id)` (composite PK) records selections.
 - **`match` is its own table** (opponent, score, result win/loss/draw) — a
   structured multi-column fact, never scattered into entry_value. Keep `owner_id`
-  on it too.
+  on it too. A `match_list` field_def can live on the same activity as a
+  running tag/count log and a progression ladder — they all share one entry
+  stream.
 
-## Count modes
+## Hero/progression status: derived from field_defs, not a stored mode
 
-- **running** — monotonic count, reported per week/month/year/lifetime. The
-  default.
-- **progression** — a count plus a level track (see below).
+- **An activity's hero stat is derived, not configured.** If the activity has
+  a `level`-kind `field_def`, the hero is the current level + progress (see
+  Progression below). Otherwise, the hero is the running count — a monotonic
+  count of entries, reported per week/month/year/lifetime.
+- This supersedes any older `count_mode` running/progression split as the
+  *source of truth*. A `count_mode`-shaped column may still exist for
+  historical/migration reasons, but no code should treat it as authoritative
+  — the presence of a `level`-kind field_def is the one fact that matters.
+  `progression.py`'s eligibility/current-stage logic already keys off
+  `field_def.kind == 'level'`, not a stored mode — keep it that way.
 
-## General-log categories (default for user-created)
+## General-log activities (default for user-created)
 
-A user-created category is, by default, a single `sub_tally` with
-`count_mode="running"` and exactly two `field_def` rows: `memo` and
-`tag_group`. No progression, no `level`/`level_rule` rows. This is the
-"general log" shape — `app/services/categories.create_category()` is the one
-write path for it. The kendo/reading seed templates (richer recipes with
-progression) remain in the codebase as a future opt-in template gallery, not
-auto-seeded on signup.
+A user-created activity is, by default, `count_mode`-equivalent to "running"
+and has exactly two `field_def` rows: `memo` and `tag_group`. No progression,
+no `level`/`level_rule` rows. This is the "general log" shape —
+`app/services/categories.create_activity()` is the one write path for it (it
+inserts the `category` wrapper and the `activity` row, sharing the same
+`name`, in one transaction). The kendo/reading seed templates (richer
+recipes with progression) remain in the codebase as a future opt-in template
+gallery, not auto-seeded on signup.
 
 ## Progression: levels-as-rows, status derived
 
@@ -71,18 +95,22 @@ auto-seeded on signup.
   prestige track (shōgō 연사/교사/범사).
 - **`level_rule`** gates transitions: `from_level_id`, `to_level_id`,
   `gate_type ∈ {time, count, event, manual}`, `gate_value`, `min_age`,
-  `prereq_level_id` (cross-track prerequisite, real FK).
+  `prereq_level_id` (cross-track prerequisite, real FK). `level`/`level_rule`
+  key on `activity_id` only — there is exactly one level ladder per activity,
+  so no `field_def_id` dimension is needed (an activity has at most one
+  `level`-kind field_def).
 - **Status is derived, not stored.** Current stage, time/progress-in-stage, and
   eligibility come from the ordered levels + the user's level entries +
-  level_rule. **Batch per category** to avoid N+1. **Never cache eligibility** —
-  a time-gate flips with no new entry. You may cache the *stage you're in*.
-- `config_json` (on sub_tally / field_def) holds **only never-queried display
+  level_rule. **Batch per owner** (all of an owner's activities in one pass,
+  for the home screen render) to avoid N+1. **Never cache eligibility** — a
+  time-gate flips with no new entry. You may cache the *stage you're in*.
+- `config_json` (on activity / field_def) holds **only never-queried display
   metadata**. If you'll ever `WHERE`/`JOIN` on it, it's a column or row.
 
 ## Cache discipline
 
-`sub_tally` carries `cached_count`, `cached_streak`, `last_entry_at`, written
-**in the same transaction** as entry writes. A `recompute(sub_tally_id,
+`activity` carries `cached_count`, `cached_streak`, `last_entry_at`, written
+**in the same transaction** as entry writes. A `recompute(activity_id,
 owner_id)` rebuilds them from truth (drift guard). The home screen reads the
 cache, never re-aggregates on every render.
 
@@ -91,7 +119,7 @@ cache, never re-aggregates on every render.
 - **`owner_id` on every owned table**, and **every query takes `owner_id` as a
   required argument** (use the accessor helper). Multi-user isolation is the
   project's non-negotiable invariant.
-- **Archive, don't delete** categories/sub-tallies/tags: `archived_at TEXT`
+- **Archive, don't delete** categories/activities/tags: `archived_at TEXT`
   (nullable timestamp). List queries carry `WHERE archived_at IS NULL`.
 - **`ON DELETE CASCADE` from `user`** so account/guest deletion erases everything
   (incl. memos).
@@ -167,16 +195,51 @@ incapable of returning private/limited accounts or matching note/entry text.
 The re-consent flag `user.private_redefinition_seen_at` gates existing private
 users into a one-time re-consent before their character sheet is exposed.
 
+## Comments on entries
+
+- `comment(id, entry_id, author_id, body, created_at, deleted_at)` — both
+  `entry_id` and `author_id` are `ON DELETE CASCADE` (a comment is co-owned by
+  the commenter and the entry's owner; either account's deletion must remove
+  it, no orphans).
+- Comment visibility is **never stored**. Every read re-evaluates
+  `can_view_activity_detail()` for the current viewer against the comment's
+  parent entry. Revoking a fellow connection, blocking, or flipping a profile
+  public→private does not delete old comments; it simply makes them stop
+  rendering to whoever lost access — the same derived-not-stored pattern as
+  progression status.
+- `user.comments_seen_at` is a watermark column (same shape as the existing
+  `user.consent_seen_at`). It is written only when the owner visits
+  `/comments` (the notification history page) — never on home-page load —
+  and is read in two places: the home badge count (`unseen_comment_count`)
+  and the per-row "new since last visit" flag on `/comments` itself
+  (`created_at > comments_seen_at`, computed before the watermark is
+  advanced). Still not a notification table — the history page is a `SELECT`
+  over the existing `comment` table, joined to `entry`/`activity`/`user`;
+  per-comment read-state is never stored.
+- **Blocking does not retroactively filter the owner's own notification
+  feed.** If the owner blocks a fellow after that fellow commented, the
+  fellow's past comments stay visible in the owner's `/comments` history —
+  it's the owner's own data and a historical record, and removing it would
+  create a reverse existence-oracle (a gap in the feed would itself signal
+  "you blocked someone"). Blocking still does its real job going forward: it
+  strips the blocked user's `can_comment_on_entry` (no new comments) and
+  removes the owner from what the blocked user can see. This is distinct
+  from the "revoked access stops rendering" rule above, which protects a
+  *viewer* losing access to someone else's content — the owner never loses
+  access to their own entries.
+
 ## Indexes (hot paths)
 
-- `entry(sub_tally_id, occurred_at DESC)` — the entry list and stats range scan.
+- `entry(activity_id, occurred_at DESC)` — the entry list and stats range scan.
 - Partial indexes excluding archived rows (`… WHERE archived_at IS NULL`).
-- `match(entry_id)`; `level(sub_tally_id, track, ordinal)`; partial
+- `match(entry_id)`; `level(activity_id, track, ordinal)`; partial
   `user(last_active_at) WHERE auth_provider='guest'`.
 
 ## Tables (canonical list)
 
-`user, category, sub_tally, field_def, tag, entry, entry_tag, entry_value,
-match, level, level_rule, connection, block`. (`user` gains `visibility`,
-`consent_seen_at` — migration 0005; `sub_tally` gains `slug` — migration 0006;
+`user, category, activity, field_def, tag, entry, entry_tag, entry_value,
+match, level, level_rule, connection, block`. `category` is internal, 1:1
+with `activity`, never exposed as a separate creation step or list. (`user`
+gains `visibility`, `consent_seen_at` — migration 0005; `activity` gains
+`slug` — migration 0006; `sub_tally` renamed to `activity` — migration 0009;
 `connection`/`block` + `user.private_redefinition_seen_at` — migration 0010.)

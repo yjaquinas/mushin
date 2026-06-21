@@ -174,7 +174,7 @@ async def test_accept_confirm_shows_sharing_consent_before_mutating(
     resp = await client_b.get("/fellows/requests/alice_ac1/accept-confirm")
     assert resp.status_code == 200
     assert ui_strings.SHARING_CONSENT_TITLE in resp.text
-    assert ui_strings.SHARING_CONSENT_CONFIRM in resp.text
+    assert ui_strings.SHARING_CONSENT_CONFIRM_ACCEPT in resp.text
 
     alice_id = users.find_by_username("alice_ac1")["id"]
     bob_id = users.find_by_username("bob_ac1")["id"]
@@ -207,6 +207,79 @@ async def test_accept_with_no_pending_request_shows_calm_inline_error(
     resp = await client_b.post("/fellows/requests/alice_nopending1/accept")
     assert resp.status_code == 200
     assert ui_strings.CONNECT_ERROR_NOT_FOUND in resp.text
+
+
+# ---------------------------------------------------------------------------
+# Regression: consent fragment must carry its own swap-target id, or the
+# fragment's own "Connect as fellows"/"Accept and connect" button can't find
+# its hx-target and htmx silently aborts the swap (the bug this guards).
+# ---------------------------------------------------------------------------
+
+
+async def test_connect_confirm_fragment_carries_relationship_affordance_id(
+    client_a: AsyncClient, client_b: AsyncClient
+) -> None:
+    """The connect-confirm fragment's root must carry #relationship-affordance
+    itself, since it swaps in via outerHTML in that id's place — otherwise the
+    fragment's own buttons (hx-target=#relationship-affordance) have nothing
+    to swap into and the click does nothing."""
+    await _signup(client_a, "alice_domid1")
+    await _signup(client_b, "bob_domid1")
+
+    resp = await client_a.get("/fellows/bob_domid1/connect-confirm")
+    assert resp.status_code == 200
+    assert 'id="relationship-affordance"' in resp.text
+
+    # Send-side body must not claim exposure already happened.
+    assert "Once you're fellows" not in resp.text
+    assert ui_strings.SHARING_CONSENT_BODY_SEND in resp.text
+
+
+async def test_accept_confirm_fragment_carries_fellows_section_id(
+    client_a: AsyncClient, client_b: AsyncClient
+) -> None:
+    """The accept-confirm fragment's root must carry #fellows-section itself
+    for the same reason — its own buttons target #fellows-section."""
+    await _signup(client_a, "alice_domid2")
+    await _signup(client_b, "bob_domid2")
+    await client_a.post("/fellows/bob_domid2/connect")
+
+    resp = await client_b.get("/fellows/requests/alice_domid2/accept-confirm")
+    assert resp.status_code == 200
+    assert 'id="fellows-section"' in resp.text
+
+    # Accept-side body is the real-exposure-moment wording.
+    assert ui_strings.SHARING_CONSENT_BODY_ACCEPT in resp.text
+
+
+async def test_connect_then_accept_full_flow_via_consent_fragments(
+    client_a: AsyncClient, client_b: AsyncClient
+) -> None:
+    """End-to-end through both consent fragments and their confirm POSTs:
+    GET connect-confirm -> POST connect -> pending_outgoing; GET
+    accept-confirm -> POST accept -> fellow. Exercises the exact swap targets
+    the fragments declare for themselves."""
+    await _signup(client_a, "alice_fullflow1")
+    await _signup(client_b, "bob_fullflow1")
+
+    confirm_resp = await client_a.get("/fellows/bob_fullflow1/connect-confirm")
+    assert confirm_resp.status_code == 200
+    assert 'id="relationship-affordance"' in confirm_resp.text
+
+    send_resp = await client_a.post("/fellows/bob_fullflow1/connect")
+    assert send_resp.status_code == 200
+
+    alice_id = users.find_by_username("alice_fullflow1")["id"]
+    bob_id = users.find_by_username("bob_fullflow1")["id"]
+    assert connections.relationship_state(alice_id, bob_id) == "pending_outgoing"
+
+    accept_confirm_resp = await client_b.get("/fellows/requests/alice_fullflow1/accept-confirm")
+    assert accept_confirm_resp.status_code == 200
+    assert 'id="fellows-section"' in accept_confirm_resp.text
+
+    accept_resp = await client_b.post("/fellows/requests/alice_fullflow1/accept")
+    assert accept_resp.status_code == 200
+    assert connections.relationship_state(alice_id, bob_id) == "fellow"
 
 
 # ---------------------------------------------------------------------------

@@ -1,15 +1,15 @@
 {% extends "web/base.html.jinja2" %}
 
-{% block title %}{{ strings.CATEGORY_NEW_TITLE }} · {{ strings.APP_NAME }}{% endblock %}
+{% block title %}{{ strings.ACTIVITY_NEW_TITLE }} · {{ strings.APP_NAME }}{% endblock %}
 
 {% block content %}
 <header class="flex items-center justify-between py-2">
-    <h1 class="text-title font-semibold text-text-primary">{{ strings.CATEGORY_NEW_TITLE }}</h1>
+    <h1 class="text-title font-semibold text-text-primary">{{ strings.ACTIVITY_NEW_TITLE }}</h1>
     <a
         href="{{ home_url }}"
         class="text-caption text-text-muted underline-offset-2 transition hover:underline focus-visible:outline-offset-2"
     >
-        {{ strings.CATEGORY_FORM_CANCEL }}
+        {{ strings.ACTIVITY_FORM_CANCEL }}
     </a>
 </header>
 

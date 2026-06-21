@@ -204,24 +204,17 @@ def _build_card_context(
     progress: dict[str, Any] | None = None
     advance_line: str | None = None
 
-    if hero.get("count_mode") == "progression":
+    if hero.get("is_progression"):
         st = progression.status(activity_id, owner_id)
         track = st["tracks"][0] if st["tracks"] else None
         if track is not None:
             current = track.get("current_level")
             next_level = track.get("next_level")
-            if current is not None:
-                hero_label = current["label"]
-            elif next_level is not None:
-                # No level attained yet: the lowest-ordinal level on the
-                # ladder is the user's effective starting point (e.g. 독서's
-                # 입문 tier has no rule of its own — it's the entry rung, not
-                # a "next" target). Show it as the hero and compute the
-                # advance line against what's actually reachable from there.
-                hero_label = next_level["label"]
-                next_level = None
-            else:
-                hero_label = None
+            # progression._evaluate_track already treats a rule-less
+            # lowest-ordinal level as the synthetic "current" (the free
+            # starting rung), so `current` here is the user's effective
+            # starting point even with zero level entries logged.
+            hero_label = current["label"] if current is not None else None
             if next_level is not None:
                 if track.get("eligible"):
                     advance_line = f"{next_level['label']} 도전 가능"
@@ -269,7 +262,10 @@ def _build_card_context(
         "icon": activity_row["icon"] or categories.DEFAULT_ICON,
         "name": activity_row["name"],
         "show_breadcrumb": activity_row["category_name"] != activity_row["name"],
-        "count_mode": activity_row["count_mode"],
+        # Derived from the recipe (does the activity have a level field?), NOT
+        # read from the stored count_mode column. Kept as a "progression" /
+        # "running" string only so existing templates can branch on it.
+        "count_mode": "progression" if hero.get("is_progression") else "running",
         "hero_label": hero_label,
         "progress": progress,
         "advance_line": advance_line,
@@ -872,16 +868,16 @@ async def update_visibility(
 
 
 # ---------------------------------------------------------------------------
-# Create category
+# Create activity
 # ---------------------------------------------------------------------------
 
 
-@router.get("/categories/new", response_class=HTMLResponse)
-async def new_category(
+@router.get("/activities/new", response_class=HTMLResponse)
+async def new_activity(
     request: Request,
     session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
 ) -> HTMLResponse:
-    """Manual create-category form: name + icon picker.
+    """Manual create-activity form: name + icon picker.
 
     Renders as a full page on navigation, or as an HTMX sheet fragment when
     requested via ``HX-Request`` (same full-page-vs-fragment pattern as
@@ -910,14 +906,14 @@ async def new_category(
     )
 
 
-@router.post("/categories", response_class=HTMLResponse)
-async def create_category(
+@router.post("/activities", response_class=HTMLResponse)
+async def create_activity(
     request: Request,
     name: Annotated[str, Form()],
     icon: Annotated[str | None, Form()] = None,
     session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
 ) -> HTMLResponse:
-    """Create a general-log category (manual form or one-tap example adopt).
+    """Create a general-log activity (manual form or one-tap example adopt).
 
     Returns the new ``activity_card`` fragment for an HTMX swap into
     ``#cards``, or a 303 to ``/home`` for the no-JS path.
@@ -938,13 +934,13 @@ async def create_category(
             context={
                 "icon_choices": categories.ICON_CHOICES,
                 "default_icon": categories.DEFAULT_ICON,
-                "name_error": ui_strings.CATEGORY_FORM_NAME_REQUIRED,
+                "name_error": ui_strings.ACTIVITY_FORM_NAME_REQUIRED,
             },
             status_code=400,
         )
 
     tz = users.get_user_timezone(owner_id)
-    result = categories.create_category(owner_id, name=name, icon=icon)
+    result = categories.create_activity(owner_id, name=name, icon=icon)
 
     with db.connect() as conn:
         conn.execute("BEGIN")
@@ -1904,17 +1900,17 @@ async def create_log(
 
     # Capture the progression status before the write so a level-up can be
     # detected by comparing current_level ids (used for the guest nudge).
-    before_level_ids = (
-        _current_level_ids(activity_id, owner_id)
-        if sub_row["count_mode"] == "progression"
-        else set()
-    )
+    # Progression is derived from the recipe (has a level-kind field_def), not
+    # from the stored count_mode.
+    is_progression = progression.is_progression(activity_id, owner_id)
+    before_level_ids = _current_level_ids(activity_id, owner_id) if is_progression else set()
 
     created = entries.create(
         owner_id, activity_id, payload, occurred_at=occurred_at, tz=tz, time_known=time_known
     )
 
     # Persist any match-list bouts submitted alongside the entry.
+    has_match_list = any(fd["kind"] == "match_list" for fd in field_defs)
     for fd in field_defs:
         if fd["kind"] != "match_list":
             continue
@@ -1924,7 +1920,7 @@ async def create_log(
 
     leveled_up = False
     new_level_id: int | None = None
-    if sub_row["count_mode"] == "progression":
+    if is_progression:
         after_level_ids = _current_level_ids(activity_id, owner_id)
         newly_attained = after_level_ids - before_level_ids
         if newly_attained:
@@ -1954,15 +1950,30 @@ async def create_log(
     # /nudge/dismiss so it can be re-enabled without re-plumbing.
     show_nudge = False
 
-    response = templates.TemplateResponse(
-        request=request,
-        name="components/activity_card.html.jinja2",
-        context={
+    html = templates.get_template("components/activity_card.html.jinja2").render(
+        {
             "card": card,
             "show_nudge": show_nudge,
             "nudge_level_id": new_level_id,
-        },
+        }
     )
+
+    # A match-list log doesn't just update the hero card -- the Record
+    # section (W/L/D, timeline, head-to-head) on the same detail page is
+    # otherwise stale until a full reload. Append it as an out-of-band swap
+    # alongside the hero-card fragment this response already targets.
+    if has_match_list:
+        record_html = templates.get_template("components/competition_stats.html.jinja2").render(
+            {
+                "record": competition.record(owner_id, activity_id),
+                "timeline": competition.results_timeline(owner_id, activity_id),
+                "head_to_head": competition.head_to_head(owner_id, activity_id),
+                "oob": True,
+            }
+        )
+        html += record_html
+
+    response = HTMLResponse(content=html)
     response.headers["HX-Trigger"] = "log-saved"
     return response
 
@@ -2185,12 +2196,13 @@ def _render_fellows_section(
     fellows/requests action below — keeps the fellow list, requests cluster,
     and pending badge all in sync after any action without a full reload.
     """
-    context = _build_fellows_context(profile_user_id, viewer_id=viewer_id, is_owner=is_owner)
-    context["error"] = error
+    fellows_context = _build_fellows_context(
+        profile_user_id, viewer_id=viewer_id, is_owner=is_owner
+    )
     return templates.TemplateResponse(
         request=request,
         name="components/fellows_section.html.jinja2",
-        context=context,
+        context={"fellows": fellows_context, "error": error},
     )
 
 
@@ -2271,6 +2283,8 @@ async def connect_confirm(
             "confirm_url": f"/fellows/{username}/connect{suffix}",
             "cancel_url": f"/fellows/{username}/connect-cancel{suffix}",
             "dom_id": _relationship_dom_id(username, from_search=from_search),
+            "body": ui_strings.SHARING_CONSENT_BODY_SEND,
+            "confirm_label": ui_strings.SHARING_CONSENT_CONFIRM,
         },
     )
 
@@ -2353,15 +2367,25 @@ async def accept_confirm(
         confirm_url = f"/fellows/requests/{username}/accept"
         cancel_url = "/fellows/requests-cancel"
 
+    action = "accept" if not from_search else "connect"
+    if action == "accept":
+        body = ui_strings.SHARING_CONSENT_BODY_ACCEPT
+        confirm_label = ui_strings.SHARING_CONSENT_CONFIRM_ACCEPT
+    else:
+        body = ui_strings.SHARING_CONSENT_BODY_SEND
+        confirm_label = ui_strings.SHARING_CONSENT_CONFIRM
+
     return templates.TemplateResponse(
         request=request,
         name="components/sharing_consent_confirm.html.jinja2",
         context={
             "username": username,
-            "action": "accept" if not from_search else "connect",
+            "action": action,
             "confirm_url": confirm_url,
             "cancel_url": cancel_url,
             "dom_id": _relationship_dom_id(username, from_search=from_search),
+            "body": body,
+            "confirm_label": confirm_label,
         },
     )
 

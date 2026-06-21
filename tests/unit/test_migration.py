@@ -359,9 +359,7 @@ def test_migration_0004_drops_kakao_and_adds_timezone(tmp_path: Path) -> None:
     db_path = fresh_db(tmp_path)
     conn = raw_conn(db_path)
     try:
-        applied = {
-            row[0] for row in conn.execute("SELECT filename FROM _migrations").fetchall()
-        }
+        applied = {row[0] for row in conn.execute("SELECT filename FROM _migrations").fetchall()}
         assert "0004_user_timezone_and_providers.sql" in applied
 
         # CHECK constraint rejects 'kakao'.
@@ -370,9 +368,7 @@ def test_migration_0004_drops_kakao_and_adds_timezone(tmp_path: Path) -> None:
 
         # 'google' is still accepted, and timezone defaults to 'UTC'.
         conn.execute("INSERT INTO user (auth_provider) VALUES ('google')")
-        row = conn.execute(
-            "SELECT timezone FROM user WHERE auth_provider='google'"
-        ).fetchone()
+        row = conn.execute("SELECT timezone FROM user WHERE auth_provider='google'").fetchone()
         assert row["timezone"] == "UTC"
     finally:
         conn.close()
@@ -384,9 +380,7 @@ def test_migration_0005_adds_visibility_and_consent_columns(tmp_path: Path) -> N
     db_path = fresh_db(tmp_path)
     conn = raw_conn(db_path)
     try:
-        applied = {
-            row[0] for row in conn.execute("SELECT filename FROM _migrations").fetchall()
-        }
+        applied = {row[0] for row in conn.execute("SELECT filename FROM _migrations").fetchall()}
         assert "0005_user_visibility.sql" in applied
 
         conn2 = sqlite3.connect(str(db_path), isolation_level=None)
@@ -419,25 +413,32 @@ def test_migration_0006_backfills_unique_slugs(tmp_path: Path) -> None:
     db_path = tmp_path / "test.db"
     db_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Apply 0001–0005 and 0007–0008, hiding both 0006 (the migration under test)
-    # and 0009 (the rename) so we can seed activity rows while the table still
-    # has its original name.  After seeding we restore both and run again so
-    # 0006 backfills slugs and 0009 renames the table in the right order.
+    # Apply 0001–0005 and 0007–0008, hiding 0006 (the migration under test),
+    # 0009 (the rename), and 0011 (the multi-activity-category merge, which
+    # queries the post-0009 `activity` table name and so can't run yet either)
+    # so we can seed activity rows while the table still has its original
+    # name.  After seeding we restore all three and run again so 0006
+    # backfills slugs, 0009 renames the table, and 0011 runs against the
+    # renamed table — in that order.
     import shutil
 
     from app.models.migrate import MIGRATIONS_DIR
 
     migration_0006 = MIGRATIONS_DIR / "0006_sub_tally_slug.sql"
     migration_0009 = MIGRATIONS_DIR / "0009_rename_sub_tally_to_activity.sql"
+    migration_0011 = MIGRATIONS_DIR / "0011_merge_multi_activity_categories.sql"
     tmp_hidden_0006 = MIGRATIONS_DIR / "0006_sub_tally_slug.sql.hidden"
     tmp_hidden_0009 = MIGRATIONS_DIR / "0009_rename_sub_tally_to_activity.sql.hidden"
+    tmp_hidden_0011 = MIGRATIONS_DIR / "0011_merge_multi_activity_categories.sql.hidden"
     shutil.move(migration_0006, tmp_hidden_0006)
     shutil.move(migration_0009, tmp_hidden_0009)
+    shutil.move(migration_0011, tmp_hidden_0011)
     try:
         run_migrations(db_path)
     finally:
         shutil.move(tmp_hidden_0006, migration_0006)
         shutil.move(tmp_hidden_0009, migration_0009)
+        shutil.move(tmp_hidden_0011, migration_0011)
 
     # Seed rows needing slugs, including a same-owner name collision
     # and an empty/non-alphanumeric name.  The table is still named 'sub_tally'
@@ -487,9 +488,7 @@ def test_migration_0006_backfills_unique_slugs(tmp_path: Path) -> None:
     try:
         # After run_migrations completes, 0009 has also been applied so the
         # table is now named 'activity'.
-        rows = conn.execute(
-            "SELECT id, owner_id, name, slug FROM activity ORDER BY id"
-        ).fetchall()
+        rows = conn.execute("SELECT id, owner_id, name, slug FROM activity ORDER BY id").fetchall()
         by_id = {row["id"]: row for row in rows}
 
         # Every row has a non-null, non-empty slug.
@@ -528,9 +527,7 @@ def test_migration_0006_backfills_unique_slugs(tmp_path: Path) -> None:
         # Unique index exists (created by 0006; still named ux_activity_owner_slug).
         index_names = {
             row[0]
-            for row in conn.execute(
-                "SELECT name FROM sqlite_master WHERE type='index'"
-            ).fetchall()
+            for row in conn.execute("SELECT name FROM sqlite_master WHERE type='index'").fetchall()
         }
         assert "ux_activity_owner_slug" in index_names
 
@@ -566,15 +563,10 @@ def test_migration_0007_adds_time_known_column(tmp_path: Path) -> None:
     db_fresh = fresh_db(tmp_path / "fresh")
     conn = raw_conn(db_fresh)
     try:
-        applied = {
-            row[0] for row in conn.execute("SELECT filename FROM _migrations").fetchall()
-        }
+        applied = {row[0] for row in conn.execute("SELECT filename FROM _migrations").fetchall()}
         assert "0007_entry_time_known.sql" in applied
 
-        cols = {
-            row[1]: row
-            for row in conn.execute("PRAGMA table_info(entry)").fetchall()
-        }
+        cols = {row[1]: row for row in conn.execute("PRAGMA table_info(entry)").fetchall()}
         assert "time_known" in cols, "time_known column missing from entry"
         col = cols["time_known"]
         assert col[2].upper() == "INTEGER", f"Expected INTEGER type, got {col[2]}"
@@ -630,9 +622,7 @@ def test_migration_0007_adds_time_known_column(tmp_path: Path) -> None:
 
     conn3 = raw_conn(db_pre)
     try:
-        row = conn3.execute(
-            "SELECT time_known FROM entry WHERE id=?", (entry_id,)
-        ).fetchone()
+        row = conn3.execute("SELECT time_known FROM entry WHERE id=?", (entry_id,)).fetchone()
         assert row is not None, "entry row not found after migration"
         assert row[0] == 1, f"Expected time_known=1, got {row[0]}"
 
@@ -774,7 +764,9 @@ def test_migration_0008_deduplicates_and_enforces_unique_active_tag_name(
             "SELECT id, name FROM tag WHERE owner_id=? AND field_def_id=? AND archived_at IS NULL",
             (uid, fd_id),
         ).fetchall()
-        assert len(active_tags) == 1, f"Expected 1 active tag, found {len(active_tags)}: {list(active_tags)}"
+        assert len(active_tags) == 1, (
+            f"Expected 1 active tag, found {len(active_tags)}: {list(active_tags)}"
+        )
 
         # The surviving tag is the winner (MIN id) with lowercase name.
         surviving = active_tags[0]
@@ -786,9 +778,7 @@ def test_migration_0008_deduplicates_and_enforces_unique_active_tag_name(
         )
 
         # The loser was archived, not deleted.
-        loser_row = conn.execute(
-            "SELECT archived_at FROM tag WHERE id=?", (loser_id,)
-        ).fetchone()
+        loser_row = conn.execute("SELECT archived_at FROM tag WHERE id=?", (loser_id,)).fetchone()
         assert loser_row is not None, "Loser tag row was deleted; expected it to be archived"
         assert loser_row["archived_at"] is not None, "Loser tag archived_at should not be NULL"
 
@@ -804,9 +794,7 @@ def test_migration_0008_deduplicates_and_enforces_unique_active_tag_name(
         # The unique index exists.
         index_names = {
             row[0]
-            for row in conn.execute(
-                "SELECT name FROM sqlite_master WHERE type='index'"
-            ).fetchall()
+            for row in conn.execute("SELECT name FROM sqlite_master WHERE type='index'").fetchall()
         }
         assert "idx_tag_active_name" in index_names, "idx_tag_active_name index not found"
 
@@ -848,9 +836,7 @@ def test_migration_0010_applies_and_adds_redefinition_column(tmp_path: Path) -> 
     db_path = fresh_db(tmp_path)
     conn = raw_conn(db_path)
     try:
-        applied = {
-            row[0] for row in conn.execute("SELECT filename FROM _migrations").fetchall()
-        }
+        applied = {row[0] for row in conn.execute("SELECT filename FROM _migrations").fetchall()}
         assert "0010_social_graph.sql" in applied
 
         cols = {row[1] for row in conn.execute("PRAGMA table_info(user)").fetchall()}
@@ -872,17 +858,13 @@ def test_migration_0010_connection_and_block_tables_exist_with_indexes(tmp_path:
     try:
         tables = {
             row[0]
-            for row in conn.execute(
-                "SELECT name FROM sqlite_master WHERE type='table'"
-            ).fetchall()
+            for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
         }
         assert {"connection", "block"} <= tables
 
         indexes = {
             row[0]
-            for row in conn.execute(
-                "SELECT name FROM sqlite_master WHERE type='index'"
-            ).fetchall()
+            for row in conn.execute("SELECT name FROM sqlite_master WHERE type='index'").fetchall()
         }
         expected = {
             "ux_connection_pair",
@@ -972,9 +954,7 @@ def test_migration_0010_block_check_constraint_and_unique_pair(tmp_path: Path) -
         conn.commit()
 
         with pytest.raises(sqlite3.IntegrityError):
-            conn.execute(
-                "INSERT INTO block (blocker_id, blocked_id) VALUES (?, ?)", (a, a)
-            )
+            conn.execute("INSERT INTO block (blocker_id, blocked_id) VALUES (?, ?)", (a, a))
 
         conn.execute("INSERT INTO block (blocker_id, blocked_id) VALUES (?, ?)", (a, b))
         conn.commit()
@@ -984,9 +964,7 @@ def test_migration_0010_block_check_constraint_and_unique_pair(tmp_path: Path) -
         conn.commit()
         # But the identical (a, b) pair again is rejected by ux_block_pair.
         with pytest.raises(sqlite3.IntegrityError):
-            conn.execute(
-                "INSERT INTO block (blocker_id, blocked_id) VALUES (?, ?)", (a, b)
-            )
+            conn.execute("INSERT INTO block (blocker_id, blocked_id) VALUES (?, ?)", (a, b))
     finally:
         conn.close()
 

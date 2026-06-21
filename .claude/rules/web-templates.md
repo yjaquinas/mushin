@@ -43,8 +43,16 @@ Path-scoped: loads when Claude is editing HTMX templates, shared components, or 
 ## Project-specific additions
 
 - Render fields in the shared field-priority order from the domain layer (hero stat → progress affordance → advance line); don't invent a per-template hierarchy.
-- Quick-add / "log" return HTMX fragments that swap without full reload; tag selection survives the swap.
-- One hero numeral per activity card; tag chips wrap (never horizontal scroll-hide), ≥44px targets, selected state differs by shape/weight + glyph (not color alone).
+- Quick-add / "log" return HTMX fragments that swap without full reload.
+- One hero numeral per activity card. Tags are entered as inline `#hashtags` inside the free-text notes field (`components/tag_group.html.jinja2`), not as separate tap-select chips — there is no per-tag checkbox/chip affordance to keep ≥44px or visually distinguish by selected state.
 - The no-account entry path uses **"No account needed — it's your own record from the start"** framing — never claim "nothing leaves your device" (guest data is on the server).
 - Never hardcode user-facing copy — pull from the centralized strings module (see `copy-patterns`).
 - Public, unauthenticated routes (`/@{username}`, `/@{username}/{activity-slug}`) render through a dedicated read-only template set (`web/public_profile.html.jinja2`, `web/public_activity.html.jinja2`) when the viewer isn't the owner. Never reuse owner-dashboard templates for these routes — a write affordance (log form, add-category, tag editor) must never be reachable from a no-session visitor, even via a stray `{% if %}`.
+- Any fragment swapped via `hx-swap="outerHTML"` must carry forward the id
+  it replaces on its own root element (e.g. `id="{{ dom_id }}"`), including
+  when it renders empty or branches on a context variable like `action`.
+  Two separate fragments lost their stable id this way in one session
+  (`fellows_section.html.jinja2` when rendering empty,
+  `sharing_consent_confirm.html.jinja2` missing the id outright) — once the
+  id vanishes, every later swap targeting it silently aborts with no visible
+  error.

@@ -64,6 +64,13 @@ class Builder:
         return c
 
     def activity(self, *, mode: str = "progression", name: str = "Grading") -> int:
+        """Create an activity. ``count_mode`` is a back-compat column only —
+        hero/progression detection derives from the presence of a
+        ``level``-kind ``field_def`` (see ``progression.is_progression``), so
+        the ``level``/``result`` field_defs are only added when
+        ``mode="progression"``; a ``mode="running"`` activity gets neither,
+        matching a true general-log shape.
+        """
         c = self._conn()
         try:
             cat = c.execute(
@@ -75,14 +82,15 @@ class Builder:
                 " VALUES (?, ?, ?, ?)",
                 (self.owner_id, cat, name, mode),
             ).lastrowid
-            self.level_field_id = c.execute(
-                "INSERT INTO field_def (activity_id, kind, label) VALUES (?, 'level', '급/단')",
-                (sid,),
-            ).lastrowid
-            self.result_field_id = c.execute(
-                "INSERT INTO field_def (activity_id, kind, label) VALUES (?, 'result', '합격')",
-                (sid,),
-            ).lastrowid
+            if mode == "progression":
+                self.level_field_id = c.execute(
+                    "INSERT INTO field_def (activity_id, kind, label) VALUES (?, 'level', '급/단')",
+                    (sid,),
+                ).lastrowid
+                self.result_field_id = c.execute(
+                    "INSERT INTO field_def (activity_id, kind, label) VALUES (?, 'result', '합격')",
+                    (sid,),
+                ).lastrowid
             return sid
         finally:
             c.close()

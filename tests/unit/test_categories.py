@@ -2,7 +2,7 @@
 
 Acceptance criteria
 -------------------
-1. ``create_category(owner_id, ...)`` is ``owner_id``-scoped and produces a
+1. ``create_activity(owner_id, ...)`` is ``owner_id``-scoped and produces a
    category + activity + 2 field_defs (memo, tag_group) in one transaction.
 2. The activity is the general-log shape: ``count_mode="running"`` with cache
    fields at their defaults; the two field_defs are exactly ``memo`` and
@@ -106,17 +106,17 @@ def test_example_categories_shape():
 # ---------------------------------------------------------------------------
 
 
-def test_create_category_returns_ids(db_with_user):
+def test_create_activity_returns_ids(db_with_user):
     _, owner_id = db_with_user
-    result = categories.create_category(owner_id, name="Workout", icon="dumbbell")
+    result = categories.create_activity(owner_id, name="Workout", icon="dumbbell")
     assert set(result) == {"category_id", "activity_id"}
     assert isinstance(result["category_id"], int)
     assert isinstance(result["activity_id"], int)
 
 
-def test_create_category_inserts_category_row(db_with_user):
+def test_create_activity_inserts_category_row(db_with_user):
     db_path, owner_id = db_with_user
-    result = categories.create_category(owner_id, name="Workout", icon="dumbbell")
+    result = categories.create_activity(owner_id, name="Workout", icon="dumbbell")
     conn = _raw(db_path)
     row = conn.execute(
         "SELECT owner_id, name, icon FROM category WHERE id = ?",
@@ -129,9 +129,9 @@ def test_create_category_inserts_category_row(db_with_user):
     assert row["icon"] == "dumbbell"
 
 
-def test_create_category_running_activity(db_with_user):
+def test_create_activity_running_activity(db_with_user):
     db_path, owner_id = db_with_user
-    result = categories.create_category(owner_id, name="Workout")
+    result = categories.create_activity(owner_id, name="Workout")
     conn = _raw(db_path)
     row = conn.execute(
         "SELECT owner_id, category_id, count_mode, cached_count, cached_streak, last_entry_at"
@@ -149,19 +149,19 @@ def test_create_category_running_activity(db_with_user):
     assert row["last_entry_at"] is None
 
 
-def test_create_category_has_memo_and_tag_group_field_defs(db_with_user):
+def test_create_activity_has_memo_and_tag_group_field_defs(db_with_user):
     db_path, owner_id = db_with_user
-    result = categories.create_category(owner_id, name="Workout")
+    result = categories.create_activity(owner_id, name="Workout")
     conn = _raw(db_path)
     kinds = _field_kinds(conn, result["activity_id"])
     conn.close()
     assert kinds == ["memo", "tag_group"], f"general-log field_defs wrong: {kinds}"
 
 
-def test_create_category_sets_slug(db_with_user):
+def test_create_activity_sets_slug(db_with_user):
     """The new activity gets a slug derived from its name."""
     db_path, owner_id = db_with_user
-    result = categories.create_category(owner_id, name="Morning Workout")
+    result = categories.create_activity(owner_id, name="Morning Workout")
     conn = _raw(db_path)
     slug = conn.execute(
         "SELECT slug FROM activity WHERE id = ?", (result["activity_id"],)
@@ -170,11 +170,11 @@ def test_create_category_sets_slug(db_with_user):
     assert slug == "morning-workout"
 
 
-def test_create_category_slug_unique_per_owner(db_with_user):
+def test_create_activity_slug_unique_per_owner(db_with_user):
     """Two sub-tallies with the same name under one owner get name and name-2."""
     db_path, owner_id = db_with_user
-    first = categories.create_category(owner_id, name="Workout")
-    second = categories.create_category(owner_id, name="Workout")
+    first = categories.create_activity(owner_id, name="Workout")
+    second = categories.create_activity(owner_id, name="Workout")
     conn = _raw(db_path)
     slug_first = conn.execute(
         "SELECT slug FROM activity WHERE id = ?", (first["activity_id"],)
@@ -187,10 +187,10 @@ def test_create_category_slug_unique_per_owner(db_with_user):
     assert slug_second == "workout-2"
 
 
-def test_create_category_no_levels_or_rules(db_with_user):
+def test_create_activity_no_levels_or_rules(db_with_user):
     """General-log categories have no progression rows."""
     db_path, owner_id = db_with_user
-    result = categories.create_category(owner_id, name="Workout")
+    result = categories.create_activity(owner_id, name="Workout")
     conn = _raw(db_path)
     levels = conn.execute(
         "SELECT COUNT(*) FROM level WHERE activity_id = ?",
@@ -205,10 +205,10 @@ def test_create_category_no_levels_or_rules(db_with_user):
     assert rules == 0
 
 
-def test_create_category_is_atomic(db_with_user):
+def test_create_activity_is_atomic(db_with_user):
     """Exactly one category, one activity, two field_defs — nothing partial."""
     db_path, owner_id = db_with_user
-    categories.create_category(owner_id, name="Workout")
+    categories.create_activity(owner_id, name="Workout")
     conn = _raw(db_path)
     cat_count = conn.execute(
         "SELECT COUNT(*) FROM category WHERE owner_id = ?", (owner_id,)
@@ -233,9 +233,9 @@ def test_create_category_is_atomic(db_with_user):
 # ---------------------------------------------------------------------------
 
 
-def test_create_category_invalid_icon_falls_back(db_with_user):
+def test_create_activity_invalid_icon_falls_back(db_with_user):
     db_path, owner_id = db_with_user
-    result = categories.create_category(owner_id, name="Mystery", icon="not-a-real-icon")
+    result = categories.create_activity(owner_id, name="Mystery", icon="not-a-real-icon")
     conn = _raw(db_path)
     icon = conn.execute(
         "SELECT icon FROM category WHERE id = ?", (result["category_id"],)
@@ -244,9 +244,9 @@ def test_create_category_invalid_icon_falls_back(db_with_user):
     assert icon == "circle-dot"
 
 
-def test_create_category_none_icon_falls_back(db_with_user):
+def test_create_activity_none_icon_falls_back(db_with_user):
     db_path, owner_id = db_with_user
-    result = categories.create_category(owner_id, name="Plain")
+    result = categories.create_activity(owner_id, name="Plain")
     conn = _raw(db_path)
     icon = conn.execute(
         "SELECT icon FROM category WHERE id = ?", (result["category_id"],)
@@ -255,9 +255,9 @@ def test_create_category_none_icon_falls_back(db_with_user):
     assert icon == "circle-dot"
 
 
-def test_create_category_valid_icon_preserved(db_with_user):
+def test_create_activity_valid_icon_preserved(db_with_user):
     db_path, owner_id = db_with_user
-    result = categories.create_category(owner_id, name="Read", icon="book-open")
+    result = categories.create_activity(owner_id, name="Read", icon="book-open")
     conn = _raw(db_path)
     icon = conn.execute(
         "SELECT icon FROM category WHERE id = ?", (result["category_id"],)
@@ -271,7 +271,7 @@ def test_create_category_valid_icon_preserved(db_with_user):
 # ---------------------------------------------------------------------------
 
 
-def test_create_category_owner_isolation(tmp_path: Path, monkeypatch):
+def test_create_activity_owner_isolation(tmp_path: Path, monkeypatch):
     db_path = _make_db(tmp_path)
     import app.models.db as _db_module
 
@@ -282,8 +282,8 @@ def test_create_category_owner_isolation(tmp_path: Path, monkeypatch):
     owner_b = _make_user(conn)
     conn.close()
 
-    res_a = categories.create_category(owner_a, name="A-cat", icon="dumbbell")
-    res_b = categories.create_category(owner_b, name="B-cat", icon="music")
+    res_a = categories.create_activity(owner_a, name="A-cat", icon="dumbbell")
+    res_b = categories.create_activity(owner_b, name="B-cat", icon="music")
 
     conn = _raw(db_path)
 
@@ -323,7 +323,7 @@ def _activity_row(db_path: Path, activity_id: int) -> sqlite3.Row:
 
 def test_rename_activity_updates_name_and_slug(db_with_user):
     db_path, owner_id = db_with_user
-    created = categories.create_category(owner_id, name="Workout")
+    created = categories.create_activity(owner_id, name="Workout")
     activity_id = created["activity_id"]
 
     conn = _raw(db_path)
@@ -341,7 +341,7 @@ def test_rename_activity_updates_name_and_slug(db_with_user):
 
 def test_rename_activity_trims_whitespace(db_with_user):
     db_path, owner_id = db_with_user
-    created = categories.create_category(owner_id, name="Workout")
+    created = categories.create_activity(owner_id, name="Workout")
     activity_id = created["activity_id"]
 
     conn = _raw(db_path)
@@ -359,7 +359,7 @@ def test_rename_activity_trims_whitespace(db_with_user):
 
 def test_rename_activity_empty_name_raises(db_with_user):
     db_path, owner_id = db_with_user
-    created = categories.create_category(owner_id, name="Workout")
+    created = categories.create_activity(owner_id, name="Workout")
     activity_id = created["activity_id"]
 
     conn = _raw(db_path)
@@ -382,7 +382,7 @@ def test_rename_activity_empty_name_raises(db_with_user):
 
 def test_rename_activity_too_long_name_raises(db_with_user):
     db_path, owner_id = db_with_user
-    created = categories.create_category(owner_id, name="Workout")
+    created = categories.create_activity(owner_id, name="Workout")
     activity_id = created["activity_id"]
 
     over = "x" * (categories.RENAME_SUB_TALLY_MAX_NAME + 1)
@@ -409,7 +409,7 @@ def test_rename_activity_too_long_name_raises(db_with_user):
 
 def test_rename_activity_not_owned_raises(db_with_user):
     db_path, owner_id = db_with_user
-    created = categories.create_category(owner_id, name="Workout")
+    created = categories.create_activity(owner_id, name="Workout")
     activity_id = created["activity_id"]
 
     # A different owner must not be able to rename this sub-tally.
@@ -444,8 +444,8 @@ def test_rename_activity_missing_id_raises(db_with_user):
 def test_rename_activity_slug_collision_gets_suffix(db_with_user):
     db_path, owner_id = db_with_user
     # Two sub-tallies; rename the second to collide with the first's slug.
-    first = categories.create_category(owner_id, name="Running")
-    second = categories.create_category(owner_id, name="Lifting")
+    first = categories.create_activity(owner_id, name="Running")
+    second = categories.create_activity(owner_id, name="Lifting")
 
     conn = _raw(db_path)
     new_slug = categories.rename_activity(
@@ -471,8 +471,8 @@ def test_rename_activity_owner_isolation_for_slug(db_with_user):
     conn.close()
 
     # owner_b has a sub-tally that slugifies to "running".
-    categories.create_category(owner_b, name="Running")
-    a_st = categories.create_category(owner_a, name="Lifting")
+    categories.create_activity(owner_b, name="Running")
+    a_st = categories.create_activity(owner_a, name="Lifting")
 
     conn = _raw(db_path)
     new_slug = categories.rename_activity(
@@ -509,7 +509,7 @@ def _count(conn: sqlite3.Connection, table: str, column: str, value: int) -> int
 
 def test_delete_category_removes_row_and_cascades(db_with_user):
     db_path, owner_id = db_with_user
-    created = categories.create_category(owner_id, name="Workout")
+    created = categories.create_activity(owner_id, name="Workout")
     category_id = created["category_id"]
     activity_id = created["activity_id"]
 
@@ -536,7 +536,7 @@ def test_delete_category_removes_row_and_cascades(db_with_user):
 
 def test_delete_category_wrong_owner_no_op(db_with_user):
     db_path, owner_a = db_with_user
-    created = categories.create_category(owner_a, name="Workout")
+    created = categories.create_activity(owner_a, name="Workout")
     category_id = created["category_id"]
     activity_id = created["activity_id"]
 

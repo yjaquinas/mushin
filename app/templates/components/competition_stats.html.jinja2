@@ -8,8 +8,15 @@
   Context: `record` (wins/losses/draws/total/decided/win_rate),
   `timeline` (list of {occurred_at, opponent, result, score}),
   `head_to_head` (list of {opponent, wins, losses, draws, total, win_rate}).
+  Optional `oob` (bool) — when true, renders as an out-of-band swap target so
+  POST /activities/{id}/log can refresh this section alongside the hero card
+  it directly responds with (see app.routes.web.create_log).
 #}
-<section class="flex flex-col gap-4 rounded-card border border-border bg-surface-1 p-4">
+<section
+    id="competition-stats"
+    {% if oob %}hx-swap-oob="true"{% endif %}
+    class="flex flex-col gap-4 rounded-card border border-border bg-surface-1 p-4"
+>
     <h2 class="text-title font-semibold text-text-primary">{{ strings.STATS_TITLE }}</h2>
 
     {# Record + win rate #}

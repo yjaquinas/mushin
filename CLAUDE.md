@@ -21,19 +21,29 @@ Studio context: see `~/.claude/CLAUDE.md` for studio-wide conventions and brand.
 
 ## Domain model
 
-Three levels: category (activity) → sub-tally → entry.
+Two levels: activity → entry. (`category` survives only as an internal,
+automatically-created 1:1 wrapper row behind every activity — never a
+separate user-facing concept, never a second creation step.)
 
 - Field-type primitives (the recipe vocabulary): tag-group, scale, count, memo,
-  match-list, level + result.
-- Count modes per sub-tally: `running`, or `progression` (a level track).
+  match-list, level + result. An activity can mix any combination on one
+  entry stream — e.g. a running tag/count/memo log alongside a match-list
+  and a level ladder, all on the same activity, all the same entries table.
+- Hero/progression status is **derived from field_defs, not a stored mode**:
+  an activity with a `level`-kind field_def shows its current level +
+  progress as the hero stat; one without shows the running count. (This
+  supersedes the old `sub_tally.count_mode` running/progression split as the
+  source of truth — see the `data-model` skill for the implementation note.)
 - Progression gating, four kinds: time, count, event, manual. A parallel
   secondary track is supported for prestige tiers.
-- Onboarding seeds each account with two starter templates: **kendo**
-  (full-featured — running practice, tournament with match-list, time-gated dan
-  progression + shōgō track) and **reading** (count-gated progression tiers).
-  Cooking, knitting, travel are deferred to a future template gallery.
-- Tables: user, category, sub_tally (activity), field_def, tag, entry,
-  entry_tag, entry_value, match, level_rule, **connection, block**.
+- Onboarding seeds each account with two starter templates: **kendo** (one
+  activity — running log + match-list + time-gated dan progression + shōgō
+  track, all on one entry stream) and **reading** (count-gated progression
+  tiers). Cooking, knitting, travel are deferred to a future template
+  gallery.
+- Tables: user, category (internal, 1:1 with activity), activity, field_def,
+  tag, entry, entry_tag, entry_value, match, level, level_rule,
+  **connection, block**.
 - Social graph: a **fellow** is a mutual connection (request → accept/decline;
   symmetric). The `connection` table holds the directed handshake plus a
   canonical `user_lo/user_hi` pair (unique, prevents reverse-duplicates);

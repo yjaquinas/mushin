@@ -13,8 +13,8 @@ router = APIRouter(prefix="/m")
 
 # Register mobile routes here, e.g.:
 #
-# @router.get("/categories")
-# async def list_categories(request: Request) -> Response:
+# @router.get("/activities")
+# async def list_activities(request: Request) -> Response:
 #     return templates_mobile.TemplateResponse(
 #         request=request,
 #         name="index.hxml.jinja2",

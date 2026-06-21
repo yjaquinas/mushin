@@ -6,16 +6,12 @@
   Context: `card` (see app.routes.web._build_card_context), and optionally
   `show_nudge` / `nudge_level_id` for the guest upgrade nudge.
 #}
-{% from "components/_icon.html.jinja2" import icon %}
 {% macro card_body() %}
     <header class="flex flex-col gap-0.5">
         {% if card.show_breadcrumb %}
         <span class="text-caption text-text-muted">{{ card.category_name }}</span>
         {% endif %}
-        <div class="flex items-center gap-1.5">
-            <span class="text-text-secondary">{{ icon(card.icon, size=20) }}</span>
-            <h2 class="text-title font-medium text-text-secondary">{{ card.name }}</h2>
-        </div>
+        <h2 class="text-title font-medium text-text-secondary">{{ card.name }}</h2>
     </header>
 
     {# Hero numeral — the single dominant figure on the card. #}
