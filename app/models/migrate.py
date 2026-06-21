@@ -28,6 +28,7 @@ transaction.
 
 from __future__ import annotations
 
+import os
 import sqlite3
 import sys
 from pathlib import Path
@@ -112,7 +113,7 @@ def _split_statements(sql: str) -> list[str]:
 
 
 if __name__ == "__main__":
-    path = sys.argv[1] if len(sys.argv) > 1 else "./data/app.db"
+    path = sys.argv[1] if len(sys.argv) > 1 else os.getenv("DATABASE_PATH", "./data/app.db")
     applied = run_migrations(path)
     if applied:
         for name in applied:

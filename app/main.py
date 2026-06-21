@@ -14,6 +14,7 @@ from fastapi.staticfiles import StaticFiles
 load_dotenv()
 
 from app.auth.routes import router as auth_router  # noqa: E402
+from app.models.db import DATABASE_PATH  # noqa: E402
 from app.models.migrate import run_migrations  # noqa: E402
 from app.routes.data_io import router as data_io_router  # noqa: E402
 from app.routes.public import router as public_router  # noqa: E402
@@ -32,7 +33,7 @@ STATIC_DIR = APP_DIR / "static"
 
 @asynccontextmanager
 async def lifespan(application: FastAPI):  # noqa: ARG001
-    applied = run_migrations()
+    applied = run_migrations(DATABASE_PATH)
     for name in applied:
         log.info("migration.applied", filename=name)
     yield
