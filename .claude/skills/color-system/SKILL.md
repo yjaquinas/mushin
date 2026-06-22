@@ -20,6 +20,32 @@ description: Mushin's color palette as renderer-agnostic tokens that map to both
   shape/weight + a glyph for colorblind and bright-sun legibility.
 - Ensure sufficient contrast on the home-card hero numeral and on chips.
 
+## Foreground/background pairing rule (binding)
+
+`--color-brand`, `--color-obsidian`, and the `--color-surface-*` family
+(`surface-0/1/2`) are **background-only roles**. Never use them as a `text-*`
+foreground color.
+
+- `--color-brand` and `--color-obsidian` are fixed — they never swap between
+  light and dark. `--color-surface-*` DOES swap.
+- If a fixed-background token's foreground swaps independently (or a
+  swapping-background token's foreground stays fixed), the pairing breaks
+  apart in one theme — text and background converge to the same value and
+  the element goes invisible. This is the dark-mode-invisibility bug class
+  found 2026-06-22 (10 instances: 4 hero numerals using `text-brand` on a
+  swapping `surface-1` background, 6 buttons using `text-surface-1` on a
+  fixed `bg-brand` background).
+- Pairing rule: a **fixed** background (`bg-brand`, `bg-obsidian`) pairs with
+  `text-on-brand` (the token built for exactly this — swaps light enough to
+  stay legible on a background that never lightens). A **swapping** surface
+  (`bg-surface-0/1/2`) pairs with `text-text-primary` / `text-text-secondary`
+  / `text-text-muted` (the swapping text-role tokens).
+- Before introducing any new `bg-*`/`text-*` pairing, check: does the
+  background token swap with `[data-theme="dark"]`? If yes, the foreground
+  must also be a swapping token. If no (fixed), the foreground must be one
+  of the tokens specifically designed to pair with that fixed background
+  (`text-on-brand`).
+
 ## Brand realignment (2026-06-19)
 
 Mushin is repainting to match the aqnas-studio brand identity (the CEO's own

@@ -30,7 +30,7 @@
     {% endif %}
 
     {# Hero numeral — the single dominant figure on the card. #}
-    <p class="text-hero-numeral font-semibold leading-tight text-brand{% if card.bumped %} hero--bumped{% endif %}">
+    <p class="text-hero-numeral font-semibold leading-tight text-text-primary{% if card.bumped %} hero--bumped{% endif %}">
         {{ card.hero_label }}<span class="text-title font-normal text-text-muted"> {{ strings.HOME_COUNT_UNIT }}</span>
     </p>
 

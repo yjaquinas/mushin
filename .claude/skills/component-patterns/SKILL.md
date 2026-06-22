@@ -102,6 +102,21 @@ Defined in `app/static/src/input.css`.
   **theme toggle** (see below) at its right edge — the only other persistent
   chrome on the page, present on every page regardless of auth state.
 
+## Primary button (bg-brand fill)
+
+Every primary CTA button uses `bg-brand` (fixed background) + `text-on-brand`
+(the swapping foreground built for it) + `font-semibold`. Never pair
+`bg-brand` with `text-surface-1` — see the `color-system` skill's
+foreground/background pairing rule for why that combination goes invisible
+in dark mode.
+
+> **Known stale doc, not yet fixed:** the `## Masthead` section above says
+> the `Mushin` wordmark uses `text-brand`, but `base.html.jinja2:20` actually
+> uses `text-on-brand` (correctly — the masthead band is `bg-obsidian`, the
+> other fixed-and-never-swaps token). Follow-up: correct "`text-title
+> font-semibold text-brand`" to "`text-title font-semibold text-on-brand`"
+> in the Masthead section.
+
 ## Theme toggle
 
 - A single icon-button at the right edge of the masthead row (the slot the

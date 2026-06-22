@@ -17,7 +17,7 @@ Specs covered
    ``<p>{{ strings.HOME_EMPTY }}</p>`` markup.
 2. Card icon + hierarchy: each activity card renders an
    ``<svg aria-hidden="true">`` icon in the label row, and the hero numeral
-   is the only element on the card with ``text-brand``.
+   is the only element on the card with ``text-text-primary``.
 3. Log -> micro-moment: on the sub-tally detail screen, submitting the
    quick-add log form returns a card fragment whose hero numeral has
    ``hero--bumped`` immediately after the swap, while the initial page
@@ -201,14 +201,14 @@ def test_empty_state_shows_glyph_and_gloss_for_fresh_account(page) -> None:
 
 def test_activity_cards_render_single_hero_numeral(page) -> None:
     """The hero numeral is the only element on an activity card with
-    `text-brand` -- cards no longer carry a per-activity icon in the label
-    row (decluttered to name + hero numeral only)."""
+    `text-text-primary` -- cards no longer carry a per-activity icon in the
+    label row (decluttered to name + hero numeral only)."""
     _signup(page, _unique_username("c"))
 
     card = page.locator("article", has=page.get_by_role("heading", name="Kendo"))
 
-    # The hero numeral is the only `text-brand` element on the card.
-    brand_elements = card.locator(".text-brand")
+    # The hero numeral is the only `text-text-primary` element on the card.
+    brand_elements = card.locator(".text-text-primary")
     assert brand_elements.count() == 1
     hero_class = brand_elements.first.get_attribute("class") or ""
     assert "text-hero-numeral" in hero_class
