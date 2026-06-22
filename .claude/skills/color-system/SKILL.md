@@ -147,10 +147,12 @@ lightness):
 
 ## Dark mode tokens
 
-Defined in `app/static/src/input.css` under `[data-theme="dark"]` (explicit
-choice) and mirrored under `@media (prefers-color-scheme: dark)` (system
-default, no cookie set). Same token *names* as light — only values change, so
-both renderers keep one token contract.
+Defined in `app/static/src/input.css` under `[data-theme="dark"]` only.
+Single activation path — explicit user choice via the theme toggle
+(cookie/session), no `prefers-color-scheme` detection (that media-query
+mirror was removed 2026-06-22; default on first visit with no cookie is
+always light). Same token *names* as light — only values change, so both
+renderers keep one token contract.
 
 Tokens requiring a dark variant: `surface-0/1/2`, `text-primary/secondary/
 muted`, `border` / `border-strong`, `accent` / `accent-subtle` /
@@ -181,10 +183,10 @@ rationale.
 | `--color-surface-1`      | `#FFFFFF` | `#1E293B` | card / sheet (pure white / surface-dark) |
 | `--color-surface-2`      | `#F1F5F9` | `#2A3950` | inset / pressed; = heat-0 (alabaster-dim / derived) |
 | `--color-border`         | `#E2E8F0` | `#334155` | brand `border` / `border-dark` |
-| `--color-border-strong`  | `#7C8AA0` | `#64748B` | darkened slate / slate-mid |
+| `--color-border-strong`  | `#7C8AA0` | `#73839A` | darkened slate / slate-mid — see contrast-fix note below |
 | `--color-text-primary`   | `#0F172A` | `#F8FAFC` | obsidian / alabaster |
 | `--color-text-secondary` | `#475569` | `#94A3B8` | light: darker slate. dark: slate (slate-mid too dark on dark bg) |
-| `--color-text-muted`     | `#64748B` | `#7E8CA3` | slate-mid (light) / lightened slate-mid (dark) |
+| `--color-text-muted`     | `#64748B` | `#96A2B4` | slate-mid (light) / lightened slate-mid (dark) — see contrast-fix note below |
 | `--color-accent`         | `#E34234` | `#FF6B5B` | cinnabar / lightened cinnabar; non-text/fill/border/focus-ring use only |
 | `--color-accent-subtle`  | `#FBE7E4` | `#3A2422` | light: pale tint under dark/accent-text. dark: dark desaturated tint under light text (chip-selected bg) |
 | `--color-accent-text`    | `#982015` | `#FF6B5B` | darkened cinnabar (light) for body-size accent text; dark `accent` already clears 4.5:1 |
@@ -218,16 +220,63 @@ Contrast checks (WCAG, computed against the values above):
   4.65:1.
 - **Light `border-strong`** (non-text, 3:1 minimum) on `surface-1`: 3.50:1.
 - **Dark `text-primary`** on `surface-0`: 17.06:1; on `surface-1`: 13.98:1.
-  `text-secondary` on `surface-1`: 5.71:1; on `surface-0`: 6.96:1.
-  `text-muted` on `surface-1`: 4.30:1; on `surface-0`: 5.24:1.
-- **Dark `accent`** on `surface-0`: 6.38:1; on `surface-1`: 5.23:1 — both
-  clear the 3:1 non-text minimum for the global focus ring, and also clear
-  4.5:1 as body text (used directly as `accent-text` in dark mode).
-  `accent-text` on `accent-subtle`: 5.16:1.
+  `text-secondary` on `surface-1`: 5.71:1; on `surface-0`: 6.96:1; on
+  `surface-2`: 4.55:1. `text-muted` on `surface-1`: 5.66:1; on `surface-0`:
+  6.91:1; on `surface-2`: 4.51:1 (post contrast-fix below).
+- **Dark `accent`** on `surface-0`: 6.38:1; on `surface-1`: 5.23:1; on
+  `surface-2`: 4.17:1 — all clear the 3:1 non-text minimum for the global
+  focus ring, and also clear 4.5:1 as body text (used directly as
+  `accent-text` in dark mode). `accent-text` on `accent-subtle`: 5.16:1.
 - **Dark `danger`** on `surface-1`: 5.54:1; on `surface-0`: 6.76:1.
 - **Dark `level`** (unchanged): on `surface-1`: 5.47:1; on `surface-0`:
   6.68:1; on `level-subtle`: 4.63:1.
-- **Dark `border-strong`** (non-text) on `surface-1`: 3.07:1.
+- **Dark `border-strong`** (non-text) on `surface-0`: 4.63:1; on `surface-1`:
+  3.79:1; on `surface-2`/`heat-0`: 3.02:1 (post contrast-fix below).
+
+### Contrast-fix pass (2026-06-22, Build Plan Task 4)
+
+A verification pass against the *as-shipped* dark-theme token block (not
+the previously-documented ratios above, which were stale) found two real
+AA failures, both now fixed by the smallest value change that clears the
+threshold — no other token in the dark or light table changed:
+
+- **`--color-text-muted` (dark):** was `#7E8CA3` — 4.30:1 on `surface-1`
+  and only 3.43:1 on `surface-2`, both under the 4.5:1 body-text minimum.
+  `text-muted` always renders at `--font-size-caption` (13px, normal
+  weight), well under WCAG's large-text threshold, so no exemption
+  applies — it must clear 4.5:1 like any other body-size text. Lightened
+  to `#96A2B4` (same hue/saturation family, minimal lightness increase) —
+  now 5.66:1 / 4.51:1 / 6.91:1 on surface-1/2/0 respectively.
+- **`--color-border-strong` (dark):** was `#64748B` — 3.07:1 on
+  `surface-1` and only 2.45:1 on `surface-2` (== `heat-0`), under the 3:1
+  non-text minimum. This token backs the `.heat-cell--month-start` year-
+  heatmap divider (added in this same meeting's Task 2) and the
+  `.cal-day--today` ring. Lightened to `#73839A` — now 3.79:1 / 3.02:1 /
+  4.63:1 on surface-1/2/0.
+  - **Known limitation, not fixed (by design, not an oversight):** the
+    month-start divider's `border-left` sits on whichever heat-ramp step
+    (`heat-0`..`heat-4`) that day's cell renders, not a fixed surface. No
+    single static border color clears 3:1 against all five ramp steps at
+    once — `heat-3`/`heat-4` are mid-bright blues that a divider dark
+    enough to read on `heat-0` will wash out against, and vice versa. This
+    is a pre-existing structural property of "static divider over a
+    per-cell-colored ramp," present identically in **light mode** too
+    (`border-strong` `#7C8AA0` on light `heat-2`/`heat-3`/`heat-4` is
+    2.12:1 / 1.33:1 / 1.50:1) — not something Task 2 or this dark-theme
+    pass introduced. Graded here against `heat-0` (the ramp's default/
+    empty-cell color and `border-strong`'s other real usages — card
+    outlines, today-ring) since that's the only fixed, predictable
+    background the token is otherwise used against. If the divider's
+    legibility against busy (heat-3/4) cells becomes a real complaint,
+    the fix is a dedicated non-token divider treatment (e.g. a fixed
+    light/dark overlay independent of `border-strong`), not a further
+    chase of one token's value — flag as a follow-up, don't re-tune this
+    token again for it.
+- **Both fixes verified against the real compiled values in
+  `app/static/src/input.css`**, not re-derived from the (stale) numbers
+  previously written in this skill — the previous "Dark `text-muted` on
+  `surface-1`: 4.30:1" line above was already documenting a failure
+  without flagging it as one.
 
 Heat ramp is re-derived from each mode's own `surface-2` toward its own
 calm slate-blue endpoint (not a naive darken of the light ramp or a

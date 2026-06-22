@@ -5,6 +5,10 @@
 {% block content %}
 <header class="flex flex-col gap-2 py-2">
     <h1 class="text-title font-semibold text-text-primary">{{ strings.ACCOUNT_TITLE }}</h1>
+    <a
+        href="{{ home_url }}"
+        class="text-caption font-medium text-text-secondary underline-offset-2 transition hover:underline focus-visible:outline-offset-2"
+    >{{ strings.ACCOUNT_HOME_LINK }}</a>
 </header>
 
 {# Visibility/share-link section is non-guest only — guests have no username

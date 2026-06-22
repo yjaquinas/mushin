@@ -27,9 +27,9 @@ Specs covered
    ``#log-panel``; a successful submit collapses the panel
    (``aria-expanded="false"``); the submit button has
    ``hx-disabled-elt="this"``.
-5. Theme toggle: clicking the masthead theme toggle cycles
-   light -> dark -> system, setting/clearing ``data-theme`` on ``<html>``
-   accordingly, and the choice persists across a page reload via the
+5. Theme toggle: clicking the masthead theme toggle flips light <-> dark,
+   setting ``data-theme`` on ``<html>`` accordingly (default with no cookie
+   is light), and the choice persists across a page reload via the
    ``mushin_theme`` cookie.
 6. Home cards: every card on ``/home`` is a single ``<a>`` link to its
    ``/activities/{id}`` detail page, has no visible action button, and a
@@ -285,44 +285,34 @@ def test_log_panel_focuses_on_expand_and_collapses_on_submit(page) -> None:
 
 
 def test_theme_toggle_cycles_and_persists_across_reload(page) -> None:
-    """The masthead theme toggle cycles system -> light -> dark -> system,
-    reflecting the active theme as `data-theme` on `<html>` (absent for
-    "system"), and the choice survives a page reload via the
-    `mushin_theme` cookie."""
+    """The masthead theme toggle flips light <-> dark, reflecting the active
+    theme as `data-theme` on `<html>` (default with no cookie is light), and
+    the choice survives a page reload via the `mushin_theme` cookie."""
     _signup(page, _unique_username("g"))
 
     toggle = page.locator("button[hx-post='/preferences/theme']")
 
-    # Fresh account: no `mushin_theme` cookie yet -> "system" -> no
-    # `data-theme` attribute on <html>.
-    assert page.locator("html").get_attribute("data-theme") is None
-
-    # First click: system -> light.
-    toggle.click()
-    page.wait_for_function("() => document.documentElement.getAttribute('data-theme') === 'light'")
+    # Fresh account: no `mushin_theme` cookie yet -> defaults to "light",
+    # never inferred from any OS/prefers-color-scheme signal.
     assert page.locator("html").get_attribute("data-theme") == "light"
 
-    # Persists across reload.
-    page.reload()
-    assert page.locator("html").get_attribute("data-theme") == "light"
-
-    # Second click: light -> dark.
-    toggle = page.locator("button[hx-post='/preferences/theme']")
+    # First click: light -> dark.
     toggle.click()
     page.wait_for_function("() => document.documentElement.getAttribute('data-theme') === 'dark'")
     assert page.locator("html").get_attribute("data-theme") == "dark"
 
+    # Persists across reload.
     page.reload()
     assert page.locator("html").get_attribute("data-theme") == "dark"
 
-    # Third click: dark -> system (data-theme attribute removed).
+    # Second click: dark -> light.
     toggle = page.locator("button[hx-post='/preferences/theme']")
     toggle.click()
-    page.wait_for_function("() => document.documentElement.getAttribute('data-theme') === null")
-    assert page.locator("html").get_attribute("data-theme") is None
+    page.wait_for_function("() => document.documentElement.getAttribute('data-theme') === 'light'")
+    assert page.locator("html").get_attribute("data-theme") == "light"
 
     page.reload()
-    assert page.locator("html").get_attribute("data-theme") is None
+    assert page.locator("html").get_attribute("data-theme") == "light"
 
 
 def test_home_cards_have_no_action_button_and_link_to_detail(page) -> None:

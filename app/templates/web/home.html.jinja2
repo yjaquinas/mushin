@@ -4,6 +4,14 @@
 
 {% block content %}
 {% from "components/_icon.html.jinja2" import icon %}
+
+{% if flash_message %}
+<p
+    role="status"
+    class="rounded-card border border-border bg-surface-2 px-4 py-2 text-caption font-medium text-text-primary"
+>{{ flash_message }}</p>
+{% endif %}
+
 <header class="flex items-center gap-2 py-2">
     <h1 class="text-title font-semibold text-text-primary">{{ strings.HOME_TITLE }}</h1>
     {% if unseen_comments %}

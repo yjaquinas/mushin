@@ -10,7 +10,5 @@ document.body.addEventListener("htmx:afterSwap", (event) => {
   const theme = target && target.dataset.theme;
   if (theme) {
     document.documentElement.dataset.theme = theme;
-  } else {
-    delete document.documentElement.dataset.theme;
   }
 });

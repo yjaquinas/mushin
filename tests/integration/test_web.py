@@ -1323,6 +1323,53 @@ async def test_history_year_view_shows_heatmap_grid_with_bucketed_cells(
     assert any(f"heat-cell--{n}" in resp.text for n in (1, 2, 3, 4))
 
 
+async def test_history_year_view_fits_without_horizontal_scroll(
+    client: AsyncClient,
+) -> None:
+    """The year heatmap packs 14 days per column (not 7), shrinking ~52
+    columns to ~27 so the whole year fits on a mobile viewport without
+    horizontal scroll -- no ``overflow-x-auto`` escape hatch needed."""
+    owner_id = await _guest_login(client)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
+    activity_id = _practice_activity_id(owner_id)
+
+    resp = await client.get(f"/activities/{activity_id}/history?period=year")
+    assert resp.status_code == 200
+    assert "overflow-x-auto" not in resp.text
+    assert "grid-rows-14" in resp.text
+    assert "grid-rows-7" not in resp.text
+    # The divider border applies to every cell in a month-start *column*
+    # (14 cells/column), not just the single day that's the 1st -- so it
+    # reads as a full vertical rule rather than a tick mark mid-column.
+    # 12 month-start columns x 14 rows = 168 bordered cells.
+    assert resp.text.count("heat-cell--month-start") == 168
+
+
+async def test_history_year_view_shows_sparse_month_labels_from_strings(
+    client: AsyncClient,
+) -> None:
+    """Only the quarterly subset (Jan, Apr, Jul, Oct) renders as visible text
+    in the month-label strip, sourced from ``ui_strings.py`` -- not all 12
+    months, and never hardcoded in the template."""
+    owner_id = await _guest_login(client)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
+    activity_id = _practice_activity_id(owner_id)
+
+    resp = await client.get(f"/activities/{activity_id}/history?period=year")
+    assert resp.status_code == 200
+
+    for month_num in strings_module.HISTORY_YEAR_HEATMAP_LABELED_MONTHS:
+        label = strings_module.HISTORY_YEAR_MONTH_ABBR[month_num]
+        assert resp.text.count(label) == 1
+
+    labeled = set(strings_module.HISTORY_YEAR_HEATMAP_LABELED_MONTHS)
+    for month_num in range(1, 13):
+        if month_num in labeled:
+            continue
+        label = strings_module.HISTORY_YEAR_MONTH_ABBR[month_num]
+        assert label not in resp.text
+
+
 async def test_detail_streak_matches_stats_service(client: AsyncClient) -> None:
     owner_id = await _guest_login(client)
     seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
@@ -1449,6 +1496,93 @@ async def test_history_context_year_anchor_math(web_db: Path) -> None:
     assert ctx["label"] == "2026"
     assert "cells" in ctx["visual"]
     assert len(ctx["visual"]["cells"]) == 365
+
+
+async def test_history_context_year_marks_first_of_month_cells(web_db: Path) -> None:
+    """Each year-period cell carries ``is_first_of_month`` (used by the
+    template to render sparse quarterly labels + a divider border on every
+    month boundary, not just the labeled ones) -- exactly 12 cells should be
+    flagged, one per month, on the first calendar day of that month."""
+    from datetime import date
+
+    from app.routes.web import _build_history_context
+
+    ctx = _build_history_context(
+        activity_id=1, owner_id=1, period="year", anchor=date(2026, 6, 15), tz=_UTC
+    )
+    cells = ctx["visual"]["cells"]
+    assert len(cells) == 365
+
+    first_of_month_dates = [c["date"] for c in cells if c["is_first_of_month"]]
+    assert first_of_month_dates == [f"2026-{m:02d}-01" for m in range(1, 13)]
+
+    # The very first cell of the year is always a month start.
+    assert cells[0]["date"] == "2026-01-01"
+    assert cells[0]["is_first_of_month"] is True
+    assert cells[0]["month"] == 1
+
+    # A mid-month day is not flagged.
+    mid_january = next(c for c in cells if c["date"] == "2026-01-15")
+    assert mid_january["is_first_of_month"] is False
+    assert mid_january["month"] == 1
+
+
+async def test_history_context_year_month_start_column_flag_covers_whole_column(
+    web_db: Path,
+) -> None:
+    """``is_month_start_column`` is true for every cell in a 14-day column
+    that contains a month boundary, not just the single day that's the
+    1st -- so the template's divider border reads as a full column rule
+    instead of a tick mark mid-column (the 1st can land anywhere within its
+    column since 14 doesn't evenly divide the days-per-month)."""
+    from datetime import date
+
+    from app.routes.web import _build_history_context
+
+    ctx = _build_history_context(
+        activity_id=1, owner_id=1, period="year", anchor=date(2026, 6, 15), tz=_UTC
+    )
+    cells = ctx["visual"]["cells"]
+    year_rows = ctx["visual"]["year_rows"]
+
+    # January 1 is day index 0 -> column 0 (cells[0:14]) is entirely flagged.
+    column_0 = cells[0:year_rows]
+    assert all(c["is_month_start_column"] for c in column_0)
+
+    # The 12 month-boundary days land across at most 12 distinct columns;
+    # every cell in each of those columns is flagged, and the count of
+    # flagged cells is therefore a multiple of year_rows.
+    flagged = [c for c in cells if c["is_month_start_column"]]
+    assert len(flagged) % year_rows == 0
+    assert len(flagged) // year_rows == 12
+
+
+async def test_history_context_year_month_columns_align_with_grid_rows(
+    web_db: Path,
+) -> None:
+    """``month_columns`` gives one entry per grid *column* (the heatmap packs
+    14 days per column, column-major), so the label strip in the template can
+    align 1:1 with the heatmap's columns. Exactly 12 columns should be flagged
+    ``is_month_start`` (2026 has 12 month boundaries, one per month, and no
+    two months share a 14-day column in a non-leap year)."""
+    from datetime import date
+
+    from app.routes.web import _build_history_context
+
+    ctx = _build_history_context(
+        activity_id=1, owner_id=1, period="year", anchor=date(2026, 6, 15), tz=_UTC
+    )
+    month_columns = ctx["visual"]["month_columns"]
+    assert ctx["visual"]["year_rows"] == 14
+    # 365 days / 14 rows per column -> 27 columns (ceil).
+    assert len(month_columns) == 27
+
+    # January always starts in column 0.
+    assert month_columns[0]["is_month_start"] is True
+    assert month_columns[0]["month"] == 1
+
+    flagged_months = [c["month"] for c in month_columns if c["is_month_start"]]
+    assert flagged_months == list(range(1, 13))
 
 
 async def test_history_context_log_groups_entries_by_day_newest_first(
@@ -2048,6 +2182,40 @@ async def test_history_fragment_renders_for_all_periods(client: AsyncClient) -> 
         assert 'role="tablist"' in txt
 
 
+async def test_history_selected_period_tab_has_no_checkmark_glyph(
+    client: AsyncClient,
+) -> None:
+    """The selected week/month/year/all tab is distinguished by highlight
+    styling alone (accent fill + bold text + border) — never a checkmark
+    glyph, per the 2026-06-22 UI-polish fix."""
+    owner_id = await _guest_login(client)
+    seed_test_activity(owner_id, name="Kendo")
+    activity_id = _practice_activity_id(owner_id)
+
+    resp = await client.get(f"/activities/{activity_id}/history?period=week")
+    assert resp.status_code == 200
+    txt = resp.text
+
+    assert "&check;" not in txt
+    assert "✓" not in txt
+
+    # Selected tab (week) carries the accent highlight classes...
+    selected_tab_start = txt.index(f'id="history-tab-{activity_id}-week"')
+    selected_tab_chunk = txt[selected_tab_start : selected_tab_start + 600]
+    assert 'aria-selected="true"' in selected_tab_chunk
+    assert "bg-accent-subtle" in selected_tab_chunk
+    assert "text-accent-text" in selected_tab_chunk
+    assert "font-semibold" in selected_tab_chunk
+    assert "border-accent" in selected_tab_chunk
+
+    # ...while an unselected tab (month) keeps the quiet outline style.
+    unselected_tab_start = txt.index(f'id="history-tab-{activity_id}-month"')
+    unselected_tab_chunk = txt[unselected_tab_start : unselected_tab_start + 600]
+    assert 'aria-selected="false"' in unselected_tab_chunk
+    assert "bg-accent-subtle" not in unselected_tab_chunk
+    assert "text-accent-text" not in unselected_tab_chunk
+
+
 # ---------------------------------------------------------------------------
 # Stats-summary fragment (GET /activities/{id}/stats-summary)
 # ---------------------------------------------------------------------------
@@ -2164,43 +2332,44 @@ async def test_theme_toggle_renders_on_logged_out_entry_screen(client: AsyncClie
     assert 'hx-post="/preferences/theme"' in resp.text
 
 
-async def test_theme_toggle_cycles_light_dark_system(client: AsyncClient) -> None:
-    # No cookie yet -> current is "system" -> next is "light".
+async def test_theme_toggle_cycles_light_dark(client: AsyncClient) -> None:
+    # No cookie yet -> current is "light" -> next is "dark".
+    resp = await client.post("/preferences/theme")
+    assert resp.status_code == 200
+    assert resp.cookies.get("mushin_theme") == "dark"
+    assert strings_module.THEME_TOGGLE_LABEL_DARK in resp.text
+    assert 'hx-post="/preferences/theme"' in resp.text
+    assert 'hx-swap="outerHTML"' in resp.text
+
+    # "dark" -> "light"
     resp = await client.post("/preferences/theme")
     assert resp.status_code == 200
     assert resp.cookies.get("mushin_theme") == "light"
     assert strings_module.THEME_TOGGLE_LABEL_LIGHT in resp.text
-    assert 'hx-post="/preferences/theme"' in resp.text
-    assert 'hx-swap="outerHTML"' in resp.text
 
-    # "light" -> "dark"
+    # "light" -> "dark" again, confirming the toggle is strictly two-state.
     resp = await client.post("/preferences/theme")
     assert resp.status_code == 200
     assert resp.cookies.get("mushin_theme") == "dark"
     assert strings_module.THEME_TOGGLE_LABEL_DARK in resp.text
 
-    # "dark" -> "system"
-    resp = await client.post("/preferences/theme")
+
+async def test_no_theme_cookie_defaults_to_light(client: AsyncClient) -> None:
+    # No cookie set -> renders the light theme, never inferred from any
+    # OS/prefers-color-scheme signal.
+    resp = await client.get("/")
     assert resp.status_code == 200
-    assert resp.cookies.get("mushin_theme") == "system"
-    assert strings_module.THEME_TOGGLE_LABEL_SYSTEM in resp.text
+    assert '<html lang="en" data-theme="light">' in resp.text
+    assert strings_module.THEME_TOGGLE_LABEL_LIGHT in resp.text
 
 
 async def test_theme_cookie_sets_data_theme_attribute_on_html(client: AsyncClient) -> None:
-    # Default (no cookie): no data-theme attribute, so prefers-color-scheme applies.
-    resp = await client.get("/")
-    assert resp.status_code == 200
-    assert "data-theme" not in resp.text
-
-    # Cycle to "light" and confirm the next full-page render carries it.
-    resp = await client.post("/preferences/theme")
-    assert resp.cookies.get("mushin_theme") == "light"
-
+    # Default (no cookie): renders light.
     resp = await client.get("/")
     assert resp.status_code == 200
     assert '<html lang="en" data-theme="light">' in resp.text
 
-    # Cycle to "dark".
+    # Toggle to "dark" and confirm the next full-page render carries it.
     resp = await client.post("/preferences/theme")
     assert resp.cookies.get("mushin_theme") == "dark"
 
@@ -2208,13 +2377,13 @@ async def test_theme_cookie_sets_data_theme_attribute_on_html(client: AsyncClien
     assert resp.status_code == 200
     assert '<html lang="en" data-theme="dark">' in resp.text
 
-    # Cycle to "system": data-theme attribute disappears again.
+    # Toggle back to "light".
     resp = await client.post("/preferences/theme")
-    assert resp.cookies.get("mushin_theme") == "system"
+    assert resp.cookies.get("mushin_theme") == "light"
 
     resp = await client.get("/")
     assert resp.status_code == 200
-    assert "data-theme" not in resp.text
+    assert '<html lang="en" data-theme="light">' in resp.text
 
 
 # ---------------------------------------------------------------------------
@@ -2257,7 +2426,9 @@ async def test_account_toggle_persists_public_and_reflects_after_redirect(
         "/account/visibility", data={"visibility": "public"}, follow_redirects=False
     )
     assert resp.status_code == 303
-    assert resp.headers["location"] == "/account"
+    # Redirects home (the owner's canonical profile URL), matching the two
+    # sibling consent-write handlers — never back to /account.
+    assert resp.headers["location"] == "/@bob"
 
     # The page now reflects the persisted value.
     resp = await client.get("/account")
@@ -2265,6 +2436,73 @@ async def test_account_toggle_persists_public_and_reflects_after_redirect(
     assert strings_module.ACCOUNT_VISIBILITY_CURRENT_PUBLIC in resp.text
     # The public radio is pre-checked (whitespace-tolerant).
     assert re.search(r'value="public"\s+checked', resp.text) is not None
+
+
+async def test_account_visibility_save_redirects_home_not_account(
+    client: AsyncClient,
+) -> None:
+    """update_visibility must redirect to _home_url_for(user), exactly like
+    its sibling consent-write handlers (submit_welcome_sharing,
+    submit_visibility_update) — never back to /account."""
+    await _signup_login(client, "erin")
+
+    resp = await client.post(
+        "/account/visibility", data={"visibility": "private"}, follow_redirects=False
+    )
+    assert resp.status_code == 303
+    assert resp.headers["location"] == "/@erin"
+    assert resp.headers["location"] != "/account"
+
+
+async def test_account_visibility_save_shows_one_shot_flash_on_home(
+    client: AsyncClient,
+) -> None:
+    """Saving a visibility change shows the confirmation flash exactly once
+    on the very next render, then it must not reappear on a follow-up
+    request (refresh/back-button)."""
+    await _signup_login(client, "flora")
+
+    resp = await client.post(
+        "/account/visibility", data={"visibility": "public"}, follow_redirects=False
+    )
+    assert resp.status_code == 303
+    location = resp.headers["location"]
+
+    # First render after the save shows the flash.
+    resp = await client.get(location)
+    assert resp.status_code == 200
+    assert strings_module.HOME_FLASH_VISIBILITY_PUBLIC in resp.text
+
+    # A subsequent, unrelated request to the same page must not show it again.
+    resp = await client.get(location)
+    assert resp.status_code == 200
+    assert strings_module.HOME_FLASH_VISIBILITY_PUBLIC not in resp.text
+
+
+async def test_account_visibility_save_flash_reflects_private_choice(
+    client: AsyncClient,
+) -> None:
+    await _signup_login(client, "gail")
+
+    resp = await client.post(
+        "/account/visibility", data={"visibility": "private"}, follow_redirects=False
+    )
+    location = resp.headers["location"]
+
+    resp = await client.get(location)
+    assert strings_module.HOME_FLASH_VISIBILITY_PRIVATE in resp.text
+    assert strings_module.HOME_FLASH_VISIBILITY_PUBLIC not in resp.text
+
+
+async def test_account_has_home_link(client: AsyncClient) -> None:
+    """/account carries a labeled in-content Home link, distinct from the
+    global header logo's link."""
+    await _signup_login(client, "harry")
+
+    resp = await client.get("/account")
+    assert resp.status_code == 200
+    assert strings_module.ACCOUNT_HOME_LINK in resp.text
+    assert 'href="/@harry"' in resp.text
 
 
 async def test_account_toggle_persists_back_to_private(client: AsyncClient) -> None:

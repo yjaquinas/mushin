@@ -64,12 +64,12 @@
                 hx-swap="outerHTML"
                 class="min-h-tap min-w-tap flex-1 rounded-button px-3 text-body transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-strong
                     {% if is_selected %}
-                        border border-border-strong bg-surface-2 font-semibold text-text-primary
+                        border border-accent bg-accent-subtle font-semibold text-accent-text
                     {% else %}
                         border border-border text-text-secondary hover:bg-surface-2
                     {% endif %}"
             >
-                {% if is_selected %}&check; {% endif %}{{ period_label }}
+                {{ period_label }}
             </button>
         {% endfor %}
     </div>
@@ -144,13 +144,33 @@
         {% elif history.period == "week" %}
             {% include "components/week_strip.html.jinja2" with context %}
         {% elif history.period == "year" %}
+            {# Month-label strip: one entry per grid *column* (not per day),
+               so it aligns 1:1 with the heatmap's columns below regardless
+               of how many days (rows) each column packs. Decorative
+               (aria-hidden) — the grid below carries the single
+               role="img"/aria-label that describes the whole year view.
+               Only a sparse (quarterly) subset of months gets text; every
+               month-start column still gets a divider border in the grid
+               below so the boundary stays legible without a label. #}
             <div
-                class="grid grid-flow-col grid-rows-7 gap-1 overflow-x-auto"
+                class="grid grid-cols-[repeat(27,minmax(0,1fr))] gap-0.5"
+                aria-hidden="true"
+            >
+                {% for col in history.visual.month_columns %}
+                    <span class="text-caption text-text-muted">
+                        {% if col.is_month_start and col.month in strings.HISTORY_YEAR_HEATMAP_LABELED_MONTHS %}
+                            {{ strings.HISTORY_YEAR_MONTH_ABBR[col.month] }}
+                        {% endif %}
+                    </span>
+                {% endfor %}
+            </div>
+            <div
+                class="grid grid-flow-col grid-rows-14 gap-0.5"
                 role="img"
                 aria-label="{{ strings.HISTORY_YEAR_HEATMAP_ARIA_LABEL }}"
             >
                 {% for cell in history.visual.cells %}
-                    <span class="heat-cell heat-cell--{{ cell.bucket }}" aria-hidden="true"></span>
+                    <span class="heat-cell heat-cell--{{ cell.bucket }}{% if cell.is_month_start_column %} heat-cell--month-start{% endif %}" aria-hidden="true"></span>
                 {% endfor %}
             </div>
         {% endif %}

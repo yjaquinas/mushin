@@ -56,10 +56,12 @@ from app.routes.web import (
     _build_field_stats_context,
     _build_history_context,
     _build_home_context,
+    _clear_flash,
     _field_defs_for_activity,
     _format_entry_time,
     _home_url_context,
     _list_sub_tallies,
+    _read_flash,
     _resolve_comment_deep_link,
     _theme_context,
     consent_gate_redirect,
@@ -177,11 +179,14 @@ async def profile(
                     return gate
             tz = users.get_user_timezone(owner_id)
             context = _build_home_context(conn, owner_id, tz)
-            return templates.TemplateResponse(
+            context["flash_message"] = _read_flash(request)
+            response = templates.TemplateResponse(
                 request=request,
                 name="web/home.html.jinja2",
                 context=context,
             )
+            _clear_flash(response)
+            return response
 
         if is_preview:
             # Re-derive the previewed capability WITHOUT reading visibility

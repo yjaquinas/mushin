@@ -37,6 +37,7 @@ from zoneinfo import ZoneInfo
 from fastapi import APIRouter, Cookie, Form, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from itsdangerous import BadSignature, URLSafeSerializer
 
 from app import ui_strings
 from app.auth import sessions, users
@@ -54,12 +55,81 @@ from app.services import (
 )
 from app.services.entries import EntryNotFoundError, SubTallyNotFoundError
 
-# Cookie holding the user's explicit theme choice: "light" | "dark" | "system".
-# Missing/invalid values are treated as "system" (no data-theme attribute, so
-# the prefers-color-scheme media query in input.css applies).
+# Cookie holding the user's explicit theme choice: "light" | "dark".
+# Missing/invalid values default to "light" (no OS/prefers-color-scheme
+# detection — first visit is always light until the user toggles).
 THEME_COOKIE = "mushin_theme"
-THEME_VALUES = ("light", "dark", "system")
-THEME_CYCLE = {"light": "dark", "dark": "system", "system": "light"}
+THEME_VALUES = ("light", "dark")
+THEME_CYCLE = {"light": "dark", "dark": "light"}
+
+# ---------------------------------------------------------------------------
+# One-shot flash messages
+# ---------------------------------------------------------------------------
+#
+# A minimal flash mechanism: a short-lived signed cookie set on a redirect
+# response, read exactly once by the next full-page render, then explicitly
+# deleted on that same response so a refresh or back-button visit never
+# replays it. Signed (not encrypted) with itsdangerous, same library and
+# pattern as app/auth/sessions.py, but its own salt namespace — a flash
+# value can never be replayed as a session token or vice versa. The payload
+# is a bare key (e.g. "visibility_public"), never personal data beyond the
+# state being confirmed.
+FLASH_COOKIE = "mushin_flash"
+_FLASH_SALT = "mushin.flash.v1"
+_FLASH_MAX_AGE = 30  # one page load's worth of validity; it's read-once anyway
+
+_FLASH_MESSAGES: dict[str, str] = {
+    "visibility_public": ui_strings.HOME_FLASH_VISIBILITY_PUBLIC,
+    "visibility_private": ui_strings.HOME_FLASH_VISIBILITY_PRIVATE,
+}
+
+
+def _flash_serializer() -> URLSafeSerializer:
+    secret = os.getenv("SESSION_SECRET", "")
+    return URLSafeSerializer(secret, salt=_FLASH_SALT)
+
+
+def _set_flash(response: RedirectResponse, key: str) -> None:
+    """Attach a one-shot flash cookie carrying *key* to *response*.
+
+    *key* must be one of ``_FLASH_MESSAGES`` — an internal identifier, never
+    free text, so the cookie can never carry personal data.
+    """
+    value = _flash_serializer().dumps({"key": key})
+    response.set_cookie(
+        key=FLASH_COOKIE,
+        value=value,
+        max_age=_FLASH_MAX_AGE,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        path="/",
+    )
+
+
+def _read_flash(request: Request) -> str | None:
+    """Return the flash message text for the current request, or ``None``.
+
+    Does not clear the cookie — pair with ``_clear_flash`` on the response
+    that renders the message so it never reappears on a later request.
+    """
+    raw = request.cookies.get(FLASH_COOKIE)
+    if not raw:
+        return None
+    try:
+        data = _flash_serializer().loads(raw)
+    except BadSignature:
+        return None
+    key = data.get("key") if isinstance(data, dict) else None
+    if not isinstance(key, str):
+        return None
+    return _FLASH_MESSAGES.get(key)
+
+
+def _clear_flash(response: HTMLResponse) -> None:
+    """Delete the flash cookie so a one-shot message is never read twice."""
+    response.delete_cookie(key=FLASH_COOKIE, path="/", secure=True, httponly=True, samesite="lax")
+
 
 _TAG_PERIOD_LABELS: dict[str, str] = {
     "week": ui_strings.TAG_FREQUENCY_THIS_WEEK,
@@ -69,10 +139,10 @@ _TAG_PERIOD_LABELS: dict[str, str] = {
 
 
 def _theme_from_cookie(value: str | None) -> str:
-    """Normalize the ``mushin_theme`` cookie to a known value, defaulting to "system"."""
+    """Normalize the ``mushin_theme`` cookie to a known value, defaulting to "light"."""
     if value in THEME_VALUES:
         return value
-    return "system"
+    return "light"
 
 
 def _theme_context(request: Request) -> dict[str, Any]:
@@ -523,8 +593,46 @@ def _build_history_context(
         label = f"{start.isoformat()} – {end.isoformat()}"
     elif period == "year":
         series = stats.heatmap_range(activity_id, owner_id, start, end, tz=tz)
-        cells = [{"date": d["date"], "bucket": _heat_bucket(d["count"])} for d in series]
-        visual = {"cells": cells}
+        year_rows = 14
+        cells = []
+        prev_month: int | None = None
+        for d in series:
+            day = date.fromisoformat(d["date"])
+            is_first_of_month = day.month != prev_month
+            prev_month = day.month
+            cells.append(
+                {
+                    "date": d["date"],
+                    "bucket": _heat_bucket(d["count"]),
+                    "month": day.month,
+                    "is_first_of_month": is_first_of_month,
+                }
+            )
+        # One entry per grid column (cells pack column-major, `year_rows`
+        # per column — see grid-rows-14 in history.html.jinja2), so the
+        # label strip above the grid can align 1:1 by column index rather
+        # than by day. A column is a "month start" if any of its cells is
+        # the first day of its month; only sparse (quarterly) months get
+        # text, but every month-start column gets a boundary flag so the
+        # template can draw a divider even where there's no label.
+        month_columns = []
+        for col_start in range(0, len(cells), year_rows):
+            col_cells = cells[col_start : col_start + year_rows]
+            month_start_cell = next((c for c in col_cells if c["is_first_of_month"]), None)
+            is_month_start_column = month_start_cell is not None
+            month_columns.append(
+                {
+                    "is_month_start": is_month_start_column,
+                    "month": month_start_cell["month"] if month_start_cell else None,
+                }
+            )
+            # The divider border reads as a full-column rule, not a tick
+            # mark mid-column, so every cell in a month-start column gets
+            # the boundary flag — not just the single day that's the 1st
+            # (which can land anywhere within its 14-day column).
+            for c in col_cells:
+                c["is_month_start_column"] = is_month_start_column
+        visual = {"cells": cells, "month_columns": month_columns, "year_rows": year_rows}
         label = f"{start.year}"
     else:
         raise ValueError(f"unknown period {period!r}; expected week/month/year/all")
@@ -815,12 +923,15 @@ async def _render_home(request: Request, user: dict[str, Any]) -> HTMLResponse:
     with db.connect() as conn:
         conn.execute("BEGIN")
         context = _build_home_context(conn, owner_id, tz)
+    context["flash_message"] = _read_flash(request)
 
-    return templates.TemplateResponse(
+    response = templates.TemplateResponse(
         request=request,
         name="web/home.html.jinja2",
         context=context,
     )
+    _clear_flash(response)
+    return response
 
 
 # ---------------------------------------------------------------------------
@@ -1025,7 +1136,11 @@ async def update_visibility(
     Validates *visibility* against ``users.VALID_VISIBILITIES`` (400 otherwise),
     persists via ``users.set_visibility_consent`` (re-stamping ``consent_seen_at``
     is idempotent — the user already passed the one-time screen), and redirects
-    back to ``/account``. Guests have no public profile and cannot toggle.
+    to the owner's home/profile URL (``_home_url_for``) — matching the two
+    sibling consent-write handlers (``submit_welcome_sharing``,
+    ``submit_visibility_update``) rather than bouncing back to ``/account``.
+    A one-shot flash cookie carries the confirmation message to that next
+    render. Guests have no public profile and cannot toggle.
     """
     user = _current_user(session)
     if user is None:
@@ -1035,7 +1150,9 @@ async def update_visibility(
     if visibility not in users.VALID_VISIBILITIES:
         return HTMLResponse(status_code=400)
     users.set_visibility_consent(int(user["id"]), visibility)
-    return RedirectResponse(url="/account", status_code=303)
+    response = RedirectResponse(url=_home_url_for(user), status_code=303)
+    _set_flash(response, f"visibility_{visibility}")
+    return response
 
 
 # ---------------------------------------------------------------------------
@@ -2864,7 +2981,7 @@ async def unblock_user(
 
 @router.post("/preferences/theme", response_class=HTMLResponse)
 async def toggle_theme(request: Request) -> HTMLResponse:
-    """Cycle the theme (light -> dark -> system -> light) and return the toggle fragment.
+    """Toggle the theme (light <-> dark) and return the toggle fragment.
 
     No auth required — works for guests and signed-in users alike. The
     ``mushin_theme`` cookie is not ``HttpOnly`` so it stays readable if a

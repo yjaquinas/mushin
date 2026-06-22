@@ -69,6 +69,12 @@ ENTRY_ERROR_GENERIC = "Something went wrong. Please try again."
 HOME_TITLE = "Your activities"
 HOME_EMPTY = "Nothing started yet."
 
+# One-shot flash confirmation shown after a successful /account/visibility
+# save (see app/routes/web.py — the flash cookie is read once, then cleared).
+# Carries only the public/private state — no other personal data.
+HOME_FLASH_VISIBILITY_PUBLIC = "Profile set to public."
+HOME_FLASH_VISIBILITY_PRIVATE = "Profile set to private."
+
 # ---------------------------------------------------------------------------
 # Empty-state example categories + create-category
 # ---------------------------------------------------------------------------
@@ -209,6 +215,29 @@ HISTORY_PERIOD_MONTH = "Month"
 HISTORY_PERIOD_YEAR = "Year"
 HISTORY_PERIOD_ALL = "All"
 
+# Month abbreviations, 1-indexed (index 0 unused) so a template can index
+# directly by a cell's 1-12 ``month`` number without an off-by-one.
+HISTORY_YEAR_MONTH_ABBR = [
+    "",
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+]
+
+# Sparse subset of month numbers labeled on the year heatmap (quarterly) —
+# every month start still gets a divider border, but only these get text,
+# to keep the label strip legible at mobile width.
+HISTORY_YEAR_HEATMAP_LABELED_MONTHS = [1, 4, 7, 10]
+
 HISTORY_PREV_WEEK = "Previous week"
 HISTORY_NEXT_WEEK = "Next week"
 HISTORY_PREV_YEAR = "Previous year"
@@ -234,10 +263,9 @@ SCALE_DISTRIBUTION_AVERAGE_LABEL = "Average"
 # ---------------------------------------------------------------------------
 
 # Each label describes the *current* theme state plus the action a tap
-# performs (cycle order: light -> dark -> system -> light).
+# performs (toggle: light <-> dark).
 THEME_TOGGLE_LABEL_LIGHT = "Theme: light. Switch to dark."
-THEME_TOGGLE_LABEL_DARK = "Theme: dark. Switch to system."
-THEME_TOGGLE_LABEL_SYSTEM = "Theme: system. Switch to light."
+THEME_TOGGLE_LABEL_DARK = "Theme: dark. Switch to light."
 
 # ---------------------------------------------------------------------------
 # Footer
@@ -304,6 +332,11 @@ VISIBILITY_CONSENT_SUBMIT = "Continue"
 # Same factual, no-alarm register as the consent screen. The toggle restates
 # the consequence briefly on each change (not the full first-run explainer).
 ACCOUNT_TITLE = "Account settings"
+
+# Secondary, in-content way back home — the global header logo already links
+# home on every page; this is a clearly labeled additional affordance, not a
+# new nav system.
+ACCOUNT_HOME_LINK = "Back to Home"
 
 ACCOUNT_VISIBILITY_HEADING = "Who can see your record"
 # The username doubles as a public handle — frame it as the share link.

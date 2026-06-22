@@ -171,8 +171,10 @@ def test_signup_lands_on_consent_screen_before_home(page) -> None:
 
 
 def test_account_visibility_toggle_updates_share_link(page) -> None:
-    """Toggling visibility to "public" on /account updates the rendered
-    share-link text to reference /@{username}."""
+    """Toggling visibility to "public" on /account redirects home (not back
+    to /account, matching the sibling consent-write handlers) with a
+    one-shot flash confirmation, and the change persists on a return visit
+    to /account."""
     username = _unique_username("toggle")
     _signup(page, username)
     page.wait_for_url(BASE_URL + "/welcome-sharing")
@@ -186,10 +188,19 @@ def test_account_visibility_toggle_updates_share_link(page) -> None:
     public_radio.check()
     page.get_by_role("button", name=ui_strings.ACCOUNT_VISIBILITY_SAVE).click()
 
-    page.wait_for_load_state("networkidle")
+    # Save redirects home (the owner's canonical profile URL), not back to
+    # /account, and shows the one-shot flash confirmation exactly once.
+    page.wait_for_url(BASE_URL + f"/@{username}")
+    assert ui_strings.HOME_FLASH_VISIBILITY_PUBLIC in page.content()
+
+    # A follow-up visit to the same page must not show the flash again.
+    page.goto(BASE_URL + f"/@{username}")
+    assert ui_strings.HOME_FLASH_VISIBILITY_PUBLIC not in page.content()
+
+    # The change persisted: /account reflects "public" on a fresh visit.
+    page.goto(BASE_URL + "/account")
     public_radio_after = page.locator("input[name='visibility'][value='public']")
     assert public_radio_after.is_checked()
-    assert f"/@{username}" in page.content()
     assert ui_strings.ACCOUNT_VISIBILITY_CURRENT_PUBLIC in page.content()
 
 
