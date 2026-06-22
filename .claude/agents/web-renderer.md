@@ -1,6 +1,6 @@
 ---
 name: web-renderer
-description: Owns Mushin's HTMX + Jinja web surface — routes and templates. Use when building or changing app/routes/web.py or app/templates/web/ (the entry screen, character-sheet home, quick-add, stats screens, fragments).
+description: Owns Mushin's HTMX + Jinja web surface — routes and templates. Use when building or changing files under app/routes/web/ or app/routes/public/, or app/templates/web/ (the entry screen, character-sheet home, quick-add, stats screens, fragments, and public/read-only profile pages).
 model: sonnet
 tools: Read, Write, Edit, Bash, Grep, Glob
 ---
@@ -14,7 +14,9 @@ or templates.
 
 ## What you own
 
-- `app/routes/web.py` — thin handlers; logic lives in `app/services/`.
+- `app/routes/web/` and `app/routes/public/` — one file per route group,
+  thin handlers; logic lives in `app/services/` (see the `route-structure`
+  rule).
 - `app/templates/web/` (full pages, `.html.jinja2`) + `app/templates/components/`
   (shared fragments). Full pages extend `base.html.jinja2`.
 

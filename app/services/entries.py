@@ -50,7 +50,7 @@ from zoneinfo import ZoneInfo
 import structlog
 
 from app.models import db
-from app.services import _db
+from app.services import _db, competition
 
 log = structlog.get_logger()
 
@@ -672,3 +672,199 @@ def recompute(activity_id: int, owner_id: int, *, tz: ZoneInfo) -> dict[str, Any
         conn.execute("BEGIN")
         _require_activity(conn, owner_id, activity_id)
         return _refresh_cache(conn, activity_id, owner_id, tz)
+
+
+# ---------------------------------------------------------------------------
+# Form -> payload transforms (renderer-agnostic; consume a mapping-like ``form``)
+# ---------------------------------------------------------------------------
+#
+# ``form`` here is any mapping with the ``starlette`` ``FormData`` interface
+# (``in`` membership and ``.get(key)``) — these helpers never touch ``Request``
+# or any HTTP type, so they are pure data transforms the route layer wires up.
+
+EMPTY_MATCH_ROW: dict[str, str] = {"opponent": "", "score": "", "result": ""}
+
+
+def resolve_occurred_at(
+    raw_date: str | None,
+    raw_time: str | None = None,
+    *,
+    tz: ZoneInfo,
+) -> tuple[str | None, int]:
+    """Turn the log sheet's date + optional time fields into (occurred_at, time_known).
+
+    *raw_date* is the ``type="date"`` value (``YYYY-MM-DD``) in the owner's
+    local timezone; *raw_time* is the optional ``type="time"`` value (``HH:MM``).
+
+    When *raw_time* is provided and non-empty:
+    - Returns an explicit ``YYYY-MM-DDTHH:MM:00`` timestamp with ``time_known=1``.
+
+    When *raw_time* is absent or empty:
+    - If *raw_date* is empty or today's date (in *tz*): returns ``(None, 1)``
+      so ``create`` defaults to "now" (time still known).
+    - If *raw_date* is a past date (backfill, no time supplied): returns
+      ``YYYY-MM-DDT00:00:00`` sentinel with ``time_known=0``.
+    """
+    raw_time = (raw_time or "").strip()
+    if not raw_date:
+        raw_date = datetime.now(tz).strftime("%Y-%m-%d")
+    if "T" in raw_date:
+        # Defensive: a full timestamp slipped through (e.g. an old client).
+        return raw_date, 1
+    if raw_time:
+        return f"{raw_date}T{raw_time}:00", 1
+    # No time given: always date-only, time_known=0.
+    return f"{raw_date}T00:00:00", 0
+
+
+def parse_match_rows(form: Any, field_def_id: int) -> list[dict[str, str]]:
+    """Read submitted match-list rows for *field_def_id* from form data.
+
+    Rows are indexed 0..n contiguously as ``match_opponent_{field_id}_{i}`` /
+    ``match_score_{field_id}_{i}`` / ``match_result_{field_id}_{i}``; reading
+    stops at the first missing index.
+    """
+    rows: list[dict[str, str]] = []
+    i = 0
+    while True:
+        opponent_key = f"match_opponent_{field_def_id}_{i}"
+        if opponent_key not in form:
+            break
+        rows.append(
+            {
+                "opponent": str(form.get(opponent_key) or ""),
+                "score": str(form.get(f"match_score_{field_def_id}_{i}") or ""),
+                "result": str(form.get(f"match_result_{field_def_id}_{i}") or ""),
+            }
+        )
+        i += 1
+    return rows
+
+
+def matches_payload_from_rows(rows: list[dict[str, str]]) -> list[dict[str, Any]]:
+    """Filter parsed match rows down to ones ready for ``competition.add_matches``.
+
+    A row is persisted only when it has both an opponent and a result —
+    incomplete trailing rows (e.g. an empty row left over from the sub-form)
+    are silently dropped rather than raising ``MatchPayloadError``.
+    """
+    payload: list[dict[str, Any]] = []
+    for index, row in enumerate(rows):
+        opponent = row["opponent"].strip()
+        result = row["result"].strip()
+        if not opponent or result not in {"win", "loss", "draw"}:
+            continue
+        payload.append(
+            {
+                "opponent": opponent,
+                "score": row["score"].strip(),
+                "result": result,
+                "sort_order": index,
+            }
+        )
+    return payload
+
+
+def payload_from_form(form: Any, field_defs: list[sqlite3.Row]) -> tuple[dict[str, Any], set[int]]:
+    """Build a ``create`` payload from submitted form fields.
+
+    Returns ``(payload, selected_tag_ids)`` — the selected tags are returned
+    separately so the swapped card can echo the just-used selection.
+    """
+    values: dict[str, Any] = {}
+    selected_tags: set[int] = set()
+    memo: str | None = None
+
+    for fd in field_defs:
+        fid = fd["id"]
+        kind = fd["kind"]
+        if kind in {"count", "scale"}:
+            raw_val = form.get(f"value_{fid}")
+            if raw_val not in (None, ""):
+                values[fid] = raw_val
+        elif kind == "memo":
+            raw_memo = form.get(f"value_{fid}")
+            if raw_memo:
+                memo = str(raw_memo)
+        # 'level' / 'result' / 'match_list' fields are not part of quick-add v1.
+
+    payload: dict[str, Any] = {"tags": sorted(selected_tags), "values": values}
+    if memo is not None:
+        payload["memo"] = memo
+    return payload, selected_tags
+
+
+# ---------------------------------------------------------------------------
+# Log orchestration (parse form -> persist entry + match rows)
+# ---------------------------------------------------------------------------
+
+
+def create_log_from_form(
+    owner_id: int,
+    activity_id: int,
+    form: Any,
+    field_defs: list[sqlite3.Row],
+    *,
+    tz: ZoneInfo,
+) -> dict[str, Any]:
+    """Create an entry (and any match-list bouts) from a submitted log form.
+
+    Orchestrates the end-to-end log write that the web ``create_log`` handler
+    used to do inline: build the scalar/memo payload, resolve ``#hashtag`` text
+    inputs to tag ids, resolve ``occurred_at`` / ``time_known``, create the
+    entry, then persist any match-list bouts submitted alongside it. *form* is a
+    mapping-like object (``in`` / ``.get``); no HTTP type is touched here. Every
+    write is scoped to *owner_id*.
+
+    Returns a dict the renderer consumes::
+
+        {
+            "entry": <hydrated entry dict>,
+            "selected_tags": {tag_id, ...},   # echo the just-used selection
+            "has_match_list": bool,           # drives the Record OOB swap
+        }
+    """
+    payload, selected_tags = payload_from_form(form, field_defs)
+
+    # Resolve #hashtag text inputs to tag IDs.
+    all_tag_ids: list[int] = []
+    hashtag_fids = [fd["id"] for fd in field_defs if fd["kind"] == "tag_group"]
+    if hashtag_fids:
+        with db.connect() as conn:
+            conn.execute("BEGIN")
+            for fid in hashtag_fids:
+                raw = str(form.get(f"hashtags_{fid}", "")).strip()
+                if raw:
+                    payload["memo"] = raw  # combined text → also the memo
+                names = parse_hashtags(raw)
+                if names:
+                    ids = find_or_create_tags(
+                        conn, owner_id=owner_id, field_def_id=fid, names=names
+                    )
+                    all_tag_ids.extend(ids)
+    payload["tags"] = all_tag_ids
+
+    occurred_at, time_known = resolve_occurred_at(
+        str(form.get("date") or "").strip(),
+        str(form.get("time") or "").strip(),
+        tz=tz,
+    )
+
+    created = create(
+        owner_id, activity_id, payload, occurred_at=occurred_at, tz=tz, time_known=time_known
+    )
+
+    # Persist any match-list bouts submitted alongside the entry.
+    has_match_list = any(fd["kind"] == "match_list" for fd in field_defs)
+    for fd in field_defs:
+        if fd["kind"] != "match_list":
+            continue
+        rows = matches_payload_from_rows(parse_match_rows(form, fd["id"]))
+        if rows:
+            competition.add_matches(owner_id, created["id"], rows)
+
+    return {
+        "entry": created,
+        "selected_tags": selected_tags,
+        "has_match_list": has_match_list,
+    }

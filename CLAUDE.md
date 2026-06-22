@@ -111,6 +111,10 @@ the Tailwind watcher). URL: http://127.0.0.1:8000.
 For per-project Claude Code rules and skills, see `.claude/` in this repo
 (loaded automatically when Claude Code runs from the project root).
 
+Route files live under `app/routes/` split by surface (`web/`, `public/`,
+`data_io.py`, `mobile.py`), one file per route group, 300-line ceiling — see
+the `route-structure` rule (`.claude/rules/route-structure.md`).
+
 ## Reference docs
 
 - `DEVELOPER_GUIDE.md` — full developer reference (architecture, server users,
