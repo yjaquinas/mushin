@@ -29,8 +29,6 @@ _OWNED_TABLES = frozenset(
         "entry",
         "tag",
         "match",
-        "level",
-        "level_rule",
     }
 )
 

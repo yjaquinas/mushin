@@ -21,6 +21,13 @@ Specs covered
    `log-saved` fragment refresh fires (see `components/field_stats.html.jinja2`).
 3. The notes textarea wraps long text (never horizontal-scroll) at a 360px
    viewport and at a 1.5x font scale.
+
+NOTE: real signup creates zero activities -- the kendo/reading onboarding
+seed and the progression feature it demonstrated were removed wholesale
+(meetings/MEETING-2026-06-21-simplify-onboarding). ``_signup`` here seeds a
+fixture "Kendo" activity directly via ``tests.conftest.seed_test_activity``
+(same pattern as ``tests/e2e/test_entry_comments.py``), against the same DB
+file the live test server reads.
 """
 
 from __future__ import annotations
@@ -75,9 +82,16 @@ def _unique_username(slug: str) -> str:
 def _signup(page, username: str, password: str = "correct-horse-battery") -> None:
     """Land on the entry screen, switch to "Create account", and submit a new
     username/password signup with consent checked, then complete the
-    one-time sharing-consent screen to reach the dashboard. A fresh
-    username/password signup now seeds the same starter templates a guest
-    used to get (``app.auth.routes._lazy_seed``)."""
+    one-time sharing-consent screen to reach the dashboard.
+
+    Real signup creates zero activities now (the onboarding seed step was
+    removed along with the progression feature it demonstrated -- see module
+    docstring), so this seeds a fixture "Kendo" activity directly via
+    ``tests.conftest.seed_test_activity`` against the same DB file the live
+    test server reads."""
+    from app.auth import users as users_module
+    from tests.conftest import seed_test_activity
+
     page.goto(BASE_URL + "/")
     page.get_by_role("tab", name=ui_strings.ENTRY_AUTH_TAB_CREATE).click()
     page.wait_for_selector("#auth-form input[name='consent']")
@@ -89,6 +103,9 @@ def _signup(page, username: str, password: str = "correct-horse-battery") -> Non
     page.wait_for_url(BASE_URL + "/welcome-sharing")
     page.get_by_role("button", name=ui_strings.VISIBILITY_CONSENT_SUBMIT).click()
     page.wait_for_url(BASE_URL + f"/@{username}")
+
+    owner = users_module.find_by_username(username)
+    seed_test_activity(owner["id"], name="Kendo")
 
     page.goto(BASE_URL + "/home")
 
@@ -206,28 +223,6 @@ def test_notes_textarea_wraps_at_1_5x_font_scale(page) -> None:
         "(el) => el.scrollWidth > el.clientWidth + 1", notes_input.element_handle()
     )
     assert not overflow_x, "the notes textarea must still wrap at 1.5x font scale"
-
-
-def test_level_bar_advances_on_log_for_progression_subtally(page) -> None:
-    """For a `progression`-mode sub-tally (e.g. Reading), logging an entry
-    that crosses a count-gate threshold advances the progress bar fill."""
-    _signup(page, _unique_username("f"))
-
-    card = _open_detail(page, "Reading")
-    progress_fill = card.locator(".progress-fill")
-
-    before_width = progress_fill.get_attribute("style") or ""
-
-    page.get_by_role("button", name=ui_strings.SUBTALLY_LOG_BUTTON).click()
-    page.locator("#log-panel form").get_by_role("button", name=ui_strings.LOG_SUBMIT).click()
-
-    page.wait_for_function(
-        """(args) => {
-            const el = document.querySelector(args.sel);
-            return el && el.getAttribute('style') !== args.before;
-        }""",
-        arg={"sel": f"#{card.get_attribute('id')} .progress-fill", "before": before_width},
-    )
 
 
 def test_submitting_log_collapses_panel_and_updates_card(page) -> None:

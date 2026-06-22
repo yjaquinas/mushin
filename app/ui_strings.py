@@ -81,23 +81,17 @@ HOME_ADD_ACTIVITY = "Add an activity"
 ACTIVITY_NEW_TITLE = "New activity"
 ACTIVITY_FORM_NAME_LABEL = "Name"
 ACTIVITY_FORM_NAME_PLACEHOLDER = "e.g. Workout"
-ACTIVITY_FORM_ICON_LABEL = "Icon"
 ACTIVITY_FORM_SUBMIT = "Create"
 ACTIVITY_FORM_CANCEL = "Cancel"
 ACTIVITY_FORM_NAME_REQUIRED = "Activity name is required"
 
 # Hero numeral suffixes / labels
-HOME_LEVEL_PREFIX = ""  # the level label itself is the hero text
 HOME_COUNT_UNIT = "times"  # generic running-count unit ("3 times")
 HOME_RUNNING_LABEL = "Total"
-HOME_PROGRESSION_LABEL = "Current level"
 
 SUBTALLY_LOG_BUTTON = "New Entry"
 HOME_STREAK_LABEL = "Streak"
 HOME_STREAK_DAYS_UNIT = " days"
-
-HOME_NEXT_LEVEL_PREFIX = "Next"
-HOME_NO_NEXT_LEVEL = "You're at the top level"
 
 # ---------------------------------------------------------------------------
 # Quick-add / log sheet
@@ -236,59 +230,6 @@ SCALE_DISTRIBUTION_EMPTY = "Nothing logged yet."
 SCALE_DISTRIBUTION_AVERAGE_LABEL = "Average"
 
 # ---------------------------------------------------------------------------
-# Progression status
-# ---------------------------------------------------------------------------
-
-PROGRESSION_TITLE = "Level"
-
-PROGRESSION_CURRENT_LABEL = "Current level"
-PROGRESSION_NO_CURRENT = "Not started yet"
-
-PROGRESSION_NEXT_LABEL = "Next level"
-PROGRESSION_NO_NEXT = "You're at the top level"
-
-PROGRESSION_ELIGIBLE = "Ready for the next level"
-PROGRESSION_NOT_ELIGIBLE = "Still working toward it"
-
-PROGRESSION_TIME_REMAINING_PREFIX = "In"
-PROGRESSION_TIME_REMAINING_DAYS_UNIT = " days"
-PROGRESSION_TIME_HELD_PREFIX = "Held for"
-PROGRESSION_TIME_HELD_YEARS_UNIT = " years"
-
-PROGRESSION_COUNT_REMAINING_PREFIX = "Just"
-PROGRESSION_COUNT_REMAINING_UNIT = " more to go"
-PROGRESSION_COUNT_PROGRESS_UNIT = " so far"
-
-PROGRESSION_AGE_REQUIREMENT_PREFIX = "Age "
-PROGRESSION_AGE_REQUIREMENT_SUFFIX = "+ required"
-PROGRESSION_AGE_UNKNOWN_NOTE = (
-    "We don't have your age on file, so we can't show whether this is met."
-)
-
-PROGRESSION_PREREQ_PREFIX = "Requires"
-PROGRESSION_PREREQ_HELD = "Held"
-PROGRESSION_PREREQ_NOT_HELD = "Not yet held"
-
-PROGRESSION_EVENT_PASS_PREFIX = "Pass on record"
-PROGRESSION_EVENT_NEED_PASS = "Needs a pass on record"
-
-PROGRESSION_MANUAL_NOTE = "Updates when you log it yourself"
-
-PROGRESSION_TRACK_DAN = "Dan"
-PROGRESSION_TRACK_SHOGO = "Title"
-PROGRESSION_TRACK_TIER = "Tier"
-
-# ---------------------------------------------------------------------------
-# Guest upgrade nudge (fires at first progression level-up)
-# ---------------------------------------------------------------------------
-
-UPGRADE_NUDGE_TITLE = "Save this progress to an account so it's always there."
-UPGRADE_NUDGE_CONNECT = "Connect"
-UPGRADE_NUDGE_LATER = "Later"
-
-LEVEL_UP_NOTICE = "Level up"
-
-# ---------------------------------------------------------------------------
 # Theme toggle (masthead)
 # ---------------------------------------------------------------------------
 
@@ -339,7 +280,7 @@ VISIBILITY_CONSENT_INTRO = (
 
 VISIBILITY_CONSENT_PRIVATE_LABEL = "Private"
 VISIBILITY_CONSENT_PRIVATE_DESC = (
-    "Visitors see your activity names and your levels, progress, and counts — but"
+    "Visitors see your activity names and counts — but"
     " not your individual entries or notes. Anyone you connect with as a fellow"
     " sees everything, including your notes."
 )
@@ -376,7 +317,7 @@ ACCOUNT_VISIBILITY_CURRENT_PUBLIC = "Your record is public."
 # Radio labels mirror the consent screen.
 ACCOUNT_VISIBILITY_PRIVATE_LABEL = "Private"
 ACCOUNT_VISIBILITY_PRIVATE_DESC = (
-    "Visitors see your activity names, levels, and progress, but not your entries"
+    "Visitors see your activity names and counts, but not your entries"
     " or notes. Fellows you connect with see everything."
 )
 ACCOUNT_VISIBILITY_PUBLIC_LABEL = "Public"
@@ -439,8 +380,8 @@ SHARING_CONSENT_CANCEL = "Not now"
 REDEFINITION_TITLE = "What “Private” means has changed"
 REDEFINITION_BODY = (
     "Your record is set to Private. That used to mean your page showed nothing"
-    " to visitors. Now a private page shows your activity names, levels, and"
-    " progress to anyone who visits or finds you in search. Your individual"
+    " to visitors. Now a private page shows your activity names and counts to"
+    " anyone who visits or finds you in search. Your individual"
     " entries and your notes stay private — only fellows you connect with see"
     " everything. Nothing else about your account changed."
 )

@@ -157,10 +157,10 @@ async def test_email_signup_then_login_succeeds(client: AsyncClient, auth_db: Pa
     assert r2.json()["user_id"] == uid
 
 
-async def test_fresh_email_signup_seeds_starter_templates(client: AsyncClient, auth_db: Path):
-    # A genuinely new (non-guest) username/password signup is seeded with the v1
-    # starter templates — the regression guard for _lazy_seed being wired into
-    # the fresh-signup path.
+async def test_fresh_email_signup_creates_no_activities(client: AsyncClient, auth_db: Path):
+    # A genuinely new (non-guest) username/password signup lands with ZERO
+    # activities — starter-template seeding was removed (simplify-onboarding,
+    # 2026-06-21). The home screen shows the empty-state quick-start instead.
     r = await client.post(
         "/auth/signup",
         data={"username": "freshie", "password": "hunter2pw", "consent": "true"},
@@ -169,8 +169,7 @@ async def test_fresh_email_signup_seeds_starter_templates(client: AsyncClient, a
     assert r.json()["upgraded"] is False
     owner_id = r.json()["user_id"]
 
-    assert _count(auth_db, "category", "owner_id = ?", (owner_id,)) > 0
-    assert _count(auth_db, "activity", "owner_id = ?", (owner_id,)) > 0
+    assert _count(auth_db, "activity", "owner_id = ?", (owner_id,)) == 0
 
 
 async def test_email_login_rejects_wrong_password(client: AsyncClient):
@@ -247,6 +246,9 @@ async def test_google_callback_creates_user_by_sub(
         conn.close()
     assert row["auth_provider"] == "google"
     assert row["provider_id"] == "google-sub-123"
+    # Fresh OAuth signup lands with ZERO activities — starter-template seeding
+    # was removed (simplify-onboarding, 2026-06-21).
+    assert _count(auth_db, "activity", "owner_id = ?", (r.json()["user_id"],)) == 0
 
 
 def test_normalize_google_payload():
@@ -374,24 +376,21 @@ async def test_guest_start_is_idempotent(client: AsyncClient, auth_db: Path):
     assert _count(auth_db, "user") == 1
 
 
-async def test_guest_start_seeds_starter_templates(client: AsyncClient, auth_db: Path):
-    # A genuinely new account is seeded with the v1 starter templates on
-    # creation (onboarding promise). A brand-new guest lands with the seeded
-    # categories + activities, not an empty account.
+async def test_guest_start_creates_no_activities(client: AsyncClient, auth_db: Path):
+    # A genuinely new account lands with ZERO activities — starter-template
+    # seeding was removed (simplify-onboarding, 2026-06-21). A brand-new guest
+    # gets the same empty-state experience as any zero-activity account.
     g = await client.post("/auth/guest")
     assert g.json()["created"] is True
     owner_id = g.json()["user_id"]
 
-    assert _count(auth_db, "category", "owner_id = ?", (owner_id,)) > 0
-    assert _count(auth_db, "activity", "owner_id = ?", (owner_id,)) > 0
+    assert _count(auth_db, "activity", "owner_id = ?", (owner_id,)) == 0
 
     # Idempotent: hitting /auth/guest again for the same session returns the same
-    # row without minting a duplicate, and seeding does NOT run again (the count
-    # stays exactly what the first seed produced).
-    seeded_categories = _count(auth_db, "category", "owner_id = ?", (owner_id,))
+    # row without minting a duplicate (and still no activities appear).
     again = await client.post("/auth/guest")
     assert again.json()["created"] is False
-    assert _count(auth_db, "category", "owner_id = ?", (owner_id,)) == seeded_categories
+    assert _count(auth_db, "activity", "owner_id = ?", (owner_id,)) == 0
 
 
 # ---------------------------------------------------------------------------

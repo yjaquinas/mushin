@@ -45,18 +45,8 @@
             </header>
 
             <p class="text-hero-numeral font-semibold leading-tight text-brand">
-                {% if card.count_mode == "progression" %}
-                    {{ card.hero_label or "—" }}
-                {% else %}
-                    {{ card.hero_label }}<span class="text-title font-normal text-text-muted"> {{ strings.HOME_COUNT_UNIT }}</span>
-                {% endif %}
+                {{ card.hero_label }}<span class="text-title font-normal text-text-muted"> {{ strings.HOME_COUNT_UNIT }}</span>
             </p>
-
-            {% if card.progress is not none %}
-            <div class="progress-track" role="progressbar" aria-valuenow="{{ card.progress.percent }}" aria-valuemin="0" aria-valuemax="100">
-                <div class="progress-fill" style="width: {{ card.progress.percent }}%"></div>
-            </div>
-            {% endif %}
 
             <p class="text-caption text-text-muted">
                 {% if card.advance_line %}{{ card.advance_line }}{% endif %}

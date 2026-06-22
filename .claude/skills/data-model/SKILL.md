@@ -1,6 +1,6 @@
 ---
 name: data-model
-description: Mushin's canonical data model — the activity → entry model (category is an internal, invisible 1:1 wrapper, never a separate user-facing level), the field_def/entry_value recipe pattern, hero/progression status derived from field_defs (not a stored count_mode), the four progression gate types, the derived-not-stored progression rule, levels-as-rows, the cache fields on activity, and the mandatory owner_id/index conventions. Use whenever writing or reviewing migrations, services that read/write entries, stats, progression math, or template seeding.
+description: Mushin's canonical data model — the activity → entry model (category is an internal, invisible 1:1 wrapper, never a separate user-facing level), the field_def/entry_value recipe pattern, the always-running-count hero stat, the cache fields on activity, and the mandatory owner_id/index conventions. Use whenever writing or reviewing migrations, services that read/write entries, or stats.
 ---
 
 # Mushin data model
@@ -49,10 +49,9 @@ user-facing level, never a second creation step). SQLite, raw SQL, WAL,
 ## The recipe: field_def + entry_value (EAV)
 
 - `field_def` rows on an activity declare the recipe. `kind ∈ {tag_group,
-  scale, count, memo, match_list, level, result}`. Form-rendering and stats
+  scale, count, memo, match_list}`. Form-rendering and stats
   iterate field defs — **no per-activity code**. An activity can have any
-  combination of kinds; a `level`-kind field_def is what makes an activity a
-  progression tracker (see below) — it is not a separate mode.
+  combination of kinds.
 - `entry_value(entry_id, field_def_id)` (composite PK) holds scalar values:
   `num_value REAL` / `text_value TEXT`, with `CHECK(num_value IS NOT NULL OR
   text_value IS NOT NULL)`. Scalars only.
@@ -61,51 +60,23 @@ user-facing level, never a second creation step). SQLite, raw SQL, WAL,
 - **`match` is its own table** (opponent, score, result win/loss/draw) — a
   structured multi-column fact, never scattered into entry_value. Keep `owner_id`
   on it too. A `match_list` field_def can live on the same activity as a
-  running tag/count log and a progression ladder — they all share one entry
-  stream.
+  running tag/count log — they share one entry stream.
 
-## Hero/progression status: derived from field_defs, not a stored mode
+## Hero stat: always the running count
 
-- **An activity's hero stat is derived, not configured.** If the activity has
-  a `level`-kind `field_def`, the hero is the current level + progress (see
-  Progression below). Otherwise, the hero is the running count — a monotonic
-  count of entries, reported per week/month/year/lifetime.
-- This supersedes any older `count_mode` running/progression split as the
-  *source of truth*. A `count_mode`-shaped column may still exist for
-  historical/migration reasons, but no code should treat it as authoritative
-  — the presence of a `level`-kind field_def is the one fact that matters.
-  `progression.py`'s eligibility/current-stage logic already keys off
-  `field_def.kind == 'level'`, not a stored mode — keep it that way.
+An activity's hero stat is always the running count of its entries (per
+week/month/year/lifetime). There is no progression mode, no `level`-kind
+field_def, and no gating mechanism — that system was removed entirely
+(2026-06). `config_json` (on activity / field_def) holds **only
+never-queried display metadata**. If you'll ever `WHERE`/`JOIN` on it, it's
+a column or row.
 
-## General-log activities (default for user-created)
+## Activity creation
 
-A user-created activity is, by default, `count_mode`-equivalent to "running"
-and has exactly two `field_def` rows: `memo` and `tag_group`. No progression,
-no `level`/`level_rule` rows. This is the "general log" shape —
-`app/services/categories.create_activity()` is the one write path for it (it
-inserts the `category` wrapper and the `activity` row, sharing the same
-`name`, in one transaction). The kendo/reading seed templates (richer
-recipes with progression) remain in the codebase as a future opt-in template
-gallery, not auto-seeded on signup.
-
-## Progression: levels-as-rows, status derived
-
-- **Levels are first-class `level` rows** (`track`, `ordinal`, `code`, `label`),
-  not JSON. `track` separates the primary ladder (e.g. kendo dan) from a parallel
-  prestige track (shōgō 연사/교사/범사).
-- **`level_rule`** gates transitions: `from_level_id`, `to_level_id`,
-  `gate_type ∈ {time, count, event, manual}`, `gate_value`, `min_age`,
-  `prereq_level_id` (cross-track prerequisite, real FK). `level`/`level_rule`
-  key on `activity_id` only — there is exactly one level ladder per activity,
-  so no `field_def_id` dimension is needed (an activity has at most one
-  `level`-kind field_def).
-- **Status is derived, not stored.** Current stage, time/progress-in-stage, and
-  eligibility come from the ordered levels + the user's level entries +
-  level_rule. **Batch per owner** (all of an owner's activities in one pass,
-  for the home screen render) to avoid N+1. **Never cache eligibility** — a
-  time-gate flips with no new entry. You may cache the *stage you're in*.
-- `config_json` (on activity / field_def) holds **only never-queried display
-  metadata**. If you'll ever `WHERE`/`JOIN` on it, it's a column or row.
+Every activity, seeded or user-created, is the same shape — `memo` and
+`tag_group` field_defs by default. `app/services/categories.create_activity()`
+is the one write path. No templates are seeded on signup; new accounts start
+with zero activities.
 
 ## Cache discipline
 
@@ -177,7 +148,7 @@ still, but `private` no longer means hidden:
 
 - **public** — whole record (activities + entries + notes) visible to anyone.
 - **private** — a non-connected visitor sees the **character sheet** at
-  `/@{username}` (activity names + levels/progress/counts, cards not clickable);
+  `/@{username}` (activity names + counts, cards not clickable);
   forcing `/@{username}/{slug}` **303-redirects** to the profile. Entries +
   notes stay gated.
 - **fellow** (accepted + consented connection) — full record incl. entries and
@@ -205,8 +176,7 @@ users into a one-time re-consent before their character sheet is exposed.
   `can_view_activity_detail()` for the current viewer against the comment's
   parent entry. Revoking a fellow connection, blocking, or flipping a profile
   public→private does not delete old comments; it simply makes them stop
-  rendering to whoever lost access — the same derived-not-stored pattern as
-  progression status.
+  rendering to whoever lost access.
 - `user.comments_seen_at` is a watermark column (same shape as the existing
   `user.consent_seen_at`). It is written only when the owner visits
   `/comments` (the notification history page) — never on home-page load —
@@ -232,14 +202,15 @@ users into a one-time re-consent before their character sheet is exposed.
 
 - `entry(activity_id, occurred_at DESC)` — the entry list and stats range scan.
 - Partial indexes excluding archived rows (`… WHERE archived_at IS NULL`).
-- `match(entry_id)`; `level(activity_id, track, ordinal)`; partial
-  `user(last_active_at) WHERE auth_provider='guest'`.
+- `match(entry_id)`; partial `user(last_active_at) WHERE auth_provider='guest'`.
 
 ## Tables (canonical list)
 
 `user, category, activity, field_def, tag, entry, entry_tag, entry_value,
-match, level, level_rule, connection, block`. `category` is internal, 1:1
+match, connection, block, comment`. `category` is internal, 1:1
 with `activity`, never exposed as a separate creation step or list. (`user`
 gains `visibility`, `consent_seen_at` — migration 0005; `activity` gains
 `slug` — migration 0006; `sub_tally` renamed to `activity` — migration 0009;
-`connection`/`block` + `user.private_redefinition_seen_at` — migration 0010.)
+`connection`/`block` + `user.private_redefinition_seen_at` — migration 0010;
+`level`/`level_rule` dropped and `field_def.kind` tightened — migration 0013,
+2026-06.)

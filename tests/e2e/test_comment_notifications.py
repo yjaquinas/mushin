@@ -95,15 +95,15 @@ def _make_user(browser, username: str, *, visibility: str = "private"):
     the one-time consent screen, and return the logged-in ``(context, page)``
     sitting on its own ``/@{username}`` profile.
 
-    Also seeds the starter templates (kendo/reading) directly via
-    ``app.services.seeding.seed_account`` -- real signup never triggers
-    seeding itself (see ``tests/e2e/test_entry_comments.py``'s module
+    Also creates a fixture "Kendo" activity directly via
+    ``tests.conftest.seed_test_activity`` -- real signup never creates any
+    activities itself (see ``tests/e2e/test_entry_comments.py``'s module
     docstring for the underlying gap). This call hits the same DB file the
     live test server reads, so the row is visible to the next request the
     browser makes.
     """
     from app.auth import users as users_module
-    from app.services import seeding
+    from tests.conftest import seed_test_activity
 
     context = browser.new_context(viewport={"width": 360, "height": 800})
     page = context.new_page()
@@ -115,7 +115,7 @@ def _make_user(browser, username: str, *, visibility: str = "private"):
     page.wait_for_url(BASE_URL + f"/@{username}")
 
     owner = users_module.find_by_username(username)
-    seeding.seed_account(owner["id"])
+    seed_test_activity(owner["id"], name="Kendo")
 
     return context, page
 

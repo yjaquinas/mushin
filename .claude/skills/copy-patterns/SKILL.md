@@ -5,7 +5,7 @@ description: Mushin's English copy voice and string conventions for a US audienc
 
 # Mushin copy patterns
 
-Mushin is a personal progress tracker — a "raising-sim RPG of yourself." The
+Mushin is a personal progress tracker — log anything, watch it add up. The
 brand pairs the English name **Mushin** with the **無心** ("no-mind") hanja as
 a quiet mark.
 
@@ -19,7 +19,7 @@ a quiet mark.
 ## Tone
 
 - Quietly on the user's side. **Celebrate by stating the fact plainly**
-  ("Level 3 reached") and let the number speak. No exclamation spam.
+  (e.g. "50 entries logged") and let the number speak. No exclamation spam.
 - **No false urgency or guilt.** Banned: "Log now or lose your streak!",
   "Your progress may disappear" — any guilt-trip contradicts the no-mind
   premise.
@@ -27,7 +27,6 @@ a quiet mark.
   initiating the action themselves** (account-switch confirmation, account
   deletion). State the real consequence neutrally, as fact, never with alarm
   punctuation or framing that implies the user made a mistake.
-- XP/level language is quiet structure, never loud decoration.
 
 ## Banned register
 

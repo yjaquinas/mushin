@@ -394,7 +394,7 @@ def delete_user(user_id: int) -> bool:
 
     The schema declares ``ON DELETE CASCADE`` on every ``owner_id`` reference, so
     a single ``DELETE FROM user`` wipes category/activity/field_def/tag/entry/
-    entry_tag/entry_value/match/level/level_rule and every memo. Deletion is
+    entry_tag/entry_value/match and every memo. Deletion is
     therefore honest: no orphaned personal data survives. Returns ``True`` if a
     row was removed.
 

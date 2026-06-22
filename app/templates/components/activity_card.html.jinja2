@@ -3,8 +3,7 @@
   Used both on the home page (per sub-tally) and as the HTMX fragment that
   swaps in after a log (see POST /activities/{id}/log).
 
-  Context: `card` (see app.routes.web._build_card_context), and optionally
-  `show_nudge` / `nudge_level_id` for the guest upgrade nudge.
+  Context: `card` (see app.routes.web._build_card_context).
 
   The non-linked branch below (``card.linked == False``) is shared by the
   home/post-log-fragment swap (keeps its header + streak) and
@@ -32,22 +31,8 @@
 
     {# Hero numeral — the single dominant figure on the card. #}
     <p class="text-hero-numeral font-semibold leading-tight text-brand{% if card.bumped %} hero--bumped{% endif %}">
-        {% if card.count_mode == "progression" %}
-            {{ card.hero_label or "—" }}
-        {% else %}
-            {{ card.hero_label }}<span class="text-title font-normal text-text-muted"> {{ strings.HOME_COUNT_UNIT }}</span>
-        {% endif %}
+        {{ card.hero_label }}<span class="text-title font-normal text-text-muted"> {{ strings.HOME_COUNT_UNIT }}</span>
     </p>
-
-    {# Progress affordance — at most one per card. #}
-    {% if card.progress is not none %}
-    <div class="progress-track" role="progressbar" aria-valuenow="{{ card.progress.percent }}" aria-valuemin="0" aria-valuemax="100">
-        <div
-            class="progress-fill{% if card.progress.leveled %} progress-fill--leveled{% endif %}"
-            style="width: {{ card.progress.percent }}%"
-        ></div>
-    </div>
-    {% endif %}
 
     {# Advance line — demoted caption, never competes with the hero numeral. #}
     {% if card.advance_line or (show_streak and card.streak) %}
@@ -78,6 +63,3 @@
 </article>
 {% endif %}
 
-{% if show_nudge %}
-    {% include "components/upgrade_nudge.html.jinja2" with context %}
-{% endif %}

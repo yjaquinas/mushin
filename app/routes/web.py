@@ -19,8 +19,7 @@ view (that's outside this task's owned files), so the small read-only queries
 needed to assemble the home screen and the quick-add recipe live here as
 private helpers, built on the owner-scoped ``app.services._db`` accessors —
 the same pattern ``app/services/stats.py`` uses for field lookups. They contain
-no business rules (no counting/streak/progression math — that's
-``app/services/stats.py`` and ``app/services/progression.py``).
+no business rules (no counting/streak math — that's ``app/services/stats.py``).
 """
 
 from __future__ import annotations
@@ -50,7 +49,6 @@ from app.services import (
     connections,
     entries,
     profiles,
-    progression,
     search,
     stats,
 )
@@ -128,11 +126,6 @@ def _format_entry_time(occurred_at: str) -> str:
 
 templates.env.filters["format_entry_time"] = _format_entry_time
 
-# Cookie that remembers the highest progression-level id for which the guest
-# upgrade nudge has been dismissed ("나중에" — respected until the *next*
-# milestone, never shown again for the same level-up).
-NUDGE_COOKIE = "mushin_nudge_dismissed_level"
-
 
 # ---------------------------------------------------------------------------
 # Session helpers
@@ -195,50 +188,15 @@ def _build_card_context(
 ) -> dict[str, Any]:
     """Assemble the per-card render context: hero, progress, advance line.
 
-    Field-priority order (shared domain rule, see progression.hero_field):
-    hero stat -> progress affordance -> advance line. This function does not
-    invent the hierarchy — it just shapes ``hero_field`` / ``progression.status``
-    output for the template.
+    Field-priority order (shared domain rule): hero stat -> progress
+    affordance -> advance line. The hero is always the running count — Mushin
+    tracks activity and frequency, not tiers or levels.
     """
     activity_id = activity_row["id"]
-    hero = progression.hero_field(activity_id, owner_id)
 
     progress: dict[str, Any] | None = None
     advance_line: str | None = None
-
-    if hero.get("is_progression"):
-        st = progression.status(activity_id, owner_id)
-        track = st["tracks"][0] if st["tracks"] else None
-        if track is not None:
-            current = track.get("current_level")
-            next_level = track.get("next_level")
-            # progression._evaluate_track already treats a rule-less
-            # lowest-ordinal level as the synthetic "current" (the free
-            # starting rung), so `current` here is the user's effective
-            # starting point even with zero level entries logged.
-            hero_label = current["label"] if current is not None else None
-            if next_level is not None:
-                if track.get("eligible"):
-                    advance_line = f"{next_level['label']} 도전 가능"
-                else:
-                    advance_line = f"다음: {next_level['label']}"
-                # Progress affordance: a quiet 0-100 fill toward the next level
-                # for count-gated tracks (the only kind we can express as a bar
-                # without leaking gate internals into the template).
-                paths = track.get("paths") or []
-                count_paths = [p for p in paths if p["gate"].get("gate_type") == "count"]
-                if count_paths:
-                    gate = count_paths[0]["gate"]
-                    required = gate.get("required_count") or 0
-                    current_count = gate.get("current_count") or 0
-                    pct = min(100, int(100 * current_count / required)) if required else 0
-                    progress = {"percent": pct, "leveled": False}
-            else:
-                advance_line = None
-        else:
-            hero_label = None
-    else:
-        hero_label = hero.get("count")
+    hero_label = activity_row["cached_count"] or 0
 
     counts = stats.counts_for_sub_tallies([activity_id], owner_id, tz=tz).get(activity_id, {})
     streak = activity_row["cached_streak"] or 0
@@ -264,10 +222,10 @@ def _build_card_context(
         "icon": activity_row["icon"] or categories.DEFAULT_ICON,
         "name": activity_row["name"],
         "show_breadcrumb": activity_row["category_name"] != activity_row["name"],
-        # Derived from the recipe (does the activity have a level field?), NOT
-        # read from the stored count_mode column. Kept as a "progression" /
-        # "running" string only so existing templates can branch on it.
-        "count_mode": "progression" if hero.get("is_progression") else "running",
+        # Always "running" — there is no leveling ladder left. Kept as a
+        # context key (rather than removed) because some templates still
+        # branch on this string; do not drop the key until they're updated.
+        "count_mode": "running",
         "hero_label": hero_label,
         "progress": progress,
         "advance_line": advance_line,
@@ -610,33 +568,6 @@ def _build_history_context(
         "expand_comment_entry_id": expand_comment_entry_id,
         "login_redirect_url": login_redirect_url,
     }
-
-
-def _build_progression_context(activity_id: int, owner_id: int) -> dict[str, Any] | None:
-    """Renderer-shaped progression status, or ``None`` for non-progression activities."""
-    st = progression.status(activity_id, owner_id)
-    if not st["is_progression"]:
-        return None
-
-    track_labels = {
-        "dan": ui_strings.PROGRESSION_TRACK_DAN,
-        "shogo": ui_strings.PROGRESSION_TRACK_SHOGO,
-        "tier": ui_strings.PROGRESSION_TRACK_TIER,
-    }
-
-    tracks = []
-    for track in st["tracks"]:
-        tracks.append(
-            {
-                "track": track["track"],
-                "track_label": track_labels.get(track["track"], track["track"]),
-                "current_level": track.get("current_level"),
-                "next_level": track.get("next_level"),
-                "eligible": track.get("eligible", False),
-                "paths": track.get("paths") or [],
-            }
-        )
-    return {"tracks": tracks}
 
 
 def _build_field_stats_context(
@@ -1117,32 +1048,20 @@ async def new_activity(
     request: Request,
     session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
 ) -> HTMLResponse:
-    """Manual create-activity form: name + icon picker.
+    """Manual create-activity form: name only, rendered as an inline sheet.
 
-    Renders as a full page on navigation, or as an HTMX sheet fragment when
-    requested via ``HX-Request`` (same full-page-vs-fragment pattern as
-    ``GET /activities/{id}/log``).
+    Both home-page entry points ("+ Add activity" and "start from scratch")
+    open this same HTMX sheet fragment — there is no standalone full-page
+    create-activity route.
     """
     user = _current_user(session)
     if user is None:
         return RedirectResponse(url="/", status_code=303)
 
-    context: dict[str, Any] = {
-        "icon_choices": categories.ICON_CHOICES,
-        "default_icon": categories.DEFAULT_ICON,
-    }
-
-    if request.headers.get("HX-Request") == "true":
-        return templates.TemplateResponse(
-            request=request,
-            name="components/category_sheet.html.jinja2",
-            context=context,
-        )
-
     return templates.TemplateResponse(
         request=request,
-        name="web/category_new.html.jinja2",
-        context=context,
+        name="components/category_sheet.html.jinja2",
+        context={},
     )
 
 
@@ -1150,7 +1069,6 @@ async def new_activity(
 async def create_activity(
     request: Request,
     name: Annotated[str, Form()],
-    icon: Annotated[str | None, Form()] = None,
     session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
 ) -> HTMLResponse:
     """Create a general-log activity (manual form or one-tap example adopt).
@@ -1166,21 +1084,22 @@ async def create_activity(
     name = name.strip()
     if not name:
         if request.headers.get("HX-Request") == "true":
-            return HTMLResponse(status_code=400)
+            return templates.TemplateResponse(
+                request=request,
+                name="components/category_form.html.jinja2",
+                context={
+                    "hx_post": "/activities",
+                    "hx_target": "#cards",
+                    "hx_swap": "beforeend",
+                    "name_error": ui_strings.ACTIVITY_FORM_NAME_REQUIRED,
+                },
+                status_code=400,
+            )
 
-        return templates.TemplateResponse(
-            request=request,
-            name="web/category_new.html.jinja2",
-            context={
-                "icon_choices": categories.ICON_CHOICES,
-                "default_icon": categories.DEFAULT_ICON,
-                "name_error": ui_strings.ACTIVITY_FORM_NAME_REQUIRED,
-            },
-            status_code=400,
-        )
+        return RedirectResponse(url="/home", status_code=303)
 
     tz = users.get_user_timezone(owner_id)
-    result = categories.create_activity(owner_id, name=name, icon=icon)
+    result = categories.create_activity(owner_id, name=name)
 
     with db.connect() as conn:
         conn.execute("BEGIN")
@@ -1198,7 +1117,7 @@ async def create_activity(
         return templates.TemplateResponse(
             request=request,
             name="components/activity_card.html.jinja2",
-            context={"card": card, "show_nudge": False, "nudge_level_id": None},
+            context={"card": card},
         )
 
     return RedirectResponse(url=_home_url_for(user), status_code=303)
@@ -1260,7 +1179,7 @@ async def activity_detail(
         has_match_list = any(fd["kind"] == "match_list" for fd in field_defs)
         card = _build_card_context(conn, owner_id, sub_row, tz=tz)
 
-    context: dict[str, Any] = {"card": card, "show_nudge": False, "nudge_level_id": None}
+    context: dict[str, Any] = {"card": card}
 
     if has_match_list:
         context["record"] = competition.record(owner_id, activity_id)
@@ -1298,7 +1217,6 @@ async def activity_detail(
         expand_comment_entry_id=expand_comment_entry_id,
     )
     context["field_stats"] = _build_field_stats_context(activity_id, owner_id, field_defs, tz=tz)
-    context["progression"] = _build_progression_context(activity_id, owner_id)
     context["public_notice"] = None
     context["preview_visitor_url"] = None
     context["is_owner"] = True
@@ -2228,13 +2146,6 @@ async def create_log(
         tz=tz,
     )
 
-    # Capture the progression status before the write so a level-up can be
-    # detected by comparing current_level ids (used for the guest nudge).
-    # Progression is derived from the recipe (has a level-kind field_def), not
-    # from the stored count_mode.
-    is_progression = progression.is_progression(activity_id, owner_id)
-    before_level_ids = _current_level_ids(activity_id, owner_id) if is_progression else set()
-
     created = entries.create(
         owner_id, activity_id, payload, occurred_at=occurred_at, tz=tz, time_known=time_known
     )
@@ -2247,15 +2158,6 @@ async def create_log(
         rows = _matches_payload_from_rows(_parse_match_rows(form, fd["id"]))
         if rows:
             competition.add_matches(owner_id, created["id"], rows)
-
-    leveled_up = False
-    new_level_id: int | None = None
-    if is_progression:
-        after_level_ids = _current_level_ids(activity_id, owner_id)
-        newly_attained = after_level_ids - before_level_ids
-        if newly_attained:
-            leveled_up = True
-            new_level_id = next(iter(newly_attained))
 
     with db.connect() as conn:
         conn.execute("BEGIN")
@@ -2272,19 +2174,9 @@ async def create_log(
 
     card["bumped"] = True
 
-    if card["progress"] is not None and leveled_up:
-        card["progress"]["leveled"] = True
-
-    # Guest-upgrade nudge is disabled for the guest-only build (deferred).
-    # Left in place along with NUDGE_COOKIE / upgrade_nudge.html.jinja2 /
-    # /nudge/dismiss so it can be re-enabled without re-plumbing.
-    show_nudge = False
-
     html = templates.get_template("components/activity_card.html.jinja2").render(
         {
             "card": card,
-            "show_nudge": show_nudge,
-            "nudge_level_id": new_level_id,
         }
     )
 
@@ -2338,17 +2230,6 @@ def _resolve_occurred_at(
         return f"{raw_date}T{raw_time}:00", 1
     # No time given: always date-only, time_known=0.
     return f"{raw_date}T00:00:00", 0
-
-
-def _current_level_ids(activity_id: int, owner_id: int) -> set[int]:
-    """The set of currently-attained level ids across all tracks (for level-up diffing)."""
-    st = progression.status(activity_id, owner_id)
-    out: set[int] = set()
-    for track in st["tracks"]:
-        current = track.get("current_level")
-        if current is not None:
-            out.add(current["id"])
-    return out
 
 
 def _parse_match_rows(form: Any, field_def_id: int) -> list[dict[str, str]]:
@@ -2974,34 +2855,6 @@ async def unblock_user(
     return _render_relationship_affordance(
         request, username, int(other["id"]), viewer_id, from_search=source == "search"
     )
-
-
-# ---------------------------------------------------------------------------
-# Guest upgrade nudge
-# ---------------------------------------------------------------------------
-
-
-@router.post("/nudge/dismiss", response_class=HTMLResponse)
-async def dismiss_nudge(
-    level_id: Annotated[int, Form()],
-) -> HTMLResponse:
-    """Dismiss the guest upgrade nudge for *level_id* ("나중에").
-
-    Stored in a small cookie (no schema change in this task) so the nudge
-    won't re-fire for the *same* level-up, but will fire again at the next
-    milestone. Never blocks logging — this is a no-op fragment response.
-    """
-    response = HTMLResponse(content="")
-    response.set_cookie(
-        key=NUDGE_COOKIE,
-        value=str(level_id),
-        max_age=60 * 60 * 24 * 365,
-        httponly=True,
-        secure=True,
-        samesite="lax",
-        path="/",
-    )
-    return response
 
 
 # ---------------------------------------------------------------------------

@@ -56,7 +56,6 @@ from app.routes.web import (
     _build_field_stats_context,
     _build_history_context,
     _build_home_context,
-    _build_progression_context,
     _field_defs_for_activity,
     _format_entry_time,
     _home_url_context,
@@ -355,8 +354,6 @@ async def public_activity(
 
     owner_context: dict[str, Any] = {
         "card": card,
-        "show_nudge": False,
-        "nudge_level_id": None,
     }
 
     if has_match_list:
@@ -387,7 +384,6 @@ async def public_activity(
     owner_context["field_stats"] = _build_field_stats_context(
         activity_id, owner_id, field_defs, tz=tz
     )
-    owner_context["progression"] = _build_progression_context(activity_id, owner_id)
     owner_context["username"] = username
     owner_context["slug"] = slug
 
@@ -467,7 +463,6 @@ def _render_readonly_activity_detail(
 
     context["counts"] = stats.counts(activity_id, owner_id, tz=tz)
     context["streaks"] = stats.streaks(activity_id, owner_id, tz=tz)
-    context["progression"] = _build_progression_context(activity_id, owner_id)
     context["field_stats"] = _build_field_stats_context(activity_id, owner_id, field_defs, tz=tz)
 
     # Real (non-preview) visitor only — a preview render never grants a

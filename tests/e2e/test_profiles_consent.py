@@ -259,13 +259,24 @@ def test_public_profile_calendar_renders_for_logged_in_non_fellow(page, other_pa
     affordances. This is distinct from the anonymous-visitor case above:
     the viewer here has an authenticated session, just not one with any
     relationship to the profile owner."""
+    from app.auth import users as users_module
+    from tests.conftest import seed_test_activity
+
     owner_username = _unique_username("calowner")
     _signup(page, owner_username)
     page.wait_for_url(BASE_URL + "/welcome-sharing")
     page.locator("input[name='visibility'][value='public']").check()
     page.get_by_role("button", name=ui_strings.VISIBILITY_CONSENT_SUBMIT).click()
     page.wait_for_url(BASE_URL + f"/@{owner_username}")
-    # Ensure starter activities are seeded (lazy on first /@{username} visit).
+
+    # Real signup creates zero activities now (the onboarding seed step was
+    # removed along with the progression feature it demonstrated — see
+    # project CLAUDE.md), so seed a fixture activity directly via
+    # ``tests.conftest.seed_test_activity`` against the same DB file the live
+    # test server reads.
+    owner = users_module.find_by_username(owner_username)
+    seed_test_activity(owner["id"], name="Kendo")
+
     page.goto(BASE_URL + f"/@{owner_username}")
 
     # A second, unrelated account — logged in, but not a fellow of the owner.

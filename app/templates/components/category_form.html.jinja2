@@ -1,18 +1,15 @@
 {#
-  Create-category form body — name (required) + icon picker
-  (categories.ICON_CHOICES, default circle-dot). Shared by the full-page
-  category_new.html.jinja2 and the HTMX sheet fragment category_sheet.html.jinja2.
+  Create-category form body — name only (no icon picker).
+  Used by the HTMX sheet fragment category_sheet.html.jinja2.
 
   Submits to POST /activities. On success the route returns the new
   activity_card fragment for an HTMX swap into #cards, or a 303 to /home for
   the no-JS path.
 
-  Context: icon_choices (categories.ICON_CHOICES), default_icon.
   Optional: hx_post/hx_target/hx_swap (embedded-sheet context — when unset,
   renders a plain form posting to /activities for the standalone page).
   Optional: name_error (shown near the name field when present).
 #}
-{% from "components/_icon.html.jinja2" import icon %}
 <form
     {% if hx_post is defined %}
     hx-post="{{ hx_post }}"
@@ -40,32 +37,6 @@
             <p class="text-caption text-danger">{{ name_error }}</p>
         {% endif %}
     </div>
-
-    <fieldset class="flex flex-col gap-2" x-data="{ selectedIcon: '{{ default_icon }}' }">
-        <legend class="text-caption font-medium text-text-secondary">
-            {{ strings.ACTIVITY_FORM_ICON_LABEL }}
-        </legend>
-        <div class="flex flex-wrap gap-2">
-            {% for choice in icon_choices %}
-                <label
-                    :class="{ 'chip--selected': selectedIcon === '{{ choice }}' }"
-                    :aria-pressed="selectedIcon === '{{ choice }}'"
-                    class="chip"
-                >
-                    <input
-                        type="radio"
-                        name="icon"
-                        value="{{ choice }}"
-                        class="sr-only"
-                        {% if choice == default_icon %}checked{% endif %}
-                        x-model="selectedIcon"
-                    >
-                    <span class="text-text-secondary">{{ icon(choice, size=20) }}</span>
-                    <span class="sr-only">{{ choice }}</span>
-                </label>
-            {% endfor %}
-        </div>
-    </fieldset>
 
     <button
         type="submit"

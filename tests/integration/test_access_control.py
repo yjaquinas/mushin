@@ -28,7 +28,7 @@ from httpx import ASGITransport, AsyncClient
 from app.main import app
 from app.models import db
 from app.models.migrate import run_migrations
-from app.services import seeding
+from tests.conftest import seed_test_activity
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -74,7 +74,7 @@ async def _logout(client: AsyncClient) -> None:
 
 
 def _owner_activity_id(owner_id: int) -> int:
-    """Return the seeded Kendo activity id for *owner_id*."""
+    """Return the test-fixture "Kendo" activity id for *owner_id*."""
     with db.connect() as conn:
         conn.execute("BEGIN")
         return conn.execute(
@@ -94,11 +94,11 @@ def _owner_entry_id(owner_id: int, activity_id: int) -> int:
 
 
 def _owner_tag_field_id(owner_id: int, activity_id: int) -> int:
-    """Return the Technique tag_group field_def id for *activity_id*."""
+    """Return the tag_group field_def id for *activity_id*."""
     with db.connect() as conn:
         conn.execute("BEGIN")
         return conn.execute(
-            "SELECT id FROM field_def WHERE activity_id = ? AND kind = 'tag_group' AND label = 'Technique'",
+            "SELECT id FROM field_def WHERE activity_id = ? AND kind = 'tag_group'",
             (activity_id,),
         ).fetchone()["id"]
 
@@ -116,7 +116,7 @@ async def test_cross_user_post_log_returns_404(client: AsyncClient) -> None:
     """
     # Set up owner A with seeded data.
     owner_a_id = await _signup(client, "user_a")
-    seeding.seed_account(owner_a_id)
+    seed_test_activity(owner_a_id, name="Kendo")
     a_activity_id = _owner_activity_id(owner_a_id)
 
     # Switch to user B.
@@ -147,7 +147,7 @@ async def test_cross_user_post_tags_returns_404(client: AsyncClient) -> None:
     """
     # Set up owner A with seeded data.
     owner_a_id = await _signup(client, "tag_owner_a")
-    seeding.seed_account(owner_a_id)
+    seed_test_activity(owner_a_id, name="Kendo")
     a_activity_id = _owner_activity_id(owner_a_id)
     a_field_def_id = _owner_tag_field_id(owner_a_id, a_activity_id)
 
@@ -178,7 +178,7 @@ async def test_unauthenticated_post_log_is_rejected(client: AsyncClient) -> None
     """
     # Create owner A so there is a real activity id to target.
     owner_a_id = await _signup(client, "unauth_owner")
-    seeding.seed_account(owner_a_id)
+    seed_test_activity(owner_a_id, name="Kendo")
     a_activity_id = _owner_activity_id(owner_a_id)
 
     # Record entry count before the attack.
@@ -228,7 +228,7 @@ async def test_cross_user_get_edit_entry_returns_404(client: AsyncClient) -> Non
 
     # Set up owner A with an entry.
     owner_a_id = await _signup(client, "edit_owner_a")
-    seeding.seed_account(owner_a_id)
+    seed_test_activity(owner_a_id, name="Kendo")
     a_activity_id = _owner_activity_id(owner_a_id)
     entries_service.create(owner_a_id, a_activity_id, {}, tz=utc)
     a_entry_id = _owner_entry_id(owner_a_id, a_activity_id)

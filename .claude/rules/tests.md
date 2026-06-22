@@ -41,4 +41,4 @@ Path-scoped: loads when Claude is editing or generating tests. Fill in project-s
 ## Project-specific additions
 
 - Every build-plan task is gated by tests for its acceptance criteria before it's "done."
-- Required suites: domain unit tests (counting, streaks, stats, progression eligibility including the dan/shōgō gates); a **multi-user isolation test** asserting no query returns another `owner_id`'s rows; Playwright flows for signup/login, quick-add, a `#hashtag` typed in the notes field surviving the fragment swap into the tag-frequency section, and the level-bar advancing on log.
+- Required suites: domain unit tests (counting, streaks, stats); a **multi-user isolation test** asserting no query returns another `owner_id`'s rows; Playwright flows for signup/login, quick-add, and a `#hashtag` typed in the notes field surviving the fragment swap into the tag-frequency section.

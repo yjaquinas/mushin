@@ -77,9 +77,20 @@ def _unique_username(slug: str) -> str:
 def _signup(page, username: str, password: str = "correct-horse-battery") -> None:
     """Land on the entry screen, switch to "Create account", and submit a new
     username/password signup with consent checked, then complete the
-    one-time sharing-consent screen to reach the dashboard. A fresh
-    username/password signup now seeds the same starter templates a guest
-    used to get (``app.auth.routes._lazy_seed``)."""
+    one-time sharing-consent screen to reach the dashboard.
+
+    Real signup creates zero activities now (the onboarding seed step was
+    removed along with the progression feature it demonstrated -- see module
+    docstring), so this seeds two fixture activities directly via
+    ``tests.conftest.seed_test_activity`` against the same DB file the live
+    test server reads: a "Kendo" activity carrying a ``match_list`` field
+    (competition stats only render for activities whose recipe includes one
+    -- see ``app/routes/web.py``'s ``activity_detail`` docstring), and a
+    "Reading" activity with the default recipe (no match_list) for the
+    negative case in ``test_competition_stats_only_on_tournament_detail``."""
+    from app.auth import users as users_module
+    from tests.conftest import seed_test_activity
+
     page.goto(BASE_URL + "/")
     page.get_by_role("tab", name=ui_strings.ENTRY_AUTH_TAB_CREATE).click()
     page.wait_for_selector("#auth-form input[name='consent']")
@@ -91,6 +102,10 @@ def _signup(page, username: str, password: str = "correct-horse-battery") -> Non
     page.wait_for_url(BASE_URL + "/welcome-sharing")
     page.get_by_role("button", name=ui_strings.VISIBILITY_CONSENT_SUBMIT).click()
     page.wait_for_url(BASE_URL + f"/@{username}")
+
+    owner = users_module.find_by_username(username)
+    seed_test_activity(owner["id"], name="Kendo", extra_field_kinds=("match_list",))
+    seed_test_activity(owner["id"], name="Reading")
 
     page.goto(BASE_URL + "/home")
 

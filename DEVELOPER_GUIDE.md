@@ -263,9 +263,8 @@ logged-in account. Two retention windows, enforced daily by
 
 Either condition alone is sufficient to purge. A purge deletes the `user` row;
 `ON DELETE CASCADE` from `user` (migration 0001) removes every dependent row
-(`category`, `sub_tally`, `field_def`, `tag`, `entry`, `entry_tag`,
-`entry_value`, `match`, `level`, `level_rule`) in the same transaction — no
-orphans.
+(`category`, `activity`, `field_def`, `tag`, `entry`, `entry_tag`,
+`entry_value`, `match`) in the same transaction — no orphans.
 
 **Real accounts (`kakao`, `google`, `email`) are never matched** — the purge
 query is hard-filtered to `auth_provider = 'guest'`.

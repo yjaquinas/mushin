@@ -35,10 +35,8 @@ the one-person AQNAS studio. Favor simple and durable.
 - **`owner_id` on every owned table** — multi-user isolation is non-negotiable.
 - **`occurred_at` + `owner_id` are typed columns on `entry`** from 0001 (later
   phases depend on them; retrofitting means a data backfill).
-- **Levels are first-class rows** (`level` table with `track`, `ordinal`,
-  `code`), not JSON. `level_rule` references `from_level_id`/`to_level_id`/
-  `prereq_level_id` as real FKs. `config_json` holds only never-queried display
-  metadata.
+- **`config_json` holds only never-queried display metadata** — if you'll ever
+  `WHERE`/`JOIN` on it, it's a column or row.
 - **Cache fields on `activity`**: `cached_count`, `cached_streak`,
   `last_entry_at` (domain-engineer maintains them in-transaction).
 - `user.auth_provider CHECK IN ('google','email','guest')`,

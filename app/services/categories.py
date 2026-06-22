@@ -5,10 +5,9 @@ both renderers (HTMX web, HXML native) consume.
 
 A user-created category is, by default, a single ``activity`` in
 ``count_mode="running"`` with exactly two ``field_def`` rows — ``memo`` and
-``tag_group``. No progression, no ``level``/``level_rule`` rows. This is the
-"general log" shape described in the ``data-model`` skill; the kendo/reading
-seed templates (richer recipes with progression) live in ``seed_data.py`` /
-``seeding.py`` as a future opt-in template gallery, not auto-seeded.
+``tag_group``. This is the "general log" shape described in the ``data-model``
+skill. There are no seed templates and no level/ladder concept: every activity's
+hero stat is always its running count.
 
 Every write is scoped by ``owner_id`` (required, positional) — multi-user
 isolation is the project's non-negotiable invariant.
@@ -207,8 +206,8 @@ def delete_category(
 
     The delete is owner-scoped: a *category_id* not owned by *owner_id* (or that
     does not exist) deletes zero rows. ``ON DELETE CASCADE`` from
-    ``category → activity → {entry, entry_tag, entry_value, match, level,
-    level_rule}`` (wired in migration 0001, with ``foreign_keys=ON`` enforced by
+    ``category → activity → {entry, entry_tag, entry_value, match}``
+    (wired in migration 0001, with ``foreign_keys=ON`` enforced by
     the db connection) removes the whole subtree, so no extra deletes are needed.
     No cache refresh is needed — the cached fields live on ``activity`` rows
     that are themselves gone.

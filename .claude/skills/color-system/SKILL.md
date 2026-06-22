@@ -67,8 +67,7 @@ pairs as part of the build task):
 **Two fixed, non-theme-swapping utilities** are added on top of the role
 system: `--color-obsidian` (→ `bg-obsidian`) and `--color-cinnabar` (→
 `bg-cinnabar`, `text-cinnabar`). These hold their literal hex value
-regardless of `data-theme` — the same pattern `--color-level` already uses
-today as a near-invariant, fixed-meaning token. Use them for deliberate
+regardless of `data-theme`. Use them for deliberate
 brand moments (e.g. the masthead band) where the color must not flip with
 theme, never as a substitute for the swapping `accent`/`surface` roles in
 ordinary UI.
@@ -109,7 +108,7 @@ at `#3D6FA3` (light) / `#5C92D6` (dark) — independent of `accent`.
 
 ## To define here when built
 
-- The named palette (brand, surface, text, accent, success/level-up, muted).
+- The named palette (brand, surface, text, accent, muted).
 - Token → Tailwind utility mapping and token → HXML attribute mapping.
 - Usage rules (what each token is for; what not to use it for).
 
@@ -164,9 +163,9 @@ Invariants that must hold in dark too:
   retired (2026-06-19)**, now that `accent` is cinnabar.
 - The heat ramp is re-derived against the dark surfaces, not a naive
   darken of the light ramp.
-- `accent-subtle` / `level-subtle` are light tints under dark text in light
-  mode; in dark mode they need their own (dark) tint under light text —
-  don't just invert. Re-check the chip-selected and level-up contrast pairs.
+- `accent-subtle` is a light tint under dark text in light
+  mode; in dark mode it needs its own (dark) tint under light text —
+  don't just invert. Re-check the chip-selected contrast pair.
 - The focus ring (`outline: 2px solid var(--color-accent)`) must clear WCAG
   non-text contrast (3:1) against both dark and light canvases.
 
@@ -189,8 +188,6 @@ rationale.
 | `--color-accent`         | `#E34234` | `#FF6B5B` | cinnabar / lightened cinnabar; non-text/fill/border/focus-ring use only |
 | `--color-accent-subtle`  | `#FBE7E4` | `#3A2422` | light: pale tint under dark/accent-text. dark: dark desaturated tint under light text (chip-selected bg) |
 | `--color-accent-text`    | `#982015` | `#FF6B5B` | darkened cinnabar (light) for body-size accent text; dark `accent` already clears 4.5:1 |
-| `--color-level`          | `#2a7a4b` | `#5fae80` | unchanged — not part of the brand remap |
-| `--color-level-subtle`   | `#e6f4ec` | `#1f3a2a` | unchanged |
 | `--color-danger`         | `#A6471C` | `#E8855E` | re-hued off cinnabar (hue ~20° vs cinnabar's ~5°); rust/burnt-orange |
 | `--color-danger-subtle`  | `#FBEAE3` | `#3D2A20` | dark tint counterpart |
 | `--color-heat-0`         | `#F1F5F9` | `#2A3950` | = surface-2 |

@@ -187,24 +187,6 @@ def test_create_activity_slug_unique_per_owner(db_with_user):
     assert slug_second == "workout-2"
 
 
-def test_create_activity_no_levels_or_rules(db_with_user):
-    """General-log categories have no progression rows."""
-    db_path, owner_id = db_with_user
-    result = categories.create_activity(owner_id, name="Workout")
-    conn = _raw(db_path)
-    levels = conn.execute(
-        "SELECT COUNT(*) FROM level WHERE activity_id = ?",
-        (result["activity_id"],),
-    ).fetchone()[0]
-    rules = conn.execute(
-        "SELECT COUNT(*) FROM level_rule WHERE activity_id = ?",
-        (result["activity_id"],),
-    ).fetchone()[0]
-    conn.close()
-    assert levels == 0
-    assert rules == 0
-
-
 def test_create_activity_is_atomic(db_with_user):
     """Exactly one category, one activity, two field_defs — nothing partial."""
     db_path, owner_id = db_with_user

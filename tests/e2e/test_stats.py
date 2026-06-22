@@ -1,5 +1,5 @@
-"""Playwright E2E specs for the stats screens (Task 9): calendar, heatmap,
-streak, and progression status on the sub-tally detail screen.
+"""Playwright E2E specs for the stats screens (Task 9): calendar and heatmap
+on the sub-tally detail screen.
 
 These are real `pytest` + `playwright.sync_api` specs (see
 .claude/rules/tests.md) -- not agent-driven via the `playwright-cli` skill.
@@ -17,17 +17,25 @@ Specs covered
    one ``.cal-day`` cell) and the trailing-365-day heatmap (``role="img"``
    grid of ``.heat-cell`` elements) — neither of which appears on the home
    screen.
-2. The Kendo detail screen shows the current dan stage ("Dan") and
-   the shōgō ("Title") parallel track; the Reading detail screen shows the
-   current tier ("Beginner") and a count-to-next requirement ("more to go").
-3. Calendar day cells remain >=44px tap targets and chips wrap (never
-   horizontal scroll-hide) at 360px viewport width and 1.5x text scale.
+2. Calendar day cells remain >=44px tap targets at 360px viewport width.
 
 Note: tap-to-select-a-day + inline day-entries-fragment behavior is covered
 by ``tests/e2e/test_calendar_selection.py`` (which exercises the current
 ``.cal-day--selected`` affordance) rather than here — this module previously
 had a now-deleted spec asserting on a stale ``#calendar-day-detail`` id that
 no longer exists in ``app/templates/components/history.html.jinja2``.
+
+The dan/shōgō grading-track and reading-tier specs that previously lived
+here tested the progression/level-ladder feature, removed wholesale in
+meetings/MEETING-2026-06-21-simplify-onboarding (migration
+0013_drop_progression.sql drops the level/level_rule tables and tightens
+field_def.kind's CHECK to exclude 'level'/'result'). They've been deleted
+rather than adapted -- there is no replacement feature.
+
+Real signup creates zero activities now (the onboarding seed step was
+removed along with progression -- see above), so ``_signup`` here seeds a
+fixture "Kendo" activity directly via ``tests.conftest.seed_test_activity``
+(same pattern as ``tests/e2e/test_entry_comments.py``).
 """
 
 from __future__ import annotations
@@ -82,9 +90,15 @@ def _unique_username(slug: str) -> str:
 def _signup(page, username: str, password: str = "correct-horse-battery") -> None:
     """Land on the entry screen, switch to "Create account", and submit a new
     username/password signup with consent checked, then complete the
-    one-time sharing-consent screen to reach the dashboard. A fresh
-    username/password signup now seeds the same starter templates a guest
-    used to get (``app.auth.routes._lazy_seed``)."""
+    one-time sharing-consent screen to reach the dashboard.
+
+    Real signup creates zero activities now (see module docstring), so this
+    seeds a fixture "Kendo" activity directly via
+    ``tests.conftest.seed_test_activity`` against the same DB file the live
+    test server reads."""
+    from app.auth import users as users_module
+    from tests.conftest import seed_test_activity
+
     page.goto(BASE_URL + "/")
     page.get_by_role("tab", name=ui_strings.ENTRY_AUTH_TAB_CREATE).click()
     page.wait_for_selector("#auth-form input[name='consent']")
@@ -96,6 +110,9 @@ def _signup(page, username: str, password: str = "correct-horse-battery") -> Non
     page.wait_for_url(BASE_URL + "/welcome-sharing")
     page.get_by_role("button", name=ui_strings.VISIBILITY_CONSENT_SUBMIT).click()
     page.wait_for_url(BASE_URL + f"/@{username}")
+
+    owner = users_module.find_by_username(username)
+    seed_test_activity(owner["id"], name="Kendo")
 
     page.goto(BASE_URL + "/home")
 
@@ -137,28 +154,6 @@ def test_detail_screen_shows_calendar_and_heatmap(page) -> None:
     heatmap = page.locator('[role="img"]')
     assert heatmap.count() > 0
     assert page.locator(".heat-cell").count() == 365
-
-
-def test_kendo_grading_detail_shows_dan_and_shogo_track(page) -> None:
-    """The Kendo detail screen shows the current dan stage ("Dan")
-    and the shōgō ("Title") parallel track section."""
-    _signup(page, _unique_username("b"))
-
-    _open_detail(page, "Kendo")
-
-    assert page.get_by_text(ui_strings.PROGRESSION_TRACK_DAN).count() > 0
-    assert page.get_by_text(ui_strings.PROGRESSION_TRACK_SHOGO).count() > 0
-
-
-def test_reading_detail_shows_tier_and_count_to_next(page) -> None:
-    """The Reading detail screen shows the current tier ("Beginner") and a
-    count-to-next requirement string ("more to go")."""
-    _signup(page, _unique_username("c"))
-
-    _open_detail(page, "Reading")
-
-    assert page.get_by_text("Beginner").count() > 0
-    assert page.get_by_text(ui_strings.PROGRESSION_COUNT_REMAINING_UNIT.strip()).count() > 0
 
 
 def test_calendar_day_cells_meet_tap_target_at_360px(page) -> None:

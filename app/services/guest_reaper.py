@@ -15,7 +15,7 @@ forever. This module enforces two retention windows:
 Either condition is sufficient to purge. A guest is purged by deleting its
 ``user`` row; ``ON DELETE CASCADE`` (declared from ``user`` in migration 0001)
 removes every dependent row (category, activity, field_def, tag, entry,
-entry_tag, entry_value, match, level, level_rule) — no separate cleanup needed.
+entry_tag, entry_value, match) — no separate cleanup needed.
 
 Owner model
 -----------

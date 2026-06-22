@@ -8,7 +8,7 @@ tools: Read, Write, Edit, Bash, Grep, Glob
 # web-renderer
 
 You own Mushin's web surface. Mushin is a mobile-first personal progress
-tracker framed as a "raising-sim RPG of yourself." You render over the shared
+tracker — log anything, watch it add up. You render over the shared
 domain/service layer (domain-engineer) — you never put business logic in routes
 or templates.
 
@@ -46,9 +46,6 @@ Read the project `web-templates` rule and the `copy-patterns`, `color-system`,
   over a calm Google / email row — honest, not a dark pattern.
 - Frame the no-account path per `copy-patterns` (`ENTRY_GUEST_SUB`). **Never**
   claim "nothing leaves your device" — guest data is on the server.
-- Guest upgrade nudge fires at the **first progression level-up**, gift-framed,
-  dismissible, and **never blocks logging**. No loss/urgency framing. Exact
-  copy lives in `ui_strings.py` per `copy-patterns`.
 
 ## Copy & i18n
 

@@ -86,11 +86,14 @@ def test_all_expected_tables_exist(tmp_path: Path) -> None:
             "entry_tag",
             "entry_value",
             "match",
-            "level",
-            "level_rule",
         }
         missing = expected - table_names
         assert not missing, f"Missing tables: {missing}"
+
+        # level/level_rule were dropped by migration 0013 -- the progression
+        # system no longer exists.
+        assert "level" not in table_names
+        assert "level_rule" not in table_names
     finally:
         conn.close()
 
@@ -108,11 +111,14 @@ def test_all_expected_indexes_exist(tmp_path: Path) -> None:
             "idx_activity_category_active",
             "idx_category_owner_active",
             "idx_match_entry",
-            "idx_level_activity_track_ordinal",
             "idx_user_guest_last_active",
         }
         missing = expected - index_names
         assert not missing, f"Missing indexes: {missing}"
+
+        # idx_level_activity_track_ordinal lived on `level`, dropped by 0013
+        # along with the table it indexed.
+        assert "idx_level_activity_track_ordinal" not in index_names
     finally:
         conn.close()
 
@@ -180,20 +186,6 @@ def _seed_all_tables(conn: sqlite3.Connection) -> int:
         (entry_id, user_id),
     )
 
-    cur = conn.execute(
-        """INSERT INTO level (activity_id, owner_id, track, ordinal, code, label)
-           VALUES (?, ?, 'dan', 1, '1dan', '1단')""",
-        (activity_id, user_id),
-    )
-    level_id = cur.lastrowid
-
-    conn.execute(
-        """INSERT INTO level_rule
-               (owner_id, activity_id, from_level_id, to_level_id, gate_type)
-           VALUES (?, ?, NULL, ?, 'count')""",
-        (user_id, activity_id, level_id),
-    )
-
     conn.commit()
     return user_id
 
@@ -207,8 +199,6 @@ OWNED_TABLES = [
     "entry_tag",
     "entry_value",
     "match",
-    "level",
-    "level_rule",
 ]
 
 
@@ -414,12 +404,14 @@ def test_migration_0006_backfills_unique_slugs(tmp_path: Path) -> None:
     db_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Apply 0001–0005 and 0007–0008, hiding 0006 (the migration under test),
-    # 0009 (the rename), and 0011 (the multi-activity-category merge, which
-    # queries the post-0009 `activity` table name and so can't run yet either)
-    # so we can seed activity rows while the table still has its original
-    # name.  After seeding we restore all three and run again so 0006
-    # backfills slugs, 0009 renames the table, and 0011 runs against the
-    # renamed table — in that order.
+    # 0009 (the rename), 0011 (the multi-activity-category merge, which
+    # queries the post-0009 `activity` table name and so can't run yet
+    # either), and 0013 (drops the progression tables and rebuilds field_def
+    # referencing `activity(id)` -- also post-0009 table-name-dependent) so we
+    # can seed activity rows while the table still has its original name.
+    # After seeding we restore all four and run again so 0006 backfills
+    # slugs, 0009 renames the table, 0011 runs against the renamed table, and
+    # 0013 runs last — in that order.
     import shutil
 
     from app.models.migrate import MIGRATIONS_DIR
@@ -427,18 +419,22 @@ def test_migration_0006_backfills_unique_slugs(tmp_path: Path) -> None:
     migration_0006 = MIGRATIONS_DIR / "0006_sub_tally_slug.sql"
     migration_0009 = MIGRATIONS_DIR / "0009_rename_sub_tally_to_activity.sql"
     migration_0011 = MIGRATIONS_DIR / "0011_merge_multi_activity_categories.sql"
+    migration_0013 = MIGRATIONS_DIR / "0013_drop_progression.sql"
     tmp_hidden_0006 = MIGRATIONS_DIR / "0006_sub_tally_slug.sql.hidden"
     tmp_hidden_0009 = MIGRATIONS_DIR / "0009_rename_sub_tally_to_activity.sql.hidden"
     tmp_hidden_0011 = MIGRATIONS_DIR / "0011_merge_multi_activity_categories.sql.hidden"
+    tmp_hidden_0013 = MIGRATIONS_DIR / "0013_drop_progression.sql.hidden"
     shutil.move(migration_0006, tmp_hidden_0006)
     shutil.move(migration_0009, tmp_hidden_0009)
     shutil.move(migration_0011, tmp_hidden_0011)
+    shutil.move(migration_0013, tmp_hidden_0013)
     try:
         run_migrations(db_path)
     finally:
         shutil.move(tmp_hidden_0006, migration_0006)
         shutil.move(tmp_hidden_0009, migration_0009)
         shutil.move(tmp_hidden_0011, migration_0011)
+        shutil.move(tmp_hidden_0013, migration_0013)
 
     # Seed rows needing slugs, including a same-owner name collision
     # and an empty/non-alphanumeric name.  The table is still named 'sub_tally'
@@ -1230,5 +1226,215 @@ def test_migration_0012_adds_comments_seen_at_column_defaulting_null(tmp_path: P
         row = conn2.execute("SELECT comments_seen_at FROM user WHERE id=?", (uid,)).fetchone()
         assert row[0] is None
         conn2.close()
+    finally:
+        conn.close()
+
+
+# ---------------------------------------------------------------------------
+# 8. Migration 0013: drop progression (level/level_rule) and tighten
+#    field_def.kind's CHECK to exclude 'level'/'result'.
+# ---------------------------------------------------------------------------
+
+
+def _seed_activity(conn: sqlite3.Connection) -> tuple[int, int]:
+    """Seed a user + category + activity; return (owner_id, activity_id)."""
+    cur = conn.execute("INSERT INTO user (auth_provider) VALUES ('email')")
+    uid = cur.lastrowid
+    cur = conn.execute(
+        "INSERT INTO category (owner_id, name, sort_order) VALUES (?, 'C', 0)", (uid,)
+    )
+    cat_id = cur.lastrowid
+    cur = conn.execute(
+        "INSERT INTO activity (owner_id, category_id, name, count_mode, sort_order)"
+        " VALUES (?, ?, 'S', 'running', 0)",
+        (uid, cat_id),
+    )
+    activity_id = cur.lastrowid
+    return uid, activity_id
+
+
+def test_migration_0013_drops_level_and_level_rule_tables(tmp_path: Path) -> None:
+    db_path = fresh_db(tmp_path)
+    conn = raw_conn(db_path)
+    try:
+        applied = {row[0] for row in conn.execute("SELECT filename FROM _migrations").fetchall()}
+        assert "0013_drop_progression.sql" in applied
+
+        tables = {
+            row[0]
+            for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
+        }
+        assert "level" not in tables
+        assert "level_rule" not in tables
+
+        result = conn.execute("PRAGMA integrity_check").fetchone()
+        assert result[0] == "ok"
+
+        fk_issues = conn.execute("PRAGMA foreign_key_check").fetchall()
+        assert fk_issues == []
+    finally:
+        conn.close()
+
+
+def test_migration_0013_field_def_check_rejects_level_and_result(tmp_path: Path) -> None:
+    """field_def.kind's CHECK no longer accepts 'level' or 'result' -- only
+    the five remaining field-type primitives."""
+    db_path = fresh_db(tmp_path)
+    conn = sqlite3.connect(str(db_path), isolation_level=None)
+    conn.execute("PRAGMA foreign_keys=ON")
+    try:
+        _uid, activity_id = _seed_activity(conn)
+        conn.commit()
+
+        with pytest.raises(sqlite3.IntegrityError):
+            conn.execute(
+                "INSERT INTO field_def (activity_id, kind, label, sort_order)"
+                " VALUES (?, 'level', 'Level', 0)",
+                (activity_id,),
+            )
+
+        with pytest.raises(sqlite3.IntegrityError):
+            conn.execute(
+                "INSERT INTO field_def (activity_id, kind, label, sort_order)"
+                " VALUES (?, 'result', 'Result', 0)",
+                (activity_id,),
+            )
+
+        # The five surviving kinds are still accepted.
+        for kind in ("tag_group", "scale", "count", "memo", "match_list"):
+            conn.execute(
+                "INSERT INTO field_def (activity_id, kind, label, sort_order) VALUES (?, ?, ?, 0)",
+                (activity_id, kind, kind),
+            )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def test_migration_0013_match_result_column_is_untouched(tmp_path: Path) -> None:
+    """match.result (the win/loss/draw outcome column) is unrelated to the
+    'result' field-kind dropped from field_def.kind -- it must still exist
+    and still enforce its own CHECK."""
+    db_path = fresh_db(tmp_path)
+    conn = sqlite3.connect(str(db_path), isolation_level=None)
+    conn.execute("PRAGMA foreign_keys=ON")
+    try:
+        uid, activity_id = _seed_activity(conn)
+        cur = conn.execute(
+            "INSERT INTO entry (owner_id, activity_id, occurred_at)"
+            " VALUES (?, ?, '2026-06-21T09:00:00')",
+            (uid, activity_id),
+        )
+        entry_id = cur.lastrowid
+        conn.commit()
+
+        cols = {row[1] for row in conn.execute("PRAGMA table_info(match)").fetchall()}
+        assert "result" in cols
+
+        conn.execute(
+            "INSERT INTO match (entry_id, owner_id, opponent, score, result, sort_order)"
+            " VALUES (?, ?, 'Opponent A', '2-1', 'win', 0)",
+            (entry_id, uid),
+        )
+        conn.commit()
+
+        with pytest.raises(sqlite3.IntegrityError):
+            conn.execute(
+                "INSERT INTO match (entry_id, owner_id, opponent, score, result, sort_order)"
+                " VALUES (?, ?, 'Opponent B', '1-1', 'invalid_outcome', 1)",
+                (entry_id, uid),
+            )
+    finally:
+        conn.close()
+
+
+def test_migration_0013_drops_legacy_level_and_result_field_def_rows_on_upgrade(
+    tmp_path: Path,
+) -> None:
+    """Upgrade path: a database that already has field_def rows with the
+    now-removed 'level'/'result' kinds (and level/level_rule rows) survives
+    0013 cleanly -- the legacy rows are dropped during the field_def rebuild
+    rather than failing the migration, and the progression tables disappear
+    without orphaning anything."""
+    import shutil
+
+    from app.models.migrate import MIGRATIONS_DIR
+
+    db_path = tmp_path / "test.db"
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+
+    migration_0013 = MIGRATIONS_DIR / "0013_drop_progression.sql"
+    tmp_hidden = MIGRATIONS_DIR / "0013_drop_progression.sql.hidden"
+    shutil.move(migration_0013, tmp_hidden)
+    try:
+        run_migrations(db_path)
+    finally:
+        shutil.move(tmp_hidden, migration_0013)
+
+    conn = sqlite3.connect(str(db_path), isolation_level=None)
+    conn.execute("PRAGMA foreign_keys=ON")
+
+    uid, activity_id = _seed_activity(conn)
+
+    cur = conn.execute(
+        "INSERT INTO field_def (activity_id, kind, label, sort_order)"
+        " VALUES (?, 'level', 'Level', 0)",
+        (activity_id,),
+    )
+    level_fd_id = cur.lastrowid
+    cur = conn.execute(
+        "INSERT INTO field_def (activity_id, kind, label, sort_order)"
+        " VALUES (?, 'result', 'Result', 1)",
+        (activity_id,),
+    )
+    result_fd_id = cur.lastrowid
+    cur = conn.execute(
+        "INSERT INTO field_def (activity_id, kind, label, sort_order)"
+        " VALUES (?, 'memo', 'Notes', 2)",
+        (activity_id,),
+    )
+    surviving_fd_id = cur.lastrowid
+
+    cur = conn.execute(
+        "INSERT INTO level (activity_id, owner_id, track, ordinal, code, label)"
+        " VALUES (?, ?, 'dan', 1, '1dan', '1st')",
+        (activity_id, uid),
+    )
+    level_id = cur.lastrowid
+    conn.execute(
+        "INSERT INTO level_rule (owner_id, activity_id, from_level_id, to_level_id, gate_type)"
+        " VALUES (?, ?, NULL, ?, 'count')",
+        (uid, activity_id, level_id),
+    )
+    conn.commit()
+    conn.close()
+
+    applied = run_migrations(db_path)
+    assert "0013_drop_progression.sql" in applied
+
+    conn = raw_conn(db_path)
+    try:
+        remaining_ids = {
+            row[0]
+            for row in conn.execute(
+                "SELECT id FROM field_def WHERE activity_id=?", (activity_id,)
+            ).fetchall()
+        }
+        assert remaining_ids == {surviving_fd_id}
+        assert level_fd_id not in remaining_ids
+        assert result_fd_id not in remaining_ids
+
+        tables = {
+            row[0]
+            for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
+        }
+        assert "level" not in tables
+        assert "level_rule" not in tables
+
+        result = conn.execute("PRAGMA integrity_check").fetchone()
+        assert result[0] == "ok"
+
+        fk_issues = conn.execute("PRAGMA foreign_key_check").fetchall()
+        assert fk_issues == []
     finally:
         conn.close()

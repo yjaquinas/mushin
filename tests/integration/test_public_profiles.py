@@ -47,7 +47,8 @@ from app.auth import users
 from app.main import app
 from app.models import db
 from app.models.migrate import run_migrations
-from app.services import connections, entries, seeding
+from app.services import connections, entries
+from tests.conftest import seed_test_activity
 
 _UTC = ZoneInfo("UTC")
 
@@ -70,10 +71,11 @@ async def client(public_db: Path) -> AsyncClient:
 
 
 def _create_account(username: str, *, visibility: str) -> int:
-    """Create a username/password account with *visibility*, seeded with starters."""
+    """Create a username/password account with *visibility*, with two fixture activities."""
     owner_id = users.create_username_user(username, "argon2-fake-hash")
     users.set_visibility_consent(owner_id, visibility)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo")
+    seed_test_activity(owner_id, name="Reading")
     return owner_id
 
 
@@ -322,8 +324,9 @@ async def _signup_and_set_visibility(client: AsyncClient, username: str, *, visi
     )
     assert resp.status_code == 200, resp.text
     owner_id = int(resp.json()["user_id"])
-    # Seed the account and set visibility/consent so /home is reachable.
-    seeding.seed_account(owner_id)
+    # Give the account one fixture activity and set visibility/consent so
+    # /home is reachable.
+    seed_test_activity(owner_id, name="Kendo")
     users.set_visibility_consent(owner_id, visibility)
     return owner_id
 
@@ -765,7 +768,7 @@ async def test_owner_preview_as_stranger_skips_consent_gate(client: AsyncClient)
     )
     assert resp.status_code == 200
     owner_id = int(resp.json()["user_id"])
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo")
     # Deliberately do NOT call set_visibility_consent — consent_seen_at is
     # still NULL, so real navigation to /@{username} would redirect to
     # /welcome-sharing.

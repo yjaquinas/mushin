@@ -3,7 +3,7 @@
 Acceptance criteria
 -------------------
 1. ``export_data(owner_id)`` for a seeded account returns the versioned envelope
-   (``schema_version``, ``exported_at``, ``data``) with all ten expected
+   (``schema_version``, ``exported_at``, ``data``) with all eight expected
    top-level data keys, and at least one row per non-empty table.
 2. Entry memos are present in the ``entries`` export (PIPA access right).
 3. No excluded field — ``owner_id``, ``password_hash``, ``provider_id``,
@@ -13,9 +13,10 @@ Acceptance criteria
    (multi-user isolation).
 
 Each test uses its own fresh migrated SQLite in ``tmp_path`` (never ``:memory:``
-and never the dev DB). Seeded rows come from ``seeding.seed_account``; the few
-content rows that seeding doesn't create (entries, tags, matches) are inserted
-directly with raw SQL so the test doesn't depend on the entries service.
+and never the dev DB). The base category/activity/field_def rows come from
+``tests.conftest.seed_test_activity``; the few content rows that helper
+doesn't create (entries, tags, matches) are inserted directly with raw SQL so
+the test doesn't depend on the entries service.
 """
 
 from __future__ import annotations
@@ -28,7 +29,8 @@ from pathlib import Path
 import pytest
 
 from app.models.migrate import run_migrations
-from app.services import connections, portability, seeding
+from app.services import connections, portability
+from tests.conftest import seed_test_activity
 
 # Fields that must never appear anywhere in an export, at any nesting depth.
 _FORBIDDEN_KEYS = frozenset(
@@ -54,8 +56,6 @@ _TOP_LEVEL_KEYS = frozenset(
         "entry_tags",
         "entry_values",
         "matches",
-        "levels",
-        "level_rules",
     }
 )
 
@@ -145,7 +145,7 @@ def populated_db(tmp_path: Path, monkeypatch):
     owner_id = _make_user(conn)
     conn.close()
 
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Test Activity")
 
     memo = "오늘 연습 좋았다"  # personal data: must survive export
     conn = _raw(db_path)
@@ -246,8 +246,8 @@ def test_isolation_excludes_other_owner_rows(tmp_path, monkeypatch):
     owner_b = _make_user(conn)
     conn.close()
 
-    seeding.seed_account(owner_a)
-    seeding.seed_account(owner_b)
+    seed_test_activity(owner_a, name="Test Activity")
+    seed_test_activity(owner_b, name="Test Activity")
 
     # Give each owner a distinctly-memo'd entry + match + tag.
     conn = _raw(db_path)
@@ -273,9 +273,6 @@ def test_isolation_excludes_other_owner_rows(tmp_path, monkeypatch):
         r[0] for r in conn.execute("SELECT id FROM entry WHERE owner_id = ?", (owner_b,))
     }
     b_tag_ids = {r[0] for r in conn.execute("SELECT id FROM tag WHERE owner_id = ?", (owner_b,))}
-    b_level_ids = {
-        r[0] for r in conn.execute("SELECT id FROM level WHERE owner_id = ?", (owner_b,))
-    }
     b_field_ids = {
         r[0]
         for r in conn.execute(
@@ -292,7 +289,6 @@ def test_isolation_excludes_other_owner_rows(tmp_path, monkeypatch):
     assert {r["id"] for r in data["sub_tallies"]}.isdisjoint(b_sub_ids)
     assert {r["id"] for r in data["entries"]}.isdisjoint(b_entry_ids)
     assert {r["id"] for r in data["tags"]}.isdisjoint(b_tag_ids)
-    assert {r["id"] for r in data["levels"]}.isdisjoint(b_level_ids)
     assert {r["id"] for r in data["field_defs"]}.isdisjoint(b_field_ids)
     # Matches reference B's entries only through entry_id; none should appear.
     assert {m["entry_id"] for m in data["matches"]}.isdisjoint(b_entry_ids)
@@ -340,7 +336,7 @@ def test_social_graph_section_lists_fellows_pending_and_blocked(tmp_path, monkey
     # Each counterpart owns a seeded account with a distinctive memo, so the
     # test can assert none of that content crosses into my export.
     for uid in (fellow, requester, target, blocked):
-        seeding.seed_account(uid)
+        seed_test_activity(uid, name="Test Activity")
     conn = _raw(db_path)
     for uid, label in (
         (fellow, "fellow-secret"),
@@ -396,7 +392,7 @@ def test_social_graph_section_empty_for_lone_user(tmp_path, monkeypatch):
     conn = _raw(db_path)
     owner_id = _make_user(conn)
     conn.close()
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Test Activity")
 
     sg = portability.export_data(owner_id)["social_graph"]
     assert sg == {"fellows": [], "pending_requests": [], "blocked": []}
@@ -415,8 +411,6 @@ _TABLES = (
     "entry_tags",
     "entry_values",
     "matches",
-    "levels",
-    "level_rules",
 )
 
 
@@ -440,7 +434,7 @@ def _seed_and_export(tmp_path: Path, monkeypatch) -> tuple[Path, int, dict]:
     owner_id = _make_user(conn)
     conn.close()
 
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Test Activity")
 
     conn = _raw(db_path)
     activity_id = _first_activity(conn, owner_id)
@@ -467,9 +461,6 @@ def _strip_ids(data: dict) -> dict:
         "field_def_id",
         "entry_id",
         "tag_id",
-        "from_level_id",
-        "to_level_id",
-        "prereq_level_id",
     }
     out: dict = {}
     for table, rows in data.items():
@@ -510,7 +501,7 @@ def test_replace_semantics_wipes_existing(tmp_path, monkeypatch):
     conn = _raw(db_path)
     owner_b = _make_user(conn)
     conn.close()
-    seeding.seed_account(owner_b)
+    seed_test_activity(owner_b, name="Test Activity")
     conn = _raw(db_path)
     sub_b = _first_activity(conn, owner_b)
     _add_entry_with_memo(conn, owner_b, sub_b, "owner-b-only-memo")
@@ -537,7 +528,7 @@ def test_owner_id_always_from_argument_never_payload(tmp_path, monkeypatch):
 
     # Every owner-scoped row written must carry owner_b, regardless of payload.
     conn = _raw(db_path)
-    for table in ("category", "activity", "entry", "tag", "match", "level", "level_rule"):
+    for table in ("category", "activity", "entry", "tag", "match"):
         owners = {
             r[0]
             for r in conn.execute(
@@ -587,7 +578,7 @@ def test_cache_recomputed_after_import(tmp_path, monkeypatch):
 def _count_all_rows(db_path: Path, owner_id: int) -> int:
     conn = _raw(db_path)
     total = 0
-    for table in ("category", "activity", "entry", "tag", "match", "level", "level_rule"):
+    for table in ("category", "activity", "entry", "tag", "match"):
         total += conn.execute(
             f"SELECT COUNT(*) FROM {table} WHERE owner_id = ?",
             (owner_id,),  # noqa: S608
@@ -632,7 +623,7 @@ def test_row_count_cap_rejected_before_write(tmp_path, monkeypatch):
     conn = _raw(db_path)
     owner_b = _make_user(conn)
     conn.close()
-    seeding.seed_account(owner_b)  # give owner_b existing data to protect
+    seed_test_activity(owner_b, name="Test Activity")  # give owner_b existing data to protect
     before = _count_all_rows(db_path, owner_b)
 
     payload = _empty_payload()
@@ -745,3 +736,191 @@ def test_string_length_cap_rejected(tmp_path, monkeypatch):
     payload["data"]["entries"][0]["memo"] = "x" * (portability.MAX_TEXT_LEN + 1)
     with pytest.raises(portability.ImportValidationError):
         portability.import_data(owner_b, payload)
+
+
+# --- backward-compatible import of pre-0013 (progression-era) exports -------
+
+
+def _legacy_progression_payload() -> dict:
+    """A pre-0013 export envelope: one category/activity/entry plus the dropped
+    ``levels`` / ``level_rules`` sections and a ``field_defs`` row with the
+    removed ``level`` kind.
+
+    This mirrors what ``export_data`` emitted before migration 0013 removed the
+    progression system. Importing it today must succeed, silently dropping the
+    progression content rather than erroring.
+    """
+    return {
+        "schema_version": portability.SCHEMA_VERSION,
+        "exported_at": "2026-06-01T00:00:00Z",
+        "data": {
+            "categories": [
+                {
+                    "id": 1,
+                    "name": "Judo",
+                    "color": None,
+                    "icon": None,
+                    "sort_order": 0,
+                    "archived_at": None,
+                    "created_at": "2026-06-01T00:00:00Z",
+                }
+            ],
+            "sub_tallies": [
+                {
+                    "id": 1,
+                    "category_id": 1,
+                    "name": "Judo",
+                    # 'progression' is still a legal count_mode in the schema;
+                    # the importer must round-trip it untouched.
+                    "count_mode": "progression",
+                    "config_json": None,
+                    "sort_order": 0,
+                    "archived_at": None,
+                    "created_at": "2026-06-01T00:00:00Z",
+                }
+            ],
+            "field_defs": [
+                {
+                    "id": 1,
+                    "activity_id": 1,
+                    "kind": "count",
+                    "label": "Reps",
+                    "config_json": None,
+                    "sort_order": 0,
+                },
+                # A pre-0013 field with the dropped 'level' kind — must be
+                # silently dropped, not rejected.
+                {
+                    "id": 2,
+                    "activity_id": 1,
+                    "kind": "level",
+                    "label": "Belt",
+                    "config_json": None,
+                    "sort_order": 1,
+                },
+            ],
+            "tags": [],
+            "entries": [
+                {
+                    "id": 1,
+                    "activity_id": 1,
+                    "occurred_at": "2026-06-01T00:00:00Z",
+                    "memo": "legacy-memo",
+                    "created_at": "2026-06-01T00:00:00Z",
+                    "updated_at": "2026-06-01T00:00:00Z",
+                }
+            ],
+            "entry_tags": [],
+            # An entry_value on the dropped 'level' field — must be dropped with it.
+            "entry_values": [
+                {
+                    "entry_id": 1,
+                    "field_def_id": 2,
+                    "num_value": 3.0,
+                    "text_value": None,
+                },
+            ],
+            "matches": [],
+            # The dropped progression sections, present in old files.
+            "levels": [
+                {
+                    "id": 1,
+                    "activity_id": 1,
+                    "track": "dan",
+                    "ordinal": 1,
+                    "code": "1k",
+                    "label": "1st kyu",
+                    "archived_at": None,
+                }
+            ],
+            "level_rules": [
+                {
+                    "id": 1,
+                    "activity_id": 1,
+                    "from_level_id": None,
+                    "to_level_id": 1,
+                    "gate_type": "count",
+                    "gate_value": 10.0,
+                    "min_age": None,
+                    "prereq_level_id": None,
+                }
+            ],
+        },
+    }
+
+
+def test_import_old_format_with_levels_succeeds_dropping_them(tmp_path, monkeypatch):
+    """A pre-0013 export carrying ``levels``/``level_rules`` keys and a legacy
+    ``level`` field_def imports without error, with that content silently
+    dropped and the surviving content intact."""
+    db_path = _make_db(tmp_path)
+    import app.models.db as _db_module
+
+    monkeypatch.setattr(_db_module, "DATABASE_PATH", str(db_path))
+
+    conn = _raw(db_path)
+    owner_id = _make_user(conn)
+    conn.close()
+
+    payload = _legacy_progression_payload()
+    summary = portability.import_data(owner_id, payload)
+
+    # Surviving tables imported; legacy sections are not in the summary at all.
+    assert summary["categories"] == 1
+    assert summary["entries"] == 1
+    assert "levels" not in summary
+    assert "level_rules" not in summary
+    # The legacy 'level' field_def was dropped; only the surviving 'count' field
+    # was written.
+    assert summary["field_defs"] == 1
+    # The entry_value pointing at the dropped 'level' field was dropped too.
+    assert summary["entry_values"] == 0
+
+    # Re-export confirms no levels/level_rules keys and the surviving content.
+    re_export = portability.export_data(owner_id)
+    assert "levels" not in re_export["data"]
+    assert "level_rules" not in re_export["data"]
+    kinds = {f["kind"] for f in re_export["data"]["field_defs"]}
+    assert kinds == {"count"}
+    assert [e["memo"] for e in re_export["data"]["entries"]] == ["legacy-memo"]
+    # 'progression' count_mode round-tripped untouched.
+    assert re_export["data"]["sub_tallies"][0]["count_mode"] == "progression"
+
+
+def test_import_old_format_levels_keys_alone_do_not_error(tmp_path, monkeypatch):
+    """Even an otherwise-empty payload that still carries the legacy keys
+    imports cleanly (the keys are tolerated, not required)."""
+    db_path = _make_db(tmp_path)
+    import app.models.db as _db_module
+
+    monkeypatch.setattr(_db_module, "DATABASE_PATH", str(db_path))
+
+    conn = _raw(db_path)
+    owner_id = _make_user(conn)
+    conn.close()
+
+    payload = _empty_payload()
+    payload["data"]["levels"] = []
+    payload["data"]["level_rules"] = []
+
+    summary = portability.import_data(owner_id, payload)
+    assert "levels" not in summary
+    assert "level_rules" not in summary
+
+
+def test_import_unknown_extra_table_key_still_rejected(tmp_path, monkeypatch):
+    """A genuinely unknown extra key (not a known legacy table) is still a hard
+    validation error — the legacy tolerance is narrow."""
+    db_path = _make_db(tmp_path)
+    import app.models.db as _db_module
+
+    monkeypatch.setattr(_db_module, "DATABASE_PATH", str(db_path))
+
+    conn = _raw(db_path)
+    owner_id = _make_user(conn)
+    conn.close()
+
+    payload = _empty_payload()
+    payload["data"]["surprise_table"] = []
+    with pytest.raises(portability.ImportValidationError):
+        portability.import_data(owner_id, payload)

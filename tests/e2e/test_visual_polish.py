@@ -22,21 +22,30 @@ Specs covered
    quick-add log form returns a card fragment whose hero numeral has
    ``hero--bumped`` immediately after the swap, while the initial page
    load's card does not.
-4. Progress bar update: for a progression-mode sub-tally, ``.progress-fill``'s
-   inline ``width`` style changes after logging (from the detail screen).
-5. Log-panel focus + double-submit guard: expanding the inline log panel (via
+4. Log-panel focus + double-submit guard: expanding the inline log panel (via
    the detail screen's trigger above the activity card) moves focus inside
    ``#log-panel``; a successful submit collapses the panel
    (``aria-expanded="false"``); the submit button has
    ``hx-disabled-elt="this"``.
-6. Theme toggle: clicking the masthead theme toggle cycles
+5. Theme toggle: clicking the masthead theme toggle cycles
    light -> dark -> system, setting/clearing ``data-theme`` on ``<html>``
    accordingly, and the choice persists across a page reload via the
    ``mushin_theme`` cookie.
-7. Home cards: every card on ``/home`` is a single ``<a>`` link to its
+6. Home cards: every card on ``/home`` is a single ``<a>`` link to its
    ``/activities/{id}`` detail page, has no visible action button, and a
    freshly-created category card (via ``POST /categories``) is clickable
    without a reload too.
+
+The progress-bar spec that previously lived here (".progress-fill"'s inline
+width style changing after logging on a progression-mode sub-tally) tested
+the progression/level-ladder feature, removed wholesale in
+meetings/MEETING-2026-06-21-simplify-onboarding. It's been deleted rather
+than adapted -- there is no progress bar left to assert on.
+
+Real signup creates zero activities now (the onboarding seed step was
+removed along with progression -- see above), so ``_signup`` here seeds a
+fixture "Kendo" activity directly via ``tests.conftest.seed_test_activity``
+(same pattern as ``tests/e2e/test_entry_comments.py``).
 """
 
 from __future__ import annotations
@@ -91,9 +100,15 @@ def _unique_username(slug: str) -> str:
 def _signup(page, username: str, password: str = "correct-horse-battery") -> None:
     """Land on the entry screen, switch to "Create account", and submit a new
     username/password signup with consent checked, then complete the
-    one-time sharing-consent screen to reach the dashboard. A fresh
-    username/password signup now seeds the same starter templates a guest
-    used to get (``app.auth.routes._lazy_seed``)."""
+    one-time sharing-consent screen to reach the dashboard.
+
+    Real signup creates zero activities now (see module docstring), so this
+    seeds a fixture "Kendo" activity directly via
+    ``tests.conftest.seed_test_activity`` against the same DB file the live
+    test server reads."""
+    from app.auth import users as users_module
+    from tests.conftest import seed_test_activity
+
     page.goto(BASE_URL + "/")
     page.get_by_role("tab", name=ui_strings.ENTRY_AUTH_TAB_CREATE).click()
     page.wait_for_selector("#auth-form input[name='consent']")
@@ -105,6 +120,9 @@ def _signup(page, username: str, password: str = "correct-horse-battery") -> Non
     page.wait_for_url(BASE_URL + "/welcome-sharing")
     page.get_by_role("button", name=ui_strings.VISIBILITY_CONSENT_SUBMIT).click()
     page.wait_for_url(BASE_URL + f"/@{username}")
+
+    owner = users_module.find_by_username(username)
+    seed_test_activity(owner["id"], name="Kendo")
 
     page.goto(BASE_URL + "/home")
 
@@ -148,22 +166,31 @@ def test_home_masthead_links_to_home(page) -> None:
     assert ui_strings.APP_NAME_HANJA in masthead.inner_text()
 
 
-def test_empty_state_shows_glyph_and_gloss_for_fresh_guest(page) -> None:
-    """A fresh account with zero sub-tallies sees the 無心 glyph, HOME_EMPTY,
+def test_empty_state_shows_glyph_and_gloss_for_fresh_account(page) -> None:
+    """A fresh account with zero activities sees the 無心 glyph, HOME_EMPTY,
     and APP_GLOSS — not the old bare-paragraph empty state.
 
-    Note: onboarding lazy-seeds the kendo + reading templates on a fresh
-    signup, so a brand-new account's /home may already have cards. If
-    seeding has already happened by the time /home renders, this spec is a
-    no-op (the empty-state branch is unreachable for that account) — but if
-    the empty branch *is* rendered, it must use the new markup, never the
-    old bare <p>.
+    Real signup creates zero activities (no onboarding seed step any more --
+    see module docstring), so unlike the other specs in this module this one
+    signs up directly without going through ``_signup``'s fixture-seeding
+    step, to actually exercise the empty-state branch.
     """
-    _signup(page, _unique_username("b"))
+    page.goto(BASE_URL + "/")
+    page.get_by_role("tab", name=ui_strings.ENTRY_AUTH_TAB_CREATE).click()
+    page.wait_for_selector("#auth-form input[name='consent']")
+    page.fill("#auth-form input[name='username']", _unique_username("b"))
+    page.fill("#auth-form input[name='password']", "correct-horse-battery")
+    page.check("#auth-form input[name='consent']")
+    page.get_by_role("button", name=ui_strings.ENTRY_CREATE_SUBMIT).click()
+
+    page.wait_for_url(BASE_URL + "/welcome-sharing")
+    page.get_by_role("button", name=ui_strings.VISIBILITY_CONSENT_SUBMIT).click()
+    page.wait_for_url(lambda url: "/welcome-sharing" not in url)
+
+    page.goto(BASE_URL + "/home")
 
     empty_glyph = page.locator('span[aria-hidden="true"]', has_text="無心")
-    if empty_glyph.count() == 0:
-        pytest.skip("guest already has seeded cards; empty-state branch not reached")
+    assert empty_glyph.count() > 0
 
     assert empty_glyph.first.get_attribute("class") is not None
     assert "var(--spacing-icon-lg)" in (empty_glyph.first.get_attribute("class") or "")
@@ -219,31 +246,6 @@ def test_log_bumps_hero_numeral_with_micro_moment_class(page) -> None:
         or ""
     )
     assert "hero--bumped" in swapped_class
-
-
-def test_progress_fill_width_changes_after_log(page) -> None:
-    """For a progression-mode sub-tally (e.g. Reading), `.progress-fill`'s
-    inline `width` style reflects the new percentage after logging."""
-    _signup(page, _unique_username("e"))
-
-    card = _open_detail(page, "Reading")
-    progress_fill = card.locator(".progress-fill")
-
-    before_style = progress_fill.get_attribute("style") or ""
-
-    page.get_by_role("button", name=ui_strings.SUBTALLY_LOG_BUTTON).click()
-    page.locator("#log-panel form").get_by_role("button", name=ui_strings.LOG_SUBMIT).click()
-
-    page.wait_for_function(
-        """(args) => {
-            const el = document.querySelector(args.sel);
-            return el && el.getAttribute('style') !== args.before;
-        }""",
-        arg={"sel": f"#{card.get_attribute('id')} .progress-fill", "before": before_style},
-    )
-
-    after_style = page.locator(f"#{card.get_attribute('id')} .progress-fill").get_attribute("style")
-    assert after_style != before_style
 
 
 def test_log_panel_focuses_on_expand_and_collapses_on_submit(page) -> None:

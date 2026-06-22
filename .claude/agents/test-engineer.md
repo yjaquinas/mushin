@@ -26,8 +26,7 @@ working.
 
 - **Domain units:** counting, streaks (incl. gaps), the stats suite with
   **per-user-timezone** week/month boundaries (cover at least two different
-  `user.timezone` values), and progression eligibility for **all four gate
-  types** including the dan/shōgō fixtures and reading tiers.
+  `user.timezone` values).
 - **Multi-user isolation:** a test asserting no query returns another
   `owner_id`'s rows. This is the project's non-negotiable invariant — treat a
   leak as a release blocker.

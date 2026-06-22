@@ -40,8 +40,6 @@ Output shape
             "entry_tags": [...],
             "entry_values": [...],
             "matches": [...],
-            "levels": [...],
-            "level_rules": [...],
         },
         "social_graph": {
             "fellows": [
@@ -68,7 +66,7 @@ is honest self-owned relationship metadata (the access right covers "who I am
 connected to"), not importable account content. Each entry names only the
 *counterpart's* public handle (``username``) and ``display_name`` plus the
 relationship's own timestamps — never any of the counterpart's private content
-(entries, memos, levels, block internals). ``import_data`` ignores
+(entries, memos, block internals). ``import_data`` ignores
 ``social_graph`` entirely; re-establishing connections requires fresh consent
 from both parties, so they are not re-created on import.
 
@@ -123,24 +121,13 @@ _ENTRY_COLUMNS = ("id", "activity_id", "occurred_at", "memo", "created_at", "upd
 _ENTRY_TAG_COLUMNS = ("entry_id", "tag_id")
 _ENTRY_VALUE_COLUMNS = ("entry_id", "field_def_id", "num_value", "text_value")
 _MATCH_COLUMNS = ("id", "entry_id", "opponent", "score", "result", "sort_order")
-_LEVEL_COLUMNS = ("id", "activity_id", "track", "ordinal", "code", "label", "archived_at")
-_LEVEL_RULE_COLUMNS = (
-    "id",
-    "activity_id",
-    "from_level_id",
-    "to_level_id",
-    "gate_type",
-    "gate_value",
-    "min_age",
-    "prereq_level_id",
-)
 
 
 def export_data(owner_id: int) -> dict[str, Any]:
     """Assemble the full portable snapshot for *owner_id*.
 
     Returns a versioned, JSON-serializable dict (see the module docstring for the
-    exact shape). All ten owned tables are exported; tables with no rows for this
+    exact shape). All eight owned tables are exported; tables with no rows for this
     owner come back as empty lists. ``owner_id``, ``user``-table fields, and the
     derived cache columns are excluded.
 
@@ -160,8 +147,6 @@ def export_data(owner_id: int) -> dict[str, Any]:
         sub_tallies = _select(conn, "activity", _SUB_TALLY_COLUMNS, "owner_id = ?", (owner_id,))
         tags = _select(conn, "tag", _TAG_COLUMNS, "owner_id = ?", (owner_id,))
         entries = _select(conn, "entry", _ENTRY_COLUMNS, "owner_id = ?", (owner_id,))
-        levels = _select(conn, "level", _LEVEL_COLUMNS, "owner_id = ?", (owner_id,))
-        level_rules = _select(conn, "level_rule", _LEVEL_RULE_COLUMNS, "owner_id = ?", (owner_id,))
         matches = _select(conn, "match", _MATCH_COLUMNS, "owner_id = ?", (owner_id,))
 
         # Child tables with no owner_id of their own: reach them through an
@@ -202,8 +187,6 @@ def export_data(owner_id: int) -> dict[str, Any]:
             "entry_tags": entry_tags,
             "entry_values": entry_values,
             "matches": matches,
-            "levels": levels,
-            "level_rules": level_rules,
         },
         "social_graph": social_graph,
     }
@@ -333,8 +316,13 @@ MAX_ROWS_PER_TABLE = 2000
 MAX_NAME_LEN = 100
 MAX_TEXT_LEN = 500
 
-# The ten data tables, in the order ``export_data`` emits them. Used to assert
+# The eight data tables, in the order ``export_data`` emits them. Used to assert
 # the payload's ``data`` dict has exactly the expected keys.
+#
+# Backward compatibility: pre-0013 export files may still carry ``levels`` /
+# ``level_rules`` keys (the progression system, dropped in migration 0013).
+# Those keys are silently ignored on import — see ``_KNOWN_LEGACY_TABLES`` and
+# the key-set check in ``_validate_payload`` — never validated, never inserted.
 _DATA_TABLES = (
     "categories",
     "sub_tallies",
@@ -344,15 +332,25 @@ _DATA_TABLES = (
     "entry_tags",
     "entry_values",
     "matches",
-    "levels",
-    "level_rules",
 )
 
+# Tables that older exports carried but that no longer exist. Their presence in a
+# payload is tolerated (dropped silently); their absence is fine too. Never
+# re-created — the tables are gone and re-establishing progression is out of scope.
+_KNOWN_LEGACY_TABLES = frozenset({"levels", "level_rules"})
+
 # Enum allow-lists, mirroring the CHECK constraints in 0001_initial.sql.
+# NOTE: ``_COUNT_MODES`` intentionally still includes ``"progression"`` — the
+# ``activity.count_mode`` CHECK still permits it (0013 only dropped the level
+# tables and tightened ``field_def.kind``), so tightening this would make the
+# importer stricter than the live schema and break round-tripping. Separate
+# future cleanup.
 _COUNT_MODES = frozenset({"running", "progression"})
 _MATCH_RESULTS = frozenset({"win", "loss", "draw"})
-_FIELD_KINDS = frozenset({"tag_group", "scale", "count", "memo", "match_list", "level", "result"})
-_GATE_TYPES = frozenset({"time", "count", "event", "manual"})
+_FIELD_KINDS = frozenset({"tag_group", "scale", "count", "memo", "match_list"})
+# Field kinds that older exports may carry but that 0013 removed. Rows bearing
+# one of these are dropped silently on import rather than rejected.
+_LEGACY_FIELD_KINDS = frozenset({"level", "result"})
 
 
 class ImportValidationError(ValueError):
@@ -443,25 +441,6 @@ _TABLE_SPECS: dict[str, dict[str, str]] = {
         "result": _TEXT,
         "sort_order": _INT,
     },
-    "levels": {
-        "id": _INT,
-        "activity_id": _INT,
-        "track": _TEXT,
-        "ordinal": _INT,
-        "code": _TEXT,
-        "label": _TEXT,
-        "archived_at": _NULL_TEXT,
-    },
-    "level_rules": {
-        "id": _INT,
-        "activity_id": _INT,
-        "from_level_id": _NULL_INT,
-        "to_level_id": _INT,
-        "gate_type": _TEXT,
-        "gate_value": _FLOAT,
-        "min_age": _NULL_INT,
-        "prereq_level_id": _NULL_INT,
-    },
 }
 
 # Per-table length caps: column -> max length. Only listed columns are capped.
@@ -473,7 +452,6 @@ _LENGTH_CAPS: dict[str, dict[str, int]] = {
     "entries": {"memo": MAX_TEXT_LEN},
     "entry_values": {"text_value": MAX_TEXT_LEN},
     "matches": {"opponent": MAX_NAME_LEN, "score": MAX_NAME_LEN},
-    "levels": {"code": MAX_NAME_LEN, "label": MAX_NAME_LEN},
 }
 
 # Per-table enum constraints: column -> allowed value set.
@@ -481,7 +459,6 @@ _ENUM_CAPS: dict[str, dict[str, frozenset[str]]] = {
     "sub_tallies": {"count_mode": _COUNT_MODES},
     "field_defs": {"kind": _FIELD_KINDS},
     "matches": {"result": _MATCH_RESULTS},
-    "level_rules": {"gate_type": _GATE_TYPES},
 }
 
 
@@ -542,18 +519,27 @@ def _validate_payload(payload: dict[str, Any]) -> dict[str, list[dict[str, Any]]
             f"got {payload.get('schema_version')!r})"
         )
 
-    data = payload.get("data")
-    if not isinstance(data, dict):
+    raw = payload.get("data")
+    if not isinstance(raw, dict):
         raise ImportValidationError("payload['data'] must be a dict")
 
-    keys = set(data.keys())
+    # Backward compatibility: pre-0013 exports carry ``levels`` / ``level_rules``
+    # keys (and may carry ``field_defs`` rows with the dropped ``level`` /
+    # ``result`` kinds). Those keys are dropped silently before validation — the
+    # progression tables no longer exist, so we neither validate nor insert them.
+    # Any other unexpected key is still a hard error.
+    keys = set(raw.keys())
     expected = set(_DATA_TABLES)
-    if keys != expected:
-        missing = sorted(expected - keys)
-        extra = sorted(keys - expected)
+    extra = sorted(keys - expected - _KNOWN_LEGACY_TABLES)
+    missing = sorted(expected - keys)
+    if missing or extra:
         raise ImportValidationError(
             f"payload['data'] keys mismatch (missing={missing}, extra={extra})"
         )
+
+    # Work on a shallow copy containing only the surviving tables, so legacy
+    # sections never reach row validation, reference checks, or the writer.
+    data = {table: raw[table] for table in _DATA_TABLES}
 
     for table in _DATA_TABLES:
         rows = data[table]
@@ -563,6 +549,37 @@ def _validate_payload(payload: dict[str, Any]) -> dict[str, list[dict[str, Any]]
             raise ImportValidationError(
                 f"{table} has {len(rows)} rows, exceeding the cap of {MAX_ROWS_PER_TABLE}"
             )
+
+    # Drop any field_def rows that carry a dropped kind (pre-0013 ``level`` /
+    # ``result``). These are gone from the schema; importing must not error on
+    # them, so they are silently filtered before per-row validation. A row that
+    # is not even a dict is left in place so _validate_rows reports it.
+    if isinstance(data["field_defs"], list):
+        dropped_field_ids = {
+            r["id"]
+            for r in data["field_defs"]
+            if isinstance(r, dict) and r.get("kind") in _LEGACY_FIELD_KINDS and "id" in r
+        }
+        data["field_defs"] = [
+            r
+            for r in data["field_defs"]
+            if not (isinstance(r, dict) and r.get("kind") in _LEGACY_FIELD_KINDS)
+        ]
+        # Cascade the drop to children that referenced those dropped field_defs,
+        # so they don't surface as dangling references in _validate_references.
+        if dropped_field_ids:
+            if isinstance(data["entry_values"], list):
+                data["entry_values"] = [
+                    r
+                    for r in data["entry_values"]
+                    if not (isinstance(r, dict) and r.get("field_def_id") in dropped_field_ids)
+                ]
+            if isinstance(data["tags"], list):
+                data["tags"] = [
+                    r
+                    for r in data["tags"]
+                    if not (isinstance(r, dict) and r.get("field_def_id") in dropped_field_ids)
+                ]
 
     for table in _DATA_TABLES:
         _validate_rows(table, data[table])
@@ -632,7 +649,6 @@ def _validate_references(data: dict[str, list[dict[str, Any]]]) -> None:
     field_def_ids = {r["id"] for r in data["field_defs"]}
     tag_ids = {r["id"] for r in data["tags"]}
     entry_ids = {r["id"] for r in data["entries"]}
-    level_ids = {r["id"] for r in data["levels"]}
 
     def _require(table: str, i: int, col: str, value: Any, universe: set[int]) -> None:
         if value not in universe:
@@ -656,15 +672,6 @@ def _validate_references(data: dict[str, list[dict[str, Any]]]) -> None:
         _require("entry_values", i, "field_def_id", r["field_def_id"], field_def_ids)
     for i, r in enumerate(data["matches"]):
         _require("matches", i, "entry_id", r["entry_id"], entry_ids)
-    for i, r in enumerate(data["levels"]):
-        _require("levels", i, "activity_id", r["activity_id"], activity_ids)
-    for i, r in enumerate(data["level_rules"]):
-        _require("level_rules", i, "activity_id", r["activity_id"], activity_ids)
-        _require("level_rules", i, "to_level_id", r["to_level_id"], level_ids)
-        if r["from_level_id"] is not None:
-            _require("level_rules", i, "from_level_id", r["from_level_id"], level_ids)
-        if r["prereq_level_id"] is not None:
-            _require("level_rules", i, "prereq_level_id", r["prereq_level_id"], level_ids)
 
 
 # --- write -----------------------------------------------------------------
@@ -674,16 +681,15 @@ def _delete_owner_data(conn: sqlite3.Connection, owner_id: int) -> None:
     """Delete all of *owner_id*'s rows.
 
     Deleting ``category`` cascades (ON DELETE CASCADE, with ``foreign_keys=ON``
-    set by ``db.py``) to ``activity`` → ``field_def`` / ``level`` /
-    ``level_rule`` / ``entry`` → ``entry_tag`` / ``entry_value`` / ``match``, and
-    ``tag`` via ``field_def``. The remaining explicit deletes are defensive: they
-    cover any owner-scoped row that a (hypothetical) future detachment from the
-    category cascade would leave behind, and they are no-ops when the cascade has
-    already removed the rows.
+    set by ``db.py``) to ``activity`` → ``field_def`` / ``entry`` → ``entry_tag``
+    / ``entry_value`` / ``match``, and ``tag`` via ``field_def``. The remaining
+    explicit deletes are defensive: they cover any owner-scoped row that a
+    (hypothetical) future detachment from the category cascade would leave
+    behind, and they are no-ops when the cascade has already removed the rows.
     """
     conn.execute("DELETE FROM category WHERE owner_id = ?", (owner_id,))
     # Defensive sweep of every directly owner-scoped table (no-op after cascade).
-    for table in ("match", "level_rule", "level", "tag", "entry", "activity"):
+    for table in ("match", "tag", "entry", "activity"):
         conn.execute(f"DELETE FROM {table} WHERE owner_id = ?", (owner_id,))  # noqa: S608
 
 
@@ -697,15 +703,14 @@ def _insert_payload(
     Returns ``(summary, new_activity_ids)`` where *summary* is a per-table
     inserted-row count and *new_activity_ids* are the freshly-assigned sub-tally
     ids (for the post-insert cache rebuild). Insert order respects dependencies:
-    categories → sub_tallies → (field_defs, levels) → (tags, level_rules) →
-    entries → (entry_tags, entry_values, matches).
+    categories → sub_tallies → field_defs → tags → entries →
+    (entry_tags, entry_values, matches).
     """
     cat_map: dict[int, int] = {}
     sub_map: dict[int, int] = {}
     field_map: dict[int, int] = {}
     tag_map: dict[int, int] = {}
     entry_map: dict[int, int] = {}
-    level_map: dict[int, int] = {}
 
     for r in data["categories"]:
         cur = conn.execute(
@@ -757,23 +762,6 @@ def _insert_payload(
         )
         field_map[r["id"]] = cur.lastrowid
 
-    for r in data["levels"]:
-        cur = conn.execute(
-            "INSERT INTO level"
-            " (activity_id, owner_id, track, ordinal, code, label, archived_at)"
-            " VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (
-                sub_map[r["activity_id"]],
-                owner_id,
-                r["track"],
-                r["ordinal"],
-                r["code"],
-                r["label"],
-                r["archived_at"],
-            ),
-        )
-        level_map[r["id"]] = cur.lastrowid
-
     for r in data["tags"]:
         cur = conn.execute(
             "INSERT INTO tag (owner_id, field_def_id, name, sort_order, archived_at, created_at)"
@@ -788,26 +776,6 @@ def _insert_payload(
             ),
         )
         tag_map[r["id"]] = cur.lastrowid
-
-    for r in data["level_rules"]:
-        from_level = r["from_level_id"]
-        prereq = r["prereq_level_id"]
-        conn.execute(
-            "INSERT INTO level_rule"
-            " (owner_id, activity_id, from_level_id, to_level_id, gate_type,"
-            "  gate_value, min_age, prereq_level_id)"
-            " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            (
-                owner_id,
-                sub_map[r["activity_id"]],
-                level_map[from_level] if from_level is not None else None,
-                level_map[r["to_level_id"]],
-                r["gate_type"],
-                r["gate_value"],
-                r["min_age"],
-                level_map[prereq] if prereq is not None else None,
-            ),
-        )
 
     for r in data["entries"]:
         cur = conn.execute(

@@ -3,8 +3,9 @@
 ## What this project is
 
 Mushin (무심, 無心 — "no-mind") is a general personal progress tracker. Log how
-often you do any activity and watch your level in it rise — a raising-sim RPG of
-yourself. Multi-user from day one; UI strings centralized for i18n.
+often you do any activity and watch it add up — entries, counts, and streaks,
+no levels or grinding. Multi-user from day one; UI strings centralized for
+i18n.
 
 Stack: FastAPI + uv + Uvicorn. Optional Tailwind CSS v4 + Alpine.js + HTMX
 (web), Hyperview/HXML (mobile), SQLite.
@@ -21,29 +22,25 @@ Studio context: see `~/.claude/CLAUDE.md` for studio-wide conventions and brand.
 
 ## Domain model
 
-Two levels: activity → entry. (`category` survives only as an internal,
+One level: activity → entry. (`category` survives only as an internal,
 automatically-created 1:1 wrapper row behind every activity — never a
 separate user-facing concept, never a second creation step.)
 
-- Field-type primitives (the recipe vocabulary): tag-group, scale, count, memo,
-  match-list, level + result. An activity can mix any combination on one
-  entry stream — e.g. a running tag/count/memo log alongside a match-list
-  and a level ladder, all on the same activity, all the same entries table.
-- Hero/progression status is **derived from field_defs, not a stored mode**:
-  an activity with a `level`-kind field_def shows its current level +
-  progress as the hero stat; one without shows the running count. (This
-  supersedes the old `sub_tally.count_mode` running/progression split as the
-  source of truth — see the `data-model` skill for the implementation note.)
-- Progression gating, four kinds: time, count, event, manual. A parallel
-  secondary track is supported for prestige tiers.
-- Onboarding seeds each account with two starter templates: **kendo** (one
-  activity — running log + match-list + time-gated dan progression + shōgō
-  track, all on one entry stream) and **reading** (count-gated progression
-  tiers). Cooking, knitting, travel are deferred to a future template
-  gallery.
+- Field-type primitives (the recipe vocabulary): tag-group, scale, count,
+  memo, match-list. An activity can mix any combination on one entry
+  stream — e.g. a running tag/count/memo log alongside a match-list, all on
+  the same activity, all the same entries table.
+- An activity's hero stat is always the running count (a monotonic count
+  of entries, reported per week/month/year/lifetime). There is no
+  progression ladder, level, or gating mechanism — Mushin tracks activity
+  and frequency, not tiers.
+- No starter templates are seeded on signup. New accounts start with zero
+  activities; the home screen shows quick-start suggestions (tap-to-create,
+  empty/blank activity, no pre-built recipe) alongside "start from scratch."
+  Activity creation is inline on the home screen — no separate creation
+  page, no icon picker, name only.
 - Tables: user, category (internal, 1:1 with activity), activity, field_def,
-  tag, entry, entry_tag, entry_value, match, level, level_rule,
-  **connection, block**.
+  tag, entry, entry_tag, entry_value, match, connection, block, comment.
 - Social graph: a **fellow** is a mutual connection (request → accept/decline;
   symmetric). The `connection` table holds the directed handshake plus a
   canonical `user_lo/user_hi` pair (unique, prevents reverse-duplicates);
@@ -75,7 +72,7 @@ the drain window.
 
 **Visibility is three-tier (not binary).** `public` = whole record incl. notes
 visible to anyone. `private` = a non-connected visitor sees the **character
-sheet** at `/@{username}` (activity names + levels/progress/counts, cards not
+sheet** at `/@{username}` (activity names + counts, cards not
 clickable) but **cannot open `/@{username}/{slug}`** — that 303-redirects to
 `/@{username}`. A **fellow** (accepted mutual connection, after a separate
 sharing-consent) sees the full record incl. entries and free-text notes on

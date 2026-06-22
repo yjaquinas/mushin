@@ -99,14 +99,6 @@
   --color-accent-text:   #982015;
 
   /*
-   * Level-up / success — a single, restrained green. Used only for the
-   * progression milestone moment (bar tick, level-up notice). Never as a
-   * general "good" status color — one use keeps its meaning legible.
-   */
-  --color-level:         #2a7a4b;
-  --color-level-subtle:  #e6f4ec;
-
-  /*
    * Danger — account deletion, irreversible destructive actions only.
    * Deliberately re-hued away from cinnabar's red family (hue ~5°) to a
    * rust/burnt-orange (hue ~20°) so the two stay visually distinct without
@@ -233,9 +225,9 @@
  *
  * Re-derived (not naively darkened) so the invariants still hold:
  *   - heat-0 == surface-2, heat-4 == accent.
- *   - accent-subtle / level-subtle are dark, desaturated tints suitable as
- *     backgrounds under light accent/level text (chip-selected, level-up
- *     fill), not light tints under dark text as in light mode.
+ *   - accent-subtle is a dark, desaturated tint suitable as a background
+ *     under light accent text (chip-selected), not a light tint under dark
+ *     text as in light mode.
  *   - accent clears WCAG non-text contrast (3:1) against surface-0/1 for
  *     the global focus ring.
  */
@@ -255,9 +247,6 @@
     --color-accent:        #FF6B5B;
     --color-accent-subtle: #3A2422;
     --color-accent-text:   #FF6B5B; /* already clears 4.5:1 on dark surfaces */
-
-    --color-level:         #5fae80;
-    --color-level-subtle:  #1f3a2a;
 
     --color-danger:        #E8855E;
     --color-danger-subtle: #3D2A20;
@@ -287,9 +276,6 @@
   --color-accent:        #FF6B5B;
   --color-accent-subtle: #3A2422;
   --color-accent-text:   #FF6B5B; /* already clears 4.5:1 on dark surfaces */
-
-  --color-level:         #5fae80;
-  --color-level-subtle:  #1f3a2a;
 
   --color-danger:        #E8855E;
   --color-danger-subtle: #3D2A20;
@@ -403,45 +389,6 @@
     outline-offset: 3px;
   }
 
-  /* ── Progress bar ─────────────────────────────────────────────────────── */
-  /*
-   * .progress-track / .progress-fill — the single quiet progress affordance
-   * on activity cards.
-   *
-   * Motion: the fill width animates on log (the "one moment of motion"
-   * reward). Driven by an inline style width set by the HTMX fragment.
-   * No glow, no pulse, no confetti — just the bar moving.
-   */
-  .progress-track {
-    position:        relative;
-    height:          0.375rem;   /* 6 px — unobtrusive */
-    border-radius:   9999px;
-    background:      var(--color-surface-2);
-    overflow:        hidden;
-  }
-
-  .progress-fill {
-    position:        absolute;
-    inset-block:     0;
-    inset-inline-start: 0;
-    border-radius:   9999px;
-    background:      var(--color-accent);
-  }
-
-  /*
-   * Level-up state: the fill turns level-green for the one celebratory moment,
-   * then reverts. Applied by swapping the HTMX fragment with an additional
-   * .progress-fill--leveled class; a CSS animation handles the fade-back.
-   */
-  .progress-fill--leveled {
-    background:      var(--color-level);
-    animation:       level-revert 2.4s ease 0.6s forwards;
-  }
-
-  @keyframes level-revert {
-    to { background: var(--color-accent); }
-  }
-
   /* ── Hero numeral "settle" on log ────────────────────────────────────── */
   /*
    * .hero--bumped — applied (once) to the hero numeral <p> by the HTMX swap
@@ -464,43 +411,16 @@
 
   /* ── Reduced-motion gate ──────────────────────────────────────────────── */
   /*
-   * All non-essential motion (hero settle, progress-fill width transition,
-   * and the swapped-in fill's start-state transition below) is gated behind
-   * prefers-reduced-motion: no-preference. Under reduced motion these rules
-   * don't apply at all, so elements render directly at their final
-   * opacity/transform/width with no animation step — correct end state,
+   * Non-essential motion (hero settle) is gated behind
+   * prefers-reduced-motion: no-preference. Under reduced motion this rule
+   * doesn't apply at all, so the element renders directly at its final
+   * opacity/transform with no animation step — correct end state,
    * zero motion.
    */
   @media (prefers-reduced-motion: no-preference) {
     .hero--bumped {
       animation: hero-settle 280ms ease-out;
       animation-fill-mode: none;
-    }
-
-    .progress-fill {
-      transition: width 400ms cubic-bezier(0.4, 0, 0.2, 1);
-
-      /*
-       * @starting-style lets a freshly-inserted .progress-fill (from an HTMX
-       * swap) transition from a "starting" width to its specified inline
-       * width, instead of snapping straight to the new value.
-       *
-       * Simplification vs. the ideal "animate from prior width": the prior
-       * width lived on the *old* (now-removed) element, and @starting-style
-       * has no way to reference it — it can only declare a fixed starting
-       * value for the *new* element. We use 0% as that starting value. In
-       * practice the visual result is close to the ideal for the common
-       * case (the bar fills further on a successful log, so 0% → new-width
-       * still reads as "the bar advancing" rather than a jump). The one
-       * imperfect case is a *decreasing* width (rare — progress doesn't
-       * usually go backward), which would visibly animate from 0% before
-       * settling at the lower value. Accepted as a one-off visual quirk in
-       * an edge case that's not part of the core "log advances the bar"
-       * reward.
-       */
-      @starting-style {
-        width: 0%;
-      }
     }
   }
 

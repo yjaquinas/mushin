@@ -49,7 +49,6 @@
     {% for example in examples %}
         <form hx-post="/activities" hx-target="#cards" hx-swap="beforeend">
             <input type="hidden" name="name" value="{{ example.name }}">
-            <input type="hidden" name="icon" value="{{ example.icon }}">
             <button
                 type="submit"
                 class="flex min-h-tap w-full items-center justify-between gap-2 rounded-card border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline-offset-2"
@@ -59,12 +58,15 @@
             </button>
         </form>
     {% endfor %}
-    <a
-        href="/activities/new"
+    <button
+        type="button"
+        hx-get="/activities/new"
+        hx-target="#sheet"
+        hx-swap="innerHTML"
         class="text-center text-caption text-text-muted underline-offset-2 transition hover:underline focus-visible:outline-offset-2"
     >
         {{ strings.HOME_START_FROM_SCRATCH }}
-    </a>
+    </button>
 </div>
 {% endif %}
 

@@ -12,7 +12,7 @@
 
   Context: username, view_mode ("connected" | "public"), card, slug,
   record/timeline/head_to_head (competition, or None/[]), counts, streaks,
-  progression, field_stats, activity_id, history (the merged calendar/log —
+  field_stats, activity_id, history (the merged calendar/log —
   see app.routes.web._build_history_context; history.is_owner is always
   False here). This template is only ever rendered for a viewer who may see
   detail — the caller (public.py) redirects "limited" viewers to the profile
@@ -51,10 +51,6 @@
 
     {% if record is not none %}
         {% include "components/competition_stats.html.jinja2" with context %}
-    {% endif %}
-
-    {% if progression is not none %}
-        {% include "components/progression_status.html.jinja2" with context %}
     {% endif %}
 
     {% include "components/stats_summary.html.jinja2" with context %}

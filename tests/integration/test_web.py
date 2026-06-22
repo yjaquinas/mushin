@@ -6,8 +6,9 @@ Covers:
    guest-start CTA, and the no-signup framing — and never claims data stays
    only on-device (guest data lives on the server).
 2. The guest flow: ``POST /auth/guest`` mints a session, and ``GET /home``
-   then renders activity cards for the seeded Kendo + Reading starter
-   templates (seeded explicitly via ``seeding.seed_account``).
+   then renders activity cards for activities created explicitly via the
+   shared ``tests/conftest.py::seed_test_activity`` helper (there are no
+   onboarding starter templates any more — every account starts empty).
 3. ``POST /activities/{id}/log`` under ``HX-Request: true`` returns an HTMX
    fragment (not a full document) and increments the sub-tally's count.
 4. A strings-centralization guard scanning ``app/templates/**`` for hardcoded
@@ -32,8 +33,9 @@ from app.auth import users as users_module
 from app.main import app
 from app.models import db
 from app.models.migrate import run_migrations
-from app.services import categories, competition, entries, seeding, stats
+from app.services import categories, competition, entries, stats
 from app.services import comments as comments_service
+from tests.conftest import seed_test_activity
 
 # Default timezone used by tests that don't exercise timezone-specific
 # behavior directly.
@@ -78,11 +80,12 @@ async def _guest_login(client: AsyncClient) -> int:
 
 
 def _clear_seeded_data(owner_id: int) -> None:
-    """Remove an account's starter templates to exercise the empty-home state.
+    """Remove any of an account's categories, to exercise the empty-home state.
 
-    Fresh accounts are now seeded with the Kendo + Reading starter templates on
-    creation. A handful of tests assert the *empty* home UI, so they delete the
-    seeded categories (children cascade) to recreate a from-scratch account.
+    Fresh accounts start with zero activities by default. This helper is a
+    defensive no-op guard for tests that assert the *empty* home UI — it
+    deletes any categories (children cascade) so the assertion holds even if
+    an earlier step in the test created one.
     """
     with db.connect() as conn:
         conn.execute("BEGIN")
@@ -185,7 +188,7 @@ async def test_footer_privacy_link_present_on_entry_and_home(client: AsyncClient
     assert 'href="/privacy"' in resp.text
 
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id)
 
     resp = await client.get("/home")
     assert resp.status_code == 200
@@ -193,17 +196,18 @@ async def test_footer_privacy_link_present_on_entry_and_home(client: AsyncClient
 
 
 # ---------------------------------------------------------------------------
-# Guest flow -> home renders seeded templates
+# Guest flow -> home renders created activities
 # ---------------------------------------------------------------------------
 
 
 async def test_guest_home_renders_seeded_starter_templates(client: AsyncClient) -> None:
-    """Regression coverage for the rendering path when a guest has seeded
-    categories — decoupled from the (now-removed) auto-seed-on-guest trigger.
+    """Regression coverage for the rendering path when a guest has activities
+    — decoupled from the (now-removed) auto-seed-on-guest trigger.
     """
     owner_id = await _guest_login(client)
 
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo")
+    seed_test_activity(owner_id, name="Reading")
 
     resp = await client.get("/home")
     assert resp.status_code == 200
@@ -266,7 +270,7 @@ async def test_empty_home_shows_example_cards_and_start_from_scratch(
     assert strings_module.HOME_EMPTY in text
     for example in categories.EXAMPLE_CATEGORIES:
         assert example["name"] in text
-    assert 'href="/activities/new"' in text
+    assert 'hx-get="/activities/new"' in text
     assert strings_module.HOME_START_FROM_SCRATCH in text
 
 
@@ -279,8 +283,6 @@ async def test_new_category_form_renders(client: AsyncClient) -> None:
 
     assert strings_module.ACTIVITY_NEW_TITLE in text
     assert strings_module.ACTIVITY_FORM_NAME_LABEL in text
-    for choice in categories.ICON_CHOICES:
-        assert f'value="{choice}"' in text
 
 
 async def test_new_category_form_hx_returns_sheet_fragment(client: AsyncClient) -> None:
@@ -295,13 +297,11 @@ async def test_new_category_form_hx_returns_sheet_fragment(client: AsyncClient) 
     assert 'role="dialog"' in text
     assert 'aria-modal="true"' in text
 
-    # The category form is present: name input + icon picker.
+    # The category form is present: name input only (no icon picker).
     assert "<form" in text
     assert strings_module.ACTIVITY_FORM_NAME_LABEL in text
     assert 'id="category-name"' in text
     assert 'name="name"' in text
-    for choice in categories.ICON_CHOICES:
-        assert f'value="{choice}"' in text
 
 
 async def test_new_category_form_redirects_when_logged_out(client: AsyncClient) -> None:
@@ -315,7 +315,7 @@ async def test_create_category_manual_returns_card_fragment(client: AsyncClient)
 
     resp = await client.post(
         "/activities",
-        data={"name": "Guitar", "icon": "music"},
+        data={"name": "Guitar"},
         headers={"HX-Request": "true"},
     )
     assert resp.status_code == 200
@@ -332,7 +332,9 @@ async def test_create_category_manual_returns_card_fragment(client: AsyncClient)
             (owner_id,),
         ).fetchone()
     assert row is not None
-    assert row["icon"] == "music"
+    # No icon picker in the create form -- the route doesn't accept/forward
+    # an icon field, so the service default applies.
+    assert row["icon"] == categories.DEFAULT_ICON
 
 
 async def test_create_category_example_adopt(client: AsyncClient) -> None:
@@ -341,7 +343,7 @@ async def test_create_category_example_adopt(client: AsyncClient) -> None:
     example = categories.EXAMPLE_CATEGORIES[0]
     resp = await client.post(
         "/activities",
-        data={"name": example["name"], "icon": example["icon"]},
+        data={"name": example["name"]},
         headers={"HX-Request": "true"},
     )
     assert resp.status_code == 200
@@ -354,7 +356,9 @@ async def test_create_category_example_adopt(client: AsyncClient) -> None:
             (owner_id, example["name"]),
         ).fetchone()
     assert row is not None
-    assert row["icon"] == example["icon"]
+    # No icon picker in the create form -- the example's icon is metadata
+    # the route no longer forwards; the service default applies.
+    assert row["icon"] == categories.DEFAULT_ICON
 
 
 async def test_create_category_via_sheet_hx_returns_activity_card_fragment(
@@ -366,7 +370,7 @@ async def test_create_category_via_sheet_hx_returns_activity_card_fragment(
 
     resp = await client.post(
         "/activities",
-        data={"name": "Calligraphy", "icon": "pen"},
+        data={"name": "Calligraphy"},
         headers={"HX-Request": "true"},
     )
     assert resp.status_code == 200
@@ -410,9 +414,12 @@ async def test_create_category_no_js_redirects_to_home(client: AsyncClient) -> N
     assert "Plain Category" in resp.text
 
 
-async def test_create_category_no_js_empty_name_rerenders_form_with_error(
+async def test_create_category_no_js_empty_name_redirects_home(
     client: AsyncClient,
 ) -> None:
+    """No-JS submission of a blank name has no standalone error page to
+    re-render anymore — it redirects back to /home (the HTMX path below is
+    the one that matters for real validation feedback)."""
     await _guest_login(client)
 
     resp = await client.post(
@@ -420,16 +427,35 @@ async def test_create_category_no_js_empty_name_rerenders_form_with_error(
         data={"name": "   "},
         follow_redirects=False,
     )
+    assert resp.status_code == 303
+    assert resp.headers["location"] == "/home"
+
+
+async def test_create_category_hx_empty_name_rerenders_form_fragment_with_error(
+    client: AsyncClient,
+) -> None:
+    await _guest_login(client)
+
+    resp = await client.post(
+        "/activities",
+        data={"name": "   "},
+        headers={"HX-Request": "true"},
+    )
     assert resp.status_code == 400
     text = resp.text
 
-    # Re-renders the standalone category_new page (not a bare/bodiless 400).
-    assert strings_module.ACTIVITY_NEW_TITLE in text
+    # Re-renders the bare form fragment (not the deleted standalone page).
+    assert "<!DOCTYPE html>" not in text
     assert strings_module.ACTIVITY_FORM_NAME_REQUIRED in text
     assert 'id="category-name"' in text
 
 
-async def test_create_category_invalid_icon_falls_back_to_default(client: AsyncClient) -> None:
+async def test_create_category_ignores_stray_icon_field_and_uses_default(
+    client: AsyncClient,
+) -> None:
+    """The create form has no icon picker and the route no longer accepts an
+    icon field at all -- a stray `icon` in the POST body (e.g. from an old
+    client) is simply ignored and the service default applies."""
     owner_id = await _guest_login(client)
 
     resp = await client.post(
@@ -462,7 +488,7 @@ async def test_home_with_categories_shows_add_category_row_last_in_cards(
     client: AsyncClient,
 ) -> None:
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo")
 
     resp = await client.get("/home")
     assert resp.status_code == 200
@@ -593,7 +619,7 @@ async def test_entry_footer_has_only_privacy_policy(client: AsyncClient) -> None
 
 async def test_log_returns_fragment_and_increments_count(client: AsyncClient) -> None:
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo")
 
     with db.connect() as conn:
         conn.execute("BEGIN")
@@ -639,7 +665,7 @@ async def test_log_unknown_activity_returns_404(client: AsyncClient) -> None:
 
 async def test_log_sheet_renders_date_only_occurred_at_field(client: AsyncClient) -> None:
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id = _practice_activity_id(owner_id)
 
     resp = await client.get(
@@ -658,7 +684,7 @@ async def test_log_sheet_renders_date_only_occurred_at_field(client: AsyncClient
 
 async def test_log_with_no_occurred_at_preserves_time_of_day(client: AsyncClient) -> None:
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id = _practice_activity_id(owner_id)
 
     resp = await client.post(
@@ -683,7 +709,7 @@ async def test_log_with_no_occurred_at_preserves_time_of_day(client: AsyncClient
 
 async def test_log_with_todays_date_preserves_time_of_day(client: AsyncClient) -> None:
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id = _practice_activity_id(owner_id)
 
     today = stats._today_local(_UTC).isoformat()
@@ -716,7 +742,7 @@ async def test_log_with_backfilled_past_date_sets_local_day(client: AsyncClient)
     from datetime import timedelta
 
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id = _practice_activity_id(owner_id)
 
     yesterday = (stats._today_local(_UTC) - timedelta(days=1)).isoformat()
@@ -765,7 +791,7 @@ def _tournament_ids(owner_id: int) -> tuple[int, int]:
 
 async def test_log_sheet_renders_match_sub_form_for_tournament(client: AsyncClient) -> None:
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id, field_def_id = _tournament_ids(owner_id)
 
     resp = await client.get(
@@ -785,7 +811,7 @@ async def test_log_sheet_does_not_render_match_sub_form_for_non_tournament(
     # (Task 3), so the no-match-form fixture is the Reading activity, which
     # has no match_list field_def at all.
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Reading")
     activity_id = _reading_activity_id(owner_id)
 
     resp = await client.get(
@@ -800,7 +826,7 @@ async def test_add_match_row_appends_row_preserving_existing_values(
     client: AsyncClient,
 ) -> None:
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id, field_def_id = _tournament_ids(owner_id)
 
     resp = await client.post(
@@ -821,7 +847,7 @@ async def test_add_match_row_appends_row_preserving_existing_values(
 
 async def test_remove_match_row_drops_the_requested_row(client: AsyncClient) -> None:
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id, field_def_id = _tournament_ids(owner_id)
 
     resp = await client.post(
@@ -846,7 +872,7 @@ async def test_remove_match_row_drops_the_requested_row(client: AsyncClient) -> 
 
 async def test_submitting_tournament_entry_persists_match_rows(client: AsyncClient) -> None:
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id, field_def_id = _tournament_ids(owner_id)
 
     resp = await client.post(
@@ -888,7 +914,7 @@ async def test_submitting_tournament_entry_persists_match_rows(client: AsyncClie
 
 async def test_submitting_tournament_entry_drops_incomplete_rows(client: AsyncClient) -> None:
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id, field_def_id = _tournament_ids(owner_id)
 
     resp = await client.post(
@@ -918,7 +944,7 @@ async def test_submitting_tournament_entry_drops_incomplete_rows(client: AsyncCl
 
 
 def _technique_field_id(owner_id: int) -> tuple[int, int]:
-    """(activity_id, Technique tag_group field_def_id) for seeded Kendo/Practice."""
+    """(activity_id, tag_group field_def_id) for the test-fixture "Kendo" activity."""
     with db.connect() as conn:
         conn.execute("BEGIN")
         activity_id = conn.execute(
@@ -928,7 +954,7 @@ def _technique_field_id(owner_id: int) -> tuple[int, int]:
             (owner_id,),
         ).fetchone()["id"]
         field_def_id = conn.execute(
-            "SELECT id FROM field_def WHERE activity_id = ? AND kind = 'tag_group' AND label = 'Technique'",
+            "SELECT id FROM field_def WHERE activity_id = ? AND kind = 'tag_group'",
             (activity_id,),
         ).fetchone()["id"]
     return activity_id, field_def_id
@@ -938,7 +964,7 @@ def _technique_field_id(owner_id: int) -> tuple[int, int]:
 async def test_log_entry_with_hashtag_creates_tags(client: AsyncClient) -> None:
     """POSTing hashtags_{field_def_id}='#waza #randori' creates tags and entry_tag rows."""
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo")
     activity_id, field_def_id = _technique_field_id(owner_id)
 
     resp = await client.post(
@@ -969,7 +995,7 @@ async def test_log_entry_with_hashtag_creates_tags(client: AsyncClient) -> None:
 async def test_log_entry_hashtag_deduplicates(client: AsyncClient) -> None:
     """Duplicate hashtag tokens produce only one entry_tag row per tag."""
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo")
     activity_id, field_def_id = _technique_field_id(owner_id)
 
     resp = await client.post(
@@ -998,7 +1024,7 @@ async def test_log_entry_hashtag_deduplicates(client: AsyncClient) -> None:
 async def test_entry_edit_prepopulates_hashtag_field(client: AsyncClient) -> None:
     """The entry edit form pre-populates the hashtag input with existing tags."""
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo")
     activity_id, field_def_id = _technique_field_id(owner_id)
 
     # Create an entry with a tag via the log route.
@@ -1033,7 +1059,7 @@ async def test_entry_edit_prepopulates_hashtag_field(client: AsyncClient) -> Non
 async def test_log_entry_memo_with_hashtags(client: AsyncClient) -> None:
     """POSTing free text with hashtags stores the full text as memo and creates tag rows."""
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo")
     activity_id, field_def_id = _technique_field_id(owner_id)
 
     resp = await client.post(
@@ -1072,7 +1098,7 @@ async def test_log_entry_memo_with_hashtags(client: AsyncClient) -> None:
 async def test_edit_entry_removes_tags_when_cleared(client: AsyncClient) -> None:
     """Editing an entry with plain text (no hashtags) clears all existing tags."""
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo")
     activity_id, field_def_id = _technique_field_id(owner_id)
 
     # Create an entry with two tags.
@@ -1125,7 +1151,7 @@ async def test_edit_entry_removes_tags_when_cleared(client: AsyncClient) -> None
 async def test_edit_form_prepopulates_memo_verbatim(client: AsyncClient) -> None:
     """The entry edit form pre-fills the combined field with the full stored memo."""
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo")
     activity_id, field_def_id = _technique_field_id(owner_id)
 
     resp = await client.post(
@@ -1173,7 +1199,7 @@ async def test_non_tournament_detail_has_no_competition_stats(client: AsyncClien
     # (Task 3), so the no-competition-stats fixture is the Reading activity,
     # which has no match_list field_def at all.
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Reading")
     activity_id = _reading_activity_id(owner_id)
 
     resp = await client.get(f"/activities/{activity_id}")
@@ -1183,7 +1209,7 @@ async def test_non_tournament_detail_has_no_competition_stats(client: AsyncClien
 
 async def test_tournament_detail_shows_record_and_head_to_head(client: AsyncClient) -> None:
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id, _field_def_id = _tournament_ids(owner_id)
 
     # Build a fixture: two outings, three bouts total against two opponents.
@@ -1217,7 +1243,7 @@ async def test_tournament_detail_shows_record_and_head_to_head(client: AsyncClie
 
 async def test_tournament_detail_win_rate_none_with_no_bouts(client: AsyncClient) -> None:
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id, _field_def_id = _tournament_ids(owner_id)
 
     resp = await client.get(f"/activities/{activity_id}")
@@ -1231,9 +1257,10 @@ async def test_tournament_detail_win_rate_none_with_no_bouts(client: AsyncClient
 
 
 def _practice_activity_id(owner_id: int) -> int:
-    """The seeded Kendo activity id (one activity, running log + match-list +
-    level ladder all on one entry stream — Task 3 collapsed the old
-    Practice/Tournament/Grading three-activity split into this single row)."""
+    """The id of the test-fixture "Kendo" activity created via
+    ``seed_test_activity(owner_id, name="Kendo", ...)`` — a plain general-log
+    activity (memo + tag_group, plus a match_list field for the tournament
+    fixtures below); "Kendo" is just a fixture name here, not a feature."""
     with db.connect() as conn:
         conn.execute("BEGIN")
         return conn.execute(
@@ -1244,14 +1271,11 @@ def _practice_activity_id(owner_id: int) -> int:
         ).fetchone()["id"]
 
 
-def _grading_activity_id(owner_id: int) -> int:
-    """The seeded Kendo activity id (progression: dan + shogo tracks live on
-    the same merged activity as the running practice log)."""
-    return _practice_activity_id(owner_id)
-
-
 def _reading_activity_id(owner_id: int) -> int:
-    """The seeded Reading (progression: count-gated tier track) sub-tally id."""
+    """The id of the test-fixture "Reading" activity (a second, distinct
+    general-log activity created via ``seed_test_activity(owner_id,
+    name="Reading")`` — used where a test needs an activity with no
+    match_list field_def)."""
     with db.connect() as conn:
         conn.execute("BEGIN")
         return conn.execute(
@@ -1262,18 +1286,9 @@ def _reading_activity_id(owner_id: int) -> int:
         ).fetchone()["id"]
 
 
-def _level_field_id(activity_id: int) -> int:
-    with db.connect() as conn:
-        conn.execute("BEGIN")
-        return conn.execute(
-            "SELECT id FROM field_def WHERE activity_id = ? AND kind = 'level'",
-            (activity_id,),
-        ).fetchone()["id"]
-
-
 async def test_detail_shows_calendar_with_marked_today(client: AsyncClient) -> None:
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id = _practice_activity_id(owner_id)
 
     from app.services import entries as entries_service
@@ -1290,7 +1305,7 @@ async def test_history_year_view_shows_heatmap_grid_with_bucketed_cells(
     client: AsyncClient,
 ) -> None:
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id = _practice_activity_id(owner_id)
 
     from app.services import entries as entries_service
@@ -1310,7 +1325,7 @@ async def test_history_year_view_shows_heatmap_grid_with_bucketed_cells(
 
 async def test_detail_streak_matches_stats_service(client: AsyncClient) -> None:
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id = _practice_activity_id(owner_id)
 
     from app.services import entries as entries_service
@@ -1341,7 +1356,7 @@ async def test_home_card_hero_keeps_streak_caption(client: AsyncClient) -> None:
     ``True`` for the linked (home-card) branch, since home has no nearby
     Summary card repeating it (Task 13's "home card unaffected")."""
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id = _practice_activity_id(owner_id)
 
     from app.services import entries as entries_service
@@ -1364,7 +1379,7 @@ async def test_detail_hero_suppresses_streak_caption_but_summary_card_keeps_it_o
     streak still renders exactly once via ``STREAK_CURRENT_LABEL``/
     ``STREAK_LONGEST_LABEL`` (Task 13 build-plan item)."""
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id = _practice_activity_id(owner_id)
 
     from app.services import entries as entries_service
@@ -1443,7 +1458,7 @@ async def test_history_context_log_groups_entries_by_day_newest_first(
     from app.services import entries as entries_service
 
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id = _practice_activity_id(owner_id)
 
     entries_service.create(owner_id, activity_id, {}, tz=_UTC)
@@ -1466,7 +1481,7 @@ async def test_history_context_week_selected_populates_day_entries(
     from app.services import entries as entries_service
 
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id = _practice_activity_id(owner_id)
 
     today = stats._today_local(_UTC)
@@ -1515,7 +1530,7 @@ async def test_history_context_decorates_log_entries_with_comment_count(
     from app.services import entries as entries_service
 
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id = _practice_activity_id(owner_id)
 
     entry = entries_service.create(owner_id, activity_id, {}, tz=_UTC)
@@ -1541,7 +1556,7 @@ async def test_history_context_decorates_day_entries_with_comment_count(
     from app.services import entries as entries_service
 
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id = _practice_activity_id(owner_id)
 
     entry = entries_service.create(owner_id, activity_id, {}, tz=_UTC)
@@ -1619,7 +1634,7 @@ async def test_history_route_week_day_tap_selects_cell_and_renders_entries(
     from app.services import entries as entries_service
 
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id = _practice_activity_id(owner_id)
 
     entries_service.create(owner_id, activity_id, {"memo": "week tap test"}, tz=_UTC)
@@ -1644,7 +1659,7 @@ async def test_history_route_week_day_tap_button_targets_week_period(
     """The week strip's day cells are real ``hx-get`` buttons parameterized
     for ``period=week`` (not month) -- the gap this task closes."""
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id = _practice_activity_id(owner_id)
 
     resp = await client.get(f"/activities/{activity_id}/history?period=week")
@@ -1666,7 +1681,7 @@ async def test_history_route_day_grouping_uses_owners_stored_timezone(
     from app.services import entries as entries_service
 
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id = _practice_activity_id(owner_id)
 
     # Pin the owner's timezone to America/Los_Angeles (UTC-7 in June).
@@ -1709,7 +1724,7 @@ async def test_history_route_private_activity_anonymous_returns_404(client: Asyn
     so this fails closed exactly like the page-load route does for `limited`
     detail requests, never leaking entry data."""
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id = _practice_activity_id(owner_id)
     await client.post("/auth/logout")
 
@@ -1725,7 +1740,7 @@ async def test_history_route_unknown_activity_returns_404(client: AsyncClient) -
 
 async def test_history_route_invalid_period_returns_400(client: AsyncClient) -> None:
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id = _practice_activity_id(owner_id)
 
     resp = await client.get(f"/activities/{activity_id}/history?period=decade")
@@ -1734,7 +1749,7 @@ async def test_history_route_invalid_period_returns_400(client: AsyncClient) -> 
 
 async def test_history_route_invalid_anchor_returns_400(client: AsyncClient) -> None:
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id = _practice_activity_id(owner_id)
 
     resp = await client.get(f"/activities/{activity_id}/history?period=week&anchor=not-a-date")
@@ -1743,7 +1758,7 @@ async def test_history_route_invalid_anchor_returns_400(client: AsyncClient) -> 
 
 async def test_history_route_default_anchor_is_today(client: AsyncClient) -> None:
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id = _practice_activity_id(owner_id)
 
     today = stats._today_local(_UTC)
@@ -1758,62 +1773,22 @@ async def test_history_route_default_anchor_is_today(client: AsyncClient) -> Non
     assert ctx["anchor"] == today.isoformat()
 
 
-async def test_kendo_grading_detail_shows_dan_and_next_stage_and_shogo(
-    client: AsyncClient,
-) -> None:
-    owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
-    activity_id = _grading_activity_id(owner_id)
-    level_field_id = _level_field_id(activity_id)
-
-    from app.services import entries as entries_service
-
-    # Attain 1st Kyu -> current dan is 1st Kyu, next is 1st Dan with a time
-    # gate countdown.
-    entries_service.create(owner_id, activity_id, {"values": {level_field_id: "1kyu"}}, tz=_UTC)
-
-    resp = await client.get(f"/activities/{activity_id}")
-    assert resp.status_code == 200
-    text = resp.text
-
-    # Current dan stage shown.
-    assert "1st Kyu" in text
-    # Next-stage requirement (1st Dan) and a remaining-time string.
-    assert "1st Dan" in text
-    assert strings_module.PROGRESSION_NEXT_LABEL in text
-    assert strings_module.PROGRESSION_TIME_REMAINING_PREFIX in text
-    # The shōgō (title) parallel track is surfaced.
-    assert strings_module.PROGRESSION_TRACK_SHOGO in text
-
-
-async def test_reading_detail_shows_tier_and_count_to_next(client: AsyncClient) -> None:
-    owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
-    activity_id = _reading_activity_id(owner_id)
-    level_field_id = _level_field_id(activity_id)
-
-    from app.services import entries as entries_service
-
-    # 3 books read -> still Beginner tier, 7 more needed for Novice
-    # (gate_value=10).
-    for _ in range(3):
-        entries_service.create(
-            owner_id, activity_id, {"values": {level_field_id: "beginner"}}, tz=_UTC
-        )
-
-    resp = await client.get(f"/activities/{activity_id}")
-    assert resp.status_code == 200
-    text = resp.text
-
-    assert "Beginner" in text
-    assert "Novice" in text
-    assert strings_module.PROGRESSION_COUNT_REMAINING_PREFIX in text
-    assert "7" in text
+# NOTE: test_kendo_grading_detail_shows_dan_and_next_stage_and_shogo and
+# test_reading_detail_shows_tier_and_count_to_next previously lived here.
+# Both tested the progression/level-ladder feature (dan/shōgō gates, reading
+# tiers) removed wholesale in meetings/MEETING-2026-06-21-simplify-onboarding
+# (migration 0013_drop_progression.sql drops field_def.kind 'level'/'result'
+# from the CHECK entirely, plus the level/level_rule tables). They are deleted
+# rather than adapted — there is no replacement feature for a fixture helper
+# to stand in for. Out of scope for this fixture migration; owned by whoever
+# does the progression-removal cleanup pass over app/ui_strings.py and
+# app/templates/components/progression_status.html.jinja2, which still
+# reference the dead feature.
 
 
 async def test_home_does_not_render_heavy_stats(client: AsyncClient) -> None:
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo")
 
     resp = await client.get("/home")
     assert resp.status_code == 200
@@ -1821,7 +1796,6 @@ async def test_home_does_not_render_heavy_stats(client: AsyncClient) -> None:
     assert "heat-cell" not in text
     assert "cal-day" not in text
     assert strings_module.STATS_SUMMARY_TITLE not in text
-    assert strings_module.PROGRESSION_TITLE not in text
 
 
 # ---------------------------------------------------------------------------
@@ -2051,7 +2025,7 @@ def test_no_hardcoded_copy_in_templates() -> None:
 
 async def test_history_fragment_renders_for_all_periods(client: AsyncClient) -> None:
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id = _practice_activity_id(owner_id)
 
     from app.services import entries as entries_service
@@ -2088,7 +2062,7 @@ async def test_stats_summary_fragment_requires_auth(client: AsyncClient) -> None
 async def test_stats_summary_fragment_404_for_wrong_owner(client: AsyncClient) -> None:
     """Authenticated as user A, GET stats-summary for user B's sub-tally returns 404."""
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id = _practice_activity_id(owner_id)
 
     # Switch to a different user.
@@ -2102,7 +2076,7 @@ async def test_stats_summary_fragment_404_for_wrong_owner(client: AsyncClient) -
 async def test_stats_summary_fragment_returns_section_html(client: AsyncClient) -> None:
     """Authenticated as owner, returns 200 with the stats-summary section and HTMX attrs."""
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id = _practice_activity_id(owner_id)
 
     resp = await client.get(f"/activities/{activity_id}/stats-summary")
@@ -2134,7 +2108,7 @@ async def test_field_stats_fragment_requires_auth(client: AsyncClient) -> None:
 async def test_field_stats_fragment_404_for_wrong_owner(client: AsyncClient) -> None:
     """Authenticated as user A, GET field-stats for user B's activity returns 404."""
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id = _practice_activity_id(owner_id)
 
     client.cookies.clear()
@@ -2147,7 +2121,7 @@ async def test_field_stats_fragment_404_for_wrong_owner(client: AsyncClient) -> 
 async def test_field_stats_fragment_returns_htmx_wrapper(client: AsyncClient) -> None:
     """Authenticated as owner, returns 200 with the HTMX self-refresh wrapper."""
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id = _practice_activity_id(owner_id)
 
     resp = await client.get(f"/activities/{activity_id}/field-stats")
@@ -2165,7 +2139,7 @@ async def test_field_stats_fragment_returns_htmx_wrapper(client: AsyncClient) ->
 async def test_field_stats_shows_tag_after_log(client: AsyncClient) -> None:
     """After logging an entry with a hashtag, the field-stats fragment returns that tag."""
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo")
     activity_id, field_def_id = _technique_field_id(owner_id)
 
     await client.post(
@@ -2375,7 +2349,7 @@ async def _create_named_account(client: AsyncClient, username: str = "renamer") 
 
 
 def _practice_activity_id_for(owner_id: int) -> int:
-    """Return the seeded Kendo activity id for *owner_id*."""
+    """Return the test-fixture "Kendo" activity id for *owner_id*."""
     with db.connect() as conn:
         conn.execute("BEGIN")
         return conn.execute(
@@ -2390,7 +2364,7 @@ async def test_rename_form_returns_fragment_with_current_name_prefilled(
     client: AsyncClient,
 ) -> None:
     owner_id = await _create_named_account(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id = _practice_activity_id_for(owner_id)
 
     resp = await client.get(
@@ -2428,7 +2402,7 @@ async def test_rename_form_unknown_activity_returns_404(client: AsyncClient) -> 
 
 async def test_rename_success_redirects_to_new_slug_url(client: AsyncClient) -> None:
     owner_id = await _create_named_account(client, "renamer1")
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id = _practice_activity_id_for(owner_id)
 
     resp = await client.post(
@@ -2443,7 +2417,7 @@ async def test_rename_success_redirects_to_new_slug_url(client: AsyncClient) -> 
 
 async def test_rename_updates_name_and_slug_in_db(client: AsyncClient) -> None:
     owner_id = await _create_named_account(client, "renamer2")
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id = _practice_activity_id_for(owner_id)
 
     resp = await client.post(
@@ -2466,7 +2440,7 @@ async def test_rename_empty_name_returns_form_fragment_with_error(
     client: AsyncClient,
 ) -> None:
     owner_id = await _create_named_account(client, "renamer3")
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id = _practice_activity_id_for(owner_id)
 
     resp = await client.post(
@@ -2487,7 +2461,7 @@ async def test_rename_non_owner_returns_404(client: AsyncClient) -> None:
     """A rename attempt against another user's sub-tally returns 404."""
     # Create two accounts.
     owner_id = await _create_named_account(client, "owner4b")
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id = _practice_activity_id_for(owner_id)
 
     # Log in as a different user.
@@ -2507,7 +2481,7 @@ async def test_rename_non_owner_returns_404(client: AsyncClient) -> None:
 
 async def test_rename_cancel_returns_plain_heading_fragment(client: AsyncClient) -> None:
     owner_id = await _create_named_account(client, "renamer5")
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id = _practice_activity_id_for(owner_id)
 
     resp = await client.get(
@@ -2534,7 +2508,7 @@ async def test_rename_old_slug_returns_404_after_rename(client: AsyncClient) -> 
     but for an unrelated reason: there's no route to match).
     """
     owner_id = await _create_named_account(client, "renamer6")
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id = _practice_activity_id_for(owner_id)
 
     # Capture the old slug before rename.
@@ -2557,7 +2531,7 @@ async def test_rename_old_slug_returns_404_after_rename(client: AsyncClient) -> 
 async def test_detail_page_shows_rename_affordance(client: AsyncClient) -> None:
     """The sub-tally detail page renders the rename heading with a pencil button."""
     owner_id = await _create_named_account(client, "renamer7")
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id = _practice_activity_id_for(owner_id)
 
     # GET /activities/{id} redirects 301 to /@{username}/{slug} for named users;
@@ -2586,7 +2560,7 @@ def _create_entry_for(owner_id: int, activity_id: int) -> int:
 @pytest.mark.anyio
 async def test_delete_confirm_returns_fragment(client: AsyncClient) -> None:
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id = _practice_activity_id(owner_id)
     entry_id = _create_entry_for(owner_id, activity_id)
 
@@ -2607,7 +2581,7 @@ async def test_delete_confirm_returns_fragment(client: AsyncClient) -> None:
 @pytest.mark.anyio
 async def test_delete_confirm_non_owner_returns_404(client: AsyncClient) -> None:
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id = _practice_activity_id(owner_id)
     entry_id = _create_entry_for(owner_id, activity_id)
 
@@ -2622,7 +2596,7 @@ async def test_delete_confirm_non_owner_returns_404(client: AsyncClient) -> None
 @pytest.mark.anyio
 async def test_delete_removes_entry_and_returns_empty_200(client: AsyncClient) -> None:
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id = _practice_activity_id(owner_id)
     entry_id = _create_entry_for(owner_id, activity_id)
 
@@ -2645,7 +2619,7 @@ async def test_delete_removes_entry_and_returns_empty_200(client: AsyncClient) -
 @pytest.mark.anyio
 async def test_delete_non_owner_returns_404(client: AsyncClient) -> None:
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id = _practice_activity_id(owner_id)
     entry_id = _create_entry_for(owner_id, activity_id)
 
@@ -2672,7 +2646,7 @@ async def test_delete_non_owner_returns_404(client: AsyncClient) -> None:
 
 async def test_category_delete_confirm_returns_fragment(client: AsyncClient) -> None:
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id = _practice_activity_id(owner_id)
 
     resp = await client.get(
@@ -2709,7 +2683,7 @@ async def test_category_delete_confirm_uses_danger_token_not_stock_red(
     button here reads as the same "warning red" as the brand accent.
     """
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id = _practice_activity_id(owner_id)
 
     resp = await client.get(
@@ -2732,7 +2706,7 @@ async def test_entry_delete_confirm_uses_danger_token_not_stock_red(
     """Same invariant as the category delete-confirm: the per-entry delete
     confirm button must use `--color-danger`, not stock Tailwind red."""
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id = _practice_activity_id(owner_id)
     entry_id = _create_entry_for(owner_id, activity_id)
 
@@ -2752,7 +2726,7 @@ async def test_entry_delete_confirm_uses_danger_token_not_stock_red(
 
 async def test_category_delete_confirm_non_owner_returns_404(client: AsyncClient) -> None:
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id = _practice_activity_id(owner_id)
 
     # Switch to a different user.
@@ -2770,7 +2744,7 @@ async def test_category_delete_confirm_requires_auth(client: AsyncClient) -> Non
 
 async def test_category_delete_succeeds_and_returns_hx_redirect(client: AsyncClient) -> None:
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id = _practice_activity_id(owner_id)
 
     # Look up the category_id so we can verify it is gone after the delete.
@@ -2804,7 +2778,7 @@ async def test_category_delete_succeeds_and_returns_hx_redirect(client: AsyncCli
 
 async def test_category_delete_non_owner_returns_404(client: AsyncClient) -> None:
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id = _practice_activity_id(owner_id)
 
     # Switch to a different user.
@@ -2826,7 +2800,7 @@ async def test_category_delete_non_owner_returns_404(client: AsyncClient) -> Non
 
 async def test_rename_form_shows_delete_activity_button(client: AsyncClient) -> None:
     owner_id = await _create_named_account(client, "deleter1")
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id = _practice_activity_id_for(owner_id)
 
     resp = await client.get(
@@ -2843,7 +2817,7 @@ async def test_rename_form_shows_delete_activity_button(client: AsyncClient) -> 
 @pytest.mark.anyio
 async def test_delete_edit_form_has_delete_button(client: AsyncClient) -> None:
     owner_id = await _guest_login(client)
-    seeding.seed_account(owner_id)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id = _practice_activity_id(owner_id)
     entry_id = _create_entry_for(owner_id, activity_id)
 

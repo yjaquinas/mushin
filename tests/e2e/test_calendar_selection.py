@@ -19,11 +19,15 @@ retired per project CLAUDE.md (2026-06-16). ``test_stats.py`` previously had
 a broken ``_enter_as_guest`` helper too; it has since been swapped to the same
 signup-based flow.
 
-A fresh username/password signup is lazy-seeded with the kendo + reading
-starter templates (``app.auth.routes._lazy_seed`` calling
-``app.services.seeding.seed_account``), so ``/home`` already has a "Kendo"
-card after signup — no need to tap a one-tap example button to get a test
-activity. These specs use that seeded "Kendo" activity.
+This docstring previously claimed a fresh signup is lazy-seeded with the
+kendo + reading starter templates via ``app.auth.routes._lazy_seed``. That
+seam, the onboarding templates, and the progression feature they
+demonstrated have all been removed (meetings/MEETING-2026-06-21-simplify-onboarding);
+a fresh signup now has zero activities. ``_signup`` here seeds a fixture
+"Kendo" activity directly via ``tests.conftest.seed_test_activity`` (the same
+pattern used in ``tests/e2e/test_entry_comments.py`` and
+``tests/e2e/test_comment_notifications.py``) so these specs still have a card
+to exercise.
 
 As of Task 5 (persistent-header / swappable-body restructure), selecting a
 day swaps the whole calendar body to a *mutually exclusive* state: the grid
@@ -104,7 +108,15 @@ def page(browser):
 def _signup(page, username: str, password: str = "correct-horse-battery") -> None:
     """Land on the entry screen, switch to "Create account", and submit a
     new username/password signup with consent checked, then complete the
-    one-time sharing-consent screen to reach the dashboard."""
+    one-time sharing-consent screen to reach the dashboard.
+
+    Real signup creates zero activities now (see module docstring), so this
+    seeds a fixture "Kendo" activity directly via
+    ``tests.conftest.seed_test_activity`` against the same DB file the live
+    test server reads."""
+    from app.auth import users as users_module
+    from tests.conftest import seed_test_activity
+
     page.goto(BASE_URL + "/")
     page.get_by_role("tab", name=ui_strings.ENTRY_AUTH_TAB_CREATE).click()
     page.wait_for_selector("#auth-form input[name='consent']")
@@ -116,6 +128,9 @@ def _signup(page, username: str, password: str = "correct-horse-battery") -> Non
     page.wait_for_url(BASE_URL + "/welcome-sharing")
     page.get_by_role("button", name=ui_strings.VISIBILITY_CONSENT_SUBMIT).click()
     page.wait_for_url(BASE_URL + f"/@{username}")
+
+    owner = users_module.find_by_username(username)
+    seed_test_activity(owner["id"], name="Kendo")
 
     page.goto(BASE_URL + "/home")
 
@@ -217,7 +232,9 @@ def test_tapping_a_second_day_after_returning_to_calendar_selects_it(page) -> No
     page.wait_for_selector(f"text={ui_strings.CALENDAR_DAY_ENTRIES_TITLE} — ")
     # The day-entries heading reads "{title} — {YYYY-MM-DD}" -- capture the
     # full panel heading text so it can be compared against the second tap's.
-    first_panel_text = page.locator("h4", has_text=ui_strings.CALENDAR_DAY_ENTRIES_TITLE).inner_text()
+    first_panel_text = page.locator(
+        "h4", has_text=ui_strings.CALENDAR_DAY_ENTRIES_TITLE
+    ).inner_text()
 
     page.get_by_role("button", name=ui_strings.CALENDAR_BACK_TO_CALENDAR).click()
     page.wait_for_selector("table")
@@ -237,7 +254,9 @@ def test_tapping_a_second_day_after_returning_to_calendar_selects_it(page) -> No
 
     second_day.click()
     page.wait_for_selector(f"text={ui_strings.CALENDAR_DAY_ENTRIES_TITLE} — ")
-    second_panel_text = page.locator("h4", has_text=ui_strings.CALENDAR_DAY_ENTRIES_TITLE).inner_text()
+    second_panel_text = page.locator(
+        "h4", has_text=ui_strings.CALENDAR_DAY_ENTRIES_TITLE
+    ).inner_text()
 
     assert second_label != first_label
     assert second_panel_text != first_panel_text

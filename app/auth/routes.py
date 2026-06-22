@@ -145,33 +145,6 @@ def _known_provider(provider: str) -> bool:
     return _oauth_enabled() and provider == "google"
 
 
-def _lazy_seed(owner_id: int) -> None:
-    """Seed the v1 starter templates for a freshly-created account.
-
-    Called from each of the three paths that mint a *genuinely new* account:
-    guest creation, fresh username/password signup, and fresh OAuth signup. It
-    is **not** called on plain login, on existing-OAuth-identity login, or on
-    guest-upgrade-in-place — those accounts already exist and were seeded at
-    their original creation (an upgraded guest was seeded when its guest row was
-    minted).
-
-    ``app.services.seeding.seed_account`` has shipped and is idempotent, so a
-    single call per fresh account is correct. The lazy import + defensive
-    ``callable``/``ImportError`` guard is kept as cheap insurance against an
-    import-time failure; it never silently degrades a normal run.
-    """
-    try:
-        from app.services import seeding  # noqa: PLC0415 - intentional lazy import (seam)
-
-        seed_fn = getattr(seeding, "seed_account", None)
-        if callable(seed_fn):
-            seed_fn(owner_id)
-    except ImportError:
-        # Defensive only: seeding ships. If it were ever unimportable the
-        # account still works; it just lands with no starter templates.
-        log.debug("seeding.seam.absent", owner_id=owner_id)
-
-
 # ---------------------------------------------------------------------------
 # Username / password (with optional recovery email)
 # ---------------------------------------------------------------------------
@@ -249,7 +222,6 @@ async def username_signup(
             status_code=409, detail="That username is already taken."
         ) from exc
 
-    _lazy_seed(user_id)
     resp = JSONResponse(
         {
             "user_id": user_id,
@@ -396,7 +368,6 @@ async def oauth_callback(
     user_id = users.create_oauth_user(
         identity.auth_provider, identity.provider_id, identity.display_name
     )
-    _lazy_seed(user_id)
     resp = JSONResponse({"user_id": user_id, "upgraded": False})
     _set_session(resp, user_id)
     log.info("auth.signup.oauth", provider=provider, user_id=user_id)
@@ -429,7 +400,6 @@ async def guest_start(
         return JSONResponse({"user_id": current, "created": False})
 
     user_id = users.create_guest(timezone)
-    _lazy_seed(user_id)
     resp = JSONResponse({"user_id": user_id, "created": True})
     _set_session(resp, user_id)
     log.info("auth.guest.created", user_id=user_id)
