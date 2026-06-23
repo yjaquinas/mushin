@@ -11,7 +11,13 @@ from __future__ import annotations
 from fastapi.templating import Jinja2Templates
 
 from app import ui_strings
-from app.routes.web import _format_count, _format_entry_time, _home_url_context, _theme_context
+from app.routes.web import (
+    _format_count,
+    _format_entry_time,
+    _format_streak_days,
+    _home_url_context,
+    _theme_context,
+)
 
 templates = Jinja2Templates(
     directory="app/templates", context_processors=[_theme_context, _home_url_context]
@@ -19,3 +25,4 @@ templates = Jinja2Templates(
 templates.env.globals["strings"] = ui_strings
 templates.env.filters["format_entry_time"] = _format_entry_time
 templates.env.filters["format_count"] = _format_count
+templates.env.filters["streak_days"] = _format_streak_days

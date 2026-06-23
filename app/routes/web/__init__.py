@@ -39,6 +39,9 @@ from app.routes.web._contexts import (
     _list_sub_tallies as _list_sub_tallies,
 )
 from app.routes.web._history_context import (
+    _build_card_top_tags as _build_card_top_tags,
+)
+from app.routes.web._history_context import (
     _build_field_stats_context as _build_field_stats_context,
 )
 from app.routes.web._history_context import (
@@ -55,6 +58,9 @@ from app.routes.web._shared import (
 )
 from app.routes.web._shared import (
     _format_entry_time as _format_entry_time,
+)
+from app.routes.web._shared import (
+    _format_streak_days as _format_streak_days,
 )
 from app.routes.web._shared import (
     _home_url_context as _home_url_context,

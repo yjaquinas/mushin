@@ -1,12 +1,23 @@
 {#
-  Count summary (week/month/year/lifetime + avg/week) and streak (current +
-  longest). Detail-screen only — see app.routes.web.activity_detail.
+  Summary card — counts + streak ("glance"), a calendar-year heatmap strip
+  with quarter labels, and (when the activity has a tag-group field) a top-3
+  tags block. Shared by the activity-detail screen and the home-card list
+  (see components/activity_card.html.jinja2) — the home-card path only ever
+  supplies `counts`/`streaks`, so the heatmap/tags blocks below guard on
+  `heatmap is defined` / `top_tags is not none` rather than assuming they
+  exist.
 
-  Context: counts (stats.counts output), streaks (stats.streaks output).
+  Context: counts (stats.counts output), streaks (stats.streaks output),
+  heatmap (optional — stats.card_stats()'s weekly series for the current
+  calendar year, oldest-first, Monday-anchored, each bucket
+  {"week_start", "intensity", "quarter_month"} — intensity bounded 0-7,
+  quarter_month is 1/4/7/10 on the one week labeled Jan/Apr/Jul/Oct, else
+  None), top_tags (optional — None, or {"label", "tags"} from
+  app.routes.web._history_context._build_card_top_tags).
 #}
 <section
     id="stats-summary-{{ activity_id }}"
-    class="flex flex-col gap-3 rounded-card border border-border bg-surface-1 p-4"
+    class="flex flex-col gap-4 rounded-card border border-border bg-surface-1 p-4"
     {% if is_owner | default(false) %}
     hx-get="/activities/{{ activity_id }}/stats-summary"
     hx-trigger="log-saved from:body"
@@ -14,13 +25,15 @@
     {% endif %}
 >
 
-    <h2 class="flex flex-wrap items-baseline gap-1.5 text-text-primary">
-        {% if card_name is defined and card_name %}
-        <span class="text-title font-semibold">{{ card_name }}</span>
-        {% endif %}
-    </h2>
-
+    {# 1. Glance section: name (home-card only), counts grid, current
+       streak. Most prominent text in the card. #}
     <div class="flex flex-col gap-2">
+        {% if card_name is defined and card_name %}
+        <h2 class="flex flex-wrap items-baseline gap-1.5 text-text-primary">
+            <span class="text-title font-semibold">{{ card_name }}</span>
+        </h2>
+        {% endif %}
+
         <dl class="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div class="flex flex-col items-center text-center">
                 <dt class="text-caption text-text-muted">{{ strings.STATS_PERIOD_WEEK }}</dt>
@@ -39,6 +52,86 @@
                 <dd class="text-title font-medium text-text-primary">{{ counts.lifetime | format_count }}</dd>
             </div>
         </dl>
+
+        <dl class="flex items-baseline justify-center gap-1.5">
+            <dt class="text-caption text-text-muted">{{ strings.STREAK_CURRENT_LABEL }}</dt>
+            <dd class="text-body font-medium text-text-primary">{{ streaks.current | streak_days }}</dd>
+        </dl>
     </div>
+
+    {% if heatmap is defined or top_tags is defined %}
+    <div class="border-t border-border"></div>
+
+    <div class="flex flex-col gap-4">
+        {# 2. Heatmap strip — non-interactive, height-encoded, single fill.
+           Secondary visual priority: smaller/muted relative to the glance
+           section above. #}
+        {% if heatmap is defined %}
+        {% set active_weeks = heatmap | selectattr('intensity', 'gt', 0) | list | length %}
+        <div class="flex flex-col gap-1">
+            <div class="flex gap-px" aria-hidden="true">
+                {% for week in heatmap %}
+                <span class="min-w-0 flex-1 whitespace-nowrap text-caption text-text-muted">
+                    {% if week.quarter_month %}{{ strings.HEATMAP_QUARTER_LABELS[week.quarter_month] }}{% endif %}
+                </span>
+                {% endfor %}
+            </div>
+            <div
+                role="img"
+                aria-label="{{ strings.HEATMAP_ARIA.format(active_weeks=active_weeks) }}"
+                class="flex h-12 items-end gap-px"
+            >
+                {% for week in heatmap %}
+                    {% if week.intensity > 0 %}
+                        {% set height_pct = (week.intensity / 7 * 100) | round(1) %}
+                        <div
+                            aria-hidden="true"
+                            class="min-w-0 flex-1 bg-heatmap-bar"
+                            style="height: {{ height_pct }}%"
+                        ></div>
+                    {% else %}
+                        <div
+                            aria-hidden="true"
+                            class="min-w-0 flex-1 bg-heatmap-baseline"
+                            style="height: 2px"
+                        ></div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+            {% if active_weeks == 0 %}
+            <p class="text-caption text-text-muted">{{ strings.HEATMAP_EMPTY }}</p>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {# 3. Top-3 tags — only when the activity has a tag-group field.
+           Lowest visual priority: smallest/most muted text of the three
+           additions. #}
+        {% if top_tags is defined and top_tags is not none %}
+        <div class="flex flex-col gap-1.5">
+            <h3 class="text-caption font-medium text-text-muted">{{ strings.TAGS_TOP_HEADING }}</h3>
+            {% if not top_tags.tags %}
+                <p class="text-caption text-text-muted">{{ strings.TAG_FREQUENCY_EMPTY }}</p>
+            {% else %}
+                <ol class="flex flex-col gap-1">
+                    {% for tag in top_tags.tags %}
+                        <li class="flex items-center gap-2 text-caption text-text-muted">
+                            <span class="min-w-0 flex-1 truncate text-text-secondary">{{ tag.name }}</span>
+                            <span>{{ tag.total }}</span>
+                            {% if tag.delta > 0 %}
+                                <span class="text-accent-text">&#9650; +{{ tag.delta }}</span>
+                            {% elif tag.delta < 0 %}
+                                <span>&#9660; {{ tag.delta }}</span>
+                            {% else %}
+                                <span>&middot;</span>
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ol>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
 
 </section>

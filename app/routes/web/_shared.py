@@ -193,6 +193,20 @@ def _format_count(n: int) -> str:
 templates.env.filters["format_count"] = _format_count
 
 
+def _format_streak_days(n: int) -> str:
+    """Format a streak length with correct singular/plural day unit.
+
+    ``n == 1`` → ``"1 day"``; any other value (including ``0``) → e.g.
+    ``"0 days"``, ``"2 days"``.
+    """
+    if n == 1:
+        return f"{n}{ui_strings.STREAK_DAY_UNIT}"
+    return f"{n}{ui_strings.STREAK_DAYS_UNIT}"
+
+
+templates.env.filters["streak_days"] = _format_streak_days
+
+
 # ---------------------------------------------------------------------------
 # Session helpers
 # ---------------------------------------------------------------------------

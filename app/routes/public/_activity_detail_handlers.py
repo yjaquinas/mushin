@@ -21,6 +21,7 @@ from app.models import db
 from app.routes.public._contexts import templates
 from app.routes.web import (
     _build_card_context,
+    _build_card_top_tags,
     _build_field_stats_context,
     _build_history_context,
     _field_defs_for_activity,
@@ -74,8 +75,11 @@ def _render_owner_activity_detail(
         owner_context["head_to_head"] = []
 
     owner_context["activity_id"] = activity_id
-    owner_context["counts"] = stats.counts(activity_id, owner_id, tz=tz)
-    owner_context["streaks"] = stats.streaks(activity_id, owner_id, tz=tz)
+    cs = stats.card_stats(activity_id, owner_id, tz=tz)
+    owner_context["counts"] = cs["counts"]
+    owner_context["streaks"] = cs["streaks"]
+    owner_context["heatmap"] = cs["heatmap"]
+    owner_context["top_tags"] = _build_card_top_tags(activity_id, owner_id, field_defs, tz=tz)
     owner_context["history"] = _build_history_context(
         activity_id,
         owner_id,
@@ -162,8 +166,11 @@ def _render_readonly_activity_detail(
         context["timeline"] = []
         context["head_to_head"] = []
 
-    context["counts"] = stats.counts(activity_id, owner_id, tz=tz)
-    context["streaks"] = stats.streaks(activity_id, owner_id, tz=tz)
+    cs = stats.card_stats(activity_id, owner_id, tz=tz)
+    context["counts"] = cs["counts"]
+    context["streaks"] = cs["streaks"]
+    context["heatmap"] = cs["heatmap"]
+    context["top_tags"] = _build_card_top_tags(activity_id, owner_id, field_defs, tz=tz)
     context["field_stats"] = _build_field_stats_context(activity_id, owner_id, field_defs, tz=tz)
 
     can_comment = bool(

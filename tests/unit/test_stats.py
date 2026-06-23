@@ -26,7 +26,7 @@ same rows the rest of the app writes.
 from __future__ import annotations
 
 import sqlite3
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -636,6 +636,160 @@ def test_heatmap_range_empty_when_end_before_start(test_db: Path) -> None:
     ids = _seed_activity(test_db, owner)
     series = stats.heatmap_range(ids["activity_id"], owner, date(2026, 6, 10), date(2026, 6, 9), tz=KST)
     assert series == []
+
+
+# ---------------------------------------------------------------------------
+# card_stats: counts + streaks + heatmap from one consolidated read
+# ---------------------------------------------------------------------------
+
+
+def test_card_stats_counts_and_streaks_match_separate_calls(
+    test_db: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """card_stats()'s counts/streaks must be byte-for-byte equivalent to calling
+    counts() and streaks() separately on the same data."""
+    owner = _seed_user(test_db)
+    ids = _seed_activity(test_db, owner)
+    st = ids["activity_id"]
+
+    _freeze_today(monkeypatch, date(2026, 6, 10))
+
+    # Entries spread across several days, including a current run, an earlier
+    # longer run (gap), a same-day collapse, and one in a prior year.
+    for day in ("08", "09", "10"):  # current run of 3
+        entries.create(owner, st, {}, occurred_at=f"2026-06-{day}T10:00:00+09:00", tz=KST)
+    entries.create(owner, st, {}, occurred_at="2026-06-10T21:00:00+09:00", tz=KST)  # same-day
+    for day in ("01", "02", "03", "04"):  # earlier run of 4 (this month)
+        entries.create(owner, st, {}, occurred_at=f"2026-05-{day}T10:00:00+09:00", tz=KST)
+    entries.create(owner, st, {}, occurred_at="2025-06-10T10:00:00+09:00", tz=KST)  # last year
+
+    card = stats.card_stats(st, owner, tz=KST)
+
+    assert card["counts"] == stats.counts(st, owner, tz=KST)
+    assert card["streaks"] == stats.streaks(st, owner, tz=KST)
+
+
+def test_card_stats_weekly_intensity_is_distinct_active_days(
+    test_db: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Each weekly bucket's intensity is the count of distinct days in that ISO
+    week with at least one entry — same-day entries collapse to one, multiple
+    distinct days in a week add up, and intensity never exceeds 7.
+
+    Fixture (KST), expected per-week intensity computed by hand below:
+      - ISO week of Mon 2026-06-08: entries on Mon 06-08 (x2, same day) and
+        Wed 06-10 → 2 distinct active days.
+      - ISO week of Mon 2026-06-01: entries on Tue 06-02 and Fri 06-05 → 2
+        distinct active days.
+      - ISO week of Mon 2026-05-25: a single entry on Wed 05-27 → 1 active day.
+      - ISO week of Mon 2026-05-18: no entries → 0.
+    """
+    owner = _seed_user(test_db)
+    ids = _seed_activity(test_db, owner)
+    st = ids["activity_id"]
+
+    # Anchor today inside the week of Mon 2026-06-08 (Wed 06-10).
+    _freeze_today(monkeypatch, date(2026, 6, 10))
+
+    # Week of 06-08: two entries same day (06-08), plus 06-10 → 2 distinct days.
+    entries.create(owner, st, {}, occurred_at="2026-06-08T08:00:00+09:00", tz=KST)
+    entries.create(owner, st, {}, occurred_at="2026-06-08T21:00:00+09:00", tz=KST)  # same day
+    entries.create(owner, st, {}, occurred_at="2026-06-10T09:00:00+09:00", tz=KST)
+    # Week of 06-01: 06-02 and 06-05 → 2 distinct days.
+    entries.create(owner, st, {}, occurred_at="2026-06-02T10:00:00+09:00", tz=KST)
+    entries.create(owner, st, {}, occurred_at="2026-06-05T10:00:00+09:00", tz=KST)
+    # Week of 05-25: only 05-27 → 1 distinct day.
+    entries.create(owner, st, {}, occurred_at="2026-05-27T10:00:00+09:00", tz=KST)
+
+    series = stats.card_stats(st, owner, tz=KST)["heatmap"]
+    by_week = {b["week_start"]: b["intensity"] for b in series}
+
+    assert by_week["2026-06-08"] == 2
+    assert by_week["2026-06-01"] == 2
+    assert by_week["2026-05-25"] == 1
+    assert by_week["2026-05-18"] == 0
+    # Intensity is bounded 0..7 regardless of entry count (same-day collapse).
+    assert all(0 <= b["intensity"] <= 7 for b in series)
+
+
+def test_card_stats_default_heatmap_window(test_db: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The heatmap covers the current calendar year as contiguous
+    Monday-anchored weekly buckets, oldest-first — from the week containing
+    Jan 1 through the week containing Dec 31, a fixed-length series regardless
+    of the current date (future weeks are zero-filled, not omitted, so the
+    card's height never changes as the year progresses). Quarter labels land
+    on exactly the one week containing each of Jan/Apr/Jul/Oct's 1st."""
+    owner = _seed_user(test_db)
+    ids = _seed_activity(test_db, owner)
+    st = ids["activity_id"]
+
+    today = date(2026, 6, 10)  # well inside the year, not at either boundary
+    _freeze_today(monkeypatch, today)
+    entries.create(owner, st, {}, occurred_at="2026-06-10T09:00:00+09:00", tz=KST)
+
+    series = stats.card_stats(st, owner, tz=KST)["heatmap"]
+
+    jan1, dec31 = date(2026, 1, 1), date(2026, 12, 31)
+    expected_start = jan1 - timedelta(days=jan1.weekday())
+    expected_end = dec31 - timedelta(days=dec31.weekday())
+    expected_weeks = (expected_end - expected_start).days // 7 + 1
+
+    assert len(series) == expected_weeks
+    assert series[0]["week_start"] == expected_start.isoformat()
+    assert series[-1]["week_start"] == expected_end.isoformat()
+
+    weeks = [date.fromisoformat(b["week_start"]) for b in series]
+    assert all(w.weekday() == 0 for w in weeks)  # every week_start is a Monday
+    assert weeks == sorted(weeks)
+    assert len(set(weeks)) == expected_weeks  # contiguous, no gaps/dupes
+    assert all(
+        (later - earlier).days == 7 for earlier, later in zip(weeks, weeks[1:], strict=False)
+    )
+
+    by_week = {b["week_start"]: b["intensity"] for b in series}
+    assert by_week["2026-06-08"] == 1  # the lone 06-10 entry's week (Monday-anchored)
+
+    # The series extends past "today" into the future, zero-filled, not omitted.
+    future_weeks = [b for b in series if date.fromisoformat(b["week_start"]) > today]
+    assert future_weeks
+    assert all(b["intensity"] == 0 for b in future_weeks)
+
+    # Quarter labels: exactly one labeled week per quarter-start month.
+    labeled = {b["week_start"]: b["quarter_month"] for b in series if b["quarter_month"]}
+    assert len(labeled) == 4
+    for month in (1, 4, 7, 10):
+        qd = date(2026, month, 1)
+        matches = [
+            ws
+            for ws in labeled
+            if date.fromisoformat(ws) <= qd <= date.fromisoformat(ws) + timedelta(days=6)
+        ]
+        assert matches == [k for k in labeled if labeled[k] == month]
+        assert len(matches) == 1
+
+
+def test_card_stats_heatmap_anchors_on_current_year(
+    test_db: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The heatmap's year follows the caller's *current* local year, not a
+    trailing window — an entry from the prior year falls outside the series."""
+    owner = _seed_user(test_db)
+    ids = _seed_activity(test_db, owner)
+    st = ids["activity_id"]
+
+    _freeze_today(monkeypatch, date(2027, 1, 2))  # early in the new year
+    entries.create(owner, st, {}, occurred_at="2027-01-02T09:00:00+09:00", tz=KST)
+    entries.create(owner, st, {}, occurred_at="2026-06-10T09:00:00+09:00", tz=KST)  # prior year
+
+    series = stats.card_stats(st, owner, tz=KST)["heatmap"]
+
+    jan1_2027 = date(2027, 1, 1)
+    expected_start = jan1_2027 - timedelta(days=jan1_2027.weekday())
+    assert series[0]["week_start"] == expected_start.isoformat()
+    assert all(date.fromisoformat(b["week_start"]) >= expected_start for b in series)
+
+    total_intensity = sum(b["intensity"] for b in series)
+    assert total_intensity == 1  # only the 2027-01-02 entry's week counts
 
 
 # ---------------------------------------------------------------------------

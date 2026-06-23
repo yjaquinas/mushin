@@ -109,6 +109,33 @@
   --color-danger:        #A6471C;
   --color-danger-subtle: #FBEAE3;
 
+  /*
+   * Heatmap trend strip (activity-detail summary card, 84 trailing days as
+   * height-encoded bars — added 2026-06-23, replacing the removed year-view
+   * heatmap calendar and its 5-step --color-heat-0..4 ramp from 41bdead).
+   * Intensity here is height, not color — a single fill communicates "this
+   * activity happened," and a muted floor sliver keeps a zero day visible as
+   * a baseline tick rather than literally blank. Both are non-text/fill
+   * roles (3:1 minimum, not 4.5:1) since neither ever carries text.
+   *
+   * --color-heatmap-bar aliases --color-accent rather than --color-brand:
+   * accent clears 3:1 against surface-1 in both themes (4.12:1 light,
+   * 5.23:1 dark), while brand fails it in dark mode (2.70:1 on surface-1 —
+   * the same documented dark-brand-on-cards shortfall noted in the dark
+   * theme block below). Accent is also already the app's "this happened /
+   * selected" signal (chip-selected, marked-day dot), so the strip reads as
+   * a continuation of that vocabulary rather than a new one.
+   *
+   * --color-heatmap-baseline aliases --color-border-strong — already this
+   * file's non-text 3:1 token (card outlines, focus-ring fallback,
+   * today-ring) and already verified to clear 3:1 against surface-1 in both
+   * themes (light 3.50:1, dark 3.79:1 — see the dark-theme contrast-fix note
+   * below), so the floor sliver is guaranteed visible without a new
+   * standalone value to maintain.
+   */
+  --color-heatmap-bar:      #E34234; /* = accent; 4.12:1 on surface-1 */
+  --color-heatmap-baseline: #7C8AA0; /* = border-strong; 3.50:1 on surface-1 */
+
   /* ── Type scale ───────────────────────────────────────────────────────── */
 
   /*
@@ -209,15 +236,17 @@
  * always renders at caption size, no large-text exemption applies). New
  * value clears 4.5:1 on surface-0/1/2.
  * --color-border-strong lightened #64748B → #73839A (was 3.07:1 on
- * surface-1, 2.45:1 on surface-2/heat-0 — under the 3:1 non-text minimum
- * for the .heat-cell--month-start divider and the .cal-day--today ring).
- * New value clears 3:1 on surface-0/1/2 (== heat-0, the heatmap's default
- * cell color). Note: the divider sits on a per-cell-colored heat ramp
- * (heat-0..heat-4); no single static border color can clear 3:1 against
- * every ramp step simultaneously in either light or dark mode (light mode
- * has the identical structural gap against heat-2/3/4) — graded here
- * against heat-0, the ramp's default/most common cell and border-strong's
- * other real usages (card outlines, focus-ring fallback, today-ring).
+ * surface-1, 2.45:1 on surface-2 — under the 3:1 non-text minimum for
+ * border-strong's usages at the time: card outlines, focus-ring fallback,
+ * the .cal-day--today ring). New value clears 3:1 on surface-0/1/2.
+ * (The year-view heatmap calendar this note originally also covered —
+ * .heat-cell--month-start's divider sitting on a per-cell heat-0..heat-4
+ * ramp — was removed 2026-06-23 along with the entire heat-0..4 ramp;
+ * border-strong is now graded only against the surfaces above. The
+ * replacement activity-detail trend strip encodes intensity by bar height
+ * against a single fill, --color-heatmap-bar, not a graded color ramp — see
+ * the heatmap-bar/heatmap-baseline tokens above, which reuse accent and
+ * border-strong respectively rather than introducing a new ramp.)
  *
  * Bug fix (2026-06-22, UI polish pass): --color-brand was never overridden
  * here, so it kept its light-mode value (#0F172A) — which is exactly
@@ -254,6 +283,14 @@
   --color-danger-subtle: #3D2A20;
 
   --color-on-brand: #f0eeec;
+
+  /* Heatmap trend strip — same aliasing rationale as the light block above:
+   * --color-heatmap-bar = accent (5.23:1 on surface-1, well clear of 3:1);
+   * --color-heatmap-baseline = border-strong (3.79:1 on surface-1, clears
+   * 3:1 — see the contrast-fix note above this block for how that value was
+   * derived). */
+  --color-heatmap-bar:      #FF6B5B; /* = accent; 5.23:1 on surface-1 */
+  --color-heatmap-baseline: #73839A; /* = border-strong; 3.79:1 on surface-1 */
 }
 
 /* ── Focus-visible: global baseline ──────────────────────────────────────── */

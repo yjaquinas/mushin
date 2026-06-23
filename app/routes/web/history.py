@@ -13,7 +13,11 @@ from fastapi.responses import HTMLResponse
 from app.auth import sessions, users
 from app.models import db
 from app.routes.web._contexts import _field_defs_for_activity
-from app.routes.web._history_context import _build_field_stats_context, _build_history_context
+from app.routes.web._history_context import (
+    _build_card_top_tags,
+    _build_field_stats_context,
+    _build_history_context,
+)
 from app.routes.web._shared import _current_user, templates
 from app.services import _db, profiles, stats
 
@@ -188,13 +192,17 @@ async def stats_summary_fragment(
         conn.execute("BEGIN")
         if not _db.exists(conn, "activity", owner_id, where="id = ?", params=(activity_id,)):
             return HTMLResponse(status_code=404)
+        field_defs = _field_defs_for_activity(conn, activity_id)
+    cs = stats.card_stats(activity_id, owner_id, tz=tz)
     return templates.TemplateResponse(
         request=request,
         name="components/stats_summary.html.jinja2",
         context={
             "activity_id": activity_id,
-            "counts": stats.counts(activity_id, owner_id, tz=tz),
-            "streaks": stats.streaks(activity_id, owner_id, tz=tz),
+            "counts": cs["counts"],
+            "streaks": cs["streaks"],
+            "heatmap": cs["heatmap"],
+            "top_tags": _build_card_top_tags(activity_id, owner_id, field_defs, tz=tz),
             "is_owner": True,
         },
     )

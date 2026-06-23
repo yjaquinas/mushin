@@ -13,7 +13,11 @@ from app.auth import sessions, users
 from app.models import db
 from app.routes.web._calendar_context import _resolve_comment_deep_link
 from app.routes.web._contexts import _build_card_context, _field_defs_for_activity
-from app.routes.web._history_context import _build_field_stats_context, _build_history_context
+from app.routes.web._history_context import (
+    _build_card_top_tags,
+    _build_field_stats_context,
+    _build_history_context,
+)
 from app.routes.web._shared import _current_user, _home_url_for, templates
 from app.services import categories, competition, profiles, stats
 
@@ -183,8 +187,11 @@ async def activity_detail(
     expand_comment_entry_id, selected_day = deep_link if deep_link is not None else (None, None)
 
     context["activity_id"] = activity_id
-    context["counts"] = stats.counts(activity_id, owner_id, tz=tz)
-    context["streaks"] = stats.streaks(activity_id, owner_id, tz=tz)
+    cs = stats.card_stats(activity_id, owner_id, tz=tz)
+    context["counts"] = cs["counts"]
+    context["streaks"] = cs["streaks"]
+    context["heatmap"] = cs["heatmap"]
+    context["top_tags"] = _build_card_top_tags(activity_id, owner_id, field_defs, tz=tz)
     context["history"] = _build_history_context(
         activity_id,
         owner_id,

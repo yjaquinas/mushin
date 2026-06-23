@@ -194,12 +194,14 @@ def test_activity_cards_render_summary_stats_grid(page) -> None:
     """Each activity card on /home renders the same Counts/Streaks grid as
     the detail screen's Summary card -- no hero numeral, no per-activity
     icon in the label row (the redundant numeral was retired in favor of
-    the richer grid)."""
+    the richer grid). The card has no "Summary" heading of its own (that
+    label was retired -- only the activity name renders as the card's
+    heading)."""
     _signup(page, _unique_username("c"))
 
     card = page.locator("article", has=page.get_by_role("heading", name="Kendo"))
 
-    assert card.get_by_text(ui_strings.STATS_SUMMARY_TITLE).count() > 0
+    assert card.get_by_text(ui_strings.STATS_PERIOD_WEEK).count() > 0
     assert card.get_by_text(ui_strings.STREAK_CURRENT_LABEL).count() > 0
     assert card.locator(".text-hero-numeral").count() == 0
 

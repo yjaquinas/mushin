@@ -273,6 +273,79 @@ def streaks(activity_id: int, owner_id: int, *, tz: ZoneInfo) -> dict[str, int]:
 # ---------------------------------------------------------------------------
 
 
+def _zero_fill(
+    entry_days: Sequence[date], start: date, end: date
+) -> list[dict[str, Any]]:
+    """Bucket *entry_days* into a dense, zero-filled ``[start, end]`` day series.
+
+    Pure (no query): takes already-read local days and returns one bucket **per
+    day** in the inclusive range, oldest first, with every day present
+    (zero-filled). Each bucket is ``{"date": "YYYY-MM-DD", "count": int}`` where
+    ``count`` is how many of *entry_days* fell on that day. If ``end`` is before
+    ``start`` the series is empty.
+    """
+    counts_by_day: dict[date, int] = defaultdict(int)
+    for d in entry_days:
+        if start <= d <= end:
+            counts_by_day[d] += 1
+
+    series: list[dict[str, Any]] = []
+    cursor = start
+    while cursor <= end:
+        series.append({"date": cursor.isoformat(), "count": counts_by_day.get(cursor, 0)})
+        cursor += timedelta(days=1)
+    return series
+
+
+# Quarter-start months labeled on the heatmap strip (Jan/Apr/Jul/Oct) — see
+# ui_strings.HEATMAP_QUARTER_LABELS for the renderer-facing label text.
+_HEATMAP_QUARTER_MONTHS = (1, 4, 7, 10)
+
+
+def _calendar_year_active_days(entry_days: Sequence[date], *, year: int) -> list[dict[str, Any]]:
+    """Bucket *entry_days* into a calendar-year active-day series for *year*.
+
+    Pure (no query): takes already-read local days and returns one bucket **per
+    ISO week** (Monday-anchored) from the week containing Jan 1 through the
+    week containing Dec 31 of *year*, oldest first — a fixed-length series
+    regardless of the current date, so weeks later in the year that haven't
+    happened yet are zero-filled rather than omitted (the card's height never
+    changes as the year progresses). Each bucket is ``{"week_start":
+    "YYYY-MM-DD", "intensity": int, "quarter_month": int | None}`` where
+    ``intensity`` is the number of *distinct* calendar days in that week that
+    had at least one entry (not the raw entry count) — naturally bounded
+    ``0..7`` since a week has 7 distinct days and same-day entries collapse via
+    the set — and ``quarter_month`` is set to 1/4/7/10 on the one week whose
+    span contains that quarter-start month's 1st, else ``None``.
+    """
+    start_week = _week_start(date(year, 1, 1))
+    end_week = _week_start(date(year, 12, 31))
+    quarter_starts = {date(year, m, 1): m for m in _HEATMAP_QUARTER_MONTHS}
+
+    active_by_week: dict[date, set[date]] = defaultdict(set)
+    for d in entry_days:
+        wk = _week_start(d)
+        if start_week <= wk <= end_week:
+            active_by_week[wk].add(d)
+
+    series: list[dict[str, Any]] = []
+    cursor = start_week
+    while cursor <= end_week:
+        week_end = cursor + timedelta(days=6)
+        quarter_month = next(
+            (m for qd, m in quarter_starts.items() if cursor <= qd <= week_end), None
+        )
+        series.append(
+            {
+                "week_start": cursor.isoformat(),
+                "intensity": len(active_by_week.get(cursor, ())),
+                "quarter_month": quarter_month,
+            }
+        )
+        cursor = _add_week(cursor, 1)
+    return series
+
+
 def heatmap_range(
     activity_id: int, owner_id: int, start: date, end: date, *, tz: ZoneInfo
 ) -> list[dict[str, Any]]:
@@ -288,17 +361,7 @@ def heatmap_range(
         conn.execute("BEGIN")
         entry_days = _entry_days(conn, activity_id, owner_id, tz)
 
-    counts_by_day: dict[date, int] = defaultdict(int)
-    for d in entry_days:
-        if start <= d <= end:
-            counts_by_day[d] += 1
-
-    series: list[dict[str, Any]] = []
-    cursor = start
-    while cursor <= end:
-        series.append({"date": cursor.isoformat(), "count": counts_by_day.get(cursor, 0)})
-        cursor += timedelta(days=1)
-    return series
+    return _zero_fill(entry_days, start, end)
 
 
 def heatmap(
@@ -313,6 +376,38 @@ def heatmap(
     return heatmap_range(
         activity_id, owner_id, today - timedelta(days=days - 1), today, tz=tz
     )
+
+
+def card_stats(activity_id: int, owner_id: int, *, tz: ZoneInfo) -> dict[str, Any]:
+    """Counts + streaks + heatmap for the activity-detail summary card in **one read**.
+
+    The summary card re-renders on every ``log-saved`` HTMX event (the hottest
+    action in the app). Rather than call :func:`counts`, :func:`streaks`, and the
+    heatmap helper separately — three independent owner-scoped scans of the same
+    ``entry`` rows — this opens **one** ``db.connect()`` and does **one**
+    :func:`_entry_days` read, then derives all three views from the days held in
+    memory via the same pure helpers those functions use. The counts and streaks
+    values are identical to calling ``counts()`` and ``streaks()`` on the same
+    data.
+
+    Returns ``{"counts": ..., "streaks": ..., "heatmap": ...}``. The heatmap
+    covers the **current calendar year** (in *tz*) — see
+    :func:`_calendar_year_active_days` for the bucket shape.
+    """
+    with db.connect() as conn:
+        conn.execute("BEGIN")
+        days = _entry_days(conn, activity_id, owner_id, tz)
+
+    today = _today_local(tz)
+    distinct_desc = sorted(set(days), reverse=True)
+    return {
+        "counts": _count_buckets(days, today),
+        "streaks": {
+            "current": _current_run(distinct_desc),
+            "longest": _longest_run(distinct_desc),
+        },
+        "heatmap": _calendar_year_active_days(days, year=today.year),
+    }
 
 
 def period_entries(

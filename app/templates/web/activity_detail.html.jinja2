@@ -5,12 +5,6 @@
 {% block content %}
 {% from "components/_icon.html.jinja2" import icon %}
 
-{% if public_notice %}
-<p class="text-caption text-text-muted">
-    {{ public_notice }}
-</p>
-{% endif %}
-
 <div class="flex flex-col gap-6">
 
     {# 1. Page header: back nav + activity identity + rename trigger #}
@@ -77,4 +71,10 @@
     {% include "components/field_stats.html.jinja2" with context %}
 
 </div>
+
+{% if public_notice %}
+<p class="text-caption text-text-muted">
+    {{ public_notice }}
+</p>
+{% endif %}
 {% endblock %}

@@ -215,6 +215,37 @@ def _build_history_context(
     }
 
 
+def _build_card_top_tags(
+    activity_id: int,
+    owner_id: int,
+    field_defs: list[sqlite3.Row],
+    *,
+    tz: ZoneInfo,
+    top: int = 3,
+) -> dict[str, Any] | None:
+    """Top-*top* tag-frequency slice for the summary card, or ``None``.
+
+    An activity's field recipe is a la carte and can carry zero, one, or
+    multiple ``tag_group`` fields. The summary card has room for exactly one
+    tag block, so this picks the field with the lowest ``sort_order``
+    (tiebreak: lowest ``id``) — i.e. the first tag-group field in the
+    activity's own recipe order, not insertion/list order.
+
+    Returns ``None`` when *field_defs* has no ``tag_group`` field at all
+    ("this activity has no tags" — the template omits the block). Returns
+    ``{"label": ..., "tags": []}`` when the chosen field exists but has zero
+    tagged entries yet ("has tags but none logged" — the template shows an
+    empty-state string instead of omitting the block). These two cases are
+    deliberately distinct return shapes; never collapse one into the other.
+    """
+    tag_group_fields = [fd for fd in field_defs if fd["kind"] == "tag_group"]
+    if not tag_group_fields:
+        return None
+    fd = min(tag_group_fields, key=lambda f: (f["sort_order"], f["id"]))
+    freq = stats.tag_frequency(activity_id, owner_id, fd["id"], tz=tz, period="month", top=top)
+    return {"label": fd["label"], "tags": freq["tags"]}
+
+
 def _build_field_stats_context(
     activity_id: int,
     owner_id: int,

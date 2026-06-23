@@ -6,13 +6,17 @@ Acceptance criteria
 compact notation: plain integer below 1000; floored one-decimal "k"/"m"
 notation above that, never rounding up past the true value, with the
 trailing ".0" stripped and no "+" suffix anywhere.
+
+``_format_streak_days`` renders a streak length with correct singular/plural
+day unit: ``"1 day"`` for ``n == 1``, ``"N days"`` otherwise (including
+``n == 0``).
 """
 
 from __future__ import annotations
 
 import pytest
 
-from app.routes.web._shared import _format_count
+from app.routes.web._shared import _format_count, _format_streak_days
 
 
 @pytest.mark.parametrize(
@@ -42,3 +46,15 @@ def test_format_count_never_rounds_up_past_floor():
 def test_format_count_999999_does_not_round_to_1m():
     """999999 / 1000 == 999.999 — must floor to "999.9k", never round to "1m"."""
     assert _format_count(999999) == "999.9k"
+
+
+@pytest.mark.parametrize(
+    ("n", "expected"),
+    [
+        (0, "0 days"),
+        (1, "1 day"),
+        (2, "2 days"),
+    ],
+)
+def test_format_streak_days_pluralization(n, expected):
+    assert _format_streak_days(n) == expected

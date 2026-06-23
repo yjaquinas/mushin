@@ -1336,15 +1336,17 @@ async def test_detail_streak_matches_stats_service(client: AsyncClient) -> None:
 
     resp = await client.get(f"/activities/{activity_id}")
     assert resp.status_code == 200
-    assert f"{expected['current']}{strings_module.STREAK_DAYS_UNIT}" in resp.text
-    assert f"{expected['longest']}{strings_module.STREAK_DAYS_UNIT}" in resp.text
+    current_unit = (
+        strings_module.STREAK_DAY_UNIT if expected["current"] == 1 else strings_module.STREAK_DAYS_UNIT
+    )
+    assert f"{expected['current']}{current_unit}" in resp.text
 
 
 async def test_home_card_shows_streak_via_stats_summary_grid(client: AsyncClient) -> None:
     """The home card has no hero numeral/streak-caption zone of its own any
-    more (retired as redundant) — it renders the same Counts/Streaks grid as
-    the detail screen's Summary card, so the current/longest streak still
-    surfaces on /home via ``STREAK_CURRENT_LABEL``/``STREAK_LONGEST_LABEL``."""
+    more (retired as redundant) — it renders the same Counts/Streak grid as
+    the detail screen's Summary card, so the current streak still surfaces
+    on /home via ``STREAK_CURRENT_LABEL``."""
     owner_id = await _guest_login(client)
     seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id = _practice_activity_id(owner_id)
@@ -1356,16 +1358,19 @@ async def test_home_card_shows_streak_via_stats_summary_grid(client: AsyncClient
 
     resp = await client.get("/home")
     assert resp.status_code == 200
-    assert f"{expected['current']}{strings_module.STREAK_DAYS_UNIT}" in resp.text
-    assert f"{expected['longest']}{strings_module.STREAK_DAYS_UNIT}" in resp.text
+    current_unit = (
+        strings_module.STREAK_DAY_UNIT if expected["current"] == 1 else strings_module.STREAK_DAYS_UNIT
+    )
+    assert f"{expected['current']}{current_unit}" in resp.text
 
 
-async def test_detail_summary_card_shows_streak_labels_exactly_once(
+async def test_detail_summary_card_shows_streak_label_exactly_once(
     client: AsyncClient,
 ) -> None:
     """The activity-detail page has no separate hero zone repeating the
-    streak — ``STREAK_CURRENT_LABEL``/``STREAK_LONGEST_LABEL`` come from the
-    Summary card alone and each render exactly once."""
+    streak — ``STREAK_CURRENT_LABEL`` comes from the Summary card alone and
+    renders exactly once. There is no "Longest streak" label anywhere on
+    the page."""
     owner_id = await _guest_login(client)
     seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id = _practice_activity_id(owner_id)
@@ -1378,7 +1383,57 @@ async def test_detail_summary_card_shows_streak_labels_exactly_once(
     assert resp.status_code == 200
     body = resp.text
     assert body.count(strings_module.STREAK_CURRENT_LABEL) == 1
-    assert body.count(strings_module.STREAK_LONGEST_LABEL) == 1
+    assert strings_module.STREAK_LONGEST_LABEL not in body
+
+
+async def test_owner_detail_context_has_heatmap_and_top_tags(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``activity_detail`` builds ``counts``/``streaks`` from one consolidated
+    ``stats.card_stats()`` call (not separate ``counts()``/``streaks()``
+    calls) and also sets ``heatmap`` and ``top_tags`` as flat sibling context
+    keys, matching the values ``stats.card_stats()``/``_build_card_top_tags``
+    compute directly."""
+    from app.routes import web as web_routes
+    from app.routes.web._contexts import _field_defs_for_activity
+    from app.routes.web._history_context import _build_card_top_tags
+
+    owner_id = await _guest_login(client)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
+    activity_id = _practice_activity_id(owner_id)
+
+    from app.services import entries as entries_service
+
+    entries_service.create(owner_id, activity_id, {}, tz=_UTC)
+
+    captured: dict[str, object] = {}
+    real_template_response = web_routes.templates.TemplateResponse
+
+    def _capturing_template_response(*args, **kwargs):
+        context = kwargs.get("context")
+        if context is None and len(args) >= 2:
+            context = args[1]
+        if isinstance(context, dict):
+            captured.update(context)
+        return real_template_response(*args, **kwargs)
+
+    monkeypatch.setattr(web_routes.templates, "TemplateResponse", _capturing_template_response)
+
+    resp = await client.get(f"/activities/{activity_id}")
+    assert resp.status_code == 200
+    assert captured, "expected to capture the TemplateResponse context dict"
+
+    expected = stats.card_stats(activity_id, owner_id, tz=_UTC)
+    assert captured["counts"] == expected["counts"]
+    assert captured["streaks"] == expected["streaks"]
+    assert captured["heatmap"] == expected["heatmap"]
+
+    with db.connect() as conn:
+        conn.execute("BEGIN")
+        field_defs = _field_defs_for_activity(conn, activity_id)
+    expected_top_tags = _build_card_top_tags(activity_id, owner_id, field_defs, tz=_UTC)
+    assert captured["top_tags"] == expected_top_tags
+    assert captured["top_tags"] is not None
 
 
 async def test_history_context_week_anchor_math(web_db: Path) -> None:
@@ -1758,10 +1813,9 @@ async def test_history_route_default_anchor_is_today(client: AsyncClient) -> Non
 
 async def test_home_does_not_render_heavy_stats(client: AsyncClient) -> None:
     """Home cards render the same Counts/Streaks grid as the detail screen's
-    Summary card (``STATS_SUMMARY_TITLE`` included — see
-    components/activity_card.html.jinja2), but never the heavier
-    history visuals (heatmap, calendar) that only belong on the detail
-    screen's own history section."""
+    Summary card (see components/activity_card.html.jinja2), but never the
+    heavier history visuals (heatmap, calendar) that only belong on the
+    detail screen's own history section."""
     owner_id = await _guest_login(client)
     seed_test_activity(owner_id, name="Kendo")
 
@@ -1770,7 +1824,7 @@ async def test_home_does_not_render_heavy_stats(client: AsyncClient) -> None:
     text = resp.text
     assert "heat-cell" not in text
     assert "cal-day" not in text
-    assert strings_module.STATS_SUMMARY_TITLE in text
+    assert strings_module.STATS_PERIOD_WEEK in text
 
 
 # ---------------------------------------------------------------------------
@@ -2102,6 +2156,54 @@ async def test_stats_summary_fragment_returns_section_html(client: AsyncClient) 
     # HTMX self-refresh wiring is present (is_owner=True path).
     assert "hx-trigger" in text
     assert f'hx-get="/activities/{activity_id}/stats-summary"' in text
+
+
+async def test_stats_summary_fragment_context_has_heatmap_and_top_tags(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The fragment route's context carries the consolidated ``card_stats()``
+    keys (``counts``/``streaks``/``heatmap``) plus ``top_tags`` — built from one
+    ``stats.card_stats()`` call rather than separate ``counts()``/``streaks()``
+    calls. The default recipe's ``tag_group`` field means ``top_tags`` is a
+    populated dict (not ``None``), even with zero tagged entries yet.
+
+    Asserts on the literal context dict (not rendered HTML) since
+    ``components/stats_summary.html.jinja2`` only reads ``counts.*`` today —
+    a later task teaches it to render ``streaks``/``heatmap``/``top_tags``."""
+    from app.routes.web import history as history_routes
+
+    owner_id = await _guest_login(client)
+    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
+    activity_id = _practice_activity_id(owner_id)
+
+    from app.services import entries as entries_service
+
+    entries_service.create(owner_id, activity_id, {}, tz=_UTC)
+
+    expected = stats.card_stats(activity_id, owner_id, tz=_UTC)
+
+    captured: dict[str, object] = {}
+    real_template_response = history_routes.templates.TemplateResponse
+
+    def _capturing_template_response(*args, **kwargs):
+        context = kwargs.get("context")
+        if context is None and len(args) >= 2:
+            context = args[1]
+        if isinstance(context, dict):
+            captured.update(context)
+        return real_template_response(*args, **kwargs)
+
+    monkeypatch.setattr(history_routes.templates, "TemplateResponse", _capturing_template_response)
+
+    resp = await client.get(f"/activities/{activity_id}/stats-summary")
+    assert resp.status_code == 200
+    assert captured, "expected to capture the TemplateResponse context dict"
+
+    assert captured["counts"] == expected["counts"]
+    assert captured["streaks"] == expected["streaks"]
+    assert captured["heatmap"] == expected["heatmap"]
+    assert captured["top_tags"] is not None
+    assert "tags" in captured["top_tags"]
 
 
 # ---------------------------------------------------------------------------

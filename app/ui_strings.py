@@ -193,6 +193,7 @@ STATS_AVG_PER_WEEK = "Weekly average"
 
 STREAK_CURRENT_LABEL = "Current streak"
 STREAK_LONGEST_LABEL = "Longest streak"
+STREAK_DAY_UNIT = " day"
 STREAK_DAYS_UNIT = " days"
 
 CALENDAR_TITLE = "Calendar"
@@ -203,6 +204,23 @@ CALENDAR_DAY_ENTRIES_TITLE = "Entries on this day"
 CALENDAR_DAY_ENTRIES_EMPTY = "No entries on this day."
 CALENDAR_DAY_CLOSE = "Close"
 CALENDAR_BACK_TO_CALENDAR = "Calendar"
+
+# Heatmap strip: non-interactive, so HEATMAP_ARIA carries all the
+# accessibility information for the whole strip; individual week-bars are
+# aria-hidden. {active_weeks} interpolated by the template. Covers the
+# current calendar year (fixed-length, future weeks zero-filled) — quarter
+# labels (HEATMAP_QUARTER_LABELS) orient the reader within the strip instead
+# of a window-length caption.
+HEATMAP_ARIA = "Activity this year, {active_weeks} weeks with activity"
+HEATMAP_EMPTY = "No activity yet"
+
+# Quarter-start month labels placed along the heatmap strip (sparse — every
+# week is a column, but only the week containing a quarter's 1st gets a text
+# label, keyed by month number so the template can index directly off a
+# bucket's `quarter_month`).
+HEATMAP_QUARTER_LABELS = {1: "Jan", 4: "Apr", 7: "Jul", 10: "Oct"}
+
+TAGS_TOP_HEADING = "Top tags"
 
 # ---------------------------------------------------------------------------
 # History: period switcher + actual log

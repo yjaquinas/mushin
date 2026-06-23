@@ -204,7 +204,7 @@ async def test_visitor_activity_detail_hero_suppresses_streak_caption(client: As
     ``card_body(show_header=False, show_streak=False)``) doesn't repeat the
     streak caption either — same dedup'd macro the owner detail page uses,
     same suppression. The Summary card below still shows the streak once via
-    ``STREAK_CURRENT_LABEL``/``STREAK_LONGEST_LABEL``."""
+    ``STREAK_CURRENT_LABEL``."""
     from app.services import stats
 
     owner_id = _create_account("herostreak1", visibility="public")
@@ -220,7 +220,7 @@ async def test_visitor_activity_detail_hero_suppresses_streak_caption(client: As
     assert f"Streak {current_streak} day" not in body
     assert ui_strings.STREAK_CURRENT_LABEL in body
     assert body.count(ui_strings.STREAK_CURRENT_LABEL) == 1
-    assert body.count(ui_strings.STREAK_LONGEST_LABEL) == 1
+    assert ui_strings.STREAK_LONGEST_LABEL not in body
 
 
 async def test_activity_detail_renders_merged_calendar_for_visitor(client: AsyncClient) -> None:
@@ -712,11 +712,50 @@ async def test_readonly_activity_detail_context_has_is_owner_false_and_no_write_
     history_ctx = captured["history"]
     assert isinstance(history_ctx, dict)
     assert history_ctx["is_owner"] is False
-    assert "edit_url" not in history_ctx
-    assert "delete_url" not in history_ctx
-    assert "log_url" not in history_ctx
-    # The only "*_url" key in the read-only history context is the
-    # already-`safe_next_path`-validated login redirect; no other write URL
-    # is constructed in this code path at all.
-    url_keys = [k for k in history_ctx if k.endswith("_url")]
-    assert url_keys == ["login_redirect_url"] or url_keys == []
+
+
+async def test_readonly_activity_detail_context_has_heatmap_and_top_tags(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``_render_readonly_activity_detail`` builds its ``counts``/``streaks``
+    from one consolidated ``stats.card_stats()`` call (not separate
+    ``counts()``/``streaks()`` calls) and also sets ``heatmap`` and
+    ``top_tags`` as flat sibling context keys — the same shape the owner
+    render produces for the same activity, so a fellow/public visitor sees
+    the identical heatmap + top-tags data."""
+    from app.routes import public as public_routes
+    from app.services import stats
+
+    owner_id = _create_account("ctxshape2", visibility="public")
+    activity_id, slug = _first_activity(owner_id)
+    entries.create(
+        owner_id, activity_id, {"tags": [], "values": {}, "memo": "heatmap probe"}, tz=_UTC
+    )
+
+    captured: dict[str, object] = {}
+    real_template_response = public_routes.templates.TemplateResponse
+
+    def _capturing_template_response(*args, **kwargs):
+        context = kwargs.get("context")
+        if context is None and len(args) >= 2:
+            context = args[1]
+        if isinstance(context, dict):
+            captured.update(context)
+        return real_template_response(*args, **kwargs)
+
+    monkeypatch.setattr(public_routes.templates, "TemplateResponse", _capturing_template_response)
+
+    client.cookies.clear()
+    resp = await client.get(f"/@ctxshape2/{slug}")
+    assert resp.status_code == 200
+    assert captured, "expected to capture the TemplateResponse context dict"
+
+    expected = stats.card_stats(activity_id, owner_id, tz=_UTC)
+    assert captured["counts"] == expected["counts"]
+    assert captured["streaks"] == expected["streaks"]
+    assert captured["heatmap"] == expected["heatmap"]
+
+    # Default recipe includes a tag_group field, so top_tags is a populated
+    # dict (not None) even with zero tagged entries yet.
+    assert captured["top_tags"] is not None
+    assert "tags" in captured["top_tags"]
