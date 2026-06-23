@@ -12,9 +12,9 @@ green on a plain dev machine / CI without a browser, mirroring
 
 Specs covered
 -------------
-1. Export: clicking the footer "Export my data" link triggers a download of
-   ``mushin-export.json``, and the downloaded file is valid JSON with
-   ``schema_version`` and ``data`` keys.
+1. Export: clicking the account page's "Export my data" link triggers a
+   download of ``mushin-export.json``, and the downloaded file is valid
+   JSON with ``schema_version`` and ``data`` keys.
 2. Import dialog: opening it shows the focus-trapped confirm dialog with a
    file input and a warning that current data will be replaced; canceling
    closes it without making any changes.
@@ -102,10 +102,11 @@ def _signup(page, username: str, password: str = "correct-horse-battery") -> Non
 
 
 def test_export_link_downloads_valid_json_snapshot(page, tmp_path) -> None:
-    """Clicking the footer "Export my data" link downloads
+    """Clicking the account page's "Export my data" link downloads
     ``mushin-export.json``, whose contents are valid JSON with
     ``schema_version`` and ``data`` keys."""
     _signup(page, _unique_username("a"))
+    page.goto(BASE_URL + "/account")
 
     with page.expect_download() as download_info:
         page.get_by_role("link", name=ui_strings.FOOTER_EXPORT_DATA).click()
@@ -126,6 +127,7 @@ def test_import_dialog_shows_warning_and_cancel_closes_without_changes(page) -> 
     a file input and a warning that current data will be replaced; canceling
     closes it without making any changes."""
     _signup(page, _unique_username("b"))
+    page.goto(BASE_URL + "/account")
 
     page.get_by_role("button", name=ui_strings.FOOTER_IMPORT_DATA).click()
 
@@ -145,14 +147,15 @@ def test_import_dialog_shows_warning_and_cancel_closes_without_changes(page) -> 
     page.get_by_role("button", name=ui_strings.IMPORT_DATA_CANCEL).click()
     dialog.wait_for(state="hidden")
 
-    # No navigation/changes — still on /home.
-    assert page.url == BASE_URL + "/home"
+    # No navigation/changes — still on /account.
+    assert page.url == BASE_URL + "/account"
 
 
 def test_import_valid_export_redirects_to_home(page, tmp_path) -> None:
     """Uploading a valid exported JSON file and confirming triggers
     ``HX-Redirect: /home`` (observed as a navigation to /home)."""
     _signup(page, _unique_username("c"))
+    page.goto(BASE_URL + "/account")
 
     # Round-trip: export the current account's own data first, so the upload
     # is guaranteed to pass validation against the live schema.
@@ -177,6 +180,7 @@ def test_import_invalid_file_shows_inline_error_and_keeps_dialog_open(page, tmp_
     """Uploading an invalid file (wrong ``schema_version``) keeps the dialog
     open with an inline error message, per ``IMPORT_DATA_ERROR_*`` strings."""
     _signup(page, _unique_username("d"))
+    page.goto(BASE_URL + "/account")
 
     bad_export_path = tmp_path / "bad-export.json"
     bad_export_path.write_text(json.dumps({"schema_version": 999, "data": {}}))
@@ -194,13 +198,14 @@ def test_import_invalid_file_shows_inline_error_and_keeps_dialog_open(page, tmp_
         "return d && d.textContent.includes('Import failed'); }"
     )
     assert dialog.is_visible()
-    assert page.url == BASE_URL + "/home"
+    assert page.url == BASE_URL + "/account"
 
 
 def test_import_non_json_file_shows_invalid_file_error(page, tmp_path) -> None:
     """Uploading a non-JSON file is rejected with
     ``IMPORT_DATA_ERROR_INVALID_FILE`` and the dialog stays open."""
     _signup(page, _unique_username("e"))
+    page.goto(BASE_URL + "/account")
 
     not_json_path = tmp_path / "notes.txt"
     not_json_path.write_text("not json")

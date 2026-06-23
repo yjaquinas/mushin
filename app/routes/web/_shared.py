@@ -162,6 +162,37 @@ def _format_entry_time(occurred_at: str) -> str:
 templates.env.filters["format_entry_time"] = _format_entry_time
 
 
+def _format_count(n: int) -> str:
+    """Format a monotonic entry count with "1k"/"1m"-style compact notation.
+
+    - ``n < 1000`` → plain integer string, e.g. ``"999"``.
+    - ``1000 <= n < 1_000_000`` → ``n / 1000``, floored to one decimal place
+      (never rounded up past the true value), trailing ``.0`` stripped,
+      suffixed ``"k"``. E.g. ``1999`` → ``"1.9k"``, not ``"2k"``.
+    - ``n >= 1_000_000`` → same logic divided by 1,000,000, suffixed ``"m"``.
+
+    No ``+`` suffix anywhere. Uses integer arithmetic (not float division) to
+    extract the floored one-decimal digit, avoiding float-precision edge
+    cases like ``1999 / 1000``. Negative input isn't expected (counts are
+    monotonic) and isn't handled.
+    """
+    if n < 1000:
+        return str(n)
+    if n < 1_000_000:
+        whole, remainder = divmod(n, 1000)
+        suffix = "k"
+    else:
+        whole, remainder = divmod(n, 1_000_000)
+        suffix = "m"
+    tenths = (remainder * 10) // (1000 if suffix == "k" else 1_000_000)
+    if tenths == 0:
+        return f"{whole}{suffix}"
+    return f"{whole}.{tenths}{suffix}"
+
+
+templates.env.filters["format_count"] = _format_count
+
+
 # ---------------------------------------------------------------------------
 # Session helpers
 # ---------------------------------------------------------------------------

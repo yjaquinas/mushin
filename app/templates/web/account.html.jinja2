@@ -71,4 +71,26 @@
     </form>
 </section>
 {% endif %}
+
+{# Export/import/logout are available to every account, including guests
+   (guests have no username/public profile but can still manage and sign
+   out of their data — see .claude/rules/repo-wide.md). #}
+<section class="flex flex-col gap-4 border-t border-border pt-4">
+    <a
+        href="/export"
+        class="text-caption text-text-muted underline-offset-2 hover:underline focus-visible:outline-offset-2"
+    >
+        {{ strings.FOOTER_EXPORT_DATA }}
+    </a>
+    {% include "components/import_data_dialog.html.jinja2" with context %}
+    <button
+        type="button"
+        hx-post="/auth/logout"
+        hx-swap="none"
+        hx-on::after-request="if(event.detail.successful) window.location.href = '/'"
+        class="flex min-h-tap w-full items-center justify-center rounded-button border border-border px-4 py-3 text-body font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline-offset-2"
+    >
+        {{ strings.FOOTER_LOGOUT }}
+    </button>
+</section>
 {% endblock %}

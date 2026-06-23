@@ -30,7 +30,7 @@
     "
 >
     <div class="bg-obsidian">
-        <div class="mx-auto flex max-w-screen-sm items-baseline justify-between gap-2 px-4 py-3">
+        <div class="mx-auto flex max-w-screen-md items-baseline justify-between gap-2 px-4 py-3">
             <a
                 href="{{ home_url }}"
                 class="flex items-baseline gap-2 focus-visible:outline-offset-2"
@@ -57,39 +57,23 @@
             </div>
         </div>
     </div>
-    <main class="mx-auto flex max-w-screen-sm grow flex-col gap-4 p-4">
+    <main class="mx-auto flex w-full max-w-screen-md grow flex-col gap-4 p-4">
         {% block content %}{% endblock %}
     </main>
-    <footer class="mx-auto flex max-w-screen-sm items-center justify-center gap-4 p-4">
+    <footer class="mx-auto flex w-full max-w-screen-md items-center justify-center gap-4 p-4">
         {% block footer %}
         <a
             href="/privacy"
-            class="text-caption text-text-muted underline-offset-2 hover:underline focus-visible:outline-offset-2"
+            class="min-h-tap text-micro sm:text-caption text-text-muted underline-offset-2 hover:underline focus-visible:outline-offset-2"
         >
             {{ strings.FOOTER_PRIVACY }}
         </a>
         <a
             href="/account"
-            class="text-caption text-text-muted underline-offset-2 hover:underline focus-visible:outline-offset-2"
+            class="min-h-tap text-micro sm:text-caption text-text-muted underline-offset-2 hover:underline focus-visible:outline-offset-2"
         >
             {{ strings.FOOTER_ACCOUNT }}
         </a>
-        <a
-            href="/export"
-            class="text-caption text-text-muted underline-offset-2 hover:underline focus-visible:outline-offset-2"
-        >
-            {{ strings.FOOTER_EXPORT_DATA }}
-        </a>
-        {% include "components/import_data_dialog.html.jinja2" with context %}
-        <button
-            type="button"
-            hx-post="/auth/logout"
-            hx-swap="none"
-            hx-on::after-request="if(event.detail.successful) window.location.href = '/'"
-            class="min-h-tap text-caption text-text-muted underline-offset-2 transition hover:underline focus-visible:outline-offset-2"
-        >
-            {{ strings.FOOTER_LOGOUT }}
-        </button>
         {% endblock %}
     </footer>
 </body>

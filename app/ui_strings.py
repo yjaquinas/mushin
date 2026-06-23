@@ -142,7 +142,7 @@ DETAIL_BACK = "Home"
 
 # Inline rename form (sub-tally heading)
 RENAME_SLUG_NOTICE = (
-    "Renaming will change your share link. Anyone with the old link will see a 404."
+    "Renaming will change your share link. The old link will stop working."
 )
 RENAME_LABEL = "Rename activity"
 RENAME_SAVE = "Save"
@@ -242,17 +242,21 @@ THEME_TOGGLE_LABEL_LIGHT = "Theme: light. Switch to dark."
 THEME_TOGGLE_LABEL_DARK = "Theme: dark. Switch to light."
 
 # ---------------------------------------------------------------------------
-# Footer
+# Footer (Privacy + Account) and account-page data/session actions
 # ---------------------------------------------------------------------------
 
 FOOTER_PRIVACY = "Privacy Policy"
 FOOTER_ACCOUNT = "Account"
+
+# Export/import/logout live on the /account page (not the footer) but keep
+# their FOOTER_* names — the names predate the move and the copy itself
+# isn't footer-specific, so renaming would just duplicate content.
 FOOTER_EXPORT_DATA = "Export my data"
 FOOTER_IMPORT_DATA = "Import data"
 FOOTER_LOGOUT = "Log out"
 FOOTER_DELETE_DATA = "Delete my data"
 
-# Delete-my-data confirm dialog (footer)
+# Delete-my-data confirm dialog (account page)
 DELETE_DATA_TITLE = "Delete all of your data?"
 DELETE_DATA_BODY = "This deletes every record kept under this device — activities, sub-tallies, entries, and memos. This can't be undone."
 DELETE_DATA_CONFIRM = "Delete my record"
@@ -489,6 +493,7 @@ CONNECT_ERROR_GENERIC = "That didn't go through."
 
 SEARCH_TITLE = "Search"
 SEARCH_NAV_LABEL = "Search"
+SEARCH_BACK_LABEL = "Back"
 SEARCH_INPUT_LABEL = "Search people and tags"
 SEARCH_INPUT_PLACEHOLDER = "Search by name or tag"
 SEARCH_PROMPT = "Search for people by name, or activities by tag."

@@ -51,6 +51,9 @@ from app.routes.web._shared import (
     _current_user as _current_user,
 )
 from app.routes.web._shared import (
+    _format_count as _format_count,
+)
+from app.routes.web._shared import (
     _format_entry_time as _format_entry_time,
 )
 from app.routes.web._shared import (

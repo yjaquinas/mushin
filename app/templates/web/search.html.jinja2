@@ -3,7 +3,15 @@
 {% block title %}{{ strings.SEARCH_TITLE }} · {{ strings.APP_NAME }}{% endblock %}
 
 {% block content %}
-<header class="flex items-center py-2">
+<header class="flex items-center gap-2 py-2">
+    <a
+        href="{{ home_url }}"
+        class="flex items-center gap-1 text-caption font-medium text-text-secondary underline-offset-2 transition hover:underline focus-visible:outline-offset-2"
+    >
+        {% from "components/_icon.html.jinja2" import icon %}
+        {{ icon("chevron-left", size=18) }}
+        {{ strings.SEARCH_BACK_LABEL }}
+    </a>
     <h1 class="text-title font-semibold text-text-primary">{{ strings.SEARCH_TITLE }}</h1>
 </header>
 

@@ -572,7 +572,7 @@ async def test_masthead_has_wordmark_and_theme_toggle_only(client: AsyncClient) 
     assert "components/account_menu" not in text
 
 
-async def test_logged_in_footer_has_privacy_export_import_and_logout(client: AsyncClient) -> None:
+async def test_logged_in_footer_has_only_privacy_and_account(client: AsyncClient) -> None:
     await _guest_login(client)
 
     resp = await client.get("/home")
@@ -582,15 +582,15 @@ async def test_logged_in_footer_has_privacy_export_import_and_logout(client: Asy
     assert strings_module.FOOTER_PRIVACY in text
     assert 'href="/privacy"' in text
 
-    assert strings_module.FOOTER_EXPORT_DATA in text
-    assert 'href="/export"' in text
+    assert strings_module.FOOTER_ACCOUNT in text
+    assert 'href="/account"' in text
 
-    assert strings_module.FOOTER_IMPORT_DATA in text
-    assert 'role="dialog"' in text
-    assert 'aria-modal="true"' in text
-
-    assert strings_module.FOOTER_LOGOUT in text
-    assert 'hx-post="/auth/logout"' in text
+    # Export/import/logout moved to the /account page — the footer (shared
+    # across every page via base.html.jinja2) no longer carries them.
+    assert strings_module.FOOTER_EXPORT_DATA not in text
+    assert strings_module.FOOTER_IMPORT_DATA not in text
+    assert strings_module.FOOTER_LOGOUT not in text
+    assert 'hx-post="/auth/logout"' not in text
 
     assert strings_module.FOOTER_DELETE_DATA not in text
     assert strings_module.DELETE_DATA_TITLE not in text
@@ -609,6 +609,28 @@ async def test_entry_footer_has_only_privacy_policy(client: AsyncClient) -> None
     assert strings_module.FOOTER_IMPORT_DATA not in text
     assert strings_module.FOOTER_LOGOUT not in text
     assert 'hx-post="/auth/logout"' not in text
+    assert 'hx-post="/auth/delete"' not in text
+
+
+async def test_account_page_has_export_import_and_logout(client: AsyncClient) -> None:
+    await _guest_login(client)
+
+    resp = await client.get("/account")
+    assert resp.status_code == 200
+    text = resp.text
+
+    assert strings_module.FOOTER_EXPORT_DATA in text
+    assert 'href="/export"' in text
+
+    assert strings_module.FOOTER_IMPORT_DATA in text
+    assert 'role="dialog"' in text
+    assert 'aria-modal="true"' in text
+
+    assert strings_module.FOOTER_LOGOUT in text
+    assert 'hx-post="/auth/logout"' in text
+
+    assert strings_module.FOOTER_DELETE_DATA not in text
+    assert strings_module.DELETE_DATA_TITLE not in text
     assert 'hx-post="/auth/delete"' not in text
 
 

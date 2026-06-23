@@ -22,21 +22,21 @@
 
     <div class="flex flex-col gap-2">
         <dl class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div class="flex flex-col">
+            <div class="flex flex-col items-center text-center">
                 <dt class="text-caption text-text-muted">{{ strings.STATS_PERIOD_WEEK }}</dt>
-                <dd class="text-title font-medium text-text-primary">{{ counts.this_week }}</dd>
+                <dd class="text-title font-medium text-text-primary">{{ counts.this_week | format_count }}</dd>
             </div>
-            <div class="flex flex-col">
+            <div class="flex flex-col items-center text-center">
                 <dt class="text-caption text-text-muted">{{ strings.STATS_PERIOD_MONTH }}</dt>
-                <dd class="text-title font-medium text-text-primary">{{ counts.this_month }}</dd>
+                <dd class="text-title font-medium text-text-primary">{{ counts.this_month | format_count }}</dd>
             </div>
-            <div class="flex flex-col">
+            <div class="flex flex-col items-center text-center">
                 <dt class="text-caption text-text-muted">{{ strings.STATS_PERIOD_YEAR }}</dt>
-                <dd class="text-title font-medium text-text-primary">{{ counts.this_year }}</dd>
+                <dd class="text-title font-medium text-text-primary">{{ counts.this_year | format_count }}</dd>
             </div>
-            <div class="flex flex-col">
+            <div class="flex flex-col items-center text-center">
                 <dt class="text-caption text-text-muted">{{ strings.STATS_PERIOD_LIFETIME }}</dt>
-                <dd class="text-title font-medium text-text-primary">{{ counts.lifetime }}</dd>
+                <dd class="text-title font-medium text-text-primary">{{ counts.lifetime | format_count }}</dd>
             </div>
         </dl>
     </div>
