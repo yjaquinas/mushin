@@ -109,31 +109,6 @@
   --color-danger:        #A6471C;
   --color-danger-subtle: #FBEAE3;
 
-  /*
-   * Heatmap intensity ramp — used by the trailing-365-day contribution
-   * heatmap. Five steps, monotonically increasing in both lightness and
-   * saturation, colorblind-safe (lightness alone signals intensity). heat-0
-   * is the explicit "no activity" cell and must stay visually distinct from
-   * heat-1 (a low-but-nonzero day) — it sits on surface-2, not white, so an
-   * empty cell never looks like a card background.
-   *
-   * Decoupled from --color-accent (2026-06-19): accent is now cinnabar, a
-   * saturated red unsuited to a calm intensity ramp. The heat ramp keeps
-   * its own independent calm blue-toned hue family, anchored on surface-2,
-   * and terminates on a calm slate-blue — never on cinnabar.
-   *
-   * heat-0 : zero entries        (== --color-surface-2)
-   * heat-1 : low activity
-   * heat-2 : moderate activity
-   * heat-3 : high activity
-   * heat-4 : busiest day(s)      (own calm hue, independent of accent)
-   */
-  --color-heat-0: #F1F5F9; /* surface-2 — empty */
-  --color-heat-1: #DCE7F2;
-  --color-heat-2: #B6CCE3;
-  --color-heat-3: #7FA3C9;
-  --color-heat-4: #3D6FA3; /* calm slate-blue — busiest, independent of accent */
-
   /* ── Type scale ───────────────────────────────────────────────────────── */
 
   /*
@@ -222,7 +197,6 @@
  * mapping (web) and the future HXML mapping (native) consume one contract.
  *
  * Re-derived (not naively darkened) so the invariants still hold:
- *   - heat-0 == surface-2, heat-4 own calm hue (decoupled from accent).
  *   - accent-subtle is a dark, desaturated tint suitable as a background
  *     under light accent text (chip-selected), not a light tint under dark
  *     text as in light mode.
@@ -244,8 +218,23 @@
  * has the identical structural gap against heat-2/3/4) — graded here
  * against heat-0, the ramp's default/most common cell and border-strong's
  * other real usages (card outlines, focus-ring fallback, today-ring).
+ *
+ * Bug fix (2026-06-22, UI polish pass): --color-brand was never overridden
+ * here, so it kept its light-mode value (#0F172A) — which is exactly
+ * --color-surface-0's dark value, making every bg-brand/text-on-brand CTA
+ * button (quick-add, submit, etc.) blend invisibly into the dark canvas.
+ * #5A6B85 fixes this: 4.68:1 against --color-on-brand (#f0eeec, text
+ * contrast, clears 4.5:1) and 3.30:1 against --color-surface-0 (component
+ * contrast, clears 3:1 — the canvas most brand buttons sit directly on,
+ * e.g. activity_detail's log button). Against --color-surface-1 (cards)
+ * it's 2.70:1, short of 3:1 — the same structural tradeoff as
+ * border-strong above: no single brand value can hit 3:1 against every
+ * surface it might sit on while still keeping on-brand text readable, so
+ * this is graded against the canvas case and the cards-list use is an
+ * accepted, documented shortfall rather than a silent one.
  */
 [data-theme="dark"] {
+  --color-brand:         #5A6B85;
   --color-surface-0:     #0F172A;
   --color-surface-1:     #1E293B;
   --color-surface-2:     #2A3950;
@@ -263,12 +252,6 @@
 
   --color-danger:        #E8855E;
   --color-danger-subtle: #3D2A20;
-
-  --color-heat-0: #2A3950; /* surface-2 — empty */
-  --color-heat-1: #324568;
-  --color-heat-2: #3D5A87;
-  --color-heat-3: #4A75AC;
-  --color-heat-4: #5C92D6; /* calm slate-blue — busiest, independent of accent */
 
   --color-on-brand: #f0eeec;
 }
@@ -371,81 +354,6 @@
    * Add an explicit offset so the ring clears the pill shape. */
   .chip:focus-visible {
     outline-offset: 3px;
-  }
-
-  /* ── Hero numeral "settle" on log ────────────────────────────────────── */
-  /*
-   * .hero--bumped — applied (once) to the hero numeral <p> by the HTMX swap
-   * fragment when a log changes its value. A quiet settle: the numeral
-   * fades and nudges up into place — no scale/bounce, no color change.
-   * `animation-fill-mode: none` so the element returns to its normal,
-   * un-animated state once the one-shot finishes (no residual transform/
-   * opacity to fight subsequent renders or re-triggers).
-   */
-  @keyframes hero-settle {
-    from {
-      opacity:   0.6;
-      transform: translateY(2px);
-    }
-    to {
-      opacity:   1;
-      transform: translateY(0);
-    }
-  }
-
-  /* ── Reduced-motion gate ──────────────────────────────────────────────── */
-  /*
-   * Non-essential motion (hero settle) is gated behind
-   * prefers-reduced-motion: no-preference. Under reduced motion this rule
-   * doesn't apply at all, so the element renders directly at its final
-   * opacity/transform with no animation step — correct end state,
-   * zero motion.
-   */
-  @media (prefers-reduced-motion: no-preference) {
-    .hero--bumped {
-      animation: hero-settle 280ms ease-out;
-      animation-fill-mode: none;
-    }
-  }
-
-  /* ── Heatmap (trailing-365-day contribution grid) ────────────────────── */
-  /*
-   * .heat-cell — a single day-cell in the contribution heatmap.
-   *
-   * NON-INTERACTIVE: heatmap cells are decorative density indicators, not
-   * tap targets — there are 365 of them, far below the 44px minimum is
-   * unavoidable and not required here. If a cell needs to be tappable
-   * (e.g. "view this day"), use .cal-day instead. Intensity is set by
-   * applying one of .heat-cell--0 through .heat-cell--4 (mapping to the
-   * --color-heat-* ramp), driven server-side from the entry count.
-   *
-   * Render heatmap cells inside a `role="img"` grid with a single
-   * descriptive aria-label (e.g. "지난 365일 활동 기록") — individual cells
-   * are aria-hidden; per-cell tooltips are not required at this size.
-   */
-  .heat-cell {
-    width:           0.625rem;  /* 10 px */
-    height:          0.625rem;  /* 10 px */
-    border-radius:   0.125rem;  /* 2 px — small square, slightly softened */
-    background:      var(--color-heat-0);
-  }
-
-  .heat-cell--0 { background: var(--color-heat-0); }
-  .heat-cell--1 { background: var(--color-heat-1); }
-  .heat-cell--2 { background: var(--color-heat-2); }
-  .heat-cell--3 { background: var(--color-heat-3); }
-  .heat-cell--4 { background: var(--color-heat-4); }
-
-  /*
-   * .heat-cell--month-start — a subtle column divider marking the first
-   * day of a month, applied to EVERY month boundary (not just the sparse
-   * quarterly subset that gets a text label above the grid) so the
-   * boundary stays visually legible even where there's no label. A
-   * left border reads as a column divider given the grid's column-major
-   * (grid-flow-col) layout.
-   */
-  .heat-cell--month-start {
-    border-left: 1.5px solid var(--color-border-strong);
   }
 
   /* ── Calendar (month view with marked days) ──────────────────────────── */

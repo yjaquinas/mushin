@@ -200,7 +200,6 @@ async def activity_detail(
     )
     context["field_stats"] = _build_field_stats_context(activity_id, owner_id, field_defs, tz=tz)
     context["public_notice"] = None
-    context["preview_visitor_url"] = None
     context["is_owner"] = True
 
     return templates.TemplateResponse(

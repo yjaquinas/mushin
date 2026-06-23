@@ -14,6 +14,7 @@ Path-scoped: loads when Claude is editing HTMX templates, shared components, or 
 - HTMX templates use `.html.jinja2` (not bare `.html` or `.j2`).
 - Files live in `app/templates/web/` (full pages) and `app/templates/components/` (shared fragments).
 - Every full page extends `base.html.jinja2` from `app/templates/web/`.
+- **`base.html.jinja2`'s shell is a sticky-footer flex column: `<body>` is `flex flex-col min-h-screen`, `<main>` is the sole `grow` child, and `<footer>` is flow-positioned (never `fixed`/`sticky`) so it pins to the bottom on short pages but is pushed down naturally by long ones — don't add a second `grow`/`flex-1` child or convert the footer to fixed positioning.**
 
 ## Interaction model
 

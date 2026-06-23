@@ -1,7 +1,7 @@
 """Playwright E2E specs for the calendar "selected day" affordance (month and
-week views): tapping a ``.cal-day`` cell swaps the calendar body to a
-day-detail state showing that day's entries inline, all via an HTMX fragment
-swap (no full navigation).
+week views): tapping a ``.cal-day`` cell swaps the log area below the
+always-visible grid/strip to a day-detail state showing that day's entries
+inline, all via an HTMX fragment swap (no full navigation).
 
 These are real `pytest` + `playwright.sync_api` specs (see
 .claude/rules/tests.md) -- not agent-driven via the `playwright-cli` skill.
@@ -29,41 +29,47 @@ pattern used in ``tests/e2e/test_entry_comments.py`` and
 ``tests/e2e/test_comment_notifications.py``) so these specs still have a card
 to exercise.
 
-As of Task 5 (persistent-header / swappable-body restructure), selecting a
-day swaps the whole calendar body to a *mutually exclusive* state: the grid
-(and the full-period log) is removed from the DOM entirely, replaced by a
-"Calendar" back-control + only that day's entries. There is no longer a
-state where a cell carries ``cal-day--selected`` while the grid is visible
-on screen -- the grid disappears the moment a day is selected. Specs that
-previously asserted ``cal-day--selected`` on a still-visible grid now assert
-the day-detail body state instead (back-control + day panel present, grid +
-full-period log absent), and "deselect" is exercised via the back-control
-rather than re-tapping a (now-absent) grid cell.
+As of the calendar-selection rework (history.html.jinja2's persistent
+grid/swappable-log-area restructure), selecting a day no longer removes the
+month grid / week strip from the DOM. The period visual (table or week strip)
+ALWAYS renders, regardless of day selection. Only the log area *below* the
+visual swaps between two mutually exclusive states:
+  - no day selected (the default): the full-period log
+    (components/period_log.html.jinja2).
+  - a day selected: a "Clear selection" control followed by *only* that
+    day's entries (components/day_entries.html.jinja2, ``#calendar-day-detail``).
+
+The tapped day's cell carries both the ``cal-day--selected`` class and
+``aria-pressed="true"``. Tapping an already-selected cell toggles the
+selection off (same effect as clicking "Clear selection") rather than
+re-selecting it, since its own ``hx-get`` omits ``&day=...`` while selected.
 
 Specs covered
 -------------
-1. Tapping a date in the month view swaps to the day-detail body state and
-   renders that day's entries (or the empty state) inline, in the same HTMX
-   interaction — no full page navigation.
-2. Tapping a different date while a day's detail is showing (via the back
-   control, then a new tap) selects that one instead.
+1. Tapping a date in the month view keeps the grid in the DOM, marks that
+   cell ``cal-day--selected`` / ``aria-pressed="true"``, and renders the
+   day-detail panel (``#calendar-day-detail``) below it instead of the
+   full-period log.
+2. Tapping a different date while a day's detail is showing (without
+   clearing first) selects that one instead.
 3. A date that has a logged entry shows ``cal-day--marked`` before it's
    tapped; after tapping, the day-detail panel for that day renders the
-   logged entry.
+   logged entry, and the grid (with the mark) is still visible.
 4. Navigating to the next/prev month, or switching period tabs, lands back
-   on the default (grid + full-period log) body state -- no day detail.
+   on the default (no day selected, full-period log) body state.
 5. On first load of the month view (no tap yet), no cell carries
    ``cal-day--selected`` and the grid + full-period log are visible.
-6. Tapping the "Calendar" back-control from the day-detail state restores
-   the default body state (grid + full-period log back, day detail gone).
-7. Switching to week view and tapping a day in the week strip behaves
-   identically to month view's day tap (Task 4 build-plan item: week's day
-   cells previously had no tap affordance at all).
-8. Selecting a day removes the month grid and the full-period log from the
-   DOM entirely (not just visually hidden) -- only the back-control and that
-   day's entries remain. Tapping the "Calendar" back-control restores the
-   grid + full-period log at the same period/anchor, and the day detail is
-   gone again (Task 5 build-plan item: persistent header / swappable body).
+6. Clicking "Clear selection" from the day-detail state restores the
+   full-period log, the grid is still present, and no cell is marked
+   ``cal-day--selected``.
+7. Re-tapping the already-selected day clears the selection -- same effect
+   as the "Clear selection" control.
+8. Switching to week view and tapping a day in the week strip behaves
+   identically to month view's day tap (the week strip stays visible, the
+   day-detail panel renders below it).
+9. After a day-select swap, focus lands on the day-detail panel
+   (``#calendar-day-detail``), per ``data-history-focus`` /
+   ``hx-on::after-swap`` in components/history.html.jinja2.
 """
 
 from __future__ import annotations
@@ -179,20 +185,21 @@ def _unique_username(slug: str) -> str:
 
 def test_initial_month_load_has_no_selected_day(page) -> None:
     """On first load of the month view (no tap yet), no cell carries
-    cal-day--selected."""
+    cal-day--selected, and the grid + full-period log are both visible."""
     username = _unique_username("a")
     _signup(page, username)
 
     _open_detail(page, "Kendo")
 
     assert page.locator(".cal-day--selected").count() == 0
+    assert page.locator("table").count() == 1
+    assert page.locator("#calendar-day-detail").count() == 0
 
 
-def test_tapping_a_day_selects_it_and_renders_entries_inline(page) -> None:
-    """Tapping a date in the month view swaps to the day-detail body state
-    and renders that day's entries (here: the empty state, since no entry
-    was logged) inline via an HTMX fragment swap -- no full navigation. The
-    grid disappears entirely once a day is selected (Task 5)."""
+def test_tapping_a_day_keeps_grid_and_renders_entries_inline(page) -> None:
+    """Tapping a date in the month view keeps the grid in the DOM, marks the
+    tapped cell selected, and renders the day-detail panel below it via an
+    HTMX fragment swap -- no full navigation."""
     username = _unique_username("b")
     _signup(page, username)
 
@@ -206,17 +213,23 @@ def test_tapping_a_day_selects_it_and_renders_entries_inline(page) -> None:
     page.wait_for_selector(f"text={ui_strings.CALENDAR_DAY_ENTRIES_EMPTY}")
     assert navigated["count"] == 0, "tapping a calendar day should swap a fragment, not navigate"
 
-    # The grid is gone entirely in the day-detail state -- not merely
-    # unselected.
-    assert page.locator(".cal-day").count() == 0
-    assert page.locator("table").count() == 0
-    assert page.get_by_role("button", name=ui_strings.CALENDAR_BACK_TO_CALENDAR).count() == 1
+    # The grid is still present -- only the log area below it swapped.
+    assert page.locator("table").count() == 1
+    assert page.locator(".cal-day").count() > 0
+
+    selected_cell = page.locator(".cal-day--today").first
+    assert "cal-day--selected" in (selected_cell.get_attribute("class") or "")
+    assert selected_cell.get_attribute("aria-pressed") == "true"
+
+    assert page.locator("#calendar-day-detail").count() == 1
+    heading = page.locator("#calendar-day-detail h4")
+    assert ui_strings.CALENDAR_DAY_ENTRIES_TITLE in heading.inner_text()
 
 
-def test_tapping_a_second_day_after_returning_to_calendar_selects_it(page) -> None:
-    """Selecting a date, returning to the calendar via the back-control, then
-    selecting a different date renders that second date's detail instead --
-    one day's detail is shown at a time."""
+def test_tapping_a_second_day_selects_it_instead(page) -> None:
+    """Tapping a different date while a day's detail is showing (without
+    clearing first) selects that one instead -- one day's detail is shown at
+    a time, and the previously-selected cell is no longer marked."""
     username = _unique_username("c")
     _signup(page, username)
 
@@ -230,14 +243,7 @@ def test_tapping_a_second_day_after_returning_to_calendar_selects_it(page) -> No
     first_label = first_day.inner_text().strip()
     first_day.click()
     page.wait_for_selector(f"text={ui_strings.CALENDAR_DAY_ENTRIES_TITLE} — ")
-    # The day-entries heading reads "{title} — {YYYY-MM-DD}" -- capture the
-    # full panel heading text so it can be compared against the second tap's.
-    first_panel_text = page.locator(
-        "h4", has_text=ui_strings.CALENDAR_DAY_ENTRIES_TITLE
-    ).inner_text()
-
-    page.get_by_role("button", name=ui_strings.CALENDAR_BACK_TO_CALENDAR).click()
-    page.wait_for_selector("table")
+    first_panel_text = page.locator("#calendar-day-detail h4").inner_text()
 
     # Pick a different day (by visible label) for the second tap.
     second_day = None
@@ -253,18 +259,20 @@ def test_tapping_a_second_day_after_returning_to_calendar_selects_it(page) -> No
     assert second_day is not None, "expected a second distinct day cell to tap"
 
     second_day.click()
-    page.wait_for_selector(f"text={ui_strings.CALENDAR_DAY_ENTRIES_TITLE} — ")
-    second_panel_text = page.locator(
-        "h4", has_text=ui_strings.CALENDAR_DAY_ENTRIES_TITLE
-    ).inner_text()
+    page.wait_for_load_state("networkidle")
+    second_panel_text = page.locator("#calendar-day-detail h4").inner_text()
 
     assert second_label != first_label
     assert second_panel_text != first_panel_text
 
+    # Only one cell should be marked selected at a time.
+    assert page.locator(".cal-day--selected").count() == 1
+
 
 def test_marked_day_shows_logged_entry_when_selected(page) -> None:
-    """A date with a logged entry shows cal-day--marked in the default grid
-    state; tapping it swaps to the day-detail state showing that entry."""
+    """A date with a logged entry shows cal-day--marked in the grid; tapping
+    it keeps the grid (with the mark) visible and shows that entry in the
+    day-detail panel below it."""
     username = _unique_username("d")
     _signup(page, username)
 
@@ -275,13 +283,15 @@ def test_marked_day_shows_logged_entry_when_selected(page) -> None:
     marked_day.click()
 
     page.wait_for_selector(f"text={ui_strings.CALENDAR_DAY_ENTRIES_TITLE}")
-    assert page.locator(".cal-day--marked").count() == 0, "grid is gone in the day-detail state"
+    # The grid (and the mark) is still present alongside the day-detail panel.
+    assert page.locator(".cal-day--marked").count() == 1
+    assert page.locator("#calendar-day-detail").count() == 1
 
 
 def test_changing_month_returns_to_default_body_state(page) -> None:
     """Navigating to the next/prev month while a day's detail is showing
-    lands back on the default body state -- grid + full-period log restored,
-    no day detail."""
+    lands back on the default body state -- full-period log restored, no day
+    detail, grid (still) present throughout."""
     username = _unique_username("e")
     _signup(page, username)
 
@@ -295,8 +305,7 @@ def test_changing_month_returns_to_default_body_state(page) -> None:
     page.wait_for_load_state("networkidle")
 
     assert page.locator(".cal-day--selected").count() == 0
-    assert page.get_by_text(ui_strings.CALENDAR_DAY_ENTRIES_EMPTY).count() == 0
-    assert page.get_by_text(ui_strings.CALENDAR_DAY_ENTRIES_TITLE).count() == 0
+    assert page.locator("#calendar-day-detail").count() == 0
     assert page.locator("table").count() == 1
 
     page.get_by_role("button", name=ui_strings.CALENDAR_PREV_MONTH).click()
@@ -309,7 +318,7 @@ def test_changing_month_returns_to_default_body_state(page) -> None:
 def test_switching_period_tabs_returns_to_default_body_state(page) -> None:
     """Switching period tabs (e.g. month -> week -> month) while a day's
     detail is showing lands back on the default body state -- no day detail,
-    grid restored."""
+    grid restored at the new period."""
     username = _unique_username("f")
     _signup(page, username)
 
@@ -326,14 +335,14 @@ def test_switching_period_tabs_returns_to_default_body_state(page) -> None:
     page.wait_for_load_state("networkidle")
 
     assert page.locator(".cal-day--selected").count() == 0
-    assert page.get_by_text(ui_strings.CALENDAR_DAY_ENTRIES_EMPTY).count() == 0
-    assert page.get_by_text(ui_strings.CALENDAR_DAY_ENTRIES_TITLE).count() == 0
+    assert page.locator("#calendar-day-detail").count() == 0
     assert page.locator("table").count() == 1
 
 
-def test_back_control_restores_default_body_state(page) -> None:
-    """Tapping the "Calendar" back-control from the day-detail state restores
-    the default body state: grid + full-period log back, day detail gone."""
+def test_clear_selection_restores_default_body_state(page) -> None:
+    """Clicking "Clear selection" from the day-detail state restores the
+    full-period log; the grid stays present throughout and no cell remains
+    marked selected."""
     username = _unique_username("g")
     _signup(page, username)
 
@@ -342,23 +351,51 @@ def test_back_control_restores_default_body_state(page) -> None:
     today_cell = page.locator(".cal-day--today").first
     today_cell.click()
     page.wait_for_selector(f"text={ui_strings.CALENDAR_DAY_ENTRIES_EMPTY}")
+    assert page.locator("table").count() == 1
 
-    page.get_by_role("button", name=ui_strings.CALENDAR_BACK_TO_CALENDAR).click()
-    page.wait_for_load_state("networkidle")
+    navigated = _track_navigations(page)
+    page.get_by_role("button", name=ui_strings.HISTORY_CLEAR_SELECTION).click()
+    page.wait_for_selector(f"text={ui_strings.HISTORY_LOG_EMPTY}")
+    assert navigated["count"] == 0, "clear-selection should swap a fragment, not navigate"
 
     assert page.locator(".cal-day--selected").count() == 0
-    assert page.get_by_text(ui_strings.CALENDAR_DAY_ENTRIES_EMPTY).count() == 0
-    assert page.get_by_text(ui_strings.CALENDAR_DAY_ENTRIES_TITLE).count() == 0
+    assert page.locator("#calendar-day-detail").count() == 0
     assert page.locator("table").count() == 1
 
 
-def test_week_view_day_tap_selects_it_and_renders_entries_inline(page) -> None:
-    """Tapping a day in the week strip (Task 4 build-plan item) behaves like
-    month view's day tap: it swaps to the day-detail body state and renders
-    that day's entries inline via an HTMX fragment swap, no full navigation
-    -- exercising the week-specific gap this task closes (week's day cells
-    previously weren't interactive at all). The week strip disappears
-    entirely once a day is selected (Task 5), same as the month grid."""
+def test_retapping_selected_day_clears_selection(page) -> None:
+    """Re-tapping the already-selected day cell clears the selection -- the
+    same effect as clicking "Clear selection" -- without needing the explicit
+    control."""
+    username = _unique_username("k")
+    _signup(page, username)
+
+    _open_detail(page, "Kendo")
+
+    today_cell = page.locator(".cal-day--today").first
+    today_cell.click()
+    page.wait_for_selector(f"text={ui_strings.CALENDAR_DAY_ENTRIES_EMPTY}")
+    assert "cal-day--selected" in (
+        page.locator(".cal-day--today").first.get_attribute("class") or ""
+    )
+
+    navigated = _track_navigations(page)
+    page.locator(".cal-day--today").first.click()
+    page.wait_for_selector(f"text={ui_strings.HISTORY_LOG_EMPTY}")
+    assert navigated["count"] == 0, "re-tapping a selected day should swap a fragment, not navigate"
+
+    assert page.locator(".cal-day--selected").count() == 0
+    assert page.locator("#calendar-day-detail").count() == 0
+    today_cell_after = page.locator(".cal-day--today").first
+    assert today_cell_after.get_attribute("aria-pressed") == "false"
+    assert page.locator("table").count() == 1
+
+
+def test_week_view_day_tap_keeps_strip_and_renders_entries_inline(page) -> None:
+    """Tapping a day in the week strip behaves like month view's day tap: the
+    strip stays in the DOM, the tapped cell is marked selected, and the
+    day-detail panel renders below it via an HTMX fragment swap, no full
+    navigation."""
     username = _unique_username("h")
     _signup(page, username)
 
@@ -376,9 +413,32 @@ def test_week_view_day_tap_selects_it_and_renders_entries_inline(page) -> None:
     page.wait_for_selector(f"text={ui_strings.CALENDAR_DAY_ENTRIES_TITLE}")
     assert navigated["count"] == 0, "tapping a week-strip day should swap a fragment, not navigate"
 
-    # The week strip is gone entirely in the day-detail state.
-    assert page.locator(".cal-day").count() == 0
-    assert page.get_by_role("button", name=ui_strings.CALENDAR_BACK_TO_CALENDAR).count() == 1
+    # The week strip is still present; the day-detail panel renders below it.
+    assert page.locator(".cal-day").count() > 0
+    selected_cell = page.locator(".cal-day--today").first
+    assert "cal-day--selected" in (selected_cell.get_attribute("class") or "")
+    assert selected_cell.get_attribute("aria-pressed") == "true"
+    assert page.locator("#calendar-day-detail").count() == 1
+
+
+def test_focus_lands_on_day_detail_panel_after_day_select_swap(page) -> None:
+    """After a day-select fragment swap, focus lands on the day-detail panel
+    (#calendar-day-detail) per the after-swap focus script in
+    components/history.html.jinja2 -- not on the period tab or anywhere
+    else."""
+    username = _unique_username("m")
+    _signup(page, username)
+
+    _open_detail(page, "Kendo")
+
+    today_cell = page.locator(".cal-day--today").first
+    today_cell.click()
+
+    page.wait_for_selector(f"text={ui_strings.CALENDAR_DAY_ENTRIES_EMPTY}")
+
+    focused_id = page.evaluate("document.activeElement && document.activeElement.id")
+    assert focused_id == "calendar-day-detail"
+    assert page.locator("#calendar-day-detail:focus").count() == 1
 
 
 def test_owner_can_edit_and_comment_on_an_entry_from_the_day_detail_panel(page) -> None:
@@ -433,7 +493,7 @@ def test_owner_can_edit_and_comment_on_an_entry_from_the_day_detail_panel(page) 
 
     # Comment: the toggle on that same (now-edited) row opens the thread
     # composer and posting a comment renders it via a fragment swap, with
-    # the day-detail panel (back-control still present) intact throughout.
+    # the day-detail panel intact throughout.
     edited_row = page.locator("li.entry-row").first
     comment_toggle = edited_row.locator("button[hx-get*='/comments']")
     assert comment_toggle.count() == 1
@@ -443,18 +503,18 @@ def test_owner_can_edit_and_comment_on_an_entry_from_the_day_detail_panel(page) 
     page.get_by_role("button", name=ui_strings.COMMENTS_SUBMIT).click()
 
     page.wait_for_selector("text=noted from the merged calendar")
-    # Still inside the day-detail state -- the back-control is present and
-    # the grid never came back.
-    assert page.get_by_role("button", name=ui_strings.CALENDAR_BACK_TO_CALENDAR).count() == 1
-    assert page.locator("table").count() == 0
+    # Still inside the day-detail state -- the panel and the grid are both
+    # present.
+    assert page.locator("#calendar-day-detail").count() == 1
+    assert page.locator("table").count() == 1
 
 
-def test_selecting_a_day_hides_grid_and_log_then_back_control_restores_them(page) -> None:
-    """Selecting a day swaps to a mutually-exclusive body state: the month
-    grid and the full-period log are removed from the DOM entirely (not
-    merely hidden), leaving only the back-control + that day's entries.
-    Tapping the "Calendar" back-control restores the grid + full-period log
-    at the same period/anchor, and the day-entries panel is gone again."""
+def test_selecting_a_day_swaps_only_the_log_area_then_clear_restores_it(page) -> None:
+    """Selecting a day swaps only the log area below the grid: the month
+    grid stays in the DOM throughout, the full-period log is replaced by the
+    day-detail panel, and clicking "Clear selection" restores the
+    full-period log at the same period/anchor with the day-entries panel
+    gone again."""
     username = _unique_username("i")
     _signup(page, username)
 
@@ -464,26 +524,30 @@ def test_selecting_a_day_hides_grid_and_log_then_back_control_restores_them(page
     # Default state: month grid (a <table>) and the full-period log are both
     # present. The day-entries panel is absent.
     assert page.locator("table").count() == 1
-    assert page.get_by_text(ui_strings.CALENDAR_DAY_ENTRIES_TITLE).count() == 0
+    assert page.locator("#calendar-day-detail").count() == 0
 
     today_cell = page.locator(".cal-day--today").first
     today_cell.click()
     page.wait_for_selector(f"text={ui_strings.CALENDAR_DAY_ENTRIES_TITLE}")
 
-    # Selected-day state: the month grid table and the full-period log are
-    # both gone from the DOM, not just hidden -- only the back-control and
-    # that day's entries remain.
-    assert page.locator("table").count() == 0
+    # Selected-day state: the grid is still present (with the mark intact);
+    # the full-period log has been replaced by the day-detail panel.
+    assert page.locator("table").count() == 1
+    assert page.locator(".cal-day--marked").count() == 1
     assert page.get_by_text(ui_strings.HISTORY_LOG_EMPTY).count() == 0
-    back_button = page.get_by_role("button", name=ui_strings.CALENDAR_BACK_TO_CALENDAR)
-    assert back_button.count() == 1
+    clear_button = page.get_by_role("button", name=ui_strings.HISTORY_CLEAR_SELECTION)
+    assert clear_button.count() == 1
 
     navigated = _track_navigations(page)
-    back_button.click()
-    page.wait_for_selector("table")
-    assert navigated["count"] == 0, "the back-control should swap a fragment, not navigate"
+    clear_button.click()
+    # An entry was logged today (_log_entry_today), so the full-period log
+    # is non-empty -- wait for the day-detail panel to disappear rather than
+    # for HISTORY_LOG_EMPTY, which only renders when the period log is empty.
+    page.wait_for_selector("#calendar-day-detail", state="detached")
+    assert navigated["count"] == 0, "clear-selection should swap a fragment, not navigate"
 
-    # Back to default state: grid restored, day-entries panel gone again.
+    # Back to default state: grid still present, day-entries panel gone
+    # again, mark still intact.
     assert page.locator("table").count() == 1
-    assert page.get_by_text(ui_strings.CALENDAR_DAY_ENTRIES_TITLE).count() == 0
+    assert page.locator("#calendar-day-detail").count() == 0
     assert page.locator(".cal-day--marked").count() == 1

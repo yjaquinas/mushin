@@ -15,23 +15,20 @@ Specs covered
 1. Empty state for a fresh guest with zero sub-tallies: the home page shows
    the 無心 glyph, ``HOME_EMPTY``, and ``APP_GLOSS`` text — not the old bare
    ``<p>{{ strings.HOME_EMPTY }}</p>`` markup.
-2. Card icon + hierarchy: each activity card renders an
-   ``<svg aria-hidden="true">`` icon in the label row, and the hero numeral
-   is the only element on the card with ``text-text-primary``.
-3. Log -> micro-moment: on the sub-tally detail screen, submitting the
-   quick-add log form returns a card fragment whose hero numeral has
-   ``hero--bumped`` immediately after the swap, while the initial page
-   load's card does not.
-4. Log-panel focus + double-submit guard: expanding the inline log panel (via
+2. Card content: each activity card on /home renders the same Counts/
+   Streaks grid as the detail screen's Summary card (name header + grid,
+   no hero numeral, no per-activity icon in the label row -- the redundant
+   numeral was retired in favor of the richer grid).
+3. Log-panel focus + double-submit guard: expanding the inline log panel (via
    the detail screen's trigger above the activity card) moves focus inside
    ``#log-panel``; a successful submit collapses the panel
    (``aria-expanded="false"``); the submit button has
    ``hx-disabled-elt="this"``.
-5. Theme toggle: clicking the masthead theme toggle flips light <-> dark,
+4. Theme toggle: clicking the masthead theme toggle flips light <-> dark,
    setting ``data-theme`` on ``<html>`` accordingly (default with no cookie
    is light), and the choice persists across a page reload via the
    ``mushin_theme`` cookie.
-6. Home cards: every card on ``/home`` is a single ``<a>`` link to its
+5. Home cards: every card on ``/home`` is a single ``<a>`` link to its
    ``/activities/{id}`` detail page, has no visible action button, and a
    freshly-created category card (via ``POST /categories``) is clickable
    without a reload too.
@@ -128,27 +125,21 @@ def _signup(page, username: str, password: str = "correct-horse-battery") -> Non
 
 
 def _open_detail(page, heading: str):
-    """Navigate from /home to a sub-tally's detail screen via its card link,
-    returning the detail-screen's hero `<article>` locator for that sub-tally.
+    """Navigate from /home to an activity's detail screen via its card link,
+    returning the detail screen's ``#stats-summary-{id}`` locator (the
+    Summary card).
 
     The card links to ``/activities/{id}``, which 301-redirects to the
     canonical ``/@{username}/{slug}`` URL for any account with a username
     (every signup in this module has one). Wait for navigation away from
     /home generically rather than for one specific URL shape.
-
-    The detail screen's hero card is deliberately "chrome-less" (see
-    ``components/activity_card.html.jinja2``'s unlinked branch) -- it has no
-    heading of its own, since the page's own ``<h1>`` already names the
-    activity. So scope by the stable ``#card-{id}`` id (read off the /home
-    card before navigating) rather than by heading, which only exists on
-    /home's linked card.
     """
     home_card = page.locator("article", has=page.get_by_role("heading", name=heading))
-    card_id = home_card.get_attribute("id")
+    activity_id = (home_card.get_attribute("id") or "").rsplit("-", 1)[-1]
     home_card.locator("a").first.click()
     page.wait_for_url(lambda url: not url.endswith("/home"))
     page.wait_for_load_state("load")
-    return page.locator(f"#{card_id}")
+    return page.locator(f"#stats-summary-{activity_id}")
 
 
 def test_home_masthead_links_to_home(page) -> None:
@@ -199,53 +190,18 @@ def test_empty_state_shows_glyph_and_gloss_for_fresh_account(page) -> None:
     assert page.get_by_text("No-mind. Just show up, and watch it add up.").count() > 0
 
 
-def test_activity_cards_render_single_hero_numeral(page) -> None:
-    """The hero numeral is the only element on an activity card with
-    `text-text-primary` -- cards no longer carry a per-activity icon in the
-    label row (decluttered to name + hero numeral only)."""
+def test_activity_cards_render_summary_stats_grid(page) -> None:
+    """Each activity card on /home renders the same Counts/Streaks grid as
+    the detail screen's Summary card -- no hero numeral, no per-activity
+    icon in the label row (the redundant numeral was retired in favor of
+    the richer grid)."""
     _signup(page, _unique_username("c"))
 
     card = page.locator("article", has=page.get_by_role("heading", name="Kendo"))
 
-    # The hero numeral is the only `text-text-primary` element on the card.
-    brand_elements = card.locator(".text-text-primary")
-    assert brand_elements.count() == 1
-    hero_class = brand_elements.first.get_attribute("class") or ""
-    assert "text-hero-numeral" in hero_class
-
-
-def test_log_bumps_hero_numeral_with_micro_moment_class(page) -> None:
-    """On the sub-tally detail screen, submitting the quick-add log form
-    returns a card fragment whose hero numeral has `hero--bumped`, while the
-    initial page load's card does not."""
-    _signup(page, _unique_username("d"))
-
-    card = _open_detail(page, "Kendo")
-    hero = card.locator(".text-hero-numeral")
-
-    # Initial page load: no `hero--bumped` class.
-    initial_class = hero.get_attribute("class") or ""
-    assert "hero--bumped" not in initial_class
-
-    page.get_by_role("button", name=ui_strings.SUBTALLY_LOG_BUTTON).click()
-    page.locator("#log-panel form").get_by_role("button", name=ui_strings.LOG_SUBMIT).click()
-
-    # Wait for the fragment swap, then check the new hero numeral's class.
-    page.wait_for_function(
-        """(sel) => {
-            const el = document.querySelector(sel);
-            return el && el.classList.contains('hero--bumped');
-        }""",
-        arg=f"#card-{card.get_attribute('id').split('-')[-1]} .text-hero-numeral",
-    )
-
-    swapped_class = (
-        page.locator(
-            f"#card-{card.get_attribute('id').split('-')[-1]} .text-hero-numeral"
-        ).get_attribute("class")
-        or ""
-    )
-    assert "hero--bumped" in swapped_class
+    assert card.get_by_text(ui_strings.STATS_SUMMARY_TITLE).count() > 0
+    assert card.get_by_text(ui_strings.STREAK_CURRENT_LABEL).count() > 0
+    assert card.locator(".text-hero-numeral").count() == 0
 
 
 def test_log_panel_focuses_on_expand_and_collapses_on_submit(page) -> None:

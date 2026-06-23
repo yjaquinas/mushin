@@ -209,42 +209,16 @@ CALENDAR_BACK_TO_CALENDAR = "Calendar"
 # ---------------------------------------------------------------------------
 
 HISTORY_PERIOD_SWITCHER_LABEL = "Select period"
-HISTORY_YEAR_HEATMAP_ARIA_LABEL = "Activity this year"
 HISTORY_PERIOD_WEEK = "Week"
 HISTORY_PERIOD_MONTH = "Month"
-HISTORY_PERIOD_YEAR = "Year"
 HISTORY_PERIOD_ALL = "All"
-
-# Month abbreviations, 1-indexed (index 0 unused) so a template can index
-# directly by a cell's 1-12 ``month`` number without an off-by-one.
-HISTORY_YEAR_MONTH_ABBR = [
-    "",
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-]
-
-# Sparse subset of month numbers labeled on the year heatmap (quarterly) —
-# every month start still gets a divider border, but only these get text,
-# to keep the label strip legible at mobile width.
-HISTORY_YEAR_HEATMAP_LABELED_MONTHS = [1, 4, 7, 10]
 
 HISTORY_PREV_WEEK = "Previous week"
 HISTORY_NEXT_WEEK = "Next week"
-HISTORY_PREV_YEAR = "Previous year"
-HISTORY_NEXT_YEAR = "Next year"
 
 HISTORY_LOG_TITLE = "Log"
 HISTORY_LOG_EMPTY = "Nothing logged in this period."
+HISTORY_CLEAR_SELECTION = "Clear selection"
 
 # ---------------------------------------------------------------------------
 # Tag-frequency / scale-distribution sections
@@ -439,7 +413,7 @@ PRIVACY_PAGE_TITLE = "Privacy Policy"
 PROFILE_PRIVATE = "This record is private."
 
 PROFILE_ACTIVITIES_EMPTY = "Nothing logged yet."
-PROFILE_BACK_TO_PROFILE = "Back to profile"
+PROFILE_BACK_TO_PROFILE = "Back to @{username}"
 
 # Quiet line under the character-sheet (limited) view of a private account —
 # factual, no lock icon, no "request access" framing.
@@ -447,8 +421,6 @@ PROFILE_LIMITED_NOTICE = "Fellows see the full record, including notes."
 
 # Owner-view notice on a public activity page — factual, no alarm framing.
 ACTIVITY_PUBLIC_NOTICE = "This page is public — anyone with the link sees it, notes included."
-ACTIVITY_PREVIEW_VISITOR = "Preview as visitor"
-ACTIVITY_PREVIEW_CONNECTION = "Preview as a fellow"
 
 # ---------------------------------------------------------------------------
 # Entry edit-in-place

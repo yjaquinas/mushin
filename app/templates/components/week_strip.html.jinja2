@@ -1,8 +1,11 @@
 {#
   Single-week strip of `.cal-day`-styled cells. Tapping a cell selects that
-  day and swaps in its entries inline, the same affordance as month view's
-  day cells (components/history.html.jinja2's month branch) -- same
-  hx-get/hx-target/hx-swap shape, parameterized for period=week.
+  day and swaps in its entries inline (below the always-visible strip), the
+  same affordance as month view's day cells (components/history.html.jinja2's
+  month branch) -- same hx-get/hx-target/hx-swap shape, parameterized for
+  period=week. Tapping an already-selected cell omits `&day=...` from its
+  own hx-get, clearing the selection (same effect as the
+  HISTORY_CLEAR_SELECTION control).
 
   Context: activity_id, history (history.anchor, history.visual.days:
   [{"date","day","marked","today","selected"}, x7]).
@@ -15,8 +18,13 @@
             </span>
             <button
                 type="button"
+                aria-pressed="{{ 'true' if cell.selected else 'false' }}"
                 class="cal-day{% if cell.marked %} cal-day--marked{% endif %}{% if cell.today %} cal-day--today{% endif %}{% if cell.selected %} cal-day--selected{% endif %}"
+                {% if cell.selected %}
+                hx-get="/activities/{{ activity_id }}/history?period=week&anchor={{ history.anchor }}"
+                {% else %}
                 hx-get="/activities/{{ activity_id }}/history?period=week&anchor={{ history.anchor }}&day={{ cell.date }}"
+                {% endif %}
                 hx-target="#history-{{ activity_id }}"
                 hx-swap="outerHTML"
             >

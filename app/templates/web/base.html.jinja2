@@ -10,7 +10,25 @@
     <script defer src="/static/js/theme.js"></script>
     <script defer src="/static/js/auth-form.js"></script>
 </head>
-<body class="bg-surface-0 text-text-primary text-body min-h-screen">
+<body
+    class="flex flex-col bg-surface-0 min-h-screen text-text-primary text-body"
+    {#
+      Delegated on <body> rather than on the swap target itself: an
+      hx-on::after-swap attribute on the element that's being replaced by its
+      own outerHTML swap is unreliable -- empirically, htmx fires afterSwap
+      for the new content before that content's own freshly-processed
+      listener is reliably wired up for SOME swaps (e.g. the calendar's
+      day-detail panel) but not others (e.g. the period-tab swap), with no
+      visible difference in markup shape. Binding on <body>, which never
+      itself gets swapped, sidesteps the race. See
+      components/history.html.jinja2 for the [data-history-focus] marker
+      this looks for.
+    #}
+    hx-on::after-swap="
+        const active = event.target.querySelector && event.target.querySelector('[data-history-focus]');
+        if (active) { active.focus(); }
+    "
+>
     <div class="bg-obsidian">
         <div class="mx-auto flex max-w-screen-sm items-baseline justify-between gap-2 px-4 py-3">
             <a
@@ -39,7 +57,7 @@
             </div>
         </div>
     </div>
-    <main class="mx-auto flex max-w-screen-sm flex-col gap-4 p-4">
+    <main class="mx-auto flex max-w-screen-sm grow flex-col gap-4 p-4">
         {% block content %}{% endblock %}
     </main>
     <footer class="mx-auto flex max-w-screen-sm items-center justify-center gap-4 p-4">

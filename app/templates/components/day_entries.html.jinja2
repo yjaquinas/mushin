@@ -44,14 +44,28 @@
 
   An entry selected for a given day can also appear in the period's full
   chronological log (components/period_log.html.jinja2) on the same page,
-  but since the Task 5 restructure the two are mutually exclusive (only one
-  body state renders at a time) -- so both use the shared
-  components/_entry_row.html.jinja2 macro, which emits the plain canonical
-  `comment-slot-{{ entry.id }}` id in both places.
+  but the two are mutually exclusive in the log area below the calendar
+  visual (only one of day-detail / full-period-log renders at a time) -- so
+  both use the shared components/_entry_row.html.jinja2 macro, which emits
+  the plain canonical `comment-slot-{{ entry.id }}` id in both places.
+
+  This partial's wrapping div is `#calendar-day-detail` -- the day-detail
+  panel referenced by the .cal-day--selected comment in
+  app/static/src/input.css. It carries `data-history-focus` (and
+  `tabindex="-1"` to be programmatically focusable, since it's not natively
+  interactive) so that, when a day is selected, history.html.jinja2's
+  after-swap focus script lands here instead of on the period tab -- see
+  components/history.html.jinja2's header comment for the marker-uniqueness
+  rule (exactly one element per swapped state carries the marker).
 #}
 {% from "components/_entry_row.html.jinja2" import entry_row %}
 
-<div class="flex flex-col gap-2 rounded-card border border-border bg-surface-2 p-3">
+<div
+    id="calendar-day-detail"
+    class="flex flex-col gap-2 rounded-card border border-border bg-surface-2 p-3"
+    tabindex="-1"
+    data-history-focus
+>
     <h4 class="text-body font-medium text-text-primary">
         {{ strings.CALENDAR_DAY_ENTRIES_TITLE }} — {{ day }}
     </h4>

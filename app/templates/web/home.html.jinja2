@@ -13,7 +13,7 @@
 {% endif %}
 
 <header class="flex items-center gap-2 py-2">
-    <h1 class="text-title font-semibold text-text-primary">{{ strings.HOME_TITLE }}</h1>
+    <h1 class="sr-only">{{ strings.HOME_TITLE }}</h1>
     {% if unseen_comments %}
     <a
         href="/comments"

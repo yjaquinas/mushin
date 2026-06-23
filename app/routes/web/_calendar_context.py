@@ -16,20 +16,6 @@ from app import ui_strings
 from app.services import entries
 from app.services.entries import EntryNotFoundError
 
-# Heatmap bucket thresholds: a day's entry count maps to .heat-cell--0..4.
-# 0 -> bucket 0 (empty); 1 -> bucket 1; 2 -> bucket 2; 3-4 -> bucket 3; 5+ -> bucket 4.
-_HEATMAP_BUCKET_EDGES = (0, 1, 2, 4)
-
-
-def _heat_bucket(count: int) -> int:
-    """Map a day's entry count to a 0..4 heat-cell intensity bucket."""
-    if count <= 0:
-        return 0
-    for bucket, edge in enumerate(_HEATMAP_BUCKET_EDGES[1:], start=1):
-        if count <= edge:
-            return bucket
-    return 4
-
 
 def _month_bounds(year: int, month: int) -> tuple[date, date]:
     """First and last day of *year*-*month*."""

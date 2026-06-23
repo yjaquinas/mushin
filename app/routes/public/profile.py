@@ -13,10 +13,7 @@ THE SINGLE VISIBILITY AUTHORITY
 This route drives every visibility decision through
 ``profiles.viewer_capability`` — the sole, fail-closed authority (see
 ``app/services/profiles.py``). The handler never reads ``user["visibility"]``
-directly; the owner's two-mode preview (``?as=stranger`` / ``?as=connection``)
-re-derives the previewed capability by calling ``viewer_capability`` with a
-substitute ``current_user_id`` (or a literal ``"connected"`` override) rather
-than ever branching on the raw column.
+directly.
 
 Session handling: the route reads the ``mushin_session`` cookie via
 ``app.auth.sessions.read_uid`` and delegates the owner-vs-visitor branch to
@@ -37,7 +34,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.auth import sessions, users
 from app.models import db
-from app.routes.public._contexts import _CONNECTION_ALIAS, _STRANGER_ALIASES, templates
+from app.routes.public._contexts import templates
 from app.routes.web import (
     _build_card_context,
     _build_fellows_context,
@@ -103,14 +100,9 @@ async def profile(
     returns ``None`` for both). Branch order — entirely driven by
     ``profiles.viewer_capability``, never an inline ``visibility`` check:
 
-      1. ``"owner"``, no preview param → owner dashboard (same context/
-         template ``GET /home`` renders), including the one-time
-         visibility-consent redirect for non-guest accounts that haven't
-         seen it yet.
-      1b. ``"owner"`` + ``?as=stranger``/``?as=connection`` → the owner
-          previews the read-only view at the downgraded capability; the
-          consent-gate redirect is skipped (it's a preview, not real
-          navigation).
+      1. ``"owner"`` → owner dashboard (same context/template ``GET /home``
+         renders), including the one-time visibility-consent redirect for
+         non-guest accounts that haven't seen it yet.
       2. ``"blocked"`` → 404, identical to a non-existent user (no
          existence oracle).
       3. ``"connected"`` / ``"public"`` → read-only profile, activity cards
@@ -130,10 +122,7 @@ async def profile(
         owner_id = int(user["id"])
         cap = profiles.viewer_capability(conn, current_user_id=current_uid, profile_user=user)
 
-        preview_as = request.query_params.get("as")
-        is_preview = cap == "owner" and preview_as in (_STRANGER_ALIASES | {_CONNECTION_ALIAS})
-
-        if cap == "owner" and not is_preview:
+        if cap == "owner":
             # ``get_public_user`` returns only a column subset, so re-fetch the
             # full row for the consent gate (it needs visibility +
             # private_redefinition_seen_at). The gate is the single shared
@@ -155,33 +144,12 @@ async def profile(
             _clear_flash(response)
             return response
 
-        if is_preview:
-            # Re-derive the previewed capability WITHOUT reading visibility
-            # directly: a stranger preview asks the helper what an anonymous
-            # viewer (current_user_id=None) would see of this same account;
-            # a connection preview is the literal "connected" capability. A
-            # preview can never raise capability above what a real such
-            # viewer would see, because it's computed by the same helper.
-            if preview_as == _CONNECTION_ALIAS:
-                cap = "connected"
-            else:
-                cap = profiles.viewer_capability(conn, current_user_id=None, profile_user=user)
-
         if cap == "blocked":
             return HTMLResponse(status_code=404)
 
-        # In a preview (the owner viewing their own page as a downgraded
-        # viewer class), the relationship-state/fellows-names logic must
-        # reflect the *previewed* viewer, never the literal owner — so pass
-        # None (a stranger has no relationship; "connected" cap already
-        # grants linked cards, and the fellows section still shows count
-        # only, matching what a real fellow who isn't a mutual fellow of
-        # themselves would never need anyway).
-        effective_uid = None if is_preview else current_uid
-
         tz = users.get_user_timezone(owner_id)
         context = _read_only_profile_context(
-            conn, username, owner_id, cap=cap, tz=tz, current_uid=effective_uid
+            conn, username, owner_id, cap=cap, tz=tz, current_uid=current_uid
         )
 
     return templates.TemplateResponse(

@@ -11,7 +11,7 @@ green on a plain dev machine / CI without a browser.
 
 Specs covered
 -------------
-1. Quick-add log updates the activity card's hero numeral via an HTMX
+1. Quick-add log refreshes the detail screen's Summary card via an HTMX
    fragment swap — no full page reload (e.g. assert no `load` navigation
    event / the page's `<head>` script tags are not re-executed). Quick-add
    only lives on the sub-tally detail screen now, so the spec navigates
@@ -111,38 +111,38 @@ def _signup(page, username: str, password: str = "correct-horse-battery") -> Non
 
 
 def _open_detail(page, heading: str):
-    """Navigate from /home to a sub-tally's detail screen via its card link,
-    returning the detail-screen's hero `<article>` locator for that sub-tally.
+    """Navigate from /home to an activity's detail screen via its card link,
+    returning the detail screen's ``#stats-summary-{id}`` locator (the
+    Summary card).
 
     The card links to ``/activities/{id}``, which 301-redirects to the
     canonical ``/@{username}/{slug}`` URL for any account with a username
     (every signup in this module has one). Wait for navigation away from
     /home generically rather than for one specific URL shape.
 
-    The detail screen's hero card is deliberately "chrome-less" (see
-    ``components/activity_card.html.jinja2``'s unlinked branch) -- it has no
-    heading of its own, since the page's own ``<h1>`` already names the
-    activity. So scope by the stable ``#card-{id}`` id (read off the /home
-    card before navigating) rather than by heading, which only exists on
-    /home's linked card.
+    The detail screen has no hero-card swap target of its own any more (the
+    redundant numeral+streak zone above the Summary card was retired) — the
+    Summary card is the one element that visibly changes after a quick-add
+    log, via its own ``log-saved``-triggered self-refresh. Derive the
+    activity id from the /home card's stable ``card-{id}`` id rather than
+    by heading, which only exists on /home's card.
     """
     home_card = page.locator("article", has=page.get_by_role("heading", name=heading))
-    card_id = home_card.get_attribute("id")
+    activity_id = (home_card.get_attribute("id") or "").rsplit("-", 1)[-1]
     home_card.locator("a").first.click()
     page.wait_for_url(lambda url: not url.endswith("/home"))
     page.wait_for_load_state("load")
-    return page.locator(f"#{card_id}")
+    return page.locator(f"#stats-summary-{activity_id}")
 
 
 def test_quick_add_updates_card_via_fragment_swap(page) -> None:
-    """On the sub-tally detail screen, logging via the quick-add panel bumps
-    the card's hero numeral without a full page reload."""
+    """On the activity detail screen, logging via the quick-add panel
+    refreshes the Summary card's counts without a full page reload."""
     _signup(page, _unique_username("a"))
 
-    # Kendo is a `running`-mode activity; its hero numeral is the lifetime
-    # count.
-    card = _open_detail(page, "Kendo")
-    before_text = card.inner_text()
+    summary = _open_detail(page, "Kendo")
+    before_text = summary.inner_text()
+    summary_id = summary.get_attribute("id")
 
     # Track full-page navigations: a fragment swap must NOT trigger one.
     navigated = {"count": 0}
@@ -151,13 +151,14 @@ def test_quick_add_updates_card_via_fragment_swap(page) -> None:
     page.get_by_role("button", name=ui_strings.SUBTALLY_LOG_BUTTON).click()
     page.locator("#log-panel form").get_by_role("button", name=ui_strings.LOG_SUBMIT).click()
 
-    # The card re-renders in place (HTMX outerHTML swap on #card-{id}).
+    # The Summary card self-refreshes in place (HTMX outerHTML swap on
+    # #stats-summary-{id}, triggered by the "log-saved" HX-Trigger header).
     page.wait_for_function(
         """(args) => {
             const el = document.querySelector(args.sel);
             return el && el.innerText !== args.before;
         }""",
-        arg={"sel": f"#{card.get_attribute('id')}", "before": before_text},
+        arg={"sel": f"#{summary_id}", "before": before_text},
     )
 
     assert navigated["count"] == 0, "logging should swap a fragment, not navigate"
@@ -166,8 +167,8 @@ def test_quick_add_updates_card_via_fragment_swap(page) -> None:
 def test_hashtag_in_notes_survives_fragment_swap_and_appears_in_tag_frequency(page) -> None:
     """A `#hashtag` typed into the free-text notes field is parsed and
     persisted on submit, and shows up in the tag-frequency section, which
-    auto-refreshes via the `log-saved` HX-Trigger fired alongside the
-    hero-card fragment swap (see `components/field_stats.html.jinja2`)."""
+    auto-refreshes via the `log-saved` HX-Trigger the log POST fires (see
+    `components/field_stats.html.jinja2`)."""
     _signup(page, _unique_username("b"))
 
     _open_detail(page, "Kendo")
@@ -228,12 +229,12 @@ def test_notes_textarea_wraps_at_1_5x_font_scale(page) -> None:
 def test_submitting_log_collapses_panel_and_updates_card(page) -> None:
     """Expanding the inline log panel, filling and submitting the form
     collapses the panel (`aria-expanded="false"`, `#log-panel` empty/hidden)
-    and updates the activity card's hero numeral / advance line."""
+    and updates the detail screen's Summary card."""
     _signup(page, _unique_username("g"))
 
-    card = _open_detail(page, "Kendo")
+    summary = _open_detail(page, "Kendo")
     trigger = page.locator('button[id^="log-trigger-"]')
-    before_text = card.inner_text()
+    before_text = summary.inner_text()
 
     trigger.click()
 
@@ -250,11 +251,11 @@ def test_submitting_log_collapses_panel_and_updates_card(page) -> None:
     )
     assert not panel.is_visible()
 
-    # The card re-renders with updated content (hero numeral / advance line).
+    # The Summary card self-refreshes with updated counts.
     page.wait_for_function(
         """(args) => {
             const el = document.querySelector(args.sel);
             return el && el.innerText !== args.before;
         }""",
-        arg={"sel": f"#{card.get_attribute('id')}", "before": before_text},
+        arg={"sel": f"#{summary.get_attribute('id')}", "before": before_text},
     )

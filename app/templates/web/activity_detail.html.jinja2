@@ -8,8 +8,6 @@
 {% if public_notice %}
 <p class="text-caption text-text-muted">
     {{ public_notice }}
-    <a href="{{ preview_visitor_url }}" class="underline underline-offset-2 hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">{{ strings.ACTIVITY_PREVIEW_VISITOR }}</a>
-    <a href="{{ preview_connection_url }}" class="underline underline-offset-2 hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">{{ strings.ACTIVITY_PREVIEW_CONNECTION }}</a>
 </p>
 {% endif %}
 
@@ -41,14 +39,9 @@
         </div>
     </header>
 
-    {# 2. Hero zone: chrome-less numeral + progress + advance line. The page's
-       own <h1> above covers the header, and the streak already appears once
-       in stats_summary.html.jinja2 below — hero_only suppresses both in the
-       shared card_body() macro so neither repeats. #}
-    {% set hero_only = true %}
-    {% include "components/activity_card.html.jinja2" with context %}
-
-    {# 3. Log button + panel — below the hero, action follows context #}
+    {# 2. Log button + panel — the page's own <h1> above already names the
+       activity, and the running count/streak appear once each in
+       stats_summary.html.jinja2 below, so there's no separate hero zone. #}
     <div x-data="{ open: false }" @log-saved.window="open = false">
         <button
             type="button"
@@ -67,20 +60,20 @@
         <div id="log-panel" x-show="open" class="mt-3"></div>
     </div>
 
-    {# 4. Competition #}
+    {# 3. Competition #}
     {% if record is not none %}
         {% include "components/competition_stats.html.jinja2" with context %}
     {% endif %}
 
-    {# 5. Stats summary #}
+    {# 4. Stats summary #}
     {% include "components/stats_summary.html.jinja2" with context %}
 
-    {# 6. History #}
+    {# 5. History #}
     <section class="flex flex-col gap-3 rounded-card border border-border bg-surface-1 p-4">
         {% include "components/history.html.jinja2" with context %}
     </section>
 
-    {# 7. Field stats — analytics tail, correctly last #}
+    {# 6. Field stats — analytics tail, correctly last #}
     {% include "components/field_stats.html.jinja2" with context %}
 
 </div>

@@ -105,13 +105,8 @@ def _render_owner_activity_detail(
 
     if anon_cap == "public":
         owner_context["public_notice"] = ui_strings.ACTIVITY_PUBLIC_NOTICE
-        base_url = profiles.canonical_activity_url(username, slug)
-        owner_context["preview_visitor_url"] = base_url + "?as=stranger"
-        owner_context["preview_connection_url"] = base_url + "?as=connection"
     else:
         owner_context["public_notice"] = None
-        owner_context["preview_visitor_url"] = None
-        owner_context["preview_connection_url"] = None
 
     owner_context["is_owner"] = True
 
@@ -136,10 +131,8 @@ def _render_readonly_activity_detail(
 ) -> HTMLResponse:
     """Build + render the read-only ``public_activity.html.jinja2`` response.
 
-    Shared by the real connected/public visitor branch and the owner's
-    ``?as=stranger``/``?as=connection`` preview — both render identically
-    once the caller has confirmed the viewer (real or previewed) may see
-    detail.
+    Used by the real connected/public visitor branch once the caller has
+    confirmed the viewer may see detail.
     """
     sub_row = conn.execute(
         """SELECT st.id, st.name, st.count_mode, st.cached_count, st.cached_streak,
@@ -173,10 +166,6 @@ def _render_readonly_activity_detail(
     context["streaks"] = stats.streaks(activity_id, owner_id, tz=tz)
     context["field_stats"] = _build_field_stats_context(activity_id, owner_id, field_defs, tz=tz)
 
-    # Real (non-preview) visitor only — a preview render never grants a
-    # comment-write affordance, since posting "as" a downgraded persona
-    # while actually authenticated as the owner would be a confusing,
-    # capability-bypassing surface.
     can_comment = bool(
         profile_user is not None
         and profiles.can_comment_on_entry(
@@ -188,12 +177,11 @@ def _render_readonly_activity_detail(
     )
     context["can_comment"] = can_comment
 
-    # An anonymous (no session) real visitor — never the owner's
-    # ?as=stranger/?as=connection preview, which calls this function with no
-    # `profile_user` at all — on an activity already cleared as readable here
-    # (this branch only runs for connected/public/preview capabilities; a
-    # blocked/limited viewer 404s/redirects in `public_activity` before this
-    # function is ever reached) gets a same-origin `/login?next=...` link
+    # An anonymous (no session) real visitor — on an activity already cleared
+    # as readable here (this branch only runs for connected/public
+    # capabilities; a blocked/limited viewer 404s/redirects in
+    # `public_activity` before this function is ever reached) gets a
+    # same-origin `/login?next=...` link
     # instead of a silently-missing composer. `safe_next_path` is the only
     # thing that decides "safe" here, so this can never become an open
     # redirect even though `request.url.path` is otherwise untrusted input.

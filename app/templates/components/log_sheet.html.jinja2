@@ -3,8 +3,12 @@
   tag_group fields, plus scale, count, memo, and an editable-defaulting
   occurred_at.
 
-  On submit, POSTs to /activities/{id}/log and swaps the result into the
-  matching activity card (#card-{id}); the sheet then closes itself.
+  On submit, POSTs to /activities/{id}/log with hx-swap="none" -- the
+  detail screen's stats-summary/history/field-stats sections refresh
+  themselves off the "log-saved" HX-Trigger the response fires, so there's
+  no primary swap target. The sheet then closes itself (see the
+  @log-saved.window listener on activity_detail.html.jinja2's log-panel
+  wrapper).
 
   Context: activity_id, name, fields (field-priority order), today (default
   occurred_at value, KST date YYYY-MM-DD).
@@ -26,8 +30,7 @@
 
     <form
         hx-post="/activities/{{ activity_id }}/log"
-        hx-target="#card-{{ activity_id }}"
-        hx-swap="outerHTML"
+        hx-swap="none"
         class="flex flex-col gap-4"
     >
         {% set tag_group_fields = fields | selectattr("kind", "equalto", "tag_group") | list %}

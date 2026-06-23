@@ -15,18 +15,15 @@ Covers ``GET /@{username}`` and ``GET /@{username}/{slug}``:
 6. No write-capable forms/links anywhere on either template (anonymous).
 7. Owner viewing ``/@{username}/{slug}`` gets the full dashboard with write
    affordances (log form, HTMX triggers).
-8. ``?as=stranger``/``?as=visitor`` forces the read-only (or redirect) view
-   even for the owner, never showing more than that real viewer class would
-   see; ``?as=connection`` previews the connected/full view.
-9. Public-account owners see ACTIVITY_PUBLIC_NOTICE and both preview links;
-   private-account owners see neither.
-10. ``GET /activities/{id}`` for an active owned sub-tally → 301 redirect to
+8. Public-account owners see ACTIVITY_PUBLIC_NOTICE; private-account owners
+   see no notice.
+9. ``GET /activities/{id}`` for an active owned sub-tally → 301 redirect to
     ``/@{username}/{slug}``.
-11. ``GET /activities/{id}`` for an archived owned sub-tally → 200 (in-place).
-12. ``GET /activities/{id}`` for a sub-tally not owned by the session → 404.
-13. A fellow (accepted + consented connection) sees the full profile/detail
+10. ``GET /activities/{id}`` for an archived owned sub-tally → 200 (in-place).
+11. ``GET /activities/{id}`` for a sub-tally not owned by the session → 404.
+12. A fellow (accepted + consented connection) sees the full profile/detail
     on a private account, including entries/notes.
-14. A blocked viewer gets 404 on both routes, for public AND private
+13. A blocked viewer gets 404 on both routes, for public AND private
     accounts — identical to a non-existent user.
 
 These routes must work with NO session cookie for the visitor/anonymous
@@ -243,34 +240,11 @@ async def test_activity_detail_renders_merged_calendar_for_visitor(client: Async
     # Period switcher tabs + prev/next nav (history.html.jinja2's header).
     assert ui_strings.HISTORY_PERIOD_WEEK in body
     assert ui_strings.HISTORY_PERIOD_MONTH in body
-    assert ui_strings.HISTORY_PERIOD_YEAR in body
     assert ui_strings.HISTORY_PERIOD_ALL in body
     # The logged entry's memo shows up via the merged log, not the deleted
     # hand-rolled <ul>.
     assert "logged today" in body
     assert f'hx-get="/activities/{activity_id}/history' in body
-
-
-async def test_owner_preview_paths_render_merged_calendar(client: AsyncClient) -> None:
-    """Both ?as=stranger and ?as=connection owner-preview paths flow through
-    the same merged calendar view as a real visitor, at their respective
-    downgraded capability — never the owner dashboard's write affordances."""
-    owner_id = await _signup_and_set_visibility(client, "previewcal1", visibility="public")
-    activity_id, slug = _first_activity(owner_id)
-    entries.create(
-        owner_id, activity_id, {"tags": [], "values": {}, "memo": "preview memo"}, tz=_UTC
-    )
-
-    for preview in ("stranger", "connection"):
-        resp = await client.get(f"/@previewcal1/{slug}?as={preview}")
-        assert resp.status_code == 200
-        body = resp.text
-        assert ui_strings.HISTORY_PERIOD_MONTH in body
-        assert "preview memo" in body
-        assert "<form" not in body
-        assert "/edit" not in body
-        assert "/delete" not in body
-        assert "/rename" not in body
 
 
 async def test_activity_detail_has_no_write_affordances(client: AsyncClient) -> None:
@@ -397,50 +371,8 @@ async def test_anonymous_visitor_private_account_gets_redirected(client: AsyncCl
     assert resp.headers["location"] == "/@privateanon1"
 
 
-async def test_owner_as_visitor_public_account_gets_readonly_view(
-    client: AsyncClient,
-) -> None:
-    """Owner visiting with ?as=visitor → read-only view (no log form)."""
-    owner_id = await _signup_and_set_visibility(client, "ownerpreview1", visibility="public")
-    _, slug = _first_activity(owner_id)
-
-    resp = await client.get(f"/@ownerpreview1/{slug}?as=visitor")
-    assert resp.status_code == 200
-    body = resp.text
-    # Read-only viewer — log form must be absent.
-    assert ui_strings.SUBTALLY_LOG_BUTTON not in body
-    assert "<form" not in body
-
-
-async def test_owner_as_visitor_private_account_gets_redirected(client: AsyncClient) -> None:
-    """Owner previewing ?as=visitor (stranger alias) on a private account →
-    303 to the profile, same as a real stranger would get — a preview can
-    never show more than the real viewer class would see."""
-    owner_id = await _signup_and_set_visibility(client, "ownerpreview2", visibility="private")
-    _, slug = _first_activity(owner_id)
-
-    resp = await client.get(f"/@ownerpreview2/{slug}?as=visitor", follow_redirects=False)
-    assert resp.status_code == 303
-    assert resp.headers["location"] == "/@ownerpreview2"
-
-
-async def test_non_owner_as_visitor_param_is_noop(client: AsyncClient) -> None:
-    """?as=visitor is a no-op for a non-owner — still read-only."""
-    profile_owner_id = _create_account("profileowner2", visibility="public")
-    _, slug = _first_activity(profile_owner_id)
-
-    # Log in as a different user.
-    await _signup_and_set_visibility(client, "otheruser2", visibility="public")
-
-    resp = await client.get(f"/@profileowner2/{slug}?as=visitor")
-    assert resp.status_code == 200
-    body = resp.text
-    assert ui_strings.SUBTALLY_LOG_BUTTON not in body
-    assert "<form" not in body
-
-
 async def test_public_account_owner_sees_public_notice(client: AsyncClient) -> None:
-    """Public-account owner gets ACTIVITY_PUBLIC_NOTICE and the preview link."""
+    """Public-account owner gets ACTIVITY_PUBLIC_NOTICE on their own activity page."""
     owner_id = await _signup_and_set_visibility(client, "publicnotice1", visibility="public")
     _, slug = _first_activity(owner_id)
 
@@ -448,14 +380,10 @@ async def test_public_account_owner_sees_public_notice(client: AsyncClient) -> N
     assert resp.status_code == 200
     body = resp.text
     assert ui_strings.ACTIVITY_PUBLIC_NOTICE in body
-    assert ui_strings.ACTIVITY_PREVIEW_VISITOR in body
-    assert ui_strings.ACTIVITY_PREVIEW_CONNECTION in body
-    assert f"/@publicnotice1/{slug}?as=stranger" in body
-    assert f"/@publicnotice1/{slug}?as=connection" in body
 
 
 async def test_private_account_owner_sees_no_public_notice(client: AsyncClient) -> None:
-    """Private-account owner does NOT see ACTIVITY_PUBLIC_NOTICE or the preview link."""
+    """Private-account owner does NOT see ACTIVITY_PUBLIC_NOTICE."""
     owner_id = await _signup_and_set_visibility(client, "privatenotice1", visibility="private")
     _, slug = _first_activity(owner_id)
 
@@ -463,7 +391,6 @@ async def test_private_account_owner_sees_no_public_notice(client: AsyncClient) 
     assert resp.status_code == 200
     body = resp.text
     assert ui_strings.ACTIVITY_PUBLIC_NOTICE not in body
-    assert ui_strings.ACTIVITY_PREVIEW_VISITOR not in body
 
 
 # ---------------------------------------------------------------------------
@@ -728,78 +655,6 @@ async def test_history_fragment_owner_unchanged(client: AsyncClient) -> None:
     assert "owner notes" in body
     # Owner gets the full edit affordance the read-only viewer never does.
     assert "/edit" in body
-
-
-# ---------------------------------------------------------------------------
-# Owner two-mode preview: ?as=stranger / ?as=connection
-# ---------------------------------------------------------------------------
-
-
-async def test_owner_preview_as_stranger_on_private_shows_limited(client: AsyncClient) -> None:
-    """?as=stranger on a private account renders the limited character sheet
-    for the owner — exactly what a real anonymous stranger would see."""
-    await _signup_and_set_visibility(client, "previewstranger1", visibility="private")
-
-    resp = await client.get("/@previewstranger1?as=stranger")
-    assert resp.status_code == 200
-    body = resp.text
-    assert ui_strings.PROFILE_LIMITED_NOTICE in body
-    assert "/@previewstranger1/" not in body  # cards not clickable
-
-
-async def test_owner_preview_as_connection_on_private_shows_full(client: AsyncClient) -> None:
-    """?as=connection on a private account renders the full (clickable-card)
-    view for the owner — what a real fellow would see."""
-    await _signup_and_set_visibility(client, "previewconn1", visibility="private")
-
-    resp = await client.get("/@previewconn1?as=connection")
-    assert resp.status_code == 200
-    body = resp.text
-    assert ui_strings.PROFILE_LIMITED_NOTICE not in body
-    assert "/@previewconn1/" in body  # clickable card link present
-
-
-async def test_owner_preview_as_stranger_skips_consent_gate(client: AsyncClient) -> None:
-    """Preview mode never detours through the consent gate, even for an
-    account that hasn't completed it (real navigation would redirect)."""
-    resp = await client.post(
-        "/auth/signup",
-        data={"username": "previewgate1", "password": "test-pw-1234", "consent": "true"},
-    )
-    assert resp.status_code == 200
-    owner_id = int(resp.json()["user_id"])
-    seed_test_activity(owner_id, name="Kendo")
-    # Deliberately do NOT call set_visibility_consent — consent_seen_at is
-    # still NULL, so real navigation to /@{username} would redirect to
-    # /welcome-sharing.
-
-    resp = await client.get("/@previewgate1?as=stranger", follow_redirects=False)
-    assert resp.status_code == 200
-    assert "/welcome-sharing" not in resp.headers.get("location", "")
-
-
-async def test_owner_preview_as_connection_on_activity_detail(client: AsyncClient) -> None:
-    """?as=connection on a private activity detail renders the read-only
-    detail (a fellow could open it), not a redirect."""
-    owner_id = await _signup_and_set_visibility(client, "previewconn2", visibility="private")
-    _, slug = _first_activity(owner_id)
-
-    resp = await client.get(f"/@previewconn2/{slug}?as=connection", follow_redirects=False)
-    assert resp.status_code == 200
-    assert "<form" not in resp.text
-
-
-async def test_owner_preview_as_stranger_on_private_activity_detail_redirects(
-    client: AsyncClient,
-) -> None:
-    """?as=stranger on a private activity detail redirects to the profile —
-    a real stranger could not open this detail either."""
-    owner_id = await _signup_and_set_visibility(client, "previewstr2", visibility="private")
-    _, slug = _first_activity(owner_id)
-
-    resp = await client.get(f"/@previewstr2/{slug}?as=stranger", follow_redirects=False)
-    assert resp.status_code == 303
-    assert resp.headers["location"] == "/@previewstr2"
 
 
 # ---------------------------------------------------------------------------

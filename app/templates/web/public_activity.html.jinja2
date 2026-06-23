@@ -24,7 +24,6 @@
   primary boundary (see .claude/rules/web-templates.md).
 #}
 {% extends "web/base.html.jinja2" %}
-{% from "components/activity_card.html.jinja2" import card_body with context %}
 
 {% block title %}{% if card %}{{ card.name }} · {% endif %}{{ username }} · {{ strings.APP_NAME }}{% endblock %}
 
@@ -33,21 +32,13 @@
 
 {% block content %}
 <a href="/@{{ username }}" class="text-caption text-text-muted underline-offset-2 hover:underline">
-    {{ strings.PROFILE_BACK_TO_PROFILE }}
+    {{ strings.PROFILE_BACK_TO_PROFILE.format(username=username) }}
 </a>
 
-    {# Card body (no link wrapper, no log button — read-only). The page's own
-       <h1> covers the header, and the streak already appears once in
-       stats_summary.html.jinja2 below, so the shared card_body() macro
-       suppresses both here (show_header=False, show_streak=False). #}
-    <article class="flex flex-col gap-3 rounded-card border border-border bg-surface-1 p-4">
-        <header class="flex flex-col">
-            <span class="text-caption text-text-muted">{{ card.category_name }}</span>
-            <h1 class="text-title font-medium text-text-secondary">{{ card.name }}</h1>
-        </header>
-
-        {{ card_body(show_header=False, show_streak=False) }}
-    </article>
+    <header class="flex flex-col">
+        {% if card.show_breadcrumb %}<span class="text-caption text-text-muted">{{ card.category_name }}</span>{% endif %}
+        <h1 class="text-title font-medium text-text-secondary">{{ card.name }}</h1>
+    </header>
 
     {% if record is not none %}
         {% include "components/competition_stats.html.jinja2" with context %}

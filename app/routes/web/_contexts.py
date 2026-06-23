@@ -62,7 +62,6 @@ def _build_card_context(
     activity_row: sqlite3.Row,
     *,
     tz: ZoneInfo,
-    selected_tags: set[int] | None = None,
     linked: bool = False,
 ) -> dict[str, Any]:
     """Assemble the per-card render context: hero, progress, advance line.
@@ -79,6 +78,7 @@ def _build_card_context(
 
     counts = stats.counts_for_sub_tallies([activity_id], owner_id, tz=tz).get(activity_id, {})
     streak = activity_row["cached_streak"] or 0
+    streaks = stats.streaks(activity_id, owner_id, tz=tz)
 
     field_defs = _field_defs_for_activity(conn, activity_id)
     fields = []
@@ -110,6 +110,8 @@ def _build_card_context(
         "advance_line": advance_line,
         "lifetime": counts.get("lifetime", activity_row["cached_count"] or 0),
         "streak": streak,
+        "counts": counts,
+        "streaks": streaks,
         "fields": fields,
         "now": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M"),
         "linked": linked,

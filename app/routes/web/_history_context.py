@@ -18,11 +18,7 @@ from zoneinfo import ZoneInfo
 
 from app import ui_strings
 from app.models import db
-from app.routes.web._calendar_context import (
-    _build_calendar_context,
-    _entries_on_day,
-    _heat_bucket,
-)
+from app.routes.web._calendar_context import _build_calendar_context, _entries_on_day
 from app.services import comments, entries, stats
 
 _TAG_PERIOD_LABELS: dict[str, str] = {
@@ -73,17 +69,17 @@ def _build_history_context(
     expand_comment_entry_id: int | None = None,
     login_redirect_url: str | None = None,
 ) -> dict[str, Any]:
-    """History view context for *period* (``week``/``month``/``year``/``all``) at *anchor*.
+    """History view context for *period* (``week``/``month``/``all``) at *anchor*.
 
-    ``visual`` is shaped per period: a calendar grid (month), a single week of
-    day-cells (week), or a bucketed heatmap series (year). For ``all``, there is
-    no visual and no prev/next navigation — only the full day-grouped log.
-    ``log`` groups the period's entries by local day (in *tz*), newest day first,
-    for the chronological log.
+    ``visual`` is shaped per period: a calendar grid (month) or a single week
+    of day-cells (week). For ``all``, there is no visual and no prev/next
+    navigation — only the full day-grouped log. ``log`` groups the period's
+    entries by local day (in *tz*), newest day first, for the chronological
+    log.
 
-    *selected*, when given (``week`` or ``month`` period — ``year``'s heatmap
-    cells deliberately have no day-select), flags the matching cell/day and
-    populates ``selected_day``/``day_entries`` with that day's detail.
+    *selected*, when given (``week`` or ``month`` period), flags the matching
+    cell/day and populates ``selected_day``/``day_entries`` with that day's
+    detail.
 
     Every entry dict in ``log`` and ``day_entries`` carries a ``comment_count``
     key (via ``comments.counts_for_entries``), so a template can render the
@@ -175,51 +171,8 @@ def _build_history_context(
             cursor += timedelta(days=1)
         visual = {"days": days_cells}
         label = f"{start.isoformat()} – {end.isoformat()}"
-    elif period == "year":
-        series = stats.heatmap_range(activity_id, owner_id, start, end, tz=tz)
-        year_rows = 14
-        cells = []
-        prev_month: int | None = None
-        for d in series:
-            day = date.fromisoformat(d["date"])
-            is_first_of_month = day.month != prev_month
-            prev_month = day.month
-            cells.append(
-                {
-                    "date": d["date"],
-                    "bucket": _heat_bucket(d["count"]),
-                    "month": day.month,
-                    "is_first_of_month": is_first_of_month,
-                }
-            )
-        # One entry per grid column (cells pack column-major, `year_rows`
-        # per column — see grid-rows-14 in history.html.jinja2), so the
-        # label strip above the grid can align 1:1 by column index rather
-        # than by day. A column is a "month start" if any of its cells is
-        # the first day of its month; only sparse (quarterly) months get
-        # text, but every month-start column gets a boundary flag so the
-        # template can draw a divider even where there's no label.
-        month_columns = []
-        for col_start in range(0, len(cells), year_rows):
-            col_cells = cells[col_start : col_start + year_rows]
-            month_start_cell = next((c for c in col_cells if c["is_first_of_month"]), None)
-            is_month_start_column = month_start_cell is not None
-            month_columns.append(
-                {
-                    "is_month_start": is_month_start_column,
-                    "month": month_start_cell["month"] if month_start_cell else None,
-                }
-            )
-            # The divider border reads as a full-column rule, not a tick
-            # mark mid-column, so every cell in a month-start column gets
-            # the boundary flag — not just the single day that's the 1st
-            # (which can land anywhere within its 14-day column).
-            for c in col_cells:
-                c["is_month_start_column"] = is_month_start_column
-        visual = {"cells": cells, "month_columns": month_columns, "year_rows": year_rows}
-        label = f"{start.year}"
     else:
-        raise ValueError(f"unknown period {period!r}; expected week/month/year/all")
+        raise ValueError(f"unknown period {period!r}; expected week/month/all")
 
     period_rows = stats.period_entries(activity_id, owner_id, start, end, tz=tz)
     by_day = defaultdict(list)

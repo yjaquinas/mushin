@@ -1301,75 +1301,6 @@ async def test_detail_shows_calendar_with_marked_today(client: AsyncClient) -> N
     assert "cal-day--today" in resp.text
 
 
-async def test_history_year_view_shows_heatmap_grid_with_bucketed_cells(
-    client: AsyncClient,
-) -> None:
-    owner_id = await _guest_login(client)
-    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
-    activity_id = _practice_activity_id(owner_id)
-
-    from app.services import entries as entries_service
-
-    entries_service.create(owner_id, activity_id, {}, tz=_UTC)
-
-    resp = await client.get(f"/activities/{activity_id}/history?period=year")
-    assert resp.status_code == 200
-    # Calendar-year (Jan 1 - Dec 31) -> 365 .heat-cell elements (non-leap years).
-    assert resp.text.count('class="heat-cell heat-cell--') == 365
-    assert 'role="img"' in resp.text
-    assert strings_module.HISTORY_YEAR_HEATMAP_ARIA_LABEL in resp.text
-    # At least one bucketed cell reflects today's entry.
-    assert "heat-cell--0" in resp.text
-    assert any(f"heat-cell--{n}" in resp.text for n in (1, 2, 3, 4))
-
-
-async def test_history_year_view_fits_without_horizontal_scroll(
-    client: AsyncClient,
-) -> None:
-    """The year heatmap packs 14 days per column (not 7), shrinking ~52
-    columns to ~27 so the whole year fits on a mobile viewport without
-    horizontal scroll -- no ``overflow-x-auto`` escape hatch needed."""
-    owner_id = await _guest_login(client)
-    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
-    activity_id = _practice_activity_id(owner_id)
-
-    resp = await client.get(f"/activities/{activity_id}/history?period=year")
-    assert resp.status_code == 200
-    assert "overflow-x-auto" not in resp.text
-    assert "grid-rows-14" in resp.text
-    assert "grid-rows-7" not in resp.text
-    # The divider border applies to every cell in a month-start *column*
-    # (14 cells/column), not just the single day that's the 1st -- so it
-    # reads as a full vertical rule rather than a tick mark mid-column.
-    # 12 month-start columns x 14 rows = 168 bordered cells.
-    assert resp.text.count("heat-cell--month-start") == 168
-
-
-async def test_history_year_view_shows_sparse_month_labels_from_strings(
-    client: AsyncClient,
-) -> None:
-    """Only the quarterly subset (Jan, Apr, Jul, Oct) renders as visible text
-    in the month-label strip, sourced from ``ui_strings.py`` -- not all 12
-    months, and never hardcoded in the template."""
-    owner_id = await _guest_login(client)
-    seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
-    activity_id = _practice_activity_id(owner_id)
-
-    resp = await client.get(f"/activities/{activity_id}/history?period=year")
-    assert resp.status_code == 200
-
-    for month_num in strings_module.HISTORY_YEAR_HEATMAP_LABELED_MONTHS:
-        label = strings_module.HISTORY_YEAR_MONTH_ABBR[month_num]
-        assert resp.text.count(label) == 1
-
-    labeled = set(strings_module.HISTORY_YEAR_HEATMAP_LABELED_MONTHS)
-    for month_num in range(1, 13):
-        if month_num in labeled:
-            continue
-        label = strings_module.HISTORY_YEAR_MONTH_ABBR[month_num]
-        assert label not in resp.text
-
-
 async def test_detail_streak_matches_stats_service(client: AsyncClient) -> None:
     owner_id = await _guest_login(client)
     seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
@@ -1387,21 +1318,11 @@ async def test_detail_streak_matches_stats_service(client: AsyncClient) -> None:
     assert f"{expected['longest']}{strings_module.STREAK_DAYS_UNIT}" in resp.text
 
 
-def _hero_streak_caption(streak: int) -> str:
-    """The exact text the hero-zone advance-line caption renders for a given
-    streak value — ``"{HOME_STREAK_LABEL} {n}{HOME_STREAK_DAYS_UNIT}"`` inside
-    ``activity_card.html.jinja2``'s ``<span class="ms-2">``. Built from the
-    label + days-unit together (not the bare ``HOME_STREAK_LABEL`` alone)
-    because ``STATS_STREAKS_LABEL`` ("Streaks") on the Summary card contains
-    ``HOME_STREAK_LABEL`` ("Streak") as a substring."""
-    return f"{strings_module.HOME_STREAK_LABEL} {streak}{strings_module.HOME_STREAK_DAYS_UNIT}"
-
-
-async def test_home_card_hero_keeps_streak_caption(client: AsyncClient) -> None:
-    """The home card's advance-line caption still carries the streak caption
-    (label + count + unit) — the dedup macro's ``show_streak`` default is
-    ``True`` for the linked (home-card) branch, since home has no nearby
-    Summary card repeating it (Task 13's "home card unaffected")."""
+async def test_home_card_shows_streak_via_stats_summary_grid(client: AsyncClient) -> None:
+    """The home card has no hero numeral/streak-caption zone of its own any
+    more (retired as redundant) — it renders the same Counts/Streaks grid as
+    the detail screen's Summary card, so the current/longest streak still
+    surfaces on /home via ``STREAK_CURRENT_LABEL``/``STREAK_LONGEST_LABEL``."""
     owner_id = await _guest_login(client)
     seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id = _practice_activity_id(owner_id)
@@ -1409,22 +1330,20 @@ async def test_home_card_hero_keeps_streak_caption(client: AsyncClient) -> None:
     from app.services import entries as entries_service
 
     entries_service.create(owner_id, activity_id, {}, tz=_UTC)
-    expected_streak = stats.streaks(activity_id, owner_id, tz=_UTC)["current"]
+    expected = stats.streaks(activity_id, owner_id, tz=_UTC)
 
     resp = await client.get("/home")
     assert resp.status_code == 200
-    assert _hero_streak_caption(expected_streak) in resp.text
+    assert f"{expected['current']}{strings_module.STREAK_DAYS_UNIT}" in resp.text
+    assert f"{expected['longest']}{strings_module.STREAK_DAYS_UNIT}" in resp.text
 
 
-async def test_detail_hero_suppresses_streak_caption_but_summary_card_keeps_it_once(
+async def test_detail_summary_card_shows_streak_labels_exactly_once(
     client: AsyncClient,
 ) -> None:
-    """The activity-detail hero zone (the dedup'd ``card_body(show_streak=...)``
-    macro, ``hero_only=True``) no longer repeats the streak caption: the
-    hero-style "Streak {n} days" caption is entirely absent from the detail
-    page, while the Summary card's own (differently-labeled) current/longest
-    streak still renders exactly once via ``STREAK_CURRENT_LABEL``/
-    ``STREAK_LONGEST_LABEL`` (Task 13 build-plan item)."""
+    """The activity-detail page has no separate hero zone repeating the
+    streak — ``STREAK_CURRENT_LABEL``/``STREAK_LONGEST_LABEL`` come from the
+    Summary card alone and each render exactly once."""
     owner_id = await _guest_login(client)
     seed_test_activity(owner_id, name="Kendo", extra_field_kinds=("match_list",))
     activity_id = _practice_activity_id(owner_id)
@@ -1432,14 +1351,10 @@ async def test_detail_hero_suppresses_streak_caption_but_summary_card_keeps_it_o
     from app.services import entries as entries_service
 
     entries_service.create(owner_id, activity_id, {}, tz=_UTC)
-    expected_streak = stats.streaks(activity_id, owner_id, tz=_UTC)["current"]
 
     resp = await client.get(f"/activities/{activity_id}")
     assert resp.status_code == 200
     body = resp.text
-    # Hero-zone streak caption (home card's exact wording) never appears here.
-    assert _hero_streak_caption(expected_streak) not in body
-    # The Summary card's streak labels appear exactly once each.
     assert body.count(strings_module.STREAK_CURRENT_LABEL) == 1
     assert body.count(strings_module.STREAK_LONGEST_LABEL) == 1
 
@@ -1479,110 +1394,6 @@ async def test_history_context_month_anchor_math(web_db: Path) -> None:
     assert ctx["label"] == "2026.06"
     # Reuses the calendar context shape.
     assert "weeks" in ctx["visual"]
-
-
-async def test_history_context_year_anchor_math(web_db: Path) -> None:
-    from datetime import date
-
-    from app.routes.web import _build_history_context
-
-    ctx = _build_history_context(
-        activity_id=1, owner_id=1, period="year", anchor=date(2026, 6, 15), tz=_UTC
-    )
-    assert ctx["start"] == "2026-01-01"
-    assert ctx["end"] == "2026-12-31"
-    assert ctx["prev_anchor"] == "2025-01-01"
-    assert ctx["next_anchor"] == "2027-01-01"
-    assert ctx["label"] == "2026"
-    assert "cells" in ctx["visual"]
-    assert len(ctx["visual"]["cells"]) == 365
-
-
-async def test_history_context_year_marks_first_of_month_cells(web_db: Path) -> None:
-    """Each year-period cell carries ``is_first_of_month`` (used by the
-    template to render sparse quarterly labels + a divider border on every
-    month boundary, not just the labeled ones) -- exactly 12 cells should be
-    flagged, one per month, on the first calendar day of that month."""
-    from datetime import date
-
-    from app.routes.web import _build_history_context
-
-    ctx = _build_history_context(
-        activity_id=1, owner_id=1, period="year", anchor=date(2026, 6, 15), tz=_UTC
-    )
-    cells = ctx["visual"]["cells"]
-    assert len(cells) == 365
-
-    first_of_month_dates = [c["date"] for c in cells if c["is_first_of_month"]]
-    assert first_of_month_dates == [f"2026-{m:02d}-01" for m in range(1, 13)]
-
-    # The very first cell of the year is always a month start.
-    assert cells[0]["date"] == "2026-01-01"
-    assert cells[0]["is_first_of_month"] is True
-    assert cells[0]["month"] == 1
-
-    # A mid-month day is not flagged.
-    mid_january = next(c for c in cells if c["date"] == "2026-01-15")
-    assert mid_january["is_first_of_month"] is False
-    assert mid_january["month"] == 1
-
-
-async def test_history_context_year_month_start_column_flag_covers_whole_column(
-    web_db: Path,
-) -> None:
-    """``is_month_start_column`` is true for every cell in a 14-day column
-    that contains a month boundary, not just the single day that's the
-    1st -- so the template's divider border reads as a full column rule
-    instead of a tick mark mid-column (the 1st can land anywhere within its
-    column since 14 doesn't evenly divide the days-per-month)."""
-    from datetime import date
-
-    from app.routes.web import _build_history_context
-
-    ctx = _build_history_context(
-        activity_id=1, owner_id=1, period="year", anchor=date(2026, 6, 15), tz=_UTC
-    )
-    cells = ctx["visual"]["cells"]
-    year_rows = ctx["visual"]["year_rows"]
-
-    # January 1 is day index 0 -> column 0 (cells[0:14]) is entirely flagged.
-    column_0 = cells[0:year_rows]
-    assert all(c["is_month_start_column"] for c in column_0)
-
-    # The 12 month-boundary days land across at most 12 distinct columns;
-    # every cell in each of those columns is flagged, and the count of
-    # flagged cells is therefore a multiple of year_rows.
-    flagged = [c for c in cells if c["is_month_start_column"]]
-    assert len(flagged) % year_rows == 0
-    assert len(flagged) // year_rows == 12
-
-
-async def test_history_context_year_month_columns_align_with_grid_rows(
-    web_db: Path,
-) -> None:
-    """``month_columns`` gives one entry per grid *column* (the heatmap packs
-    14 days per column, column-major), so the label strip in the template can
-    align 1:1 with the heatmap's columns. Exactly 12 columns should be flagged
-    ``is_month_start`` (2026 has 12 month boundaries, one per month, and no
-    two months share a 14-day column in a non-leap year)."""
-    from datetime import date
-
-    from app.routes.web import _build_history_context
-
-    ctx = _build_history_context(
-        activity_id=1, owner_id=1, period="year", anchor=date(2026, 6, 15), tz=_UTC
-    )
-    month_columns = ctx["visual"]["month_columns"]
-    assert ctx["visual"]["year_rows"] == 14
-    # 365 days / 14 rows per column -> 27 columns (ceil).
-    assert len(month_columns) == 27
-
-    # January always starts in column 0.
-    assert month_columns[0]["is_month_start"] is True
-    assert month_columns[0]["month"] == 1
-
-    flagged_months = [c["month"] for c in month_columns if c["is_month_start"]]
-    assert flagged_months == list(range(1, 13))
 
 
 async def test_history_context_log_groups_entries_by_day_newest_first(
@@ -1762,9 +1573,10 @@ async def test_history_route_week_day_tap_selects_cell_and_renders_entries(
     client: AsyncClient,
 ) -> None:
     """Tapping a day in week view (Task 4 build-plan item) renders the same
-    day-entries affordance as month view: the day-detail body state replaces
-    the week strip entirely (Task 5) and the day's entries are rendered via
-    the shared ``day_entries.html.jinja2`` partial."""
+    day-entries affordance as month view: the week strip stays in the DOM
+    (the period visual always renders, regardless of selection) and that
+    day's entries render below it via the shared ``day_entries.html.jinja2``
+    partial."""
     from app.services import entries as entries_service
 
     owner_id = await _guest_login(client)
@@ -1779,12 +1591,14 @@ async def test_history_route_week_day_tap_selects_cell_and_renders_entries(
         f"&day={today.isoformat()}"
     )
     assert resp.status_code == 200
-    # The week strip's own .cal-day cells are gone once a day is selected --
-    # only the back-control + that day's entries remain.
-    assert "cal-day--selected" not in resp.text
+    # The week strip stays in the DOM and the tapped day's cell is marked
+    # selected -- only the full-period log below it is swapped out for the
+    # day-detail panel.
+    assert "cal-day--selected" in resp.text
+    assert 'id="calendar-day-detail"' in resp.text
     assert strings_module.CALENDAR_DAY_ENTRIES_TITLE in resp.text
     assert "week tap test" in resp.text
-    assert strings_module.CALENDAR_BACK_TO_CALENDAR in resp.text
+    assert strings_module.HISTORY_CLEAR_SELECTION in resp.text
 
 
 async def test_history_route_week_day_tap_button_targets_week_period(
@@ -1921,6 +1735,11 @@ async def test_history_route_default_anchor_is_today(client: AsyncClient) -> Non
 
 
 async def test_home_does_not_render_heavy_stats(client: AsyncClient) -> None:
+    """Home cards render the same Counts/Streaks grid as the detail screen's
+    Summary card (``STATS_SUMMARY_TITLE`` included — see
+    components/activity_card.html.jinja2), but never the heavier
+    history visuals (heatmap, calendar) that only belong on the detail
+    screen's own history section."""
     owner_id = await _guest_login(client)
     seed_test_activity(owner_id, name="Kendo")
 
@@ -1929,7 +1748,7 @@ async def test_home_does_not_render_heavy_stats(client: AsyncClient) -> None:
     text = resp.text
     assert "heat-cell" not in text
     assert "cal-day" not in text
-    assert strings_module.STATS_SUMMARY_TITLE not in text
+    assert strings_module.STATS_SUMMARY_TITLE in text
 
 
 # ---------------------------------------------------------------------------
@@ -2080,11 +1899,12 @@ async def test_owner_view_c_param_for_past_month_entry_selects_day_and_expands(
     assert resp.status_code == 200
     # Landed on March 2026 (the entry's month), not the current month.
     assert "2026.03" in resp.text
-    # The day-detail body state renders -- the month grid is gone entirely
-    # (Task 5: a selected day replaces the grid, it doesn't coexist with it),
-    # and the back-control + this day's detail panel are present instead.
-    assert "cal-day--selected" not in resp.text
-    assert strings_module.CALENDAR_BACK_TO_CALENDAR in resp.text
+    # The day-detail panel renders below the month grid -- the grid itself
+    # stays in the DOM (it always renders regardless of day selection), with
+    # that day's cell marked selected, and the "Clear selection" control +
+    # this day's detail panel present below it.
+    assert "cal-day--selected" in resp.text
+    assert strings_module.HISTORY_CLEAR_SELECTION in resp.text
     assert f"{strings_module.CALENDAR_DAY_ENTRIES_TITLE} — {past_day}" in resp.text
     # The day-entries comment toggle for this entry auto-fires on load.
     assert f'id="comment-slot-{entry_id}"' in resp.text
@@ -2174,7 +1994,7 @@ async def test_history_fragment_renders_for_all_periods(client: AsyncClient) -> 
     assert f'id="history-{activity_id}"' in resp.text
     assert 'role="tablist"' in resp.text
 
-    for period in ("week", "month", "year"):
+    for period in ("week", "month"):
         r = await client.get(f"/activities/{activity_id}/history?period={period}")
         assert r.status_code == 200, (period, r.text[:500])
         txt = r.text

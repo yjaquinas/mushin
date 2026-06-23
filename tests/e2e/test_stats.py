@@ -1,5 +1,5 @@
-"""Playwright E2E specs for the stats screens (Task 9): calendar and heatmap
-on the sub-tally detail screen.
+"""Playwright E2E specs for the stats screens (Task 9): calendar on the
+sub-tally detail screen.
 
 These are real `pytest` + `playwright.sync_api` specs (see
 .claude/rules/tests.md) -- not agent-driven via the `playwright-cli` skill.
@@ -14,10 +14,14 @@ green on a plain dev machine / CI without a browser, mirroring
 Specs covered
 -------------
 1. Opening a sub-tally detail screen shows the month calendar (with at least
-   one ``.cal-day`` cell) and the trailing-365-day heatmap (``role="img"``
-   grid of ``.heat-cell`` elements) — neither of which appears on the home
-   screen.
+   one ``.cal-day`` cell), which doesn't appear on the home screen.
 2. Calendar day cells remain >=44px tap targets at 360px viewport width.
+
+The trailing-year heatmap ("year" period view) was removed entirely (the
+period switcher is now week/month/all only) -- see
+``app/templates/components/history.html.jinja2``. The spec that used to
+switch to the "year" tab and assert on ``.heat-cell``/``role="img"`` has been
+deleted along with the feature, not adapted.
 
 Note: tap-to-select-a-day + inline day-entries-fragment behavior is covered
 by ``tests/e2e/test_calendar_selection.py`` (which exercises the current
@@ -133,27 +137,18 @@ def _open_detail(page, heading: str):
     return page.locator("article", has=page.get_by_role("heading", name=heading))
 
 
-def test_detail_screen_shows_calendar_and_heatmap(page) -> None:
+def test_detail_screen_shows_calendar(page) -> None:
     """The Kendo detail screen's history section defaults to the month
-    calendar; switching to the "year" period tab swaps in the trailing-year
-    heatmap instead (the two are mutually exclusive period views, not shown
-    together). Neither appears on the home screen."""
+    calendar (at least one ``.cal-day`` cell), which doesn't appear on the
+    home screen."""
     _signup(page, _unique_username("a"))
 
     home_html = page.content()
-    assert "heat-cell" not in home_html
     assert "cal-day" not in home_html
 
     _open_detail(page, "Kendo")
 
     assert page.locator(".cal-day").count() > 0
-
-    page.get_by_role("tab", name=ui_strings.HISTORY_PERIOD_YEAR).click()
-    page.wait_for_load_state("networkidle")
-
-    heatmap = page.locator('[role="img"]')
-    assert heatmap.count() > 0
-    assert page.locator(".heat-cell").count() == 365
 
 
 def test_calendar_day_cells_meet_tap_target_at_360px(page) -> None:

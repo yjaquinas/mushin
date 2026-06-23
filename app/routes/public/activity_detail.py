@@ -13,11 +13,7 @@ THE SINGLE VISIBILITY AUTHORITY
 This route drives its visibility decision through
 ``profiles.viewer_capability`` / ``profiles.can_view_activity_detail`` — the
 sole, fail-closed authority (see ``app/services/profiles.py``). No handler
-reads ``user["visibility"]`` directly; the owner's two-mode preview
-(``?as=stranger`` / ``?as=connection``) re-derives the previewed capability
-by calling ``viewer_capability`` with a substitute ``current_user_id`` (or a
-literal ``"connected"`` override) rather than ever branching on the raw
-column.
+reads ``user["visibility"]`` directly.
 
 Business logic stays in ``app/services/``; the heavier render paths (owner
 dashboard continuation, read-only public view) live in the internal
@@ -43,7 +39,6 @@ from app.routes.public._activity_detail_handlers import (
     _render_owner_activity_detail,
     _render_readonly_activity_detail,
 )
-from app.routes.public._contexts import _CONNECTION_ALIAS, _STRANGER_ALIASES
 from app.routes.web import _build_card_context, _field_defs_for_activity
 from app.services import profiles
 
@@ -62,12 +57,8 @@ async def public_activity(
     Branch order (security-critical — do not reorder), entirely driven by
     ``profiles.viewer_capability`` / ``can_view_activity_detail``:
 
-      1. Owner, no preview param → ``activity_detail.html.jinja2`` (full
-         dashboard with write affordances); a public-notice strip when the
-         account is public.
-      1b. Owner + ``?as=stranger``/``?as=connection`` → preview the
-          read-only view at the downgraded capability (never more than that
-          real viewer class would see).
+      1. Owner → ``activity_detail.html.jinja2`` (full dashboard with write
+         affordances); a public-notice strip when the account is public.
       2. ``"blocked"`` → 404 (no existence oracle).
       3. ``can_view_activity_detail`` True (``connected``/``public``) →
          read-only ``public_activity.html.jinja2`` — full entries + notes.
@@ -90,16 +81,14 @@ async def public_activity(
             return HTMLResponse(status_code=404)
 
         cap = profiles.viewer_capability(conn, current_user_id=current_uid, profile_user=user)
-        preview_as = request.query_params.get("as")
-        is_preview = cap == "owner" and preview_as in (_STRANGER_ALIASES | {_CONNECTION_ALIAS})
 
         tz = users.get_user_timezone(owner_id)
 
         # ------------------------------------------------------------------
-        # Branch 1 — owner viewing their own activity (not previewing):
-        # render the full owner dashboard.
+        # Branch 1 — owner viewing their own activity: render the full
+        # owner dashboard.
         # ------------------------------------------------------------------
-        if cap == "owner" and not is_preview:
+        if cap == "owner":
             sub_row = conn.execute(
                 """SELECT st.id, st.name, st.slug, st.count_mode,
                           st.cached_count, st.cached_streak,
@@ -120,26 +109,6 @@ async def public_activity(
             # toggles render for the owner.
             can_comment = profiles.can_comment_on_entry(
                 conn, current_user_id=current_uid, profile_user=user, activity_id=activity_id
-            )
-
-        # ------------------------------------------------------------------
-        # Branch 1b — owner previewing as a downgraded viewer class.
-        # ------------------------------------------------------------------
-        elif is_preview:
-            if preview_as == _CONNECTION_ALIAS:
-                effective_cap = "connected"
-            else:
-                effective_cap = profiles.viewer_capability(
-                    conn, current_user_id=None, profile_user=user
-                )
-
-            if effective_cap == "limited":
-                return RedirectResponse(
-                    url=profiles.canonical_profile_url(username), status_code=303
-                )
-
-            return _render_readonly_activity_detail(
-                request, conn, username, slug, owner_id, activity_id, tz=tz
             )
 
         # ------------------------------------------------------------------

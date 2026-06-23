@@ -57,7 +57,7 @@ async def activity_history(
     """
     current_uid = sessions.read_uid(session)
 
-    if period not in ("week", "month", "year", "all"):
+    if period not in ("week", "month", "all"):
         return HTMLResponse(status_code=400)
 
     if anchor is None:
