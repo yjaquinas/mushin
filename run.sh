@@ -10,7 +10,7 @@ TAILWIND_OUTPUT="app/static/style.css"
 
 # Start Tailwind watcher in background (skip if no input.css)
 if [[ -f "$TAILWIND_INPUT" ]]; then
-    tailwindcss --input "$TAILWIND_INPUT" --output "$TAILWIND_OUTPUT" --watch=always &
+    tailwindcss --input "$TAILWIND_INPUT" --output "$TAILWIND_OUTPUT" --watch &
     TW_PID=$!
     trap 'kill $TW_PID 2>/dev/null' EXIT
     echo "Tailwind watcher running (pid=$TW_PID)"
