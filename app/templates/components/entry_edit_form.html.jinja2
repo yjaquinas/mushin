@@ -21,10 +21,8 @@
         class="flex flex-col gap-3 rounded-card border border-border bg-surface-1 p-3"
     >
         {# Date + optional time #}
-        <div
-            x-data="{ addTime: {{ 'true' if entry.time_known == 1 else 'false' }} }"
-            class="flex flex-col gap-2"
-        >
+        <div class="flex flex-col gap-2">
+            <script>addTime = {{ 'true' if entry.time_known == 1 else 'false' }}</script>
             <div class="flex flex-col gap-1">
                 <label for="edit-date-{{ entry.id }}" class="text-caption font-medium text-text-secondary">
                     {{ strings.LOG_OCCURRED_AT_LABEL }}
@@ -42,12 +40,13 @@
                 <input
                     type="checkbox"
                     name="add_time"
-                    x-model="addTime"
+                    _="on change set addTime to (it.checked)
+                       on change toggle hidden on me.parentElement.nextElementSibling based on (not addTime)"
                     class="rounded border-border"
                 >
                 {{ strings.LOG_TIME_ADD }}
             </label>
-            <div x-show="addTime" x-cloak class="flex flex-col gap-1">
+            <div hidden class="flex flex-col gap-1">
                 <label for="edit-time-{{ entry.id }}" class="text-caption font-medium text-text-secondary">
                     {{ strings.LOG_TIME_ADD }}
                 </label>

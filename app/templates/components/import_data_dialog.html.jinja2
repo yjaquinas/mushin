@@ -1,8 +1,8 @@
 {#
   Import-my-data — quiet footer link opening a focus-trapped confirm dialog
   for uploading a previously-exported JSON file and replacing ALL of the
-  current account's data with its contents. Uses Alpine for open/close and
-  focus-trap (see web-templates.md for when Alpine is sanctioned).
+  current account's data with its contents. Uses hyperscript for open/close
+  and focus management (see web-templates.md for when Alpine is sanctioned).
 
   The form posts to /import (multipart/form-data) and targets this whole
   component (#import-data-dialog) so the route can re-render it in place
@@ -14,27 +14,29 @@
 #}
 <div
     id="import-data-dialog"
-    x-data="{ open: {{ 'true' if open_on_error else 'false' }} }"
-    @keydown.escape.window="open = false"
+    hidden
+    _="on init set me.hidden to (not {{ 'true' if open_on_error else 'false' }})
+       on keydown[key=='Escape'] from :window set me.hidden to true"
 >
     <button
         type="button"
-        @click="open = true"
+        _="on click set me.parentElement.hidden to false"
         class="text-caption text-text-muted underline-offset-2 hover:underline focus-visible:outline-offset-2"
     >
         {{ strings.FOOTER_IMPORT_DATA }}
     </button>
 
-    <div
-        x-show="open"
-        x-cloak
+    <div hidden
+        _="on click of me and not its * set me.hidden to true
+           on keydown[key=='Escape'] from :window set me.hidden to true"
         class="fixed inset-0 z-50 flex items-end justify-center bg-text-primary/50 sm:items-center"
         role="presentation"
     >
         <div
-            x-show="open"
-            @click.outside="open = false"
-            x-init="$watch('open', (open) => { if (open) $nextTick(() => $refs.importCancelButton.focus()) })"
+            _="on keydown[key=='Escape'] from :window set me.parentElement.hidden to true
+               on init if me.parentElement.hidden is false then
+                   me.querySelector('#import-cancel-button')?.focus()
+               end"
             role="dialog"
             aria-modal="true"
             aria-labelledby="import-data-title"
@@ -80,8 +82,8 @@
 
                 <button
                     type="button"
-                    x-ref="importCancelButton"
-                    @click="open = false"
+                    id="import-cancel-button"
+                    _="on click set me.closest('div[role=presentation]').hidden to true"
                     class="min-h-tap w-full rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline-offset-2"
                 >
                     {{ strings.IMPORT_DATA_CANCEL }}

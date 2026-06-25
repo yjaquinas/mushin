@@ -3,31 +3,26 @@
   wrapping components/category_form.html.jinja2.
 #}
 <div
-    x-data="{
-        open: true,
-        close() {
-            this.open = false;
-        },
-    }"
-    x-show="open"
-    x-init="$nextTick(() => $refs.dialog.querySelector('input, textarea, select, button, [tabindex]')?.focus())"
-    @keydown.escape.window="close()"
+    hidden
+    _="on init set me.hidden to false
+       on init me.querySelector('input, textarea, select, button, [tabindex]')?.focus()
+       on keydown[key=='Escape'] from :window set me.hidden to true"
     class="fixed inset-0 z-10 flex items-end justify-center bg-black/30 sm:items-center"
     role="dialog"
     aria-modal="true"
     aria-label="{{ strings.ACTIVITY_NEW_TITLE }}"
 >
     <div
-        x-ref="dialog"
-        @click.outside="close()"
-        @htmx:after-request="if ($event.detail.successful) close()"
+        id="category-sheet-dialog"
+        _="on click of me and not its * set me.parentElement.hidden to true
+           on htmx:after-request from me if event.detail.successful set me.parentElement.hidden to true"
         class="flex max-h-[90vh] w-full max-w-screen-sm flex-col gap-4 overflow-y-auto rounded-t-card bg-surface-1 p-4 sm:rounded-card"
     >
         <header class="flex items-center justify-between">
             <h2 class="text-title font-semibold text-text-primary">{{ strings.ACTIVITY_NEW_TITLE }}</h2>
             <button
                 type="button"
-                @click="close()"
+                _="on click set me.closest('div[role=dialog]')?.hidden to true"
                 class="min-h-tap min-w-tap rounded-button px-3 text-body text-text-secondary transition hover:bg-surface-2"
             >
                 {{ strings.ACTIVITY_FORM_CANCEL }}

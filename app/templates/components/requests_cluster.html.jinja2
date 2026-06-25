@@ -13,19 +13,25 @@
   app.services.connections.list_incoming_pending / list_outgoing_pending),
   `fellows.pending_count`.
 #}
-<div x-data="{ open: false }" class="flex flex-col gap-3">
+<div class="flex flex-col gap-3">
+    <script>open = false</script>
     <button
         type="button"
-        @click="open = !open"
-        :aria-expanded="open.toString()"
+        _="on click set open to (not open)
+           set aria-expanded to (open.toString())
+           on click toggle hidden on #requests-cluster-body based on (not open)"
+        aria-expanded="false"
         aria-controls="requests-cluster-body"
         class="flex min-h-tap w-full items-center justify-between gap-2 rounded-card px-1 py-2 text-body font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
     >
         <span>{{ strings.REQUESTS_HEADING }} ({{ strings.REQUESTS_PENDING_BADGE.format(count=fellows.pending_count) }})</span>
-        <span aria-hidden="true" x-text="open ? '−' : '+'"></span>
+        <span aria-hidden="true"
+            _="on click set text content to (if open then '−' else '+')">+</span>
     </button>
 
-    <div id="requests-cluster-body" x-show="open" x-cloak class="flex flex-col gap-3">
+    <div id="requests-cluster-body"
+        hidden
+        class="flex flex-col gap-3">
         {% if not fellows.incoming_requests and not fellows.outgoing_requests %}
         <p class="text-caption text-text-secondary">{{ strings.REQUESTS_INCOMING_EMPTY }}</p>
         {% endif %}

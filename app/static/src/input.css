@@ -319,11 +319,8 @@
     transition: background-color 0s 600000s;
   }
 
-  /* Hide Alpine-controlled elements until Alpine initializes, avoiding a
-   * flash of the dialog before x-show takes effect. */
-  [x-cloak] {
-    display: none !important;
-  }
+  /* No x-cloak needed: the `hidden` attribute provides the same
+   * display:none behavior by default in all browsers. */
 }
 
 /* ── Chip base styles ─────────────────────────────────────────────────────── */

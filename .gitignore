@@ -80,3 +80,4 @@ meetings/*
 .playwright-cli/
 
 todo.txt
+meetings

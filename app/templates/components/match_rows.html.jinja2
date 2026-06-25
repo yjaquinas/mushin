@@ -48,16 +48,21 @@
                 <span class="text-caption font-medium text-text-secondary">
                     {{ strings.MATCH_LIST_RESULT_LABEL }}
                 </span>
-                <div class="flex flex-wrap gap-2" x-data="{ result: '{{ row.result }}' }">
+                <div class="flex flex-wrap gap-2">
                     {% for value, text in (
                         ("win", strings.MATCH_RESULT_WIN),
                         ("loss", strings.MATCH_RESULT_LOSS),
                         ("draw", strings.MATCH_RESULT_DRAW),
                     ) %}
                         <label
-                            :class="{ 'chip--selected': result === '{{ value }}' }"
-                            :aria-pressed="result === '{{ value }}'"
-                            class="chip"
+                            class="chip{% if row.result == value %} chip--selected{% endif %}"
+                            aria-pressed="{{ 'true' if row.result == value else 'false' }}"
+                            _="on click
+                                set result to '{{ value }}'
+                                add .chip--selected to me
+                                set me.aria-pressed to 'true'
+                                remove .chip--selected from me.parentElement.querySelectorAll('.chip') except me
+                                set it.aria-pressed to 'false' for it in me.parentElement.querySelectorAll('.chip') except me"
                         >
                             <input
                                 type="radio"
@@ -65,7 +70,6 @@
                                 value="{{ value }}"
                                 class="sr-only"
                                 {% if row.result == value %}checked{% endif %}
-                                x-model="result"
                             >
                             {{ text }}
                         </label>

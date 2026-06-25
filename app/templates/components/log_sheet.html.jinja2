@@ -14,14 +14,14 @@
   occurred_at value, KST date YYYY-MM-DD).
 #}
 <div
-    x-init="$nextTick(() => $el.querySelector('input, textarea, select, button, [tabindex]')?.focus())"
+    _="on init me.querySelector('input, textarea, select, button, [tabindex]')?.focus()"
     class="flex flex-col gap-4 rounded-card border border-border bg-surface-1 p-4"
 >
     <header class="flex items-center justify-between">
         <h2 class="text-title font-semibold text-text-primary">{{ name }}</h2>
         <button
             type="button"
-            @click="open = false"
+            _="on click set me.closest('#log-panel')?.hidden to true"
             class="min-h-tap min-w-tap rounded-button px-3 text-body text-text-secondary transition hover:bg-surface-2"
         >
             {{ strings.LOG_CANCEL }}
@@ -72,7 +72,8 @@
             {% endif %}
         {% endfor %}
 
-        <div x-data="{ addTime: false }" class="flex flex-col gap-2">
+        <div class="flex flex-col gap-2">
+            <script>addTime = false</script>
             <div class="flex flex-col gap-1">
                 <label for="date" class="text-caption font-medium text-text-secondary">
                     {{ strings.LOG_OCCURRED_AT_LABEL }}
@@ -90,12 +91,13 @@
                 <input
                     type="checkbox"
                     name="add_time"
-                    x-model="addTime"
+                    _="on change set addTime to (it.checked)
+                       on change toggle hidden on me.parentElement.nextElementSibling based on (not addTime)"
                     class="rounded border-border"
                 >
                 {{ strings.LOG_TIME_ADD }}
             </label>
-            <div x-show="addTime" x-cloak class="flex flex-col gap-1">
+            <div hidden class="flex flex-col gap-1">
                 <label for="time" class="text-caption font-medium text-text-secondary">
                     {{ strings.LOG_TIME_ADD }}
                 </label>

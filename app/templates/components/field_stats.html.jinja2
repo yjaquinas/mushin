@@ -5,26 +5,26 @@
   Context: field_stats ({"tag_groups": [...], "scales": [...], "period": str, "period_label": str}),
            activity_id (int), is_owner (bool, default false).
 
-  When is_owner, the outer div uses Alpine to track the history period and HTMX to
-  refresh after a log or period change. Alpine's x-on:*.window catches history-period-changed
-  events fired via HX-Trigger on any element (they bubble to window); hx-on::config-request
-  injects the current period into every request from this element.
+  When is_owner, the outer div uses HTMX to refresh after a log or period change.
+  hx-on::after-swap syncs data-period from the active period tab in the parent
+  history section (fired whenever the history section swaps in after a period
+  switch); hx-on::config-request injects the current period into every request
+  from this element. The custom history-period-changed event (formerly handled
+  by Alpine) is no longer needed — the period tab's own outerHTML swap triggers
+  after-swap on this element, which updates data-period before any subsequent
+  request.
 #}
 {% if is_owner | default(false) %}
 <div
     id="field-stats-{{ activity_id }}"
     data-period="{{ field_stats.period | default('month') }}"
-    x-data
-    x-on:history-period-changed.window="
-        const p = $event.detail.period;
-        if (p !== 'all') {
-            $el.dataset.period = p;
-            htmx.trigger($el, 'needs-period-refresh');
-        }
-    "
     hx-get="/activities/{{ activity_id }}/field-stats"
     hx-trigger="log-saved from:body, needs-period-refresh"
     hx-swap="outerHTML"
+    hx-on::after-swap="
+        const tab = $el.parentElement?.querySelector('[data-history-focus]');
+        if (tab) { $el.dataset.period = tab.dataset.period || '{{ field_stats.period }}'; }
+    "
     hx-on::config-request="event.detail.parameters['period'] = event.target.dataset.period"
 >
 {% else %}
