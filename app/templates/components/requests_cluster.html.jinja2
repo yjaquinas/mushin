@@ -1,8 +1,8 @@
 {#
   Requests cluster — owner-only, included by fellows_section.html.jinja2.
-  Collapsed by default behind a "Requests (N)" toggle line (Alpine.js
-  open/close — the client-only-state case web-templates.md sanctions Alpine
-  for) that expands to the existing full-width Accept/Decline/Cancel rows,
+  Collapsed by default behind a "Requests (N)" toggle line (hyperscript
+  open/close — the client-only-state case sanctioned by web-templates.md)
+  that expands to the existing full-width Accept/Decline/Cancel rows,
   unchanged.
 
   Incoming pending: Accept (consent-gated GET->POST) / Decline (direct).
@@ -14,19 +14,24 @@
   `fellows.pending_count`.
 #}
 <div class="flex flex-col gap-3">
-    <script>open = false</script>
+    <script>$open = false</script>
     <button
         type="button"
-        _="on click set open to (not open)
-           set aria-expanded to (open.toString())
-           on click toggle hidden on #requests-cluster-body based on (not open)"
+        _="on click
+            set $open to (not $open)
+            set @aria-expanded to ($open.toString())
+            if $open
+                set #requests-cluster-body's @hidden to ''
+            else
+                set #requests-cluster-body's @hidden to 'hidden'
+            end"
         aria-expanded="false"
         aria-controls="requests-cluster-body"
         class="flex min-h-tap w-full items-center justify-between gap-2 rounded-card px-1 py-2 text-body font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
     >
         <span>{{ strings.REQUESTS_HEADING }} ({{ strings.REQUESTS_PENDING_BADGE.format(count=fellows.pending_count) }})</span>
         <span aria-hidden="true"
-            _="on click set text content to (if open then '−' else '+')">+</span>
+            _="on click set text content to (if $open then '−' else '+')">+</span>
     </button>
 
     <div id="requests-cluster-body"

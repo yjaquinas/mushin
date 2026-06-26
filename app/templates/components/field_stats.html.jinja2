@@ -9,10 +9,8 @@
   hx-on::after-swap syncs data-period from the active period tab in the parent
   history section (fired whenever the history section swaps in after a period
   switch); hx-on::config-request injects the current period into every request
-  from this element. The custom history-period-changed event (formerly handled
-  by Alpine) is no longer needed — the period tab's own outerHTML swap triggers
-  after-swap on this element, which updates data-period before any subsequent
-  request.
+  from this element. The period tab's own outerHTML swap triggers after-swap
+  on this element, which updates data-period before any subsequent request.
 #}
 {% if is_owner | default(false) %}
 <div

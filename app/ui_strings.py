@@ -269,8 +269,8 @@ FOOTER_ACCOUNT = "Account"
 # Export/import/logout live on the /account page (not the footer) but keep
 # their FOOTER_* names — the names predate the move and the copy itself
 # isn't footer-specific, so renaming would just duplicate content.
-FOOTER_EXPORT_DATA = "Export my data"
-FOOTER_IMPORT_DATA = "Import data"
+FOOTER_EXPORT_ENTRIES = "Export entries"
+FOOTER_IMPORT_ENTRIES = "Import entries"
 FOOTER_LOGOUT = "Log out"
 FOOTER_DELETE_DATA = "Delete my data"
 
@@ -327,7 +327,7 @@ VISIBILITY_CONSENT_SUBMIT = "Continue"
 
 # Same factual, no-alarm register as the consent screen. The toggle restates
 # the consequence briefly on each change (not the full first-run explainer).
-ACCOUNT_TITLE = "Account settings"
+ACCOUNT_TITLE = "Account"
 
 # Secondary, in-content way back home — the global header logo already links
 # home on every page; this is a clearly labeled additional affordance, not a

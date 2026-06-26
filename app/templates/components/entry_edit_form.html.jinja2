@@ -22,7 +22,7 @@
     >
         {# Date + optional time #}
         <div class="flex flex-col gap-2">
-            <script>addTime = {{ 'true' if entry.time_known == 1 else 'false' }}</script>
+            <script>$addTime = {{ 'true' if entry.time_known == 1 else 'false' }}</script>
             <div class="flex flex-col gap-1">
                 <label for="edit-date-{{ entry.id }}" class="text-caption font-medium text-text-secondary">
                     {{ strings.LOG_OCCURRED_AT_LABEL }}
@@ -40,8 +40,13 @@
                 <input
                     type="checkbox"
                     name="add_time"
-                    _="on change set addTime to (it.checked)
-                       on change toggle hidden on me.parentElement.nextElementSibling based on (not addTime)"
+                    _="on change
+                           set $addTime to (it.checked)
+                           if $addTime
+                               set me.parentElement.nextElementSibling's @hidden to ''
+                           else
+                               set me.parentElement.nextElementSibling's @hidden to 'hidden'
+                           end"
                     class="rounded border-border"
                 >
                 {{ strings.LOG_TIME_ADD }}

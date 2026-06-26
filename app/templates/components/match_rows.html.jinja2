@@ -58,11 +58,11 @@
                             class="chip{% if row.result == value %} chip--selected{% endif %}"
                             aria-pressed="{{ 'true' if row.result == value else 'false' }}"
                             _="on click
-                                set result to '{{ value }}'
+                                set $picked to '{{ value }}'
                                 add .chip--selected to me
-                                set me.aria-pressed to 'true'
+                                set me's @aria-pressed to 'true'
                                 remove .chip--selected from me.parentElement.querySelectorAll('.chip') except me
-                                set it.aria-pressed to 'false' for it in me.parentElement.querySelectorAll('.chip') except me"
+                                set it's @aria-pressed to 'false' for it in me.parentElement.querySelectorAll('.chip') except me"
                         >
                             <input
                                 type="radio"

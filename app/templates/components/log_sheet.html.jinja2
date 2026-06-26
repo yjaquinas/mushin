@@ -21,7 +21,11 @@
         <h2 class="text-title font-semibold text-text-primary">{{ name }}</h2>
         <button
             type="button"
-            _="on click set me.closest('#log-panel')?.hidden to true"
+            _="on click
+                   set target to me.closest('#log-panel')
+                   if target is not null
+                       set target's @hidden to 'hidden'
+                   end"
             class="min-h-tap min-w-tap rounded-button px-3 text-body text-text-secondary transition hover:bg-surface-2"
         >
             {{ strings.LOG_CANCEL }}
@@ -73,7 +77,7 @@
         {% endfor %}
 
         <div class="flex flex-col gap-2">
-            <script>addTime = false</script>
+            <script>$addTime = false</script>
             <div class="flex flex-col gap-1">
                 <label for="date" class="text-caption font-medium text-text-secondary">
                     {{ strings.LOG_OCCURRED_AT_LABEL }}
@@ -91,8 +95,13 @@
                 <input
                     type="checkbox"
                     name="add_time"
-                    _="on change set addTime to (it.checked)
-                       on change toggle hidden on me.parentElement.nextElementSibling based on (not addTime)"
+                    _="on change
+                           set $addTime to (it.checked)
+                           if $addTime
+                               set me.parentElement.nextElementSibling's @hidden to ''
+                           else
+                               set me.parentElement.nextElementSibling's @hidden to 'hidden'
+                           end"
                     class="rounded border-border"
                 >
                 {{ strings.LOG_TIME_ADD }}

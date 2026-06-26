@@ -4,11 +4,7 @@
 
 {% block content %}
 <header class="flex flex-col gap-2 py-2">
-    <h1 class="text-title font-semibold text-text-primary">{{ strings.ACCOUNT_TITLE }}</h1>
-    <a
-        href="{{ home_url }}"
-        class="text-caption font-medium text-text-secondary underline-offset-2 transition hover:underline focus-visible:outline-offset-2"
-    >{{ strings.ACCOUNT_HOME_LINK }}</a>
+    <h1 class="text-2xl font-semibold text-text-primary">{{ strings.ACCOUNT_TITLE }}</h1>
 </header>
 
 {# Visibility/share-link section is non-guest only — guests have no username
@@ -19,13 +15,6 @@
         <h2 class="text-body font-semibold text-text-primary">{{ strings.ACCOUNT_VISIBILITY_HEADING }}</h2>
         <p class="text-caption text-text-secondary">
             {{ strings.ACCOUNT_VISIBILITY_SHARE_LINK.format(username=username) }}
-        </p>
-        <p class="text-caption text-text-secondary">
-            {% if visibility == "public" %}
-                {{ strings.ACCOUNT_VISIBILITY_CURRENT_PUBLIC }}
-            {% else %}
-                {{ strings.ACCOUNT_VISIBILITY_CURRENT_PRIVATE }}
-            {% endif %}
         </p>
     </div>
 
@@ -72,25 +61,126 @@
 </section>
 {% endif %}
 
-{# Export/import/logout are available to every account, including guests
-   (guests have no username/public profile but can still manage and sign
-   out of their data — see .claude/rules/repo-wide.md). #}
+{# Data actions: export / import — available to every account, including guests. #}
 <section class="flex flex-col gap-4 border-t border-border pt-4">
-    <a
-        href="/export"
-        class="text-caption text-text-muted underline-offset-2 hover:underline focus-visible:outline-offset-2"
-    >
-        {{ strings.FOOTER_EXPORT_DATA }}
-    </a>
-    {% include "components/import_data_dialog.html.jinja2" with context %}
+    <h2 class="text-body font-semibold text-text-primary">Data</h2>
+    <div class="flex gap-3">
+        <a
+            href="/export"
+            class="flex min-h-tap flex-1 items-center justify-center gap-2 rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline-offset-2"
+        >
+            {% from "components/_icon.html.jinja2" import icon %}
+            {{ icon("arrow-up-tray", size=18) }}
+            {{ strings.FOOTER_EXPORT_ENTRIES }}
+        </a>
+        {% include "components/import_data_dialog.html.jinja2" with context %}
+        <button
+            type="button"
+            _="on click set #import-data-dialog's @hidden to ''"
+            class="flex min-h-tap flex-1 items-center justify-center gap-2 rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline-offset-2"
+        >
+            {% from "components/_icon.html.jinja2" import icon %}
+            {{ icon("arrow-down-tray", size=18) }}
+            {{ strings.FOOTER_IMPORT_ENTRIES }}
+        </button>
+    </div>
+</section>
+
+{# Session actions: logout #}
+<section class="flex flex-col gap-4 border-t border-border pt-4">
+    <h2 class="text-body font-semibold text-text-primary">Session</h2>
     <button
         type="button"
         hx-post="/auth/logout"
         hx-swap="none"
         hx-on::after-request="if(event.detail.successful) window.location.href = '/'"
-        class="flex min-h-tap w-full items-center justify-center rounded-button border border-border px-4 py-3 text-body font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline-offset-2"
+        class="flex min-h-tap w-full items-center justify-center gap-2 rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline-offset-2"
     >
+        {% from "components/_icon.html.jinja2" import icon %}
+        {{ icon("circle-user", size=18) }}
         {{ strings.FOOTER_LOGOUT }}
     </button>
+</section>
+
+{# Danger zone: delete account — only for non-guest accounts. #}
+{% if not is_guest %}
+<section class="flex flex-col gap-4 border-t border-border pt-4">
+    <h2 class="text-body font-semibold text-text-primary">Danger zone</h2>
+    <button
+        type="button"
+        _="on click set #delete-account-dialog's @hidden to ''"
+        class="flex min-h-tap w-full items-center justify-center gap-2 rounded-button border border-danger bg-danger-subtle px-4 py-3 text-body font-semibold text-danger transition hover:opacity-90 focus-visible:outline-offset-2"
+    >
+        {% from "components/_icon.html.jinja2" import icon %}
+        {{ icon("trash", size=18) }}
+        {{ strings.FOOTER_DELETE_DATA }}
+    </button>
+
+    {# Delete-account confirm dialog — mirrors import_data_dialog pattern. #}
+    <div
+        id="delete-account-dialog"
+        hidden
+        _="on init set me's @hidden to 'hidden'
+           on keydown[key=='Escape'] from :window set me's @hidden to 'hidden'
+           on click of me and not its * set me's @hidden to 'hidden'"
+    >
+        <div hidden
+            class="fixed inset-0 z-50 flex items-end justify-center bg-text-primary/50 sm:items-center"
+            role="presentation"
+        >
+            <div
+                _="on init if me.parentElement's @hidden is '' then
+                       me.querySelector('#delete-cancel-button')?.focus()
+                   end"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="delete-account-title"
+                class="flex w-full max-w-md flex-col gap-4 rounded-card border border-border bg-surface-1 p-4 sm:rounded-card"
+            >
+                <h2 id="delete-account-title" class="text-body font-semibold text-text-primary">
+                    {{ strings.DELETE_DATA_TITLE }}
+                </h2>
+                <p class="text-caption text-text-secondary">{{ strings.DELETE_DATA_BODY }}</p>
+
+                <form
+                    hx-post="/delete"
+                    hx-target="#delete-account-dialog"
+                    hx-swap="outerHTML"
+                    class="flex flex-col gap-3"
+                >
+                    <button
+                        type="submit"
+                        hx-disabled-elt="this"
+                        class="min-h-tap w-full rounded-button bg-danger px-4 py-3 text-body font-semibold text-white transition hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-60"
+                    >
+                        {{ strings.DELETE_DATA_CONFIRM }}
+                    </button>
+                    <button
+                        type="button"
+                        id="delete-cancel-button"
+                        _="on click
+                               set target to me.closest('div[role=presentation]')
+                               if target is not null
+                                   set target's @hidden to 'hidden'
+                               end"
+                        class="min-h-tap w-full rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline-offset-2"
+                    >
+                        {{ strings.DELETE_DATA_CANCEL }}
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+{# Privacy policy — always at the bottom. #}
+<section class="flex flex-col items-center gap-4 border-t border-border pt-4">
+    <a
+        href="/privacy"
+        class="text-caption text-text-muted underline-offset-2 hover:underline focus-visible:outline-offset-2"
+    >
+        {{ strings.FOOTER_PRIVACY }}
+    </a>
 </section>
 {% endblock %}
