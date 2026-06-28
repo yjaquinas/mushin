@@ -5,29 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{{ title | default(strings.APP_NAME) }}{% endblock %}</title>
     <link rel="stylesheet" href="/static/style.css">
-    <script src="https://unpkg.com/htmx.org@2"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/hyperscript.org@0.9.91/dist/_hyperscript.min.js" integrity="sha384-OT9bNmUa5rM34SmxFpRftn2F6GbgM/4xnTmn0z106OE5uvsigkdtUMOpdPKOigyO" crossorigin="anonymous"></script>
-    <script defer src="/static/js/theme.js"></script>
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.10/dist/htmx.min.js" integrity="sha384-H5SrcfygHmAuTDZphMHqBJLc3FhssKjG7w/CeCpFReSfwBWDTKpkzPP8c+cLsK+V" crossorigin="anonymous"></script>
+    <script defer src="/static/js/dialogs.js"></script>
+    <script defer src="/static/js/account-dialogs.js"></script>
     <script defer src="/static/js/auth-form.js"></script>
+    <script defer src="/static/js/category-sheet.js"></script>
+    <script defer src="/static/js/log-sheet.js"></script>
 </head>
-<body
-    class="flex flex-col bg-surface-0 min-h-screen text-text-primary text-body"
-    {#
-      Delegated on <body> rather than on the swap target itself: an
-      hx-on::after-swap attribute on the element that's being replaced by its
-      own outerHTML swap is unreliable -- empirically, htmx fires afterSwap
-      for the new content before that content's own freshly-processed
-      listener is reliably wired up for SOME swaps (e.g. the calendar's
-      day-detail panel) but not others (e.g. the period-tab swap), with no
-      visible difference in markup shape. Binding on <body>, which never
-      itself gets swapped, sidesteps the race. See
-      components/history.html.jinja2 for the [data-history-focus] marker
-      this looks for.
-    #}
-    hx-on::after-swap="
-        const active = event.target.querySelector && event.target.querySelector('[data-history-focus]');
-        if (active) { active.focus(); }
-    "
+<body class="flex flex-col bg-surface-0 min-h-screen text-text-primary text-body"
+    hx-on::after-swap="var t=event.detail.target;if(t){var f=t.querySelector('[data-history-focus]');if(f)f.focus();}"
 >
     <div class="bg-obsidian">
         <div class="mx-auto flex max-w-screen-md items-baseline justify-between gap-2 px-4 py-3">

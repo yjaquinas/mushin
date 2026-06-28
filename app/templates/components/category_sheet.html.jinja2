@@ -1,43 +1,29 @@
 {#
   Create-activity sheet — same dialog shell as components/log_sheet.html.jinja2,
   wrapping components/category_form.html.jinja2.
+
+  Dialog behavior (init focus, Escape key, overlay click, auto-close on
+  successful form submit) is handled by category-sheet.js (DialogManager).
 #}
 <div
+    id="category-sheet-dialog"
     hidden
-    _="on init
-           set me's @hidden to ''
-           me.querySelector('input, textarea, select, button, [tabindex]')?.focus()
-       end
-       on keydown[key=='Escape'] from :window set me's @hidden to 'hidden'"
-    class="fixed inset-0 z-10 flex items-end justify-center bg-black/30 sm:items-center"
-    role="dialog"
-    aria-modal="true"
-    aria-label="{{ strings.ACTIVITY_NEW_TITLE }}"
+    class="flex max-h-[90vh] w-full max-w-screen-sm flex-col gap-4 overflow-y-auto rounded-t-card bg-surface-1 p-4 sm:rounded-card"
 >
-    <div
-        id="category-sheet-dialog"
-        _="on click of me and not its * set me.parentElement's @hidden to 'hidden'
-           on htmx:after-request from me if event.detail.successful set me.parentElement's @hidden to 'hidden'"
-        class="flex max-h-[90vh] w-full max-w-screen-sm flex-col gap-4 overflow-y-auto rounded-t-card bg-surface-1 p-4 sm:rounded-card"
-    >
-        <header class="flex items-center justify-between">
-            <h2 class="text-title font-semibold text-text-primary">{{ strings.ACTIVITY_NEW_TITLE }}</h2>
-            <button
-                type="button"
-                _="on click
-                       set target to me.closest('div[role=dialog]')
-                       if target is not null
-                           set target's @hidden to 'hidden'
-                       end"
-                class="min-h-tap min-w-tap rounded-button px-3 text-body text-text-secondary transition hover:bg-surface-2"
-            >
-                {{ strings.ACTIVITY_FORM_CANCEL }}
-            </button>
-        </header>
+    <header class="flex items-center justify-between">
+        <h2 class="text-title font-semibold text-text-primary">{{ strings.ACTIVITY_NEW_TITLE }}</h2>
+        <button
+            type="button"
+            id="category-sheet-cancel"
+            hx-on::click="document.getElementById('category-sheet-dialog').setAttribute('hidden','')"
+            class="min-h-tap min-w-tap rounded-button px-3 text-body text-text-secondary transition hover:bg-surface-2"
+        >
+            {{ strings.ACTIVITY_FORM_CANCEL }}
+        </button>
+    </header>
 
-        {% set hx_post = "/activities" %}
-        {% set hx_target = "#cards" %}
-        {% set hx_swap = "beforeend" %}
-        {% include "components/category_form.html.jinja2" with context %}
-    </div>
+    {% set hx_post = "/activities" %}
+    {% set hx_target = "#cards" %}
+    {% set hx_swap = "beforeend" %}
+    {% include "components/category_form.html.jinja2" with context %}
 </div>

@@ -76,7 +76,8 @@
         {% include "components/import_data_dialog.html.jinja2" with context %}
         <button
             type="button"
-            _="on click set #import-data-dialog's @hidden to ''"
+            id="import-open-button"
+            hx-on::click="document.getElementById('import-data-dialog').removeAttribute('hidden')"
             class="flex min-h-tap flex-1 items-center justify-center gap-2 rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline-offset-2"
         >
             {% from "components/_icon.html.jinja2" import icon %}
@@ -91,9 +92,10 @@
     <h2 class="text-body font-semibold text-text-primary">Session</h2>
     <button
         type="button"
+        id="logout-button"
         hx-post="/auth/logout"
         hx-swap="none"
-        hx-on::after-request="if(event.detail.successful) window.location.href = '/'"
+        hx-on::after-request="if(event.detail.successful)window.location.href='/'"
         class="flex min-h-tap w-full items-center justify-center gap-2 rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline-offset-2"
     >
         {% from "components/_icon.html.jinja2" import icon %}
@@ -108,7 +110,8 @@
     <h2 class="text-body font-semibold text-text-primary">Danger zone</h2>
     <button
         type="button"
-        _="on click set #delete-account-dialog's @hidden to ''"
+        id="delete-open-button"
+        hx-on::click="document.getElementById('delete-account-dialog').removeAttribute('hidden')"
         class="flex min-h-tap w-full items-center justify-center gap-2 rounded-button border border-danger bg-danger-subtle px-4 py-3 text-body font-semibold text-danger transition hover:opacity-90 focus-visible:outline-offset-2"
     >
         {% from "components/_icon.html.jinja2" import icon %}
@@ -120,18 +123,12 @@
     <div
         id="delete-account-dialog"
         hidden
-        _="on init set me's @hidden to 'hidden'
-           on keydown[key=='Escape'] from :window set me's @hidden to 'hidden'
-           on click of me and not its * set me's @hidden to 'hidden'"
     >
         <div hidden
             class="fixed inset-0 z-50 flex items-end justify-center bg-text-primary/50 sm:items-center"
             role="presentation"
         >
             <div
-                _="on init if me.parentElement's @hidden is '' then
-                       me.querySelector('#delete-cancel-button')?.focus()
-                   end"
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="delete-account-title"
@@ -158,11 +155,6 @@
                     <button
                         type="button"
                         id="delete-cancel-button"
-                        _="on click
-                               set target to me.closest('div[role=presentation]')
-                               if target is not null
-                                   set target's @hidden to 'hidden'
-                               end"
                         class="min-h-tap w-full rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline-offset-2"
                     >
                         {{ strings.DELETE_DATA_CANCEL }}

@@ -4,6 +4,9 @@
   via HTMX fragments that swap the whole row group, carrying already-entered
   values along (hx-include="closest form" or this group's inputs).
 
+  Result chip selection uses CSS :has(input:checked) for styling; the radio
+  input inside each <label> is toggled by native <label> click behavior.
+
   On submit, the parent form's POST reads `match_opponent_{field.id}_{i}` /
   `match_score_{field.id}_{i}` / `match_result_{field.id}_{i}` for each row
   index in `rows` and persists via competition.add_matches.
@@ -55,14 +58,8 @@
                         ("draw", strings.MATCH_RESULT_DRAW),
                     ) %}
                         <label
-                            class="chip{% if row.result == value %} chip--selected{% endif %}"
+                            class="chip"
                             aria-pressed="{{ 'true' if row.result == value else 'false' }}"
-                            _="on click
-                                set $picked to '{{ value }}'
-                                add .chip--selected to me
-                                set me's @aria-pressed to 'true'
-                                remove .chip--selected from me.parentElement.querySelectorAll('.chip') except me
-                                set it's @aria-pressed to 'false' for it in me.parentElement.querySelectorAll('.chip') except me"
                         >
                             <input
                                 type="radio"

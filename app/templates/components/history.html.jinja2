@@ -21,15 +21,19 @@
   components/day_entries.html.jinja2) when one is — so after every swap,
   focus lands on a stable, predictable target regardless of which control
   (tab, prev/next, day-cell, or clear-selection) triggered the swap, without
-  requiring per-control id-matching. The actual `hx-on::after-swap` listener
-  lives on `<body>` in web/base.html.jinja2, not here — see that file's
-  comment for why it can't live on this self-replacing `outerHTML` target.
+  requiring per-control id-matching. The actual after-swap listener lives
+  in app/static/js/base-behavior.js, registered on `<body>` — see that file
+  for why it can't live on this self-replacing `outerHTML` target.
+
+  Period sync: after every swap, the `data-period` attribute on the
+  field-stats div is updated from the active period tab's `data-period`.
 
   Context: activity_id, history (see app.routes.web._build_history_context).
 #}
 <div
     id="history-{{ activity_id }}"
     class="flex flex-col gap-3"
+    hx-on::after-swap="var fs=document.getElementById('field-stats-'+this.id.split('-').pop());if(fs){var t=this.querySelector('[data-history-focus]');if(t)fs.dataset.period=t.dataset.period||fs.dataset.period;}"
 >
     {# Sentinel: refreshes the whole history section on log-saved.
        Lives here (not on the parent div) so its hx-vals don't bleed into

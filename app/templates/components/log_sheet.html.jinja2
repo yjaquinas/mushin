@@ -6,26 +6,26 @@
   On submit, POSTs to /activities/{id}/log with hx-swap="none" -- the
   detail screen's stats-summary/history/field-stats sections refresh
   themselves off the "log-saved" HX-Trigger the response fires, so there's
-  no primary swap target. The sheet then closes itself (see the
-  @log-saved.window listener on activity_detail.html.jinja2's log-panel
-  wrapper).
+  no primary swap target.
+
+  Dialog behavior (init focus, Escape key, overlay click, cancel button)
+  is handled by log-sheet.js. The time checkbox toggle uses hx-on::change
+  inline (shared with entry_edit_form).
 
   Context: activity_id, name, fields (field-priority order), today (default
   occurred_at value, KST date YYYY-MM-DD).
 #}
 <div
-    _="on init me.querySelector('input, textarea, select, button, [tabindex]')?.focus()"
-    class="flex flex-col gap-4 rounded-card border border-border bg-surface-1 p-4"
+    id="log-sheet-dialog"
+    hidden
+    class="flex max-h-[90vh] w-full max-w-screen-sm flex-col gap-4 overflow-y-auto rounded-t-card bg-surface-1 p-4 sm:rounded-card"
 >
     <header class="flex items-center justify-between">
         <h2 class="text-title font-semibold text-text-primary">{{ name }}</h2>
         <button
             type="button"
-            _="on click
-                   set target to me.closest('#log-panel')
-                   if target is not null
-                       set target's @hidden to 'hidden'
-                   end"
+            id="log-sheet-cancel"
+            hx-on::click="document.getElementById('log-sheet-dialog').setAttribute('hidden','')"
             class="min-h-tap min-w-tap rounded-button px-3 text-body text-text-secondary transition hover:bg-surface-2"
         >
             {{ strings.LOG_CANCEL }}
@@ -77,7 +77,6 @@
         {% endfor %}
 
         <div class="flex flex-col gap-2">
-            <script>$addTime = false</script>
             <div class="flex flex-col gap-1">
                 <label for="date" class="text-caption font-medium text-text-secondary">
                     {{ strings.LOG_OCCURRED_AT_LABEL }}
@@ -95,14 +94,8 @@
                 <input
                     type="checkbox"
                     name="add_time"
-                    _="on change
-                           set $addTime to (it.checked)
-                           if $addTime
-                               set me.parentElement.nextElementSibling's @hidden to ''
-                           else
-                               set me.parentElement.nextElementSibling's @hidden to 'hidden'
-                           end"
                     class="rounded border-border"
+                    hx-on::change="var l=this.parentElement;if(l){var d=l.nextElementSibling;if(d){this.checked?d.removeAttribute('hidden'):d.setAttribute('hidden','');}}"
                 >
                 {{ strings.LOG_TIME_ADD }}
             </label>

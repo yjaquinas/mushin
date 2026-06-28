@@ -7,7 +7,7 @@ often you do any activity and watch it add up — entries, counts, and streaks,
 no levels or grinding. Multi-user from day one; UI strings centralized for
 i18n.
 
-Stack: FastAPI + uv + Uvicorn. Optional Tailwind CSS v4 + hyperscript + HTMX
+Stack: FastAPI + uv + Uvicorn. Optional Tailwind CSS v4 + HTMX + vanilla JS
 (web), Hyperview/HXML (mobile), SQLite.
 Hosting: Ubuntu 24.04 (production via Caddy + systemd).
 Studio context: see `~/.claude/CLAUDE.md` for studio-wide conventions and brand.

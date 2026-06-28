@@ -1,32 +1,29 @@
 {#
   Import-my-data — quiet footer link opening a focus-trapped confirm dialog
   for uploading a previously-exported JSON file and replacing ALL of the
-  current account's data with its contents. Uses hyperscript for open/close
-  and focus management.
+  current account's data with its contents.
 
   The form posts to /import (multipart/form-data) and targets this whole
   component (#import-data-dialog) so the route can re-render it in place
   with an inline error on failure, or return HX-Redirect: /home on success.
 
+  Auto-open on error uses hx-on::load with a data-auto-open flag.
+
   Optional context (set by the route on an error re-render):
-    import_error   - error string shown inline above the form.
-    open_on_error  - when true, the dialog opens immediately on swap-in.
+    import_error    - error string shown inline above the form.
+    open_on_error   - when true, the dialog opens immediately on swap-in.
 #}
 <div
     id="import-data-dialog"
     hidden
-    _="on init set me's @hidden to (if {{ 'true' if open_on_error else 'false' }} then 'hidden' else '')
-       on keydown[key=='Escape'] from :window set me's @hidden to 'hidden'
-       on click of me and not its * set me's @hidden to 'hidden'"
+    {% if open_on_error %}data-auto-open{% endif %}
+    hx-on::load="if(this.hasAttribute('data-auto-open'))this.removeAttribute('hidden')"
 >
     <div hidden
         class="fixed inset-0 z-50 flex items-end justify-center bg-text-primary/50 sm:items-center"
         role="presentation"
     >
         <div
-            _="on init if me.parentElement's @hidden is '' then
-                   me.querySelector('#import-cancel-button')?.focus()
-               end"
             role="dialog"
             aria-modal="true"
             aria-labelledby="import-data-title"
@@ -73,11 +70,6 @@
                 <button
                     type="button"
                     id="import-cancel-button"
-                    _="on click
-                           set target to me.closest('div[role=presentation]')
-                           if target is not null
-                               set target's @hidden to 'hidden'
-                           end"
                     class="min-h-tap w-full rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline-offset-2"
                 >
                     {{ strings.IMPORT_DATA_CANCEL }}
