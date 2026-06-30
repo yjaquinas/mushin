@@ -13,7 +13,7 @@
     id="field-stats-{{ activity_id }}"
     data-period="{{ field_stats.period | default('month') }}"
     hx-get="/activities/{{ activity_id }}/field-stats"
-    hx-vals='js: { period: this.dataset.period }'
+    hx-vals='js:{ period: this.dataset.period }'
     hx-trigger="log-saved from:body, needs-period-refresh"
     hx-swap="outerHTML"
 >
