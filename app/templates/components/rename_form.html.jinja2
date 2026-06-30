@@ -1,7 +1,8 @@
 {#
-  Inline rename form fragment — swaps #rename-heading on the sub-tally detail
-  page. Submitting POSTs to /activities/{id}/rename which on success redirects
-  to the new canonical URL. Cancel swaps back to the plain heading.
+  Inline rename form fragment — swaps #rename-heading's innerHTML on the
+  sub-tally detail page. Submitting POSTs to /activities/{id}/rename which
+  on success redirects to the new canonical URL. Cancel swaps back to the
+  plain heading via rename-form-cancel.
 
   Context:
     activity_id   int    — the sub-tally being renamed
@@ -9,49 +10,47 @@
     error          str?   — validation error message (optional)
 #}
 {% from "components/_icon.html.jinja2" import icon %}
-<div id="rename-heading">
-    <form
-        hx-post="/activities/{{ activity_id }}/rename"
-        hx-target="#rename-heading"
-        hx-swap="outerHTML"
-        class="flex flex-col gap-2"
-    >
-        <div class="flex items-center gap-2">
-            <label for="rename-input" class="sr-only">{{ strings.RENAME_SAVE }}</label>
-            <input
-                id="rename-input"
-                type="text"
-                name="name"
-                value="{{ current_name }}"
-                maxlength="200"
-                required
-                autofocus
-                class="flex-1 rounded border border-border bg-surface-1 px-3 py-1 text-title font-semibold text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-            >
-            <button
-                type="submit"
-                class="min-h-tap rounded-button bg-brand px-3 text-body font-semibold text-on-brand transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-            >{{ strings.RENAME_SAVE }}</button>
-            <button
-                type="button"
-                hx-get="/activities/{{ activity_id }}/rename-form-cancel"
-                hx-target="#rename-heading"
-                hx-swap="outerHTML"
-                class="min-h-tap rounded-button border border-border px-3 text-body text-text-secondary transition hover:bg-surface-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-            >{{ strings.RENAME_CANCEL }}</button>
-        </div>
-        {% if error %}
-        <p class="text-caption text-danger" role="alert">{{ error }}</p>
-        {% endif %}
-        <p class="text-caption text-text-muted">{{ strings.RENAME_SLUG_NOTICE }}</p>
-    </form>
+<form
+    hx-post="/activities/{{ activity_id }}/rename"
+    hx-target="#rename-heading"
+    hx-swap="innerHTML"
+    class="flex flex-col gap-2"
+>
+    <div class="flex items-center gap-2">
+        <label for="rename-input" class="sr-only">{{ strings.RENAME_SAVE }}</label>
+        <input
+            id="rename-input"
+            type="text"
+            name="name"
+            value="{{ current_name }}"
+            maxlength="200"
+            required
+            autofocus
+            class="flex-1 rounded border border-border bg-surface-1 px-3 py-1 text-title font-semibold text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+        >
+        <button
+            type="submit"
+            class="min-h-tap rounded-button bg-brand px-3 text-body font-semibold text-on-brand transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+        >{{ strings.RENAME_SAVE }}</button>
+        <button
+            type="button"
+            hx-get="/activities/{{ activity_id }}/rename-form-cancel"
+            hx-target="#rename-heading"
+            hx-swap="innerHTML"
+            class="min-h-tap rounded-button border border-border px-3 text-body text-text-secondary transition hover:bg-surface-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+        >{{ strings.RENAME_CANCEL }}</button>
+    </div>
+    {% if error %}
+    <p class="text-caption text-danger" role="alert">{{ error }}</p>
+    {% endif %}
+    <p class="text-caption text-text-muted">{{ strings.RENAME_SLUG_NOTICE }}</p>
     <div class="mt-4 border-t border-border pt-4">
         <button
             type="button"
             hx-get="/activities/{{ activity_id }}/delete-confirm"
             hx-target="#rename-heading"
-            hx-swap="outerHTML"
+            hx-swap="innerHTML"
             class="min-h-tap text-body text-danger transition hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
         >{{ strings.ACTIVITY_DELETE }}</button>
     </div>
-</div>
+</form>

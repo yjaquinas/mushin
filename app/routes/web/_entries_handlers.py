@@ -201,8 +201,14 @@ async def log_sheet_body(
     request: Request,
     activity_id: int,
     owner_id: int,
+    *,
+    inline: bool = False,
 ) -> HTMLResponse:
-    """Body of ``GET /activities/{activity_id}/log`` — the quick-add sheet fragment."""
+    """Body of ``GET /activities/{activity_id}/log`` — the quick-add sheet fragment.
+
+    When *inline* is ``True``, renders the form without the dialog wrapper so it
+    expands inline in the activity detail page instead of opening as a modal.
+    """
     tz = users.get_user_timezone(owner_id)
 
     with db.connect() as conn:
@@ -227,6 +233,7 @@ async def log_sheet_body(
         "name": row["name"],
         "fields": fields,
         "today": datetime.now(tz).strftime("%Y-%m-%d"),
+        "inline": inline,
     }
     return templates.TemplateResponse(
         request=request,

@@ -220,6 +220,20 @@ async def log_sheet(
     return await log_sheet_body(request, activity_id, owner_id)
 
 
+@router.get("/activities/{activity_id}/log-inline", response_class=HTMLResponse)
+async def log_sheet_inline(
+    request: Request,
+    activity_id: int,
+    session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
+) -> HTMLResponse:
+    """Render the quick-add form inline (no dialog wrapper)."""
+    user = _current_user(session)
+    if user is None:
+        return RedirectResponse(url="/", status_code=303)
+    owner_id = int(user["id"])
+    return await log_sheet_body(request, activity_id, owner_id, inline=True)
+
+
 @router.post("/activities/{activity_id}/match-rows/{field_def_id}/add", response_class=HTMLResponse)
 async def add_match_row(
     request: Request,

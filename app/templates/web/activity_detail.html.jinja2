@@ -9,14 +9,14 @@
 
     {# 1. Activity identity + rename trigger #}
     <div class="flex items-center gap-2 pb-2">
-        <div id="rename-heading">
+        <div id="rename-heading" class="flex items-center gap-2">
             <h1 class="text-title font-semibold text-text-primary">{{ card.name }}</h1>
             <button
                 type="button"
                 aria-label="{{ strings.RENAME_LABEL }}"
                 hx-get="/activities/{{ card.id }}/rename-form"
                 hx-target="#rename-heading"
-                hx-swap="outerHTML"
+                hx-swap="innerHTML"
                 class="min-h-tap min-w-tap flex items-center justify-center rounded text-text-muted transition hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
             >{{ icon('pencil', size=16) }}</button>
         </div>
@@ -29,12 +29,12 @@
             id="log-trigger-{{ card.id }}"
             aria-expanded="false"
             aria-controls="log-panel"
-            hx-get="/activities/{{ card.id }}/log"
+            hx-get="/activities/{{ card.id }}/log-inline"
             hx-target="#log-panel"
             hx-swap="innerHTML"
-            hx-on:click="var b=this,p=document.getElementById('log-panel'),i=document.getElementById('log-trigger-icon-{{ card.id }}');var open=b.getAttribute('aria-expanded')==='true';b.setAttribute('aria-expanded',open?'false':'true');if(open){p.setAttribute('hidden','');i.classList.remove('rotate-45')}else{p.removeAttribute('hidden');i.classList.add('rotate-45')}"
-            hx-on::after-request="var i=document.getElementById('log-trigger-icon-{{ card.id }}');if(i)i.classList.remove('rotate-45');"
-            hx-on::log-saved="var p=document.getElementById('log-panel');if(p&&!p.hasAttribute('hidden')){p.setAttribute('hidden','');var i=document.getElementById('log-trigger-icon-{{ card.id }}');if(i)i.classList.remove('rotate-45');}"
+            hx-on:click="var b=this,p=document.getElementById('log-panel'),i=document.getElementById('log-trigger-icon-{{ card.id }}');var open=b.getAttribute('aria-expanded')==='true';b.setAttribute('aria-expanded',open?'false':'true');if(open){p.setAttribute('hidden','');p.innerHTML='';i.classList.remove('rotate-45')}else{p.removeAttribute('hidden');i.classList.add('rotate-45')}"
+            hx-on::after-request="var p=document.getElementById('log-panel'),i=document.getElementById('log-trigger-icon-{{ card.id }}');if(p)p.removeAttribute('hidden');if(i)i.classList.remove('rotate-45');"
+            hx-on:log-saved="var p=document.getElementById('log-panel');p&&!p.hidden&&(p.hidden=true,p.innerHTML='');var i=document.getElementById('log-trigger-icon-{{ card.id }}');i&&i.classList.remove('rotate-45');"
             class="flex w-full min-h-tap items-center justify-center gap-2 rounded-button bg-brand px-4 text-body font-semibold text-on-brand transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
         >
             <span class="transition-transform"
