@@ -10,8 +10,8 @@ These two surfaces have different, deliberately narrow contracts:
 
 * ``search_people`` returns ONLY ``{id, username, display_name, visibility,
   relationship_state}`` — never any activity / entry / tag / note / memo data.
-  All real accounts (public AND private) are findable, but guests, the searcher
-  themselves, and anyone blocked in either direction are excluded.
+  All real accounts (public AND private) are findable, including the searcher
+  themselves; guests and anyone blocked in either direction are excluded.
 
 * ``search_tags_public`` is structurally incapable of returning private or
   limited accounts: ``user.visibility = 'public'`` is a join predicate, not a
@@ -74,9 +74,10 @@ def search_people(searcher_id: int, query: str, *, limit: int = 20) -> list[dict
     ``connections.relationship_state(searcher_id, row_id)`` and picks the
     Connect / Requested / Respond / "fellows" affordance.
 
-    Excluded: guests (``auth_provider='guest'`` or NULL username), the searcher
-    themselves, and any account the searcher is blocked-with in EITHER direction
-    (a ``block`` row either way). Results are capped at ``limit`` (≤ MAX_LIMIT).
+    Excluded: guests (``auth_provider='guest'`` or NULL username), and any
+    account the searcher is blocked-with in EITHER direction (a ``block`` row
+    either way). The searcher themselves IS included in results. Results are
+    capped at ``limit`` (≤ MAX_LIMIT).
     """
     q = query.strip()
     if not q:
@@ -91,7 +92,6 @@ def search_people(searcher_id: int, query: str, *, limit: int = 20) -> list[dict
             "SELECT id, username, display_name, visibility FROM user"
             " WHERE auth_provider != 'guest'"
             " AND username IS NOT NULL"
-            " AND id != ?"
             " AND ("
             "   username LIKE ? || '%' ESCAPE ?"
             "   OR display_name LIKE ? || '%' ESCAPE ?"
@@ -105,7 +105,6 @@ def search_people(searcher_id: int, query: str, *, limit: int = 20) -> list[dict
             " ORDER BY username"
             " LIMIT ?",
             (
-                searcher_id,
                 pattern,
                 _LIKE_ESCAPE,
                 pattern,
