@@ -2,9 +2,10 @@
   Create-category form body — name only (no icon picker).
   Used by the HTMX sheet fragment category_sheet.html.jinja2.
 
-  Submits to POST /activities. On success the route returns the new
-  activity_card fragment for an HTMX swap into #cards, or a 303 to /home for
-  the no-JS path.
+  Submits to POST /activities. On success the route returns 201 with
+  ``HX-Redirect`` to the new activity's detail page.
+  On failure (empty / duplicate name), returns 400 with the form fragment
+  and an inline error message.
 
   Optional: hx_post/hx_target/hx_swap (embedded-sheet context — when unset,
   renders a plain form posting to /activities for the standalone page).

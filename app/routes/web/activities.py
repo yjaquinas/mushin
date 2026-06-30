@@ -18,7 +18,7 @@ from app.routes.web._history_context import (
     _build_field_stats_context,
     _build_history_context,
 )
-from app.routes.web._shared import _current_user, _home_url_for, templates
+from app.routes.web._shared import _current_user, templates
 from app.services import categories, competition, profiles, stats
 
 router = APIRouter()
@@ -51,16 +51,16 @@ async def new_activity(
     )
 
 
-@router.post("/activities", response_class=HTMLResponse)
+@router.post("/activities", response_model=None)
 async def create_activity(
     request: Request,
     name: Annotated[str, Form()],
     session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
-) -> HTMLResponse:
+) -> HTMLResponse | RedirectResponse:
     """Create a general-log activity (manual form or one-tap example adopt).
 
-    Returns the new ``activity_card`` fragment for an HTMX swap into
-    ``#cards``, or a 303 to ``/home`` for the no-JS path.
+    On success, returns 201 with ``HX-Redirect`` to the new activity's
+    detail page (``/@{username}/{slug}``).
     """
     user = _current_user(session)
     if user is None:
@@ -84,29 +84,43 @@ async def create_activity(
 
         return RedirectResponse(url="/home", status_code=303)
 
-    tz = users.get_user_timezone(owner_id)
+    # Reject duplicate active-activity names for this owner.
+    with db.connect() as conn:
+        if conn.execute(
+            "SELECT 1 FROM category"
+            " WHERE owner_id = ? AND LOWER(name) = LOWER(?) AND archived_at IS NULL"
+            " LIMIT 1",
+            (owner_id, name),
+        ).fetchone():
+            if request.headers.get("HX-Request") == "true":
+                return templates.TemplateResponse(
+                    request=request,
+                    name="components/category_form.html.jinja2",
+                    context={
+                        "hx_post": "/activities",
+                        "hx_target": "#cards",
+                        "hx_swap": "beforeend",
+                        "name_error": ui_strings.ACTIVITY_FORM_NAME_DUPLICATE,
+                    },
+                    status_code=400,
+                )
+            return RedirectResponse(url="/home", status_code=303)
+
     result = categories.create_activity(owner_id, name=name)
 
     with db.connect() as conn:
-        conn.execute("BEGIN")
-        sub_row = conn.execute(
-            """SELECT st.id, st.name, st.count_mode, st.cached_count, st.cached_streak,
-                      st.last_entry_at, st.category_id, c.name AS category_name, c.icon AS icon
-                 FROM activity st
-                 JOIN category c ON c.id = st.category_id
-                WHERE st.id = ? AND st.owner_id = ?""",
+        slug = conn.execute(
+            "SELECT slug FROM activity WHERE id = ? AND owner_id = ?",
             (result["activity_id"], owner_id),
-        ).fetchone()
-        card = _build_card_context(conn, owner_id, sub_row, tz=tz, linked=True)
+        ).fetchone()["slug"]
 
-    if request.headers.get("HX-Request") == "true":
-        return templates.TemplateResponse(
-            request=request,
-            name="components/activity_card.html.jinja2",
-            context={"card": card},
-        )
-
-    return RedirectResponse(url=_home_url_for(user), status_code=303)
+    username = user.get("username")
+    if username is not None:
+        dest = profiles.canonical_activity_url(username, slug)
+        response = HTMLResponse(content="", status_code=201)
+        response.headers["HX-Redirect"] = dest
+        return response
+    return RedirectResponse(url="/home", status_code=303)
 
 
 # ---------------------------------------------------------------------------
