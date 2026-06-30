@@ -18,7 +18,6 @@ from app.routes.web._shared import (
     THEME_CYCLE,
     _current_user,
     _home_url_for,
-    _set_flash,
     _theme_from_cookie,
     templates,
     ui_strings as strings,
@@ -164,32 +163,69 @@ async def account_settings(
     )
 
 
-@router.post("/account/visibility", response_model=None)
+@router.post("/account", response_model=None)
 async def update_visibility(
-    visibility: Annotated[str, Form()],
+    request: Request,
+    visibility: Annotated[str | None, Form()],
     session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
-) -> RedirectResponse | HTMLResponse:
+) -> HTMLResponse:
     """Change the current account's ``visibility`` from the settings page.
 
     Validates *visibility* against ``users.VALID_VISIBILITIES`` (400 otherwise),
-    persists via ``users.set_visibility_consent`` (re-stamping ``consent_seen_at``
-    is idempotent — the user already passed the one-time screen), and redirects
-    to the owner's home/profile URL (``_home_url_for``) — matching the two
-    sibling consent-write handlers (``submit_welcome_sharing``,
-    ``submit_visibility_update``) rather than bouncing back to ``/account``.
-    A one-shot flash cookie carries the confirmation message to that next
-    render. Guests have no public profile and cannot toggle.
+    persists via ``users.set_visibility_consent``, and re-renders the account
+    page with a flash confirmation — matching the user's expectation of staying
+    on the settings page after saving. Guests have no public profile and cannot
+    toggle.
+
+    The form action is ``/account`` (not ``/account/visibility``) so the URL
+    never changes after saving.
     """
     user = _current_user(session)
     if user is None:
-        return RedirectResponse(url="/", status_code=303)
+        return HTMLResponse(status_code=401)
     if user["auth_provider"] == "guest":
         return HTMLResponse(status_code=400)
     if visibility not in users.VALID_VISIBILITIES:
         return HTMLResponse(status_code=400)
     users.set_visibility_consent(int(user["id"]), visibility)
-    response = RedirectResponse(url=_home_url_for(user), status_code=303)
-    _set_flash(response, f"visibility_{visibility}")
+    return templates.TemplateResponse(
+        request=request,
+        name="web/account.html.jinja2",
+        context={
+            "is_guest": False,
+            "username": user["username"],
+            "visibility": visibility,
+            "current_page": "account",
+            "page_title": strings.ACCOUNT_TITLE,
+            "show_back": False,
+            "flash_message": (
+                strings.HOME_FLASH_VISIBILITY_PUBLIC
+                if visibility == "public"
+                else strings.HOME_FLASH_VISIBILITY_PRIVATE
+            ),
+        },
+    )
+
+
+@router.post("/delete", response_model=None)
+async def delete_account(
+    session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
+) -> HTMLResponse:
+    """Delete the current account and all its data, then redirect to /.
+
+    ON DELETE CASCADE in the schema wipes every owned row (activities,
+    entries, tags, etc.) in a single DELETE FROM user. The session cookie
+    is cleared so the browser is fully logged out before the redirect.
+    Guests cannot delete — they have no persistent data to remove.
+    """
+    user = _current_user(session)
+    if user is None:
+        return HTMLResponse(status_code=401)
+    if user["auth_provider"] == "guest":
+        return HTMLResponse(status_code=400)
+    users.delete_user(int(user["id"]))
+    response = HTMLResponse(content="")
+    response.delete_cookie(key=sessions.COOKIE_NAME, path="/")
     return response
 
 

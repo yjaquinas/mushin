@@ -3,6 +3,15 @@
 {% block title %}{{ strings.ACCOUNT_TITLE }} · {{ strings.APP_NAME }}{% endblock %}
 
 {% block content %}
+{% if flash_message %}
+<p
+    role="status"
+    class="rounded-card border border-border bg-surface-2 px-4 py-2 text-caption font-medium text-text-primary"
+    data-flash-dismiss
+>{{ flash_message }}</p>
+{% include "components/flash_dismiss.html.jinja2" %}
+{% endif %}
+
 {# Visibility/share-link section is non-guest only — guests have no username
    and thus no public profile (see .claude/rules/repo-wide.md). #}
 {% if not is_guest %}
@@ -14,7 +23,7 @@
         </p>
     </div>
 
-    <form method="post" action="/account/visibility" class="flex flex-col gap-4">
+    <form method="post" action="/account" class="flex flex-col gap-4" id="visibility-form">
         <fieldset class="flex flex-col gap-3">
             <legend class="sr-only">{{ strings.ACCOUNT_VISIBILITY_HEADING }}</legend>
 
@@ -49,11 +58,36 @@
 
         <button
             type="submit"
-            class="flex min-h-tap w-full items-center justify-center rounded-button bg-brand px-4 py-3 text-title font-semibold text-on-brand transition focus-visible:outline-offset-2"
+            class="flex min-h-tap w-full items-center justify-center rounded-button bg-brand px-4 py-3 text-title font-semibold text-on-brand transition focus-visible:outline-offset-2 disabled:opacity-60"
         >
             {{ strings.ACCOUNT_VISIBILITY_SAVE }}
         </button>
     </form>
+
+    {# Disable save button when selected visibility matches current visibility. #}
+    <script>
+    (function() {
+      var form = document.getElementById('visibility-form');
+      if (!form) return;
+      var radios = form.querySelectorAll('input[name="visibility"]');
+      var saveBtn = form.querySelector('button[type="submit"]');
+      var current = '{{ visibility }}';
+
+      function checkVisibilityBtn() {
+        var selected = '';
+        for (var i = 0; i < radios.length; i++) {
+          if (radios[i].checked) { selected = radios[i].value; break; }
+        }
+        saveBtn.disabled = selected === current;
+      }
+
+      checkVisibilityBtn();
+      for (var i = 0; i < radios.length; i++) {
+        radios[i].addEventListener('change', checkVisibilityBtn);
+      }
+      document.addEventListener('htmx:afterSwap', checkVisibilityBtn);
+    })();
+    </script>
 </section>
 {% endif %}
 
@@ -79,7 +113,7 @@
         <button
             type="button"
             id="import-open-button"
-            hx-on::click="document.getElementById('import-data-dialog').removeAttribute('hidden')"
+            hx-on:click="document.getElementById('import-data-dialog').removeAttribute('hidden')"
             class="flex min-h-tap flex-1 items-center justify-center gap-2 rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline-offset-2"
         >
             {% from "components/_icon.html.jinja2" import icon %}
@@ -113,7 +147,7 @@
     <button
         type="button"
         id="delete-open-button"
-        hx-on::click="document.getElementById('delete-account-dialog').removeAttribute('hidden')"
+        hx-on:click="document.getElementById('delete-account-dialog').removeAttribute('hidden')"
         class="flex min-h-tap w-full items-center justify-center gap-2 rounded-button border border-danger bg-danger-subtle px-4 py-3 text-body font-semibold text-danger transition hover:opacity-90 focus-visible:outline-offset-2"
     >
         {% from "components/_icon.html.jinja2" import icon %}
@@ -121,48 +155,46 @@
         {{ strings.FOOTER_DELETE_DATA }}
     </button>
 
-    {# Delete-account confirm dialog — mirrors import_data_dialog pattern. #}
+    {# Delete-account confirm dialog. #}
     <div
         id="delete-account-dialog"
         hidden
+        class="fixed inset-0 z-50 flex items-end justify-center bg-text-primary/50 sm:items-center"
+        role="presentation"
     >
-        <div hidden
-            class="fixed inset-0 z-50 flex items-end justify-center bg-text-primary/50 sm:items-center"
-            role="presentation"
+        <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-account-title"
+            class="flex w-full max-w-md flex-col gap-4 rounded-card border border-border bg-surface-1 p-4 sm:rounded-card"
         >
-            <div
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="delete-account-title"
-                class="flex w-full max-w-md flex-col gap-4 rounded-card border border-border bg-surface-1 p-4 sm:rounded-card"
-            >
-                <h2 id="delete-account-title" class="text-body font-semibold text-text-primary">
-                    {{ strings.DELETE_DATA_TITLE }}
-                </h2>
-                <p class="text-caption text-text-secondary">{{ strings.DELETE_DATA_BODY }}</p>
+            <h2 id="delete-account-title" class="text-body font-semibold text-text-primary">
+                {{ strings.DELETE_DATA_TITLE }}
+            </h2>
+            <p class="text-caption text-text-secondary">{{ strings.DELETE_DATA_BODY }}</p>
 
-                <form
-                    hx-post="/delete"
-                    hx-target="#delete-account-dialog"
-                    hx-swap="outerHTML"
-                    class="flex flex-col gap-3"
+            <form
+                hx-post="/delete"
+                hx-swap="none"
+                hx-on::after-request="if(event.detail.successful)window.location.href='/'"
+                class="flex flex-col gap-3"
+            >
+                <button
+                    type="submit"
+                    hx-disabled-elt="this"
+                    class="min-h-tap w-full rounded-button bg-danger px-4 py-3 text-body font-semibold text-white transition hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-60"
                 >
-                    <button
-                        type="submit"
-                        hx-disabled-elt="this"
-                        class="min-h-tap w-full rounded-button bg-danger px-4 py-3 text-body font-semibold text-white transition hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-60"
-                    >
-                        {{ strings.DELETE_DATA_CONFIRM }}
-                    </button>
-                    <button
-                        type="button"
-                        id="delete-cancel-button"
-                        class="min-h-tap w-full rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline-offset-2"
-                    >
-                        {{ strings.DELETE_DATA_CANCEL }}
-                    </button>
-                </form>
-            </div>
+                    {{ strings.DELETE_DATA_CONFIRM }}
+                </button>
+                <button
+                    type="button"
+                    id="delete-cancel-button"
+                    hx-on:click="document.getElementById('delete-account-dialog').setAttribute('hidden','')"
+                    class="min-h-tap w-full rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline-offset-2"
+                >
+                    {{ strings.DELETE_DATA_CANCEL }}
+                </button>
+            </form>
         </div>
     </div>
 </section>

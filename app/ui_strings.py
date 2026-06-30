@@ -260,12 +260,12 @@ SCALE_DISTRIBUTION_AVERAGE_LABEL = "Average"
 FOOTER_EXPORT_ENTRIES = "Export entries"
 FOOTER_IMPORT_ENTRIES = "Import entries"
 FOOTER_LOGOUT = "Log out"
-FOOTER_DELETE_DATA = "Delete my data"
+FOOTER_DELETE_DATA = "Delete my account"
 
 # Delete-my-data confirm dialog (account page)
 DELETE_DATA_TITLE = "Delete all of your data?"
-DELETE_DATA_BODY = "This deletes every record kept under this device — activities, sub-tallies, entries, and memos. This can't be undone."
-DELETE_DATA_CONFIRM = "Delete my record"
+DELETE_DATA_BODY = "This deletes every record kept under this account — activities, entries, etc. This can't be undone."
+DELETE_DATA_CONFIRM = "Delete my account"
 DELETE_DATA_CANCEL = "Go back"
 
 # Import-data confirm dialog (footer)
@@ -300,7 +300,7 @@ VISIBILITY_CONSENT_PRIVATE_DESC = (
 VISIBILITY_CONSENT_PUBLIC_LABEL = "Public"
 VISIBILITY_CONSENT_PUBLIC_DESC = (
     "Your whole record — every activity, entry, and note — is visible to anyone"
-    " who has your profile link, and public records can turn up in tag search."
+    " who has your profile link."
 )
 
 VISIBILITY_CONSENT_PRIVACY_PREFIX = "See our"
@@ -340,7 +340,7 @@ ACCOUNT_VISIBILITY_PRIVATE_DESC = (
 ACCOUNT_VISIBILITY_PUBLIC_LABEL = "Public"
 ACCOUNT_VISIBILITY_PUBLIC_DESC = (
     "Your whole record — every activity, entry, and note — is visible to anyone"
-    " who has your profile link, and can turn up in tag search."
+    " who has your profile link."
 )
 
 ACCOUNT_VISIBILITY_SAVE = "Save"
