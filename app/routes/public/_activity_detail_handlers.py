@@ -113,6 +113,10 @@ def _render_owner_activity_detail(
         owner_context["public_notice"] = None
 
     owner_context["is_owner"] = True
+    owner_context["current_page"] = None
+    owner_context["page_title"] = f"{username} | {card['name']}"
+    owner_context["show_back"] = True
+    owner_context["back_url"] = profiles.canonical_profile_url(username)
 
     return templates.TemplateResponse(
         request=request,
@@ -198,6 +202,10 @@ def _render_readonly_activity_detail(
         target = profiles.safe_next_path(request.url.path)
         login_redirect_url = f"/login?next={quote(target or '', safe='')}"
     context["login_redirect_url"] = login_redirect_url
+    context["current_page"] = None
+    context["page_title"] = f"{username} | {card['name']}"
+    context["show_back"] = True
+    context["back_url"] = f"/@{username}"
 
     # Merged calendar/log view — the same `components/history.html.jinja2`
     # partial the owner dashboard renders (per .claude/rules/web-templates.md,

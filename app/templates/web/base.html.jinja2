@@ -16,52 +16,55 @@
 <body class="flex flex-col bg-surface-0 min-h-screen text-text-primary text-body"
     hx-on::after-swap="var t=event.detail.target;if(t){var f=t.querySelector('[data-history-focus]');if(f)f.focus();}"
 >
-    <div class="bg-obsidian">
-        <div class="mx-auto flex max-w-screen-md items-baseline justify-between gap-2 px-4 py-3">
-            <a
-                href="{{ home_url }}"
-                class="flex items-baseline gap-2 focus-visible:outline-offset-2"
-            >
-                <span class="text-title font-semibold text-on-brand">{{ strings.APP_NAME }}</span>
-                <span class="text-caption text-on-brand opacity-70">{{ strings.APP_NAME_HANJA }}</span>
-            </a>
-            <div class="flex items-center gap-1 text-on-brand [&_a]:text-on-brand [&_a:hover]:bg-brand-subtle [&_button]:text-on-brand [&_button:hover]:bg-brand-subtle">
-                {% block search_link %}
-                {% if home_url != "/" %}
-                <a
-                    href="/search"
-                    aria-label="{{ strings.SEARCH_NAV_LABEL }}"
-                    class="flex min-h-tap min-w-tap items-center justify-center rounded-button transition hover:bg-brand-subtle focus-visible:outline-offset-2"
-                >
-                    {% from "components/_icon.html.jinja2" import icon %}
-                    {{ icon("search", size=22) }}
-                </a>
-                {% endif %}
-                {% endblock %}
-                {% block theme_toggle %}
-                {% include "components/theme_toggle.html.jinja2" with context %}
-                {% endblock %}
-            </div>
-        </div>
-    </div>
-    <main class="mx-auto flex w-full max-w-screen-md grow flex-col gap-4 p-4">
+    {# Masthead — top bar with back button + centered title. Hidden on entry, home, and one-time-gate pages. #}
+    {% if page_title %}
+    <header class="mx-auto flex w-full max-w-screen-md items-center justify-between gap-2 px-4 py-3">
+        {% if show_back and back_url %}
+        <a
+            href="{{ back_url }}"
+            class="flex min-h-tap min-w-tap items-center justify-center rounded-button text-text-secondary transition hover:bg-surface-2 focus-visible:outline-offset-2"
+            aria-label="Back"
+        >
+            {% from "components/_icon.html.jinja2" import icon %}
+            {{ icon('chevron-left', size=22) }}
+        </a>
+        {% else %}
+        <span class="min-w-[44px]"></span>
+        {% endif %}
+        <h1 class="text-title font-semibold text-text-primary">{{ page_title }}</h1>
+        <span class="min-w-[44px]"></span>
+    </header>
+    {% endif %}
+    <main class="mx-auto flex w-full max-w-screen-md grow flex-col gap-4 px-4 py-4">
         {% block content %}{% endblock %}
     </main>
-    <footer class="mx-auto flex w-full max-w-screen-md items-center justify-center gap-4 p-4">
-        {% block footer %}
+
+    {# Bottom navigation bar — always visible. #}
+    <nav class="bottom-nav" aria-label="{{ strings.NAV_HOME }}">
         <a
-            href="/privacy"
-            class="min-h-tap text-micro sm:text-caption text-text-muted underline-offset-2 hover:underline focus-visible:outline-offset-2"
+            href="{{ home_url }}"
+            class="bottom-nav-tab{% if current_page == 'home' %} bottom-nav-tab--active{% endif %}"
         >
-            {{ strings.FOOTER_PRIVACY }}
+            {% from "components/_icon.html.jinja2" import icon %}
+            {{ icon("footprints", size=22) }}
+            <span>{{ strings.NAV_HOME }}</span>
+        </a>
+        <a
+            href="/search"
+            class="bottom-nav-tab{% if current_page == 'search' %} bottom-nav-tab--active{% endif %}"
+        >
+            {% from "components/_icon.html.jinja2" import icon %}
+            {{ icon("search", size=22) }}
+            <span>{{ strings.NAV_SEARCH }}</span>
         </a>
         <a
             href="/account"
-            class="min-h-tap text-micro sm:text-caption text-text-muted underline-offset-2 hover:underline focus-visible:outline-offset-2"
+            class="bottom-nav-tab{% if current_page == 'account' %} bottom-nav-tab--active{% endif %}"
         >
-            {{ strings.FOOTER_ACCOUNT }}
+            {% from "components/_icon.html.jinja2" import icon %}
+            {{ icon("circle-user", size=22) }}
+            <span>{{ strings.NAV_ACCOUNT }}</span>
         </a>
-        {% endblock %}
-    </footer>
+    </nav>
 </body>
 </html>

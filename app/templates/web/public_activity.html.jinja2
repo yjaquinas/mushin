@@ -27,18 +27,10 @@
 
 {% block title %}{% if card %}{{ card.name }} · {% endif %}{{ username }} · {{ strings.APP_NAME }}{% endblock %}
 
-{# Public pages are zero-write: no theme-toggle POST either. #}
-{% block theme_toggle %}{% endblock %}
-
 {% block content %}
-<a href="/@{{ username }}" class="text-caption text-text-muted underline-offset-2 hover:underline">
-    {{ strings.PROFILE_BACK_TO_PROFILE.format(username=username) }}
-</a>
-
-    <header class="flex flex-col">
-        {% if card.show_breadcrumb %}<span class="text-caption text-text-muted">{{ card.category_name }}</span>{% endif %}
-        <h1 class="text-title font-medium text-text-secondary">{{ card.name }}</h1>
-    </header>
+    {% if card.show_breadcrumb %}
+    <p class="text-caption text-text-muted">{{ card.category_name }}</p>
+    {% endif %}
 
     {% if record is not none %}
         {% include "components/competition_stats.html.jinja2" with context %}
@@ -57,13 +49,4 @@
     <section class="flex flex-col gap-3 rounded-card border border-border bg-surface-1 p-4">
         {% include "components/history.html.jinja2" with context %}
     </section>
-{% endblock %}
-
-{% block footer %}
-<a
-    href="/privacy"
-    class="text-caption text-text-muted underline-offset-2 hover:underline focus-visible:outline-offset-2"
->
-    {{ strings.FOOTER_PRIVACY }}
-</a>
 {% endblock %}

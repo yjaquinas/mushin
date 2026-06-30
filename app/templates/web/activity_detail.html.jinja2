@@ -7,35 +7,22 @@
 
 <div class="flex flex-col gap-6">
 
-    {# 1. Page header: back nav + activity identity + rename trigger #}
-    <header class="flex flex-col gap-1 border-b border-border pb-4">
-        <a
-            href="{{ home_url }}"
-            class="inline-flex items-center gap-1 text-caption text-text-muted transition hover:text-text-primary focus-visible:outline-offset-2"
-        >
-            {{ icon('chevron-left', size=14) }}{{ strings.DETAIL_BACK }}
-        </a>
-        {% if card.show_breadcrumb %}
-        <p class="text-caption text-text-muted">{{ card.category_name }}</p>
-        {% endif %}
+    {# 1. Activity identity + rename trigger #}
+    <div class="flex items-center gap-2 pb-2">
         <div id="rename-heading">
-            <div class="flex items-center gap-2">
-                <h1 class="text-title font-semibold text-text-primary">{{ card.name }}</h1>
-                <button
-                    type="button"
-                    aria-label="{{ strings.RENAME_LABEL }}"
-                    hx-get="/activities/{{ card.id }}/rename-form"
-                    hx-target="#rename-heading"
-                    hx-swap="outerHTML"
-                    class="min-h-tap min-w-tap flex items-center justify-center rounded text-text-muted transition hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-                >{{ icon('pencil', size=16) }}</button>
-            </div>
+            <h1 class="text-title font-semibold text-text-primary">{{ card.name }}</h1>
+            <button
+                type="button"
+                aria-label="{{ strings.RENAME_LABEL }}"
+                hx-get="/activities/{{ card.id }}/rename-form"
+                hx-target="#rename-heading"
+                hx-swap="outerHTML"
+                class="min-h-tap min-w-tap flex items-center justify-center rounded text-text-muted transition hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+            >{{ icon('pencil', size=16) }}</button>
         </div>
-    </header>
+    </div>
 
-    {# 2. Log button + panel — the page's own <h1> above already names the
-       activity, and the running count/streak appear once each in
-       stats_summary.html.jinja2 below, so there's no separate hero zone. #}
+    {# 2. Log button + panel #}
     <div>
         <button
             type="button"

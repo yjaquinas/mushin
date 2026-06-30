@@ -21,6 +21,7 @@ from app.routes.web._shared import (
     _set_flash,
     _theme_from_cookie,
     templates,
+    ui_strings as strings,
 )
 
 router = APIRouter()
@@ -52,7 +53,7 @@ async def welcome_sharing(
     return templates.TemplateResponse(
         request=request,
         name="web/welcome_sharing.html.jinja2",
-        context={},
+        context={"current_page": "home"},
     )
 
 
@@ -107,7 +108,7 @@ async def visibility_update(
     return templates.TemplateResponse(
         request=request,
         name="web/visibility_update.html.jinja2",
-        context={},
+        context={"current_page": "home"},
     )
 
 
@@ -156,6 +157,9 @@ async def account_settings(
             "is_guest": is_guest,
             "username": user["username"],
             "visibility": user["visibility"],
+            "current_page": "account",
+            "page_title": strings.ACCOUNT_TITLE,
+            "show_back": False,
         },
     )
 
@@ -210,7 +214,7 @@ async def toggle_theme(request: Request) -> HTMLResponse:
     # _theme_context context processor would overwrite "theme" with the
     # (stale) request-cookie value before the new cookie is set on the
     # response.
-    fragment = templates.get_template("components/theme_toggle.html.jinja2").render(
+    fragment = templates.get_template("components/theme_toggle_account.html.jinja2").render(
         request=request, theme=next_theme
     )
     response = HTMLResponse(content=fragment)

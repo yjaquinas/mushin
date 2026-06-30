@@ -79,10 +79,9 @@ HOME_FLASH_VISIBILITY_PRIVATE = "Profile set to private."
 # Empty-state example categories + create-category
 # ---------------------------------------------------------------------------
 
-HOME_EXAMPLES_HINT = "Try one of these, or make your own."
+HOME_EXAMPLES_HINT = "or try one of these:"
 HOME_EXAMPLE_ADD = "Add"
-HOME_START_FROM_SCRATCH = "or start from scratch"
-HOME_ADD_ACTIVITY = "Add an activity"
+HOME_ADD_ACTIVITY = "Add an Activity"
 
 ACTIVITY_NEW_TITLE = "New activity"
 ACTIVITY_FORM_NAME_LABEL = "Name"
@@ -90,6 +89,7 @@ ACTIVITY_FORM_NAME_PLACEHOLDER = "e.g. Workout"
 ACTIVITY_FORM_SUBMIT = "Create"
 ACTIVITY_FORM_CANCEL = "Cancel"
 ACTIVITY_FORM_NAME_REQUIRED = "Activity name is required"
+ACTIVITY_FORM_NAME_DUPLICATE = "An activity with this name already exists."
 
 # Hero numeral suffixes / labels
 HOME_COUNT_UNIT = "times"  # generic running-count unit ("3 times")
@@ -253,18 +253,6 @@ SCALE_DISTRIBUTION_AVERAGE_LABEL = "Average"
 # ---------------------------------------------------------------------------
 # Theme toggle (masthead)
 # ---------------------------------------------------------------------------
-
-# Each label describes the *current* theme state plus the action a tap
-# performs (toggle: light <-> dark).
-THEME_TOGGLE_LABEL_LIGHT = "Theme: light. Switch to dark."
-THEME_TOGGLE_LABEL_DARK = "Theme: dark. Switch to light."
-
-# ---------------------------------------------------------------------------
-# Footer (Privacy + Account) and account-page data/session actions
-# ---------------------------------------------------------------------------
-
-FOOTER_PRIVACY = "Privacy Policy"
-FOOTER_ACCOUNT = "Account"
 
 # Export/import/logout live on the /account page (not the footer) but keep
 # their FOOTER_* names — the names predate the move and the copy itself
@@ -511,7 +499,6 @@ CONNECT_ERROR_GENERIC = "That didn't go through."
 
 SEARCH_TITLE = "Search"
 SEARCH_NAV_LABEL = "Search"
-SEARCH_BACK_LABEL = "Back"
 SEARCH_INPUT_LABEL = "Search people and tags"
 SEARCH_INPUT_PLACEHOLDER = "Search by name or tag"
 SEARCH_PROMPT = "Search for people by name, or activities by tag."
@@ -552,8 +539,15 @@ COMMENTS_PAGE_NEW_BADGE_ARIA = "New"
 COMMENTS_PAGE_SHOW_OLDER = "Show older"
 
 # ---------------------------------------------------------------------------
+# Bottom navigation bar
+# ---------------------------------------------------------------------------
+
+NAV_HOME = "Activities"
+NAV_SEARCH = "Search"
+NAV_ACCOUNT = "Account"
+
+# ---------------------------------------------------------------------------
 # Misc / a11y
 # ---------------------------------------------------------------------------
 
-NAV_HOME = "Home"
 ALT_LOGO = ""  # decorative

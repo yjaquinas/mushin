@@ -3,10 +3,6 @@
 {% block title %}{{ strings.ACCOUNT_TITLE }} · {{ strings.APP_NAME }}{% endblock %}
 
 {% block content %}
-<header class="flex flex-col gap-2 py-2">
-    <h1 class="text-2xl font-semibold text-text-primary">{{ strings.ACCOUNT_TITLE }}</h1>
-</header>
-
 {# Visibility/share-link section is non-guest only — guests have no username
    and thus no public profile (see .claude/rules/repo-wide.md). #}
 {% if not is_guest %}
@@ -60,6 +56,12 @@
     </form>
 </section>
 {% endif %}
+
+{# Theme toggle — available to every account. #}
+<section class="flex flex-col gap-4 border-t border-border pt-4">
+    <h2 class="text-body font-semibold text-text-primary">Theme</h2>
+    {% include "components/theme_toggle_account.html.jinja2" with context %}
+</section>
 
 {# Data actions: export / import — available to every account, including guests. #}
 <section class="flex flex-col gap-4 border-t border-border pt-4">
@@ -165,14 +167,4 @@
     </div>
 </section>
 {% endif %}
-
-{# Privacy policy — always at the bottom. #}
-<section class="flex flex-col items-center gap-4 border-t border-border pt-4">
-    <a
-        href="/privacy"
-        class="text-caption text-text-muted underline-offset-2 hover:underline focus-visible:outline-offset-2"
-    >
-        {{ strings.FOOTER_PRIVACY }}
-    </a>
-</section>
 {% endblock %}

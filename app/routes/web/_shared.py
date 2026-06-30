@@ -135,7 +135,8 @@ def _home_url_context(request: Request) -> dict[str, Any]:
 
 
 templates = Jinja2Templates(
-    directory="app/templates", context_processors=[_theme_context, _home_url_context]
+    directory="app/templates",
+    context_processors=[_theme_context, _home_url_context],
 )
 # Centralized copy is exposed to every template as `strings` — templates
 # never hardcode user-facing text (see .claude/skills/copy-patterns).

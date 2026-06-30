@@ -65,5 +65,6 @@ async def comments_page(
             "username": user["username"],
             "has_more": has_more,
             "next_before_id": next_before_id,
+            "current_page": None,
         },
     )

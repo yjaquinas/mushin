@@ -15,14 +15,7 @@
 
 {% block title %}{{ username }} · {{ strings.APP_NAME }}{% endblock %}
 
-{# Public pages are zero-write: no theme-toggle POST either. #}
-{% block theme_toggle %}{% endblock %}
-
 {% block content %}
-<header class="flex items-center py-2">
-    <h1 class="text-title font-semibold text-text-primary">{{ username }}</h1>
-</header>
-
 {% include "components/fellows_section.html.jinja2" with context %}
 
 {% if not cards %}
@@ -71,13 +64,4 @@
 {% if viewer_logged_in %}
 {% include "components/relationship_affordance.html.jinja2" with context %}
 {% endif %}
-{% endblock %}
-
-{% block footer %}
-<a
-    href="/privacy"
-    class="text-caption text-text-muted underline-offset-2 hover:underline focus-visible:outline-offset-2"
->
-    {{ strings.FOOTER_PRIVACY }}
-</a>
 {% endblock %}

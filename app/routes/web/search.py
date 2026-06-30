@@ -15,7 +15,7 @@ from fastapi import APIRouter, Cookie, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.auth import sessions
-from app.routes.web._shared import _current_user, templates
+from app.routes.web._shared import _current_user, templates, ui_strings as strings
 from app.services import search
 
 router = APIRouter()
@@ -34,7 +34,14 @@ async def search_page(
     return templates.TemplateResponse(
         request=request,
         name="web/search.html.jinja2",
-        context={"query": "", "people": [], "tags": []},
+        context={
+            "query": "",
+            "people": [],
+            "tags": [],
+            "current_page": "search",
+            "page_title": strings.SEARCH_TITLE,
+            "show_back": False,
+        },
     )
 
 

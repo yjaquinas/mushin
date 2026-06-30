@@ -40,6 +40,7 @@ from app.routes.web import (
     _build_fellows_context,
     _build_home_context,
     _clear_flash,
+    _home_url_for,
     _list_sub_tallies,
     _read_flash,
     consent_gate_redirect,
@@ -136,6 +137,9 @@ async def profile(
             tz = users.get_user_timezone(owner_id)
             context = _build_home_context(conn, owner_id, tz)
             context["flash_message"] = _read_flash(request)
+            context["current_page"] = "home"
+            context["page_title"] = username
+            context["show_back"] = False
             response = templates.TemplateResponse(
                 request=request,
                 name="web/home.html.jinja2",
@@ -151,6 +155,10 @@ async def profile(
         context = _read_only_profile_context(
             conn, username, owner_id, cap=cap, tz=tz, current_uid=current_uid
         )
+        context["current_page"] = None
+        context["page_title"] = username
+        context["show_back"] = False
+        context["back_url"] = "/"
 
     return templates.TemplateResponse(
         request=request,

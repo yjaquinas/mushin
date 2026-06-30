@@ -36,6 +36,9 @@ async def _render_home(request: Request, user: dict) -> HTMLResponse:
         conn.execute("BEGIN")
         context = _build_home_context(conn, owner_id, tz)
     context["flash_message"] = _read_flash(request)
+    context["current_page"] = "home"
+    context["page_title"] = None
+    context["show_back"] = False
 
     response = templates.TemplateResponse(
         request=request,
@@ -52,7 +55,7 @@ async def privacy(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(
         request=request,
         name="web/privacy.html.jinja2",
-        context={},
+        context={"current_page": None},
     )
 
 
@@ -68,7 +71,12 @@ async def index(
         return templates.TemplateResponse(
             request=request,
             name="web/entry.html.jinja2",
-            context={"active": "login", "demo_username": demo_username, "next": None},
+            context={
+                "active": "login",
+                "demo_username": demo_username,
+                "next": None,
+                "current_page": None,
+            },
         )
     return await _render_home(request, user)
 
@@ -98,7 +106,12 @@ async def login(
     return templates.TemplateResponse(
         request=request,
         name="web/entry.html.jinja2",
-        context={"active": "login", "demo_username": demo_username, "next": safe_next},
+        context={
+            "active": "login",
+            "demo_username": demo_username,
+            "next": safe_next,
+            "current_page": None,
+        },
     )
 
 

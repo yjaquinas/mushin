@@ -2,24 +2,41 @@
 //
 // Uses DialogManager for focus-trap, Escape key, and overlay-click.
 // Auto-opens on load and closes on successful form submission.
+// Handles both initial page load and HTMX-swap into #sheet.
 
 (function () {
   "use strict";
 
-  var sheet = document.getElementById("category-sheet-dialog");
-  if (!sheet) return;
+  function initSheet() {
+    var sheet = document.getElementById("category-sheet-dialog");
+    if (!sheet) return;
 
-  var dlg = new DialogManager("category-sheet-dialog");
-  dlg.init();
-  dialogManagerRegistry.add(dlg);
-  dlg.open();
+    // Prevent duplicate initialization.
+    if (sheet.getAttribute("data-category-sheet-init")) return;
+    sheet.setAttribute("data-category-sheet-init", "true");
 
-  // Close on successful form submission inside the sheet.
-  document.body.addEventListener("htmx:afterRequest", function (event) {
-    if (!event.detail.successful) return;
-    if (event.detail.target.closest("#category-sheet-dialog") !== sheet) return;
-    var method = event.detail.requestConfig && event.detail.requestConfig.method;
-    if (method !== "post") return;
-    dlg.close();
+    var dlg = new DialogManager("category-sheet-dialog");
+    dlg.init();
+    dialogManagerRegistry.add(dlg);
+    dlg.open();
+
+    // Close on successful form submission inside the sheet.
+    // In HTMX 2.x, POST requests have useUrlParams: false.
+    document.body.addEventListener("htmx:afterRequest", function (event) {
+      if (!event.detail.successful) return;
+      if (!document.body.contains(sheet)) return;
+      var cfg = event.detail.requestConfig;
+      if (!cfg || cfg.useUrlParams) return;
+      dlg.close();
+    });
+  }
+
+  // Initial page load.
+  initSheet();
+
+  // HTMX swap into #sheet (the new-activity entry point).
+  document.body.addEventListener("htmx:afterSwap", function (event) {
+    if (event.detail.target.id !== "sheet") return;
+    initSheet();
   });
 })();

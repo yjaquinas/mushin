@@ -26,36 +26,88 @@
 {% include "components/fellows_section.html.jinja2" with context %}
 
 {% if not cards %}
-<div class="flex flex-col items-center gap-3 py-12 text-center">
+<div id="home-empty-state" class="flex flex-col items-center gap-3 py-12 text-center">
     <span class="text-[length:var(--spacing-icon-lg)] leading-none text-text-muted" aria-hidden="true">{{ strings.APP_NAME_HANJA }}</span>
     <p class="text-title font-medium text-text-primary">{{ strings.HOME_EMPTY }}</p>
     <p class="text-body text-text-secondary">{{ strings.APP_GLOSS }}</p>
 </div>
 {% endif %}
 
-<div id="cards" class="flex flex-col gap-3">
-    {% for card in cards %}
-        {% include "components/activity_card.html.jinja2" with context %}
-    {% endfor %}
-    {% if cards %}
-    <button
-        type="button"
-        hx-get="/activities/new"
-        hx-target="#sheet"
-        hx-swap="innerHTML"
-        class="flex min-h-tap w-full items-center gap-2 rounded-card border border-dashed border-border bg-transparent px-4 py-3 text-body font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline-offset-2"
-    >
-        <span aria-hidden="true">{{ icon("plus", size=20) }}</span>
-        {{ strings.HOME_ADD_ACTIVITY }}
-    </button>
-    {% endif %}
-</div>
+<div id="cards" class="flex flex-col gap-3"
+     hx-on::after-swap="var e=document.getElementById('home-empty-state');if(e){var c=this.querySelectorAll('[id^=card-]');if(c.length>0)e.remove();}"
+>
+<script>
+(function() {
+  document.body.addEventListener("htmx:afterSwap", function(event) {
+    if (event.detail.target.id !== "cards") return;
+    var e = document.getElementById("home-empty-state");
+    if (e) {
+      var cards = document.querySelectorAll("#cards > [id^=card-]");
+      if (cards.length > 0) e.remove();
+    }
+    var f = document.getElementById("add-activity-form");
+    if (f && f.getAttribute("hidden") === "") {
+      f.setAttribute("hidden", "");
+      var b = document.getElementById("add-activity-inline");
+      if (b) b.removeAttribute("hidden");
+    }
+  });
+})();
+</script>
+    {% if not cards %}
+    <div id="add-activity-inline">
+        <button
+            type="button"
+            hx-on:click="var b=this,f=document.getElementById('add-activity-form');if(b)b.setAttribute('hidden','');if(f)f.removeAttribute('hidden');document.getElementById('category-name').focus();"
+            class="min-h-tap w-full rounded-button bg-brand px-4 py-3 text-title font-semibold text-on-brand transition focus-visible:outline-offset-2"
+        >
+            {{ strings.HOME_ADD_ACTIVITY }}
+        </button>
 
-{% if not cards %}
-<div class="flex flex-col gap-3">
+        <form
+            id="add-activity-form"
+            hidden
+            hx-post="/activities"
+            hx-target="#cards"
+            hx-swap="afterbegin"
+            class="flex flex-col gap-4"
+        >
+            <div class="flex flex-col gap-1">
+                <label for="category-name" class="text-caption font-medium text-text-secondary">
+                    {{ strings.ACTIVITY_FORM_NAME_LABEL }}
+                </label>
+                <input
+                    type="text"
+                    id="category-name"
+                    name="name"
+                    required
+                    placeholder="{{ strings.ACTIVITY_FORM_NAME_PLACEHOLDER }}"
+                    class="min-h-tap rounded-input border border-border bg-surface-1 px-3 py-2 text-body text-text-primary focus-visible:outline-2"
+                >
+            </div>
+
+            <div class="flex gap-2">
+                <button
+                    type="button"
+                    hx-on:click="var f=document.getElementById('add-activity-form'),b=this.closest('#add-activity-inline').querySelector('button');if(f)f.setAttribute('hidden','');if(b)b.removeAttribute('hidden');"
+                    class="min-h-tap flex-1 rounded-button border border-border px-4 py-3 text-body font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline-offset-2"
+                >
+                    {{ strings.ACTIVITY_FORM_CANCEL }}
+                </button>
+                <button
+                    type="submit"
+                    hx-disabled-elt="this"
+                    class="min-h-tap flex-1 rounded-button bg-brand px-4 py-3 text-body font-semibold text-on-brand transition focus-visible:outline-offset-2 disabled:opacity-60"
+                >
+                    {{ strings.ACTIVITY_FORM_SUBMIT }}
+                </button>
+            </div>
+        </form>
+    </div>
+
     <p class="text-center text-caption text-text-secondary">{{ strings.HOME_EXAMPLES_HINT }}</p>
     {% for example in examples %}
-        <form hx-post="/activities" hx-target="#cards" hx-swap="beforeend">
+        <form hx-post="/activities" hx-target="#cards" hx-swap="afterbegin">
             <input type="hidden" name="name" value="{{ example.name }}">
             <button
                 type="submit"
@@ -66,20 +118,64 @@
             </button>
         </form>
     {% endfor %}
-    <button
-        type="button"
-        hx-get="/activities/new"
-        hx-target="#sheet"
-        hx-swap="innerHTML"
-        class="text-center text-caption text-text-muted underline-offset-2 transition hover:underline focus-visible:outline-offset-2"
-    >
-        {{ strings.HOME_START_FROM_SCRATCH }}
-    </button>
+    {% else %}
+    {% for card in cards %}
+        {% include "components/activity_card.html.jinja2" with context %}
+    {% endfor %}
+    <div id="add-activity-inline">
+        <button
+            type="button"
+            hx-on:click="var b=this,f=document.getElementById('add-activity-form');if(b)b.setAttribute('hidden','');if(f)f.removeAttribute('hidden');document.getElementById('category-name').focus();"
+            class="flex min-h-tap w-full items-center gap-2 rounded-card border border-dashed border-border bg-transparent px-4 py-3 text-body font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline-offset-2"
+        >
+            <span aria-hidden="true">{{ icon("plus", size=20) }}</span>
+            {{ strings.HOME_ADD_ACTIVITY }}
+        </button>
+
+        <form
+            id="add-activity-form"
+            hidden
+            hx-post="/activities"
+            hx-target="#cards"
+            hx-swap="afterbegin"
+            class="flex flex-col gap-4"
+        >
+            <div class="flex flex-col gap-1">
+                <label for="category-name" class="text-caption font-medium text-text-secondary">
+                    {{ strings.ACTIVITY_FORM_NAME_LABEL }}
+                </label>
+                <input
+                    type="text"
+                    id="category-name"
+                    name="name"
+                    required
+                    placeholder="{{ strings.ACTIVITY_FORM_NAME_PLACEHOLDER }}"
+                    class="min-h-tap rounded-input border border-border bg-surface-1 px-3 py-2 text-body text-text-primary focus-visible:outline-2"
+                >
+            </div>
+
+            <div class="flex gap-2">
+                <button
+                    type="button"
+                    hx-on:click="var f=document.getElementById('add-activity-form'),b=this.closest('#add-activity-inline').querySelector('button');if(f)f.setAttribute('hidden','');if(b)b.removeAttribute('hidden');"
+                    class="min-h-tap flex-1 rounded-button border border-border px-4 py-3 text-body font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline-offset-2"
+                >
+                    {{ strings.ACTIVITY_FORM_CANCEL }}
+                </button>
+                <button
+                    type="submit"
+                    hx-disabled-elt="this"
+                    class="min-h-tap flex-1 rounded-button bg-brand px-4 py-3 text-body font-semibold text-on-brand transition focus-visible:outline-offset-2 disabled:opacity-60"
+                >
+                    {{ strings.ACTIVITY_FORM_SUBMIT }}
+                </button>
+            </div>
+        </form>
+    </div>
+    {% endif %}
 </div>
-{% endif %}
 
 {# Quick-add sheet target: empty until a card's "Log" button swaps in the
-   form fragment (see GET /activities/{id}/log), or the create-category
-   sheet (see GET /activities/new) swaps in the activity form. #}
+   form fragment (see GET /activities/{id}/log). #}
 <div id="sheet"></div>
 {% endblock %}

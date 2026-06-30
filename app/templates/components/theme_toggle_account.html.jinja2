@@ -1,0 +1,29 @@
+{#
+  Theme toggle — styled as a Data-section button.
+  Icon and label reflect the *destination* state; tapping posts to
+  /preferences/theme which sets the mushin_theme cookie and returns this
+  same fragment re-rendered for the new state.
+
+  Context: theme ("light" | "dark").
+#}
+{% from "components/_icon.html.jinja2" import icon %}
+{% if theme == "light" %}
+  {% set theme_icon = "sun" %}
+  {% set theme_short = "LIGHT" %}
+{% else %}
+  {% set theme_icon = "moon" %}
+  {% set theme_short = "DARK" %}
+{% endif %}
+<button
+    type="button"
+    id="theme-toggle"
+    hx-post="/preferences/theme"
+    hx-swap="outerHTML"
+    hx-on::after-request="document.documentElement.dataset.theme=this.dataset.theme"
+    aria-label="{{ 'Theme: light. Switch to dark.' if theme == 'light' else 'Theme: dark. Switch to light.' }}"
+    data-theme="{{ theme }}"
+    class="flex min-h-tap w-full items-center justify-center gap-2 rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline-offset-2"
+>
+    {{ icon(theme_icon, size=18) }}
+    {{ theme_short }}
+</button>
