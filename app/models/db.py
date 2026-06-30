@@ -49,7 +49,11 @@ def connect_to(path: str | Path) -> Iterator[sqlite3.Connection]:
     _configure(conn)
     try:
         yield conn
-        conn.execute("COMMIT")
+        try:
+            conn.execute("COMMIT")
+        except sqlite3.OperationalError:
+            # No active transaction to commit — read-only use of db.connect().
+            pass
     except Exception:
         try:
             conn.execute("ROLLBACK")
