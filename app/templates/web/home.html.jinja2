@@ -9,7 +9,9 @@
 <p
     role="status"
     class="rounded-card border border-border bg-surface-2 px-4 py-2 text-caption font-medium text-text-primary"
+    data-flash-dismiss
 >{{ flash_message }}</p>
+{% include "components/flash_dismiss.html.jinja2" %}
 {% endif %}
 
 <header class="flex items-center gap-2 py-2">

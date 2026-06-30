@@ -1,0 +1,11 @@
+{#
+  5-second auto-dismiss for flash/toast messages.
+  Usage: {% include "components/flash_dismiss.html.jinja2" %}
+  Expects a <p data-flash-dismiss> element already rendered in the template.
+#}
+<script>
+(function() {
+  var t = document.querySelector('[data-flash-dismiss]');
+  if (t) setTimeout(function() { t.remove(); }, 5000);
+})();
+</script>
