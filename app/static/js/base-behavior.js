@@ -164,13 +164,6 @@
       return;
     }
 
-    if (elt && elt.id === "theme-toggle" && event.detail.successful) {
-      window.setTimeout(function () {
-        window.location.reload();
-      }, 100);
-      return;
-    }
-
     if (elt && elt.matches("[data-log-trigger]")) {
       var panel = document.getElementById("log-panel");
       if (panel) show(panel);

@@ -19,6 +19,8 @@
 // or garbage value (falls back to 'UTC'), so this is best-effort — if the
 // detection throws or the field is absent, auth still works.
 window.MushinAuth = {
+  dialog: null,
+
   // Resolve the browser's IANA timezone name (e.g. "America/New_York").
   // Returns "" if the platform doesn't expose it, letting the server fall
   // back to 'UTC' rather than sending a bogus value.
@@ -44,6 +46,26 @@ window.MushinAuth = {
       form.appendChild(field);
     }
     field.value = this.detectTimezone();
+  },
+
+  ensureDialog() {
+    var el = document.getElementById("auth-error-dialog");
+    if (!el) return null;
+    if (!this.dialog) {
+      this.dialog = new DialogManager("auth-error-dialog");
+      this.dialog.init();
+      dialogManagerRegistry.add(this.dialog);
+    }
+    return this.dialog;
+  },
+
+  showErrorDialog(form, message) {
+    var dialog = this.ensureDialog();
+    if (!dialog || !message) return;
+
+    var titleEl = document.getElementById("auth-error-title");
+    if (titleEl) titleEl.textContent = message;
+    dialog.open();
   },
 
   handle(event) {
@@ -89,6 +111,7 @@ window.MushinAuth = {
 
     errorEl.textContent = message;
     errorEl.hidden = !message;
+    this.showErrorDialog(form, message);
   },
 };
 
@@ -96,6 +119,13 @@ document.addEventListener("submit", function (event) {
   const form = event.target;
   if (!form || !form.hasAttribute("data-auth-form")) return;
   window.MushinAuth.stampTimezone(event);
+});
+
+document.addEventListener("click", function (event) {
+  var close = event.target.closest("#auth-error-close-button");
+  if (close && window.MushinAuth.dialog) {
+    window.MushinAuth.dialog.close();
+  }
 });
 
 document.body.addEventListener("htmx:afterRequest", function (event) {

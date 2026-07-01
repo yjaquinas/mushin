@@ -33,7 +33,8 @@ from app import ui_strings
 from app.auth import sessions, users
 from app.services import profiles
 
-_ICONS_DIR = Path(__file__).resolve().parent.parent.parent / "static" / "icons"
+_STATIC_DIR = Path(__file__).resolve().parent.parent.parent / "static"
+_ICONS_DIR = _STATIC_DIR / "icons"
 
 
 @lru_cache(maxsize=None)
@@ -49,6 +50,22 @@ def _icon(name: str, size: int = 20) -> Markup:
     content = re.sub(r'width="\d+"', f'width="{size}"', content, count=1)
     content = re.sub(r'height="\d+"', f'height="{size}"', content, count=1)
     return Markup(content)
+
+
+@lru_cache(maxsize=None)
+def _asset_version(path: str) -> str:
+    rel = path.removeprefix("/static/").lstrip("/")
+    target = _STATIC_DIR / rel
+    if not target.exists():
+        return "0"
+    return str(target.stat().st_mtime_ns)
+
+
+def _static_asset(path: str) -> str:
+    """Return a cache-busted static asset URL for template use."""
+    if not path.startswith("/static/"):
+        return path
+    return f"{path}?v={_asset_version(path)}"
 
 # Cookie holding the user's explicit theme choice: "light" | "dark".
 # Missing/invalid values default to "light" (no OS/prefers-color-scheme
@@ -163,6 +180,7 @@ templates = Jinja2Templates(
 # never hardcode user-facing text.
 templates.env.globals["strings"] = ui_strings
 templates.env.globals["icon"] = _icon
+templates.env.globals["static_asset"] = _static_asset
 
 
 def _format_entry_time(occurred_at: str) -> str:

@@ -12,17 +12,12 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Cookie, File, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
-from fastapi.templating import Jinja2Templates
 
-from app import ui_strings
 from app.auth import sessions, users
-from app.routes.web import _home_url_for
+from app.routes.web._shared import _home_url_for, templates
 from app.services import portability
 
 router = APIRouter()
-
-templates = Jinja2Templates(directory="app/templates")
-templates.env.globals["strings"] = ui_strings
 
 #: Reject uploads larger than this. A personal activity-log export is tiny;
 #: this is a sanity bound against hostile/oversized uploads, read as

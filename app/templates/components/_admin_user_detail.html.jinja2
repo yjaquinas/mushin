@@ -1,0 +1,59 @@
+<section class="rounded-card border border-border bg-surface-1 p-4">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+            <a href="/admin/users" class="text-sm text-text-secondary underline-offset-2 hover:underline">{{ strings.ADMIN_BACK_TO_USERS }}</a>
+            <h2 class="mt-2 text-lg font-semibold">
+                {% if detail_user.username %}@{{ detail_user.username }}{% else %}{{ detail_user.display_name or detail_user.auth_provider }}{% endif %}
+                <span class="text-text-muted">#{{ detail_user.id }}</span>
+            </h2>
+            <p class="mt-1 text-sm text-text-secondary">
+                {{ detail_user.auth_provider }} · {{ strings.ADMIN_COLUMN_CREATED }} {{ detail_user.created_at }}
+            </p>
+            {% if detail_user.deleted_at %}
+            <p class="mt-2 text-sm font-medium text-text-secondary">{{ strings.ADMIN_STATUS_DELETED }}: {{ detail_user.deleted_at }}</p>
+            {% elif detail_user.suspended_at %}
+            <p class="mt-2 text-sm font-medium text-danger">{{ strings.ADMIN_STATUS_SUSPENDED }}: {{ detail_user.suspended_at }}</p>
+            {% endif %}
+        </div>
+        {% if detail_user.username and not detail_user.deleted_at %}
+        <a href="/@{{ detail_user.username }}" class="rounded-button border border-border px-3 py-2 text-sm text-text-secondary">{{ strings.ADMIN_PUBLIC_PROFILE }}</a>
+        {% endif %}
+    </div>
+</section>
+
+<section class="grid gap-4 lg:grid-cols-2">
+    <form method="post" action="/admin/users/{{ detail_user.id }}/edit" class="rounded-card border border-border bg-surface-1 p-4">
+        <h3 class="font-semibold">{{ strings.ADMIN_EDIT_USER_HEADING }}</h3>
+        <label class="mt-3 block text-sm text-text-secondary">
+            {{ strings.ADMIN_FIELD_USERNAME }}
+            <input name="username" value="{{ detail_user.username or '' }}" required class="mt-1 w-full rounded border border-border bg-surface-0 px-3 py-2 text-text-primary">
+        </label>
+        <label class="mt-3 block text-sm text-text-secondary">
+            {{ strings.ADMIN_FIELD_EMAIL }}
+            <input name="email" value="{{ detail_user.email or '' }}" class="mt-1 w-full rounded border border-border bg-surface-0 px-3 py-2 text-text-primary">
+        </label>
+        <label class="mt-3 block text-sm text-text-secondary">
+            {{ strings.ADMIN_FIELD_PASSWORD }}
+            <input name="password" type="password" class="mt-1 w-full rounded border border-border bg-surface-0 px-3 py-2 text-text-primary">
+        </label>
+        <button class="mt-4 rounded-button bg-brand px-4 py-2 text-sm font-medium text-on-brand">{{ strings.ADMIN_SAVE_USER }}</button>
+    </form>
+
+    <div class="rounded-card border border-border bg-surface-1 p-4">
+        <h3 class="font-semibold">{{ strings.ADMIN_MANAGEMENT_HEADING }}</h3>
+        <p class="mt-2 text-sm text-text-secondary">{{ strings.ADMIN_MANAGEMENT_ACTIVE_NOTE }}</p>
+        <form method="post" action="/admin/users/{{ detail_user.id }}/suspension" class="mt-4">
+            {% if detail_user.deleted_at %}
+            <p class="text-sm text-text-secondary">{{ strings.ADMIN_DELETED_ACCOUNT_NOTE }}</p>
+            {% elif detail_user.suspended_at %}
+            <input type="hidden" name="suspended" value="false">
+            <button class="rounded-button border border-border px-4 py-2 text-sm text-text-secondary">{{ strings.ADMIN_UNSUSPEND_USER }}</button>
+            {% else %}
+            <input type="hidden" name="suspended" value="true">
+            <button class="rounded-button bg-danger px-4 py-2 text-sm font-medium text-on-brand">{{ strings.ADMIN_SUSPEND_USER }}</button>
+            {% endif %}
+        </form>
+    </div>
+</section>
+
+{% include "components/_admin_user_detail_content.html.jinja2" with context %}

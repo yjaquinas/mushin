@@ -33,7 +33,7 @@
     <div class="mt-4 flex items-center justify-between gap-3">
         {% if has_previous_page %}
         <a
-            href="/admin?period={{ selected_period }}&offset={{ selected_offset }}&page={{ selected_page - 1 }}"
+            href="/admin/monitor?period={{ selected_period }}&{% if selected_period == 'daily' %}day={{ selected_value }}{% elif selected_period == 'weekly' %}week={{ selected_value }}{% elif selected_period == 'monthly' %}month={{ selected_value }}{% else %}year={{ selected_value }}{% endif %}&page={{ selected_page - 1 }}"
             class="rounded-button border border-border px-3 py-2 text-sm text-text-secondary"
         >
             {{ strings.ADMIN_PREVIOUS_PAGE }}
@@ -43,7 +43,7 @@
         {% endif %}
         {% if has_next_page %}
         <a
-            href="/admin?period={{ selected_period }}&offset={{ selected_offset }}&page={{ selected_page + 1 }}"
+            href="/admin/monitor?period={{ selected_period }}&{% if selected_period == 'daily' %}day={{ selected_value }}{% elif selected_period == 'weekly' %}week={{ selected_value }}{% elif selected_period == 'monthly' %}month={{ selected_value }}{% else %}year={{ selected_value }}{% endif %}&page={{ selected_page + 1 }}"
             class="rounded-button border border-border px-3 py-2 text-sm text-text-secondary"
         >
             {{ strings.ADMIN_NEXT_PAGE }}

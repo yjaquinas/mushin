@@ -19,6 +19,8 @@ from app.routes.web._shared import (
     _current_user,
     _theme_from_cookie,
     templates,
+)
+from app.routes.web._shared import (
     ui_strings as strings,
 )
 
@@ -107,13 +109,7 @@ async def update_visibility(
 async def delete_account(
     session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
 ) -> RedirectResponse | HTMLResponse:
-    """Delete the current account and all its data, then redirect to /.
-
-    ON DELETE CASCADE in the schema wipes every owned row (activities,
-    entries, tags, etc.) in a single DELETE FROM user. The session cookie
-    is cleared so the browser is fully logged out before the redirect.
-    Guests cannot delete — they have no persistent data to remove.
-    """
+    """Delete account access while preserving history, then redirect to /."""
     user = _current_user(session)
     if user is None:
         return HTMLResponse(status_code=401)
@@ -150,6 +146,7 @@ async def toggle_theme(request: Request) -> HTMLResponse:
         request=request, theme=next_theme
     )
     response = HTMLResponse(content=fragment)
+    response.headers["HX-Refresh"] = "true"
     response.set_cookie(
         key=THEME_COOKIE,
         value=next_theme,

@@ -1,0 +1,10 @@
+<nav class="flex rounded-button border border-border bg-surface-1 p-1 text-sm">
+    <a
+        href="/admin/monitor"
+        class="rounded-button px-3 py-2 {% if admin_section == 'monitor' %}bg-brand text-on-brand{% else %}text-text-secondary hover:text-text-primary{% endif %}"
+    >{{ strings.ADMIN_NAV_MONITOR }}</a>
+    <a
+        href="/admin/users"
+        class="rounded-button px-3 py-2 {% if admin_section == 'users' %}bg-brand text-on-brand{% else %}text-text-secondary hover:text-text-primary{% endif %}"
+    >{{ strings.ADMIN_NAV_USERS }}</a>
+</nav>

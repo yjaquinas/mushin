@@ -127,7 +127,7 @@ def list_comments(
     rows = conn.execute(
         "SELECT c.id AS id, c.entry_id AS entry_id, c.author_id AS author_id,"
         "       u.username AS author_username, u.display_name AS author_display_name,"
-        "       c.body AS body, c.created_at AS created_at"
+        "       c.body AS body, c.created_at AS created_at, c.hidden_at AS hidden_at"
         "  FROM comment c JOIN user u ON u.id = c.author_id"
         " WHERE c.entry_id = ? AND c.deleted_at IS NULL"
         " ORDER BY c.created_at ASC, c.id ASC",
@@ -183,6 +183,8 @@ def soft_delete_comment(conn: sqlite3.Connection, comment_id: int, *, requester_
     ).fetchone()
     if row is None:
         raise CommentNotFoundError(f"comment {comment_id} not found")
+    if not profiles.is_active_user(conn, requester_id):
+        raise CommentPermissionError(f"user {requester_id} may not delete comment {comment_id}")
 
     if requester_id != row["author_id"] and requester_id != row["entry_owner_id"]:
         raise CommentPermissionError(f"user {requester_id} may not delete comment {comment_id}")
@@ -255,6 +257,7 @@ def list_comments_for_owner(
     sql = (
         "SELECT c.id AS comment_id,"
         "       c.body AS body,"
+        "       c.hidden_at AS hidden_at,"
         "       c.created_at AS created_at,"
         "       u.username AS author_username,"
         "       u.display_name AS author_display_name,"

@@ -28,4 +28,6 @@
         <a href="/privacy" class="underline underline-offset-2 focus-visible:outline-offset-2">{{ strings.ENTRY_CONSENT_LINK_TEXT }}</a>{{ strings.ENTRY_CONSENT_SUFFIX }}
     </p>
 </section>
+
+{% include "components/auth_error_dialog.html.jinja2" with context %}
 {% endblock %}

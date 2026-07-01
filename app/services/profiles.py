@@ -45,7 +45,8 @@ def get_public_user(conn: sqlite3.Connection, username: str) -> dict | None:
     visibility-consent gate.
     """
     row = conn.execute(
-        "SELECT id, username, visibility, auth_provider, consent_seen_at FROM user WHERE username = ?",
+        "SELECT id, username, visibility, auth_provider, consent_seen_at"
+        " FROM user WHERE username = ? AND deleted_at IS NULL",
         (username,),
     ).fetchone()
     if row is None:
@@ -129,6 +130,15 @@ def is_blocked(conn: sqlite3.Connection, user_a_id: int, user_b_id: int) -> bool
     return row is not None
 
 
+def is_active_user(conn: sqlite3.Connection, user_id: int) -> bool:
+    """Return whether *user_id* exists and has login/comment access."""
+    row = conn.execute(
+        "SELECT 1 FROM user WHERE id = ? AND suspended_at IS NULL AND deleted_at IS NULL",
+        (user_id,),
+    ).fetchone()
+    return row is not None
+
+
 def viewer_capability(
     conn: sqlite3.Connection,
     *,
@@ -153,6 +163,8 @@ def viewer_capability(
     on the profile's visibility. Pure of HTTP; never cache the result.
     """
     profile_user_id = profile_user["id"]
+    if current_user_id is not None and not is_active_user(conn, current_user_id):
+        current_user_id = None
 
     if is_owner_viewing(current_user_id=current_user_id, profile_user_id=profile_user_id):
         return "owner"
@@ -211,7 +223,7 @@ def can_comment_on_entry(
     (owner/fellow/public) and does not vary per activity. Fail-closed: any
     ambiguity resolves to ``False``.
     """
-    return current_user_id is not None and can_view_activity_detail(
+    return current_user_id is not None and is_active_user(conn, current_user_id) and can_view_activity_detail(
         conn,
         current_user_id=current_user_id,
         profile_user=profile_user,

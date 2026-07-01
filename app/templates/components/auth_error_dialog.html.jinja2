@@ -1,0 +1,29 @@
+{#
+  Welcome-page auth message dialog. Opened client-side by auth-form.js when
+  /auth/login or /auth/signup returns a JSON 4xx with a `detail` message.
+#}
+<div id="auth-error-dialog" hidden>
+    <div
+        class="fixed inset-0 z-50 flex items-end justify-center bg-text-primary/50 sm:items-center"
+        role="presentation"
+    >
+        <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="auth-error-title"
+            class="flex w-full max-w-md flex-col gap-4 rounded-card border border-border bg-surface-1 p-4 sm:rounded-card"
+        >
+            <h2 id="auth-error-title" class="text-body font-semibold text-text-primary">
+                {{ strings.ENTRY_AUTH_ERROR_DEFAULT_TITLE }}
+            </h2>
+
+            <button
+                type="button"
+                id="auth-error-close-button"
+                class="min-h-tap w-full rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline-offset-2"
+            >
+                {{ strings.ENTRY_AUTH_ERROR_CLOSE }}
+            </button>
+        </div>
+    </div>
+</div>

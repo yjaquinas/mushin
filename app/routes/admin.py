@@ -1,10 +1,4 @@
-"""Admin dashboard — placeholder, HTTP Basic Auth gated.
-
-No admin features yet. This is the auth gate and a landing page for future
-operator tooling. Credentials come from the environment (``ADMIN_USERNAME``,
-``ADMIN_PASSWORD_HASH``) — see ``.env.example`` for how to generate a hash.
-Unset or wrong credentials always 401; there is no bypass.
-"""
+"""Admin dashboard, HTTP Basic Auth gated."""
 
 from __future__ import annotations
 
@@ -12,14 +6,12 @@ import os
 import secrets
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-from fastapi.responses import HTMLResponse
+from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
 from app.auth.passwords import verify_password
-from app.models import db
-from app.routes.web._shared import templates
-from app.services import visitor_reports
+from app.routes import _admin_handlers
 
 router = APIRouter()
 
@@ -47,46 +39,88 @@ def _require_admin(credentials: Annotated[HTTPBasicCredentials, Depends(_securit
         )
 
 
-@router.get("/admin", response_class=HTMLResponse, dependencies=[Depends(_require_admin)])
-async def admin_dashboard(request: Request) -> HTMLResponse:
-    """Operator dashboard for visitor analytics."""
-    period = request.query_params.get("period", "daily")
-    page = _int_param(request, "page", default=1, minimum=1)
-    selected_value = _selected_value(request, period)
-    calendar_month = request.query_params.get("calendar_month")
-    calendar_year = request.query_params.get("calendar_year")
-    with db.connect() as conn:
-        context = visitor_reports.dashboard_context(
-            conn,
-            period=period,
-            selected_value=selected_value,
-            calendar_month=calendar_month,
-            calendar_year=calendar_year,
-            page=page,
-        )
-    return templates.TemplateResponse(
-        request=request,
-        name="admin/dashboard.html.jinja2",
-        context=context,
+@router.get("/admin", dependencies=[Depends(_require_admin)])
+async def admin_index(request: Request) -> RedirectResponse:
+    """Redirect the legacy admin root to the monitor tab."""
+    query = f"?{request.url.query}" if request.url.query else ""
+    return RedirectResponse(url=f"/admin/monitor{query}", status_code=303)
+
+
+@router.get("/admin/monitor", response_class=HTMLResponse, dependencies=[Depends(_require_admin)])
+async def admin_monitor(request: Request) -> HTMLResponse:
+    """Operator dashboard for visitor analytics and recent content."""
+    return await _admin_handlers.monitor(request)
+
+
+@router.get("/admin/users", response_class=HTMLResponse, dependencies=[Depends(_require_admin)])
+async def admin_users(request: Request) -> HTMLResponse:
+    """Operator dashboard for user and account monitoring."""
+    return await _admin_handlers.users(request)
+
+
+@router.get("/admin/users/{user_id}", response_class=HTMLResponse, dependencies=[Depends(_require_admin)])
+async def admin_user_detail(request: Request, user_id: int) -> HTMLResponse:
+    """Admin detail page for one user."""
+    return await _admin_handlers.user_detail(request, user_id)
+
+
+@router.post("/admin/users/{user_id}/edit", dependencies=[Depends(_require_admin)])
+async def admin_edit_user(
+    user_id: int,
+    username: Annotated[str, Form()],
+    email: Annotated[str | None, Form()] = None,
+    password: Annotated[str | None, Form()] = None,
+) -> RedirectResponse:
+    """Edit a user's identity fields."""
+    return await _admin_handlers.edit_user(
+        user_id, username=username, email=email, password=password
     )
 
 
-def _int_param(request: Request, name: str, *, default: int, minimum: int) -> int:
-    raw = request.query_params.get(name)
-    if raw is None:
-        return default
-    try:
-        value = int(raw)
-    except ValueError:
-        return default
-    return max(minimum, value)
+@router.post("/admin/users/{user_id}/suspension", dependencies=[Depends(_require_admin)])
+async def admin_set_suspension(
+    user_id: int,
+    suspended: Annotated[bool, Form()] = False,
+) -> RedirectResponse:
+    """Suspend or unsuspend a user."""
+    return await _admin_handlers.set_suspension(user_id, suspended=suspended)
 
 
-def _selected_value(request: Request, period: str) -> str | None:
-    key_by_period = {
-        "daily": "day",
-        "weekly": "week",
-        "monthly": "month",
-        "yearly": "year",
-    }
-    return request.query_params.get(key_by_period.get(period, "day"))
+@router.post("/admin/users/{user_id}/entries/{entry_id}/edit", dependencies=[Depends(_require_admin)])
+async def admin_edit_entry(
+    user_id: int,
+    entry_id: int,
+    memo: Annotated[str, Form()] = "",
+) -> RedirectResponse:
+    """Edit a user-owned entry memo."""
+    return await _admin_handlers.edit_entry(user_id, entry_id, memo=memo)
+
+
+@router.post("/admin/users/{user_id}/entries/{entry_id}/visibility", dependencies=[Depends(_require_admin)])
+async def admin_set_entry_visibility(
+    user_id: int,
+    entry_id: int,
+    hidden: Annotated[bool, Form()] = False,
+) -> RedirectResponse:
+    """Hide or unhide a user-owned entry."""
+    return await _admin_handlers.set_entry_visibility(user_id, entry_id, hidden=hidden)
+
+
+@router.post("/admin/users/{user_id}/comments/{comment_id}/edit", dependencies=[Depends(_require_admin)])
+async def admin_edit_comment(
+    user_id: int,
+    comment_id: int,
+    body: Annotated[str, Form()],
+) -> RedirectResponse:
+    """Edit a related comment."""
+    return await _admin_handlers.edit_comment(user_id, comment_id, body=body)
+
+
+@router.post("/admin/users/{user_id}/comments/{comment_id}/visibility", dependencies=[Depends(_require_admin)])
+async def admin_set_comment_visibility(
+    user_id: int,
+    comment_id: int,
+    hidden: Annotated[bool, Form()] = False,
+) -> RedirectResponse:
+    """Hide or unhide a related comment."""
+    return await _admin_handlers.set_comment_visibility(user_id, comment_id, hidden=hidden)

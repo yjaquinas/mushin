@@ -37,7 +37,11 @@
                 <span class="text-caption text-text-muted">{{ comment.created_at[:10] }}</span>
             </div>
             <div class="flex items-start justify-between gap-2">
+                {% if comment.hidden_at %}
+                <p class="text-body text-text-muted italic">{{ strings.COMMENTS_HIDDEN_BY_MODERATOR }}</p>
+                {% else %}
                 <p class="text-body text-text-primary">{{ comment.body }}</p>
+                {% endif %}
                 {% if current_user_id is not none and (current_user_id == comment.author_id or current_user_id == entry_owner_id) %}
                 <button
                     type="button"

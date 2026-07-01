@@ -113,7 +113,10 @@ def _normalize_email(email: str | None) -> str | None:
     if not cleaned:
         return None
     if not _EMAIL_RE.match(cleaned):
-        raise HTTPException(status_code=400, detail="That email address looks malformed.")
+        raise HTTPException(
+            status_code=400,
+            detail="Enter a valid email address.",
+        )
     return cleaned
 
 
@@ -170,7 +173,10 @@ async def username_signup(
     """
     _require_consent(consent)
     if not password:
-        raise HTTPException(status_code=400, detail="username and password are required")
+        raise HTTPException(
+            status_code=400,
+            detail="Enter a username and password.",
+        )
 
     username = _normalize_username(username)
     email = _normalize_email(email)
@@ -185,14 +191,12 @@ async def username_signup(
                 # The username already maps to a real account: do not merge.
                 raise HTTPException(
                     status_code=409,
-                    detail="That username already has an account. "
-                    "Choose whether to keep or discard your guest data.",
+                    detail="That username is already in use.",
                 )
             if email is not None and users.find_by_email(email) is not None:
                 raise HTTPException(
                     status_code=409,
-                    detail="That email already has an account. "
-                    "Choose whether to keep or discard your guest data.",
+                    detail="That email address is already in use.",
                 )
             user = users.attach_provider(
                 current,
@@ -219,7 +223,7 @@ async def username_signup(
     except users.IdentityTakenError as exc:
         # Generic message: don't leak whether the username or email collided.
         raise HTTPException(
-            status_code=409, detail="That username is already taken."
+            status_code=409, detail="That username is already in use."
         ) from exc
 
     resp = JSONResponse(
@@ -249,10 +253,17 @@ async def username_login(
     """
     username = _normalize_username(username)
     user = users.find_by_username(username)
-    if user is None or not passwords.verify_password(user["password_hash"], password):
+    if (
+        user is None
+        or user["suspended_at"] is not None
+        or not passwords.verify_password(user["password_hash"], password)
+    ):
         # Same response whether the username is unknown or the password is wrong,
         # so we don't leak which usernames are registered.
-        raise HTTPException(status_code=401, detail="That username or password isn't right.")
+        raise HTTPException(
+            status_code=401,
+            detail="Incorrect username or password.",
+        )
 
     resp = JSONResponse(
         {
@@ -360,6 +371,8 @@ async def oauth_callback(
 
     # --- Plain login / fresh signup --------------------------------------
     if existing is not None:
+        if existing["suspended_at"] is not None:
+            raise HTTPException(status_code=401, detail="Incorrect username or password.")
         resp = JSONResponse({"user_id": existing["id"], "upgraded": False})
         _set_session(resp, existing["id"])
         log.info("auth.login.oauth", provider=provider, user_id=existing["id"])
@@ -415,11 +428,11 @@ async def guest_start(
 async def delete_account(
     session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
 ) -> Response:
-    """Delete the current account (real or guest) and ALL its data, then log out.
+    """Delete current account access while preserving history, then log out.
 
-    Cookie-bound: a guest is a data subject and deletes via this same
-    control. The cascade (schema ``ON DELETE CASCADE``) removes every owned row
-    including memos. The session cookie is cleared on the response.
+    Cookie-bound: a guest is a data subject and deletes via this same control.
+    The user row is anonymized and marked deleted; owned history remains. The
+    session cookie is cleared on the response.
     """
     current = _current_uid(session)
     if current is None or users.get_user(current) is None:

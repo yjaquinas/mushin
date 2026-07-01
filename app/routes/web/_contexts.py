@@ -74,9 +74,8 @@ def _build_card_context(
 
     progress: dict[str, Any] | None = None
     advance_line: str | None = None
-    hero_label = activity_row["cached_count"] or 0
-
     counts = stats.counts_for_sub_tallies([activity_id], owner_id, tz=tz).get(activity_id, {})
+    hero_label = counts.get("lifetime", activity_row["cached_count"] or 0)
     streak = activity_row["cached_streak"] or 0
     streaks = stats.streaks(activity_id, owner_id, tz=tz)
 

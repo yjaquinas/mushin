@@ -67,6 +67,19 @@ def _row_to_dict(row: sqlite3.Row | None) -> dict[str, Any] | None:
     return dict(row) if row is not None else None
 
 
+def _deleted_username(conn: sqlite3.Connection, user_id: int) -> str:
+    base = "deleted-user"
+    candidate = base
+    suffix = int(user_id)
+    while conn.execute(
+        "SELECT 1 FROM user WHERE username = ? AND id != ?",
+        (candidate, user_id),
+    ).fetchone():
+        candidate = f"{base}-{suffix}"
+        suffix += 1
+    return candidate
+
+
 # ---------------------------------------------------------------------------
 # Lookups
 # ---------------------------------------------------------------------------
@@ -76,7 +89,10 @@ def get_user(user_id: int) -> dict[str, Any] | None:
     """Fetch a user row by id, or ``None``."""
     with db.connect() as conn:
         conn.execute("BEGIN")
-        row = conn.execute("SELECT * FROM user WHERE id = ?", (user_id,)).fetchone()
+        row = conn.execute(
+            "SELECT * FROM user WHERE id = ? AND suspended_at IS NULL AND deleted_at IS NULL",
+            (user_id,),
+        ).fetchone()
         return _row_to_dict(row)
 
 
@@ -104,7 +120,8 @@ def find_by_provider(auth_provider: str, provider_id: str) -> dict[str, Any] | N
     with db.connect() as conn:
         conn.execute("BEGIN")
         row = conn.execute(
-            "SELECT * FROM user WHERE auth_provider = ? AND provider_id = ?",
+            "SELECT * FROM user"
+            " WHERE auth_provider = ? AND provider_id = ? AND deleted_at IS NULL",
             (auth_provider, provider_id),
         ).fetchone()
         return _row_to_dict(row)
@@ -119,7 +136,7 @@ def find_by_username(username: str) -> dict[str, Any] | None:
     with db.connect() as conn:
         conn.execute("BEGIN")
         row = conn.execute(
-            "SELECT * FROM user WHERE username = ?",
+            "SELECT * FROM user WHERE username = ? AND deleted_at IS NULL",
             (username,),
         ).fetchone()
         return _row_to_dict(row)
@@ -134,7 +151,7 @@ def find_by_email(email: str) -> dict[str, Any] | None:
     with db.connect() as conn:
         conn.execute("BEGIN")
         row = conn.execute(
-            "SELECT * FROM user WHERE email = ?",
+            "SELECT * FROM user WHERE email = ? AND deleted_at IS NULL",
             (email,),
         ).fetchone()
         return _row_to_dict(row)
@@ -390,18 +407,15 @@ def touch_last_active(user_id: int) -> None:
 
 
 def delete_user(user_id: int) -> bool:
-    """Delete the ``user`` row, cascading to *all* owned data including memos.
-
-    The schema declares ``ON DELETE CASCADE`` on every ``owner_id`` reference, so
-    a single ``DELETE FROM user`` wipes category/activity/field_def/tag/entry/
-    entry_tag/entry_value/match and every memo. Deletion is
-    therefore honest: no orphaned personal data survives. Returns ``True`` if a
-    row was removed.
-
-    ``PRAGMA foreign_keys=ON`` is set per-connection by ``db._configure``; the
-    cascade depends on it.
-    """
+    """Remove account access while preserving owned history."""
     with db.connect() as conn:
         conn.execute("BEGIN")
-        cur = conn.execute("DELETE FROM user WHERE id = ?", (user_id,))
+        cur = conn.execute(
+            "UPDATE user"
+            " SET username = ?, display_name = 'deleted-user', email = NULL,"
+            " provider_id = NULL, password_hash = NULL, suspended_at = NULL,"
+            " deleted_at = ?, comments_seen_at = NULL"
+            " WHERE id = ? AND deleted_at IS NULL",
+            (_deleted_username(conn, user_id), _now_iso(), user_id),
+        )
         return cur.rowcount > 0

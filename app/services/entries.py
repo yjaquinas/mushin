@@ -450,6 +450,7 @@ def _hydrate(conn: sqlite3.Connection, owner_id: int, entry_row: sqlite3.Row) ->
         "occurred_at": entry_row["occurred_at"],
         "time_known": entry_row["time_known"],
         "memo": entry_row["memo"],
+        "hidden_at": entry_row["hidden_at"],
         "created_at": entry_row["created_at"],
         "updated_at": entry_row["updated_at"],
         "values": values,
@@ -527,7 +528,13 @@ def get(owner_id: int, entry_id: int) -> dict[str, Any]:
     """Fetch one entry by id, scoped to *owner_id*. Raises if not found."""
     with db.connect() as conn:
         conn.execute("BEGIN")
-        row = _db.fetch_one(conn, "entry", owner_id, where="id = ?", params=(entry_id,))
+        row = _db.fetch_one(
+            conn,
+            "entry",
+            owner_id,
+            where="id = ?",
+            params=(entry_id,),
+        )
         if row is None:
             raise EntryNotFoundError(f"entry {entry_id} not found for owner {owner_id}")
         return _hydrate(conn, owner_id, row)
@@ -588,7 +595,13 @@ def update(
     """
     with db.connect() as conn:
         conn.execute("BEGIN")
-        row = _db.fetch_one(conn, "entry", owner_id, where="id = ?", params=(entry_id,))
+        row = _db.fetch_one(
+            conn,
+            "entry",
+            owner_id,
+            where="id = ?",
+            params=(entry_id,),
+        )
         if row is None:
             raise EntryNotFoundError(f"entry {entry_id} not found for owner {owner_id}")
         activity_id = row["activity_id"]
@@ -637,7 +650,13 @@ def update(
         if occurred_changed:
             _refresh_cache(conn, activity_id, owner_id, tz)
 
-        fresh = _db.fetch_one(conn, "entry", owner_id, where="id = ?", params=(entry_id,))
+        fresh = _db.fetch_one(
+            conn,
+            "entry",
+            owner_id,
+            where="id = ?",
+            params=(entry_id,),
+        )
         return _hydrate(conn, owner_id, fresh)
 
 
@@ -651,7 +670,12 @@ def delete(owner_id: int, entry_id: int, *, tz: ZoneInfo) -> bool:
     with db.connect() as conn:
         conn.execute("BEGIN")
         row = _db.fetch_one(
-            conn, "entry", owner_id, where="id = ?", params=(entry_id,), columns="activity_id"
+            conn,
+            "entry",
+            owner_id,
+            where="id = ?",
+            params=(entry_id,),
+            columns="activity_id",
         )
         if row is None:
             return False

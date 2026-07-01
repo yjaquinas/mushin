@@ -4,16 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{{ title | default(strings.APP_NAME) }}{% endblock %}</title>
-    <link rel="stylesheet" href="/static/style.css">
-    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="stylesheet" href="{{ static_asset('/static/style.css') }}">
+    <link rel="icon" type="image/svg+xml" href="{{ static_asset('/static/favicon.svg') }}">
     <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.10/dist/htmx.min.js" integrity="sha384-H5SrcfygHmAuTDZphMHqBJLc3FhssKjG7w/CeCpFReSfwBWDTKpkzPP8c+cLsK+V" crossorigin="anonymous"></script>
-    <script defer src="/static/js/dialogs.js"></script>
-    <script defer src="/static/js/account-dialogs.js"></script>
-    <script defer src="/static/js/auth-form.js"></script>
-    <script defer src="/static/js/base-behavior.js"></script>
-    <script defer src="/static/js/category-sheet.js"></script>
-    <script defer src="/static/js/field-stats.js"></script>
-    <script defer src="/static/js/log-sheet.js"></script>
+    <script defer src="{{ static_asset('/static/js/dialogs.js') }}"></script>
+    <script defer src="{{ static_asset('/static/js/account-dialogs.js') }}"></script>
+    <script defer src="{{ static_asset('/static/js/auth-form.js') }}"></script>
+    <script defer src="{{ static_asset('/static/js/base-behavior.js') }}"></script>
+    <script defer src="{{ static_asset('/static/js/category-sheet.js') }}"></script>
+    <script defer src="{{ static_asset('/static/js/field-stats.js') }}"></script>
+    <script defer src="{{ static_asset('/static/js/log-sheet.js') }}"></script>
 </head>
 <body class="flex flex-col bg-surface-0 min-h-screen text-text-primary text-body">
     {# Masthead — top bar with back button + centered title. Hidden on entry, home, and one-time-gate pages. #}

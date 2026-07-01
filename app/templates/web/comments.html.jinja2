@@ -48,7 +48,11 @@
             </div>
             <p class="line-clamp-1 text-body text-text-primary">
                 <span class="font-medium text-text-secondary">{{ comment.author_display_name or comment.author_username }}</span>
+                {% if comment.hidden_at %}
+                <span class="ms-1 italic text-text-muted">{{ strings.COMMENTS_HIDDEN_BY_MODERATOR }}</span>
+                {% else %}
                 <span class="ms-1">{{ comment.body }}</span>
+                {% endif %}
             </p>
         </a>
     </li>
