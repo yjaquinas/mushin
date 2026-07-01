@@ -1,0 +1,86 @@
+{#
+  Shared form body for both the inline and dialog log-sheet variants.
+  Renders the field inputs, date/time picker, and submit button.
+
+  Context: activity_id, fields (field-priority order), today (YYYY-MM-DD),
+           tag_group_fields (list), has_tag_group (bool).
+#}
+{% for field in fields %}
+    {% if field.kind == "tag_group" %}
+        {% include "components/tag_group.html.jinja2" with context %}
+    {% elif field.kind in ("count", "scale") %}
+        <div class="flex flex-col gap-1">
+            <label for="value_{{ field.id }}" class="text-caption font-medium text-text-secondary">
+                {{ field.label }}
+            </label>
+            <input
+                type="number"
+                inputmode="decimal"
+                step="any"
+                id="value_{{ field.id }}"
+                name="value_{{ field.id }}"
+                class="min-h-tap rounded-input border border-border bg-surface-1 px-3 py-2 text-body text-text-primary focus-visible:outline-2"
+            >
+        </div>
+    {% elif field.kind == "match_list" %}
+        {% set rows = field.rows %}
+        {% include "components/match_rows.html.jinja2" with context %}
+    {% elif field.kind == "memo" and not has_tag_group %}
+        <div class="flex flex-col gap-1">
+            <label for="value_{{ field.id }}" class="text-caption font-medium text-text-secondary">
+                {{ strings.LOG_MEMO_LABEL }}
+            </label>
+            <textarea
+                id="value_{{ field.id }}"
+                name="value_{{ field.id }}"
+                rows="3"
+                placeholder="{{ strings.LOG_MEMO_PLACEHOLDER }}"
+                class="rounded-input border border-border bg-surface-1 px-3 py-2 text-body text-text-primary focus-visible:outline-2"
+            ></textarea>
+        </div>
+    {% endif %}
+{% endfor %}
+
+<div class="flex flex-col gap-2">
+    <div class="flex flex-col gap-1">
+        <label for="date" class="text-caption font-medium text-text-secondary">
+            {{ strings.LOG_OCCURRED_AT_LABEL }}
+        </label>
+        <input
+            type="date"
+            id="date"
+            name="date"
+            value="{{ today }}"
+            required
+            class="min-h-tap rounded-input border border-border bg-surface-1 px-3 py-2 text-body text-text-primary focus-visible:outline-2"
+        >
+    </div>
+    <label class="flex min-h-tap items-center gap-2 text-body text-text-secondary">
+        <input
+            type="checkbox"
+            name="add_time"
+            class="rounded border-border"
+            hx-on::change="var l=this.parentElement;if(l){var d=l.nextElementSibling;if(d){this.checked?d.removeAttribute('hidden'):d.setAttribute('hidden','');}}"
+        >
+        {{ strings.LOG_TIME_ADD }}
+    </label>
+    <div hidden class="flex flex-col gap-1">
+        <label for="time" class="text-caption font-medium text-text-secondary">
+            {{ strings.LOG_TIME_ADD }}
+        </label>
+        <input
+            type="time"
+            id="time"
+            name="time"
+            class="min-h-tap rounded-input border border-border bg-surface-1 px-3 py-2 text-body text-text-primary focus-visible:outline-2"
+        >
+    </div>
+</div>
+
+<button
+    type="submit"
+    hx-disabled-elt="this"
+    class="min-h-tap w-full rounded-button bg-brand px-4 py-3 text-title font-semibold text-on-brand transition focus-visible:outline-offset-2 disabled:opacity-60"
+>
+    {{ strings.LOG_SUBMIT }}
+</button>
