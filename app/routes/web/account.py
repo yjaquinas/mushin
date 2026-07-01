@@ -1,8 +1,8 @@
-"""Visibility consent, account settings, and the theme toggle.
+"""Account settings, delete, and the theme toggle.
 
-Covers the one-time visibility-consent screen (``/welcome-sharing``), the
-private-redefinition re-consent interstitial (``/visibility-update``), the
-``/account`` settings page, and the no-auth ``/preferences/theme`` toggle.
+Covers the ``/account`` settings page, ``/delete``, and
+the no-auth ``/preferences/theme`` toggle. The one-time consent interstitials
+(``/welcome-sharing``, ``/visibility-update``) live in ``account_consent.py``.
 """
 
 from __future__ import annotations
@@ -17,116 +17,12 @@ from app.routes.web._shared import (
     THEME_COOKIE,
     THEME_CYCLE,
     _current_user,
-    _home_url_for,
     _theme_from_cookie,
     templates,
     ui_strings as strings,
 )
 
 router = APIRouter()
-
-
-# ---------------------------------------------------------------------------
-# Visibility consent (one-time, before first /home use)
-# ---------------------------------------------------------------------------
-
-
-@router.get("/welcome-sharing", response_class=HTMLResponse)
-async def welcome_sharing(
-    request: Request,
-    session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
-) -> HTMLResponse:
-    """The one-time visibility-consent screen.
-
-    Shown once to every non-guest account before they can use ``/home``: it
-    explains the new ``visibility`` setting plainly and lets them choose
-    ``public`` or ``private`` (private pre-selected). Once chosen, the gate in
-    ``home()`` never sends them here again. Guests have no public profile and
-    are bounced straight to ``/home``.
-    """
-    user = _current_user(session)
-    if user is None:
-        return RedirectResponse(url="/", status_code=303)
-    if user["auth_provider"] == "guest" or user["consent_seen_at"] is not None:
-        return RedirectResponse(url=_home_url_for(user), status_code=303)
-    return templates.TemplateResponse(
-        request=request,
-        name="web/welcome_sharing.html.jinja2",
-        context={"current_page": "home"},
-    )
-
-
-@router.post("/welcome-sharing", response_model=None)
-async def submit_welcome_sharing(
-    visibility: Annotated[str, Form()],
-    session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
-) -> RedirectResponse | HTMLResponse:
-    """Persist the user's one-time visibility choice, then go to ``/home``.
-
-    Validates *visibility* is ``'public'`` or ``'private'`` (400 otherwise),
-    writes ``user.visibility`` + ``user.consent_seen_at`` for the session user,
-    and redirects to ``/home`` (which now passes the consent gate).
-    """
-    user = _current_user(session)
-    if user is None:
-        return RedirectResponse(url="/", status_code=303)
-    if visibility not in users.VALID_VISIBILITIES:
-        return HTMLResponse(status_code=400)
-    users.set_visibility_consent(int(user["id"]), visibility)
-    return RedirectResponse(url=_home_url_for(user), status_code=303)
-
-
-# ---------------------------------------------------------------------------
-# Private redefinition (one-time re-consent interstitial)
-# ---------------------------------------------------------------------------
-
-
-@router.get("/visibility-update", response_class=HTMLResponse, response_model=None)
-async def visibility_update(
-    request: Request,
-    session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
-) -> HTMLResponse | RedirectResponse:
-    """The one-time "what Private means has changed" interstitial.
-
-    Shown once to a pre-existing private account whose meaning of ``private``
-    changed under them. Self-guards the same way ``welcome_sharing`` does: a
-    guest, a still-unconsented account (gate 1 owns them), a public account, or
-    an account that has already acknowledged the change is bounced straight
-    home — so a direct visit can't show the screen out of turn.
-    """
-    user = _current_user(session)
-    if user is None:
-        return RedirectResponse(url="/", status_code=303)
-    if (
-        user["auth_provider"] == "guest"
-        or user["consent_seen_at"] is None
-        or user["visibility"] != "private"
-        or user["private_redefinition_seen_at"] is not None
-    ):
-        return RedirectResponse(url=_home_url_for(user), status_code=303)
-    return templates.TemplateResponse(
-        request=request,
-        name="web/visibility_update.html.jinja2",
-        context={"current_page": "home"},
-    )
-
-
-@router.post("/visibility-update", response_model=None)
-async def submit_visibility_update(
-    session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
-) -> RedirectResponse:
-    """Acknowledge the private-redefinition interstitial, then go to ``/home``.
-
-    Stamps ``private_redefinition_seen_at`` for the session user via
-    ``users.mark_redefinition_seen`` so the re-consent gate never fires again,
-    then redirects to the owner's home/profile URL. No body to validate — this
-    is a single affirmative acknowledgement, not a re-choice.
-    """
-    user = _current_user(session)
-    if user is None:
-        return RedirectResponse(url="/", status_code=303)
-    users.mark_redefinition_seen(int(user["id"]))
-    return RedirectResponse(url=_home_url_for(user), status_code=303)
 
 
 # ---------------------------------------------------------------------------

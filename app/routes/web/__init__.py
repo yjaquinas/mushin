@@ -81,6 +81,7 @@ from app.routes.web._shared import (
     templates as templates,
 )
 from app.routes.web.account import router as _account_router
+from app.routes.web.account_consent import router as _account_consent_router
 from app.routes.web.activities import router as _activities_router
 from app.routes.web.activity_admin import router as _activity_admin_router
 from app.routes.web.comments import router as _comments_router
@@ -94,6 +95,7 @@ router = APIRouter()
 router.include_router(_home_router)
 router.include_router(_comments_router)
 router.include_router(_account_router)
+router.include_router(_account_consent_router)
 router.include_router(_activities_router)
 router.include_router(_activity_admin_router)
 router.include_router(_history_router)
