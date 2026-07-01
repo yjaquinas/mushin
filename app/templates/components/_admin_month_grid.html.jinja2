@@ -1,0 +1,52 @@
+<div class="mt-4">
+    <div class="mb-3 flex items-center justify-between gap-3">
+        <a
+            href="/admin?period={{ selected_period }}&calendar_month={{ selector.prev_value }}&{% if selected_period == 'daily' %}day={{ selector.prev_period_value }}{% else %}week={{ selector.prev_period_value }}{% endif %}&page=1"
+            class="flex min-h-tap min-w-tap items-center justify-center rounded-button px-2 text-body text-text-secondary transition hover:bg-surface-2"
+            aria-label="{{ strings.CALENDAR_PREV_MONTH }}"
+        >
+            &lt;
+        </a>
+        <h3 class="text-body font-medium text-text-primary">{{ selector.title }}</h3>
+        <a
+            href="/admin?period={{ selected_period }}&calendar_month={{ selector.next_value }}&{% if selected_period == 'daily' %}day={{ selector.next_period_value }}{% else %}week={{ selector.next_period_value }}{% endif %}&page=1"
+            class="flex min-h-tap min-w-tap items-center justify-center rounded-button px-2 text-body text-text-secondary transition hover:bg-surface-2"
+            aria-label="{{ strings.CALENDAR_NEXT_MONTH }}"
+        >
+            &gt;
+        </a>
+    </div>
+    <table class="w-full border-collapse">
+        <thead>
+            <tr>
+                {% for wd in selector.weekdays %}
+                <th scope="col" class="pb-2 text-caption font-medium text-text-muted">{{ wd }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for week in selector.weeks %}
+            <tr class="{% if selected_period == 'weekly' %}admin-week-row{% endif %}">
+                {% for day in week %}
+                <td class="text-center">
+                    {% if selected_period == 'weekly' %}
+                    <div
+                        class="admin-week-slot{% if day.week_selected %} admin-week-slot--selected{% endif %}{% if loop.first %} admin-week-slot--first{% endif %}{% if loop.last %} admin-week-slot--last{% endif %}"
+                    >
+                    {% endif %}
+                    <a
+                        href="/admin?{% if selected_period == 'daily' %}period=daily&day={{ day.date }}{% else %}period=weekly&week={{ day.week_value }}{% endif %}&calendar_month={{ selector.title }}&page=1"
+                        class="admin-calendar-day{% if selected_period == 'daily' %} admin-day{% else %} admin-week-day{% endif %}{% if day.today and selected_period == 'daily' %} admin-day--today{% endif %}{% if day.selected %} admin-day--selected{% endif %}{% if day.week_selected %} admin-week-day--selected{% endif %}{% if day.current_week and selected_period == 'weekly' and loop.first %} admin-week-day--today{% endif %}{% if not day.in_month %} {% if selected_period == 'daily' %}admin-day--outside{% else %}admin-week-day--outside{% endif %}{% endif %}"
+                    >
+                        {{ day.day }}
+                    </a>
+                    {% if selected_period == 'weekly' %}
+                    </div>
+                    {% endif %}
+                </td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
