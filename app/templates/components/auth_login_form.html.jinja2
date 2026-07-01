@@ -27,7 +27,7 @@
     <form
         hx-post="/auth/login"
         hx-swap="none"
-        hx-on::after-request="MushinAuth.handle(event)"
+        data-auth-form
         class="flex flex-col gap-4"
     >
         {% if next %}

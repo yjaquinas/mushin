@@ -25,7 +25,7 @@
     <form
         hx-post="/auth/signup"
         hx-swap="none"
-        hx-on::after-request="MushinAuth.handle(event)"
+        data-auth-form
         class="flex flex-col gap-4"
     >
         <div class="flex flex-col gap-1">

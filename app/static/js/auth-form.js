@@ -91,3 +91,15 @@ window.MushinAuth = {
     errorEl.hidden = !message;
   },
 };
+
+document.addEventListener("submit", function (event) {
+  const form = event.target;
+  if (!form || !form.hasAttribute("data-auth-form")) return;
+  window.MushinAuth.stampTimezone(event);
+});
+
+document.body.addEventListener("htmx:afterRequest", function (event) {
+  const elt = event.detail && event.detail.elt;
+  if (!elt || !elt.hasAttribute("data-auth-form")) return;
+  window.MushinAuth.handle(event);
+});
