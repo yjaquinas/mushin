@@ -12,10 +12,18 @@
     <script defer src="/static/js/auth-form.js"></script>
     <script defer src="/static/js/category-sheet.js"></script>
     <script defer src="/static/js/log-sheet.js"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        document.body.addEventListener("htmx:afterSwap", function (event) {
+          var target = event.detail.target;
+          if (!target) return;
+          var focusTarget = target.querySelector("[data-history-focus]");
+          if (focusTarget) focusTarget.focus();
+        });
+      });
+    </script>
 </head>
-<body class="flex flex-col bg-surface-0 min-h-screen text-text-primary text-body"
-    hx-on::after-swap="var t=event.detail.target;if(t){var f=t.querySelector('[data-history-focus]');if(f)f.focus();}"
->
+<body class="flex flex-col bg-surface-0 min-h-screen text-text-primary text-body">
     {# Masthead — top bar with back button + centered title. Hidden on entry, home, and one-time-gate pages. #}
     {% if page_title %}
     <header class="mx-auto flex w-full max-w-screen-md items-center justify-between gap-2 px-4 py-3">
