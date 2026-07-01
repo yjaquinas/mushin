@@ -1,34 +1,58 @@
 // Account-page dialogs: import-data and delete-account.
-//
-// Uses DialogManager for focus-trap, Escape key, and overlay-click.
-// Cancel buttons inside the dialog content also close the dialog (overlay-click
-// fires first since the target is inside the dialog element).
-// Auto-open on error uses hx-on::load in import_data_dialog.html.jinja2.
 
 (function () {
   "use strict";
 
-  // ── Import dialog ──────────────────────────────────────────
-  var importDlg = new DialogManager("import-data-dialog");
-  importDlg.init();
-  dialogManagerRegistry.add(importDlg);
+  function initDialog(id) {
+    var el = document.getElementById(id);
+    if (!el || el.getAttribute("data-dialog-init")) return null;
+    el.setAttribute("data-dialog-init", "true");
+    var dlg = new DialogManager(id);
+    dlg.init();
+    dialogManagerRegistry.add(dlg);
+    return dlg;
+  }
 
-  var importCancelBtn = document.getElementById("import-cancel-button");
-  if (importCancelBtn) {
-    importCancelBtn.addEventListener("click", function () {
+  var importDlg = initDialog("import-data-dialog");
+  var deleteDlg = initDialog("delete-account-dialog");
+
+  document.addEventListener("click", function (event) {
+    var importOpen = event.target.closest("#import-open-button");
+    if (importOpen && importDlg) {
+      importDlg.open();
+      return;
+    }
+
+    var importCancel = event.target.closest("#import-cancel-button");
+    if (importCancel && importDlg) {
       importDlg.close();
-    });
-  }
+      return;
+    }
 
-  // ── Delete-account dialog ──────────────────────────────────
-  var deleteDlg = new DialogManager("delete-account-dialog");
-  deleteDlg.init();
-  dialogManagerRegistry.add(deleteDlg);
+    var deleteOpen = event.target.closest("#delete-open-button");
+    if (deleteOpen && deleteDlg) {
+      deleteDlg.open();
+      return;
+    }
 
-  var deleteCancelBtn = document.getElementById("delete-cancel-button");
-  if (deleteCancelBtn) {
-    deleteCancelBtn.addEventListener("click", function () {
+    var deleteCancel = event.target.closest("#delete-cancel-button");
+    if (deleteCancel && deleteDlg) {
       deleteDlg.close();
-    });
+    }
+  });
+
+  function autoOpenImportDialog() {
+    var el = document.getElementById("import-data-dialog");
+    if (el && el.hasAttribute("data-auto-open") && importDlg) {
+      importDlg.open();
+    }
   }
+
+  autoOpenImportDialog();
+
+  document.body.addEventListener("htmx:afterSwap", function () {
+    importDlg = initDialog("import-data-dialog") || importDlg;
+    deleteDlg = initDialog("delete-account-dialog") || deleteDlg;
+    autoOpenImportDialog();
+  });
 })();

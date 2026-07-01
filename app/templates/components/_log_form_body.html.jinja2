@@ -60,7 +60,7 @@
             type="checkbox"
             name="add_time"
             class="rounded border-border"
-            hx-on::change="var l=this.parentElement;if(l){var d=l.nextElementSibling;if(d){this.checked?d.removeAttribute('hidden'):d.setAttribute('hidden','');}}"
+            data-toggle-time
         >
         {{ strings.LOG_TIME_ADD }}
     </label>

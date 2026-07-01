@@ -7,7 +7,7 @@
   component (#import-data-dialog) so the route can re-render it in place
   with an inline error on failure, or return HX-Redirect: /home on success.
 
-  Auto-open on error uses hx-on::load with a data-auto-open flag.
+  Auto-open on error uses account-dialogs.js with a data-auto-open flag.
 
   Optional context (set by the route on an error re-render):
     import_error    - error string shown inline above the form.
@@ -17,9 +17,8 @@
     id="import-data-dialog"
     hidden
     {% if open_on_error %}data-auto-open{% endif %}
-    hx-on::load="if(this.hasAttribute('data-auto-open'))this.removeAttribute('hidden')"
 >
-    <div hidden
+    <div
         class="fixed inset-0 z-50 flex items-end justify-center bg-text-primary/50 sm:items-center"
         role="presentation"
     >

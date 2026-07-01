@@ -9,8 +9,8 @@
   no primary swap target.
 
   Dialog behavior (init focus, Escape key, overlay click, cancel button)
-  is handled by log-sheet.js. The time checkbox toggle uses hx-on::change
-  inline (shared with entry_edit_form).
+  is handled by log-sheet.js. The time checkbox toggle uses delegated JS
+  via data-toggle-time (shared with entry_edit_form).
 
   Context: activity_id, name, fields (field-priority order), today (default
   occurred_at value, KST date YYYY-MM-DD), inline (bool — when True, renders
@@ -26,7 +26,6 @@
         <button
             type="button"
             id="log-sheet-inline-cancel"
-            hx-on:click="var c=document.getElementById('log-sheet-inline');if(c){c.setAttribute('hidden','');var i=document.getElementById('log-trigger-icon-{{ activity_id }}');if(i)i.classList.remove('rotate-45');}"
             class="min-h-tap min-w-tap rounded-button px-3 text-body text-text-secondary transition hover:bg-surface-2"
         >
             {{ strings.LOG_CANCEL }}
@@ -36,7 +35,6 @@
     <form
         hx-post="/activities/{{ activity_id }}/log"
         hx-swap="none"
-        hx-on:log-saved="this.reset();var p=document.getElementById('log-panel');if(p){p.setAttribute('hidden','');p.innerHTML='';}var b=document.getElementById('log-trigger-{{ activity_id }}');if(b)b.setAttribute('aria-expanded','false');"
         class="flex flex-col gap-4"
     >
         {% include "components/_log_form_body.html.jinja2" with context %}
@@ -53,7 +51,6 @@
         <button
             type="button"
             id="log-sheet-cancel"
-            hx-on:click="var f=document.getElementById('log-sheet-dialog').querySelector('form');if(f){f.querySelectorAll('input[type=number],input[type=date],input[type=time],textarea').forEach(function(i){i.value=''});f.querySelectorAll('input[type=checkbox]').forEach(function(c){c.checked=false});}document.getElementById('log-sheet-dialog').setAttribute('hidden','')"
             class="min-h-tap min-w-tap rounded-button px-3 text-body text-text-secondary transition hover:bg-surface-2"
         >
             {{ strings.LOG_CANCEL }}
@@ -63,7 +60,6 @@
     <form
         hx-post="/activities/{{ activity_id }}/log"
         hx-swap="none"
-        hx-on:log-saved="this.reset();var d=document.getElementById('log-sheet-dialog');if(d)d.setAttribute('hidden','');"
         class="flex flex-col gap-4"
     >
         {% include "components/_log_form_body.html.jinja2" with context %}

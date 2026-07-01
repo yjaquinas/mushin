@@ -5,7 +5,7 @@
   On submit: POST /activities/{activity_id}/entries/{entry_id}
   On cancel: GET  /activities/{activity_id}/entries/{entry_id}/cancel-edit
 
-  The time checkbox toggle uses hx-on::change inline.
+  The time checkbox toggle uses delegated JS via data-toggle-time.
 
   Context:
     activity_id   int    — owning sub-tally
@@ -40,7 +40,7 @@
                     type="checkbox"
                     name="add_time"
                     class="rounded border-border"
-                    hx-on::change="var l=this.parentElement;if(l){var d=l.nextElementSibling;if(d){this.checked?d.removeAttribute('hidden'):d.setAttribute('hidden','');}}"
+                    data-toggle-time
                 >
                 {{ strings.LOG_TIME_ADD }}
             </label>

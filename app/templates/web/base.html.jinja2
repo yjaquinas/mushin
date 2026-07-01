@@ -10,18 +10,10 @@
     <script defer src="/static/js/dialogs.js"></script>
     <script defer src="/static/js/account-dialogs.js"></script>
     <script defer src="/static/js/auth-form.js"></script>
+    <script defer src="/static/js/base-behavior.js"></script>
     <script defer src="/static/js/category-sheet.js"></script>
+    <script defer src="/static/js/field-stats.js"></script>
     <script defer src="/static/js/log-sheet.js"></script>
-    <script>
-      document.addEventListener("DOMContentLoaded", function () {
-        document.body.addEventListener("htmx:afterSwap", function (event) {
-          var target = event.detail.target;
-          if (!target) return;
-          var focusTarget = target.querySelector("[data-history-focus]");
-          if (focusTarget) focusTarget.focus();
-        });
-      });
-    </script>
 </head>
 <body class="flex flex-col bg-surface-0 min-h-screen text-text-primary text-body">
     {# Masthead — top bar with back button + centered title. Hidden on entry, home, and one-time-gate pages. #}

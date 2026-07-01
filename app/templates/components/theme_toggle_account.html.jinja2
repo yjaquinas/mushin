@@ -18,7 +18,6 @@
     id="theme-toggle"
     hx-post="/preferences/theme"
     hx-swap="outerHTML"
-    hx-on::before-request="setTimeout(()=>location.reload(),100)"
     aria-label="{{ 'Theme: light. Switch to dark.' if theme == 'light' else 'Theme: dark. Switch to light.' }}"
     data-theme="{{ theme }}"
     class="flex min-h-tap w-full items-center justify-center gap-2 rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline-offset-2"

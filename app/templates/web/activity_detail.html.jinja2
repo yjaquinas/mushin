@@ -27,12 +27,10 @@
             id="log-trigger-{{ card.id }}"
             aria-expanded="false"
             aria-controls="log-panel"
+            data-log-trigger
             hx-get="/activities/{{ card.id }}/log-inline"
             hx-target="#log-panel"
             hx-swap="innerHTML"
-            hx-on:click="var b=this,p=document.getElementById('log-panel'),i=document.getElementById('log-trigger-icon-{{ card.id }}');var open=b.getAttribute('aria-expanded')==='true';b.setAttribute('aria-expanded',open?'false':'true');if(open){p.setAttribute('hidden','');p.innerHTML='';i.classList.remove('rotate-45')}else{p.removeAttribute('hidden');i.classList.add('rotate-45')}"
-            hx-on::after-request="var p=document.getElementById('log-panel'),i=document.getElementById('log-trigger-icon-{{ card.id }}');if(p)p.removeAttribute('hidden');if(i)i.classList.remove('rotate-45');"
-            hx-on:log-saved="var p=document.getElementById('log-panel');p&&!p.hidden&&(p.hidden=true,p.innerHTML='');var i=document.getElementById('log-trigger-icon-{{ card.id }}');i&&i.classList.remove('rotate-45');"
             class="flex w-full min-h-tap items-center justify-center gap-2 rounded-button bg-brand px-4 text-body font-semibold text-on-brand transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
         >
             <span class="transition-transform"

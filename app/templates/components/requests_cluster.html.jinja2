@@ -4,7 +4,7 @@
   the existing full-width Accept/Decline/Cancel rows, unchanged.
 
   Toggle behavior (aria-expanded, hidden toggle, +/- icon swap) uses
-  hx-on::click inline.
+  delegated JS in base-behavior.js.
 
   Incoming pending: Accept (consent-gated GET->POST) / Decline (direct).
   Outgoing pending: "Requested" label + a quiet Cancel (direct).
@@ -20,7 +20,6 @@
         id="requests-cluster-toggle"
         aria-expanded="false"
         aria-controls="requests-cluster-body"
-        hx-on::click="this.setAttribute('aria-expanded',this.getAttribute('aria-expanded')==='true'?'false':'true');var b=document.getElementById('requests-cluster-body');b.toggleAttribute('hidden');var i=document.getElementById('requests-cluster-icon');i.textContent=this.getAttribute('aria-expanded')==='true'?'−':'+'"
         class="flex min-h-tap w-full items-center justify-between gap-2 rounded-card px-1 py-2 text-body font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
     >
         <span>{{ strings.REQUESTS_HEADING }} ({{ strings.REQUESTS_PENDING_BADGE.format(count=fellows.pending_count) }})</span>

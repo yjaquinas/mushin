@@ -28,7 +28,7 @@
     <div class="flex gap-2">
         <button
             type="button"
-            hx-on:click="var f=document.getElementById('add-activity-form'),b=this.closest('#add-activity-inline').querySelector('button');if(f)f.setAttribute('hidden','');if(b)b.removeAttribute('hidden');"
+            data-add-activity-cancel
             class="min-h-tap flex-1 rounded-button border border-border px-4 py-3 text-body font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline-offset-2"
         >
             {{ strings.ACTIVITY_FORM_CANCEL }}

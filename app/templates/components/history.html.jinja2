@@ -33,7 +33,6 @@
 <div
     id="history-{{ activity_id }}"
     class="flex flex-col gap-3"
-    hx-on::after-swap="var fs=document.getElementById('field-stats-'+this.id.split('-').pop());if(fs){var t=this.querySelector('[data-history-focus]');if(t)fs.dataset.period=t.dataset.period||fs.dataset.period;}"
 >
     {# Sentinel: refreshes the whole history section on log-saved.
        Lives here (not on the parent div) so its hx-vals don't bleed into

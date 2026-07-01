@@ -9,7 +9,6 @@
     class="rounded-card border border-border bg-surface-2 px-4 py-2 text-caption font-medium text-text-primary"
     data-flash-dismiss
 >{{ flash_message }}</p>
-{% include "components/flash_dismiss.html.jinja2" %}
 {% endif %}
 
 {# Visibility/share-link section is non-guest only — guests have no username
@@ -23,7 +22,7 @@
         </p>
     </div>
 
-    <form method="post" action="/account" class="flex flex-col gap-4" id="visibility-form">
+    <form method="post" action="/account" class="flex flex-col gap-4" id="visibility-form" data-current-visibility="{{ visibility }}">
         <fieldset class="flex flex-col gap-3">
             <legend class="sr-only">{{ strings.ACCOUNT_VISIBILITY_HEADING }}</legend>
 
@@ -64,30 +63,6 @@
         </button>
     </form>
 
-    {# Disable save button when selected visibility matches current visibility. #}
-    <script>
-    (function() {
-      var form = document.getElementById('visibility-form');
-      if (!form) return;
-      var radios = form.querySelectorAll('input[name="visibility"]');
-      var saveBtn = form.querySelector('button[type="submit"]');
-      var current = '{{ visibility }}';
-
-      function checkVisibilityBtn() {
-        var selected = '';
-        for (var i = 0; i < radios.length; i++) {
-          if (radios[i].checked) { selected = radios[i].value; break; }
-        }
-        saveBtn.disabled = selected === current;
-      }
-
-      checkVisibilityBtn();
-      for (var i = 0; i < radios.length; i++) {
-        radios[i].addEventListener('change', checkVisibilityBtn);
-      }
-      document.addEventListener('htmx:afterSwap', checkVisibilityBtn);
-    })();
-    </script>
 </section>
 {% endif %}
 
@@ -112,7 +87,6 @@
         <button
             type="button"
             id="import-open-button"
-            hx-on:click="document.getElementById('import-data-dialog').removeAttribute('hidden')"
             class="flex min-h-tap flex-1 items-center justify-center gap-2 rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline-offset-2"
         >
             {{ icon("arrow-down-tray", size=18) }}
@@ -129,7 +103,6 @@
         id="logout-button"
         hx-post="/auth/logout"
         hx-swap="none"
-        hx-on::after-request="if(event.detail.successful)window.location.href='/'"
         class="flex min-h-tap w-full items-center justify-center gap-2 rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline-offset-2"
     >
         {{ icon("circle-user", size=18) }}
@@ -144,7 +117,6 @@
     <button
         type="button"
         id="delete-open-button"
-        hx-on:click="document.getElementById('delete-account-dialog').removeAttribute('hidden')"
         class="flex min-h-tap w-full items-center justify-center gap-2 rounded-button border border-danger bg-danger-subtle px-4 py-3 text-body font-semibold text-danger transition hover:opacity-90 focus-visible:outline-offset-2"
     >
         {{ icon("trash", size=18) }}

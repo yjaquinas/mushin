@@ -39,4 +39,11 @@
     if (event.detail.target.id !== "sheet") return;
     initSheet();
   });
+
+  document.addEventListener("click", function (event) {
+    var cancel = event.target.closest("#category-sheet-cancel");
+    if (!cancel) return;
+    var sheet = document.getElementById("category-sheet-dialog");
+    if (sheet) sheet.setAttribute("hidden", "");
+  });
 })();

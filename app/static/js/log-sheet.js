@@ -17,4 +17,23 @@
   dlg.init();
   dialogManagerRegistry.add(dlg);
   dlg.open();
+
+  function resetAndCloseDialog() {
+    var form = sheet.querySelector("form");
+    if (form) {
+      form.reset();
+      form.querySelectorAll("[data-toggle-time]").forEach(function (checkbox) {
+        var timeBlock = checkbox.closest("label");
+        timeBlock = timeBlock ? timeBlock.nextElementSibling : null;
+        if (timeBlock) timeBlock.setAttribute("hidden", "");
+      });
+    }
+    dlg.close();
+  }
+
+  document.addEventListener("click", function (event) {
+    var cancel = event.target.closest("#log-sheet-cancel");
+    if (!cancel || !sheet.contains(cancel)) return;
+    resetAndCloseDialog();
+  });
 })();
