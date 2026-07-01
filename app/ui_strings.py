@@ -117,9 +117,7 @@ MATCH_LIST_REMOVE_ROW = "Remove"
 # ---------------------------------------------------------------------------
 
 # Inline rename form (sub-tally heading)
-RENAME_SLUG_NOTICE = (
-    "Renaming will change your share link. The old link will stop working."
-)
+RENAME_SLUG_NOTICE = "Renaming will change your share link. The old link will stop working."
 RENAME_LABEL = "Rename activity"
 RENAME_SAVE = "Save"
 RENAME_CANCEL = "Cancel"
@@ -502,5 +500,34 @@ NAV_ACCOUNT = "Account"
 # Admin (operator dashboard, HTTP Basic Auth gated)
 # ---------------------------------------------------------------------------
 
-ADMIN_DASHBOARD_TITLE = "Admin"
-ADMIN_DASHBOARD_PLACEHOLDER = "Dashboard coming soon."
+ADMIN_DASHBOARD_TITLE = "Mushin Admin Dashboard"
+ADMIN_VISITOR_HEADING = "Visitors"
+ADMIN_VISITOR_NOTE = (
+    "Visitors are deduplicated by IP, device details, and language within a two-hour window. "
+    "Sources come from the browser's referrer header; browser history is not available."
+)
+ADMIN_VISITOR_TODAY = "Today"
+ADMIN_VISITOR_WEEK = "Last 7 days"
+ADMIN_VISITOR_MONTH = "Last 30 days"
+ADMIN_COUNTRIES_HEADING = "Countries"
+ADMIN_REFERRERS_HEADING = "Sources"
+ADMIN_RECENT_VISITORS_HEADING = "Recent visitors"
+ADMIN_RECENT_EMPTY = "No visitor records yet."
+ADMIN_PERIOD_HEADING = "Monitoring"
+ADMIN_PERIOD_CURRENT = "Selected period"
+ADMIN_PERIOD_DAILY = "Daily"
+ADMIN_PERIOD_WEEKLY = "Weekly"
+ADMIN_PERIOD_MONTHLY = "Monthly"
+ADMIN_PERIOD_YEARLY = "Yearly"
+ADMIN_PREVIOUS_YEAR = "Previous year"
+ADMIN_NEXT_YEAR = "Next year"
+ADMIN_PREVIOUS_PAGE = "Previous page"
+ADMIN_NEXT_PAGE = "Next page"
+ADMIN_PAGE_LABEL = "Page {page} of {total}"
+ADMIN_COLUMN_TIME = "Time"
+ADMIN_COLUMN_LOCATION = "Location"
+ADMIN_COLUMN_DEVICE = "Device"
+ADMIN_COLUMN_SOURCE = "Source"
+ADMIN_COLUMN_PATH = "Path"
+ADMIN_UNKNOWN = "Unknown"
+ADMIN_DIRECT_UNKNOWN = "Direct / unknown"

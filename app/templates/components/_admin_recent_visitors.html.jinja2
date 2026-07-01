@@ -1,0 +1,56 @@
+<section class="rounded-card border border-border bg-surface-1 p-4">
+    <div class="flex items-center justify-between gap-3">
+        <h2 class="font-semibold">{{ strings.ADMIN_RECENT_VISITORS_HEADING }}</h2>
+        <span class="text-sm text-text-secondary">
+            {{ strings.ADMIN_PAGE_LABEL.format(page=selected_page, total=total_pages) }}
+        </span>
+    </div>
+    {% if visitors %}
+    <div class="mt-3 overflow-x-auto">
+        <table class="w-full min-w-[760px] text-left text-sm">
+            <thead class="text-text-secondary">
+                <tr>
+                    <th class="py-2 pr-3 font-medium">{{ strings.ADMIN_COLUMN_TIME }}</th>
+                    <th class="py-2 pr-3 font-medium">{{ strings.ADMIN_COLUMN_LOCATION }}</th>
+                    <th class="py-2 pr-3 font-medium">{{ strings.ADMIN_COLUMN_DEVICE }}</th>
+                    <th class="py-2 pr-3 font-medium">{{ strings.ADMIN_COLUMN_SOURCE }}</th>
+                    <th class="py-2 pr-3 font-medium">{{ strings.ADMIN_COLUMN_PATH }}</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-border">
+                {% for visitor in visitors %}
+                <tr>
+                    <td class="py-2 pr-3 text-text-secondary">{{ visitor.last_seen_at }}</td>
+                    <td class="py-2 pr-3">{{ visitor.location_label }}</td>
+                    <td class="py-2 pr-3">{{ visitor.device }} · {{ visitor.browser }} · {{ visitor.os }}</td>
+                    <td class="py-2 pr-3">{{ visitor.referrer_host or strings.ADMIN_DIRECT_UNKNOWN }}</td>
+                    <td class="py-2 pr-3">{{ visitor.landing_path }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="mt-4 flex items-center justify-between gap-3">
+        {% if has_previous_page %}
+        <a
+            href="/admin?period={{ selected_period }}&offset={{ selected_offset }}&page={{ selected_page - 1 }}"
+            class="rounded-button border border-border px-3 py-2 text-sm text-text-secondary"
+        >
+            {{ strings.ADMIN_PREVIOUS_PAGE }}
+        </a>
+        {% else %}
+        <span></span>
+        {% endif %}
+        {% if has_next_page %}
+        <a
+            href="/admin?period={{ selected_period }}&offset={{ selected_offset }}&page={{ selected_page + 1 }}"
+            class="rounded-button border border-border px-3 py-2 text-sm text-text-secondary"
+        >
+            {{ strings.ADMIN_NEXT_PAGE }}
+        </a>
+        {% endif %}
+    </div>
+    {% else %}
+    <p class="mt-3 text-sm text-text-secondary">{{ strings.ADMIN_RECENT_EMPTY }}</p>
+    {% endif %}
+</section>

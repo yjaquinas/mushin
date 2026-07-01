@@ -14,6 +14,7 @@ from fastapi.staticfiles import StaticFiles
 load_dotenv()
 
 from app.auth.routes import router as auth_router  # noqa: E402
+from app.middleware.visitor_tracking import VisitorTrackingMiddleware  # noqa: E402
 from app.models.db import DATABASE_PATH  # noqa: E402
 from app.models.migrate import run_migrations  # noqa: E402
 from app.routes.admin import router as admin_router  # noqa: E402
@@ -41,6 +42,7 @@ async def lifespan(application: FastAPI):  # noqa: ARG001
 
 
 app = FastAPI(title="Mushin", lifespan=lifespan)
+app.add_middleware(VisitorTrackingMiddleware)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 # Auth / guest / upgrade routes live in their own router (app/auth/), not in

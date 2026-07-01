@@ -480,6 +480,123 @@
     box-shadow:      inset 0 0 0 1.5px var(--color-border-strong);
   }
 
+  /* ── Admin visitor selectors ───────────────────────────────────────── */
+  .admin-day,
+  .admin-week-day,
+  .admin-grid-card {
+    position: relative;
+    transition:
+      background 120ms ease,
+      color 120ms ease,
+      box-shadow 120ms ease,
+      border-color 120ms ease;
+  }
+
+  .admin-day {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--spacing-tap);
+    min-height: var(--spacing-tap);
+    margin-inline: auto;
+    border-radius: var(--radius-button);
+    color: var(--color-text-primary);
+  }
+
+  .admin-day:hover,
+  .admin-grid-card:hover {
+    background: var(--color-surface-2);
+  }
+
+  .admin-day--today::after,
+  .admin-week-day--today::before,
+  .admin-grid-card--today::after {
+    content: "";
+    position: absolute;
+    width: 0.35rem;
+    height: 0.35rem;
+    border-radius: 9999px;
+    background: var(--color-accent);
+  }
+
+  .admin-day--today::after {
+    bottom: 0.35rem;
+  }
+
+  .admin-day--selected,
+  .admin-grid-card--selected {
+    box-shadow: inset 0 0 0 1.5px var(--color-border-strong);
+  }
+
+  .admin-day--outside,
+  .admin-week-day--outside {
+    color: color-mix(in srgb, var(--color-text-muted) 72%, var(--color-surface-1));
+  }
+
+  .admin-week-row {
+    position: relative;
+  }
+
+  .admin-week-row:hover .admin-week-day {
+    background: var(--color-surface-2);
+  }
+
+  .admin-week-day {
+    display: block;
+    border-top: 1.5px solid transparent;
+    border-bottom: 1.5px solid transparent;
+    padding: 0.75rem 0.5rem;
+    text-align: center;
+    color: var(--color-text-secondary);
+  }
+
+  .admin-week-day--first {
+    border-top-left-radius: var(--radius-button);
+    border-bottom-left-radius: var(--radius-button);
+    border-left: 1.5px solid transparent;
+  }
+
+  .admin-week-day--last {
+    border-top-right-radius: var(--radius-button);
+    border-bottom-right-radius: var(--radius-button);
+    border-right: 1.5px solid transparent;
+  }
+
+  .admin-week-day--selected {
+    border-color: var(--color-border-strong);
+    color: var(--color-text-primary);
+  }
+
+  .admin-week-day--outside,
+  .admin-week-day--selected.admin-week-day--outside,
+  .admin-week-row:hover .admin-week-day--outside {
+    color: color-mix(in srgb, var(--color-text-muted) 72%, var(--color-surface-1));
+  }
+
+  .admin-week-day--today::before {
+    left: 0.4rem;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  .admin-grid-card {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 3.5rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    color: var(--color-text-secondary);
+    text-align: center;
+    font-size: var(--font-size-caption);
+  }
+
+  .admin-grid-card--today::after {
+    bottom: 0.55rem;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
   /* ── Bottom navigation bar ─────────────────────────────────────────── */
   /*
    * Full-width fixed bar at the bottom of the viewport. Three evenly-spaced

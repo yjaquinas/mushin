@@ -1,0 +1,33 @@
+<section class="rounded-card border border-border bg-surface-1 p-4">
+    <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div>
+            <h2 class="text-lg font-semibold">{{ strings.ADMIN_PERIOD_HEADING }}</h2>
+            <p class="mt-1 text-sm text-text-secondary">
+                {{ strings.ADMIN_PERIOD_CURRENT }}: {{ period_title }}
+            </p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+            {% for tab in period_tabs %}
+            <a
+                href="/admin?period={{ tab.key }}&page=1"
+                class="rounded-button border px-3 py-2 text-sm {% if tab.selected %}border-border-strong bg-surface-2 font-semibold{% else %}border-border text-text-secondary{% endif %}"
+            >
+                {% if tab.key == "daily" %}{{ strings.ADMIN_PERIOD_DAILY }}{% endif %}
+                {% if tab.key == "weekly" %}{{ strings.ADMIN_PERIOD_WEEKLY }}{% endif %}
+                {% if tab.key == "monthly" %}{{ strings.ADMIN_PERIOD_MONTHLY }}{% endif %}
+                {% if tab.key == "yearly" %}{{ strings.ADMIN_PERIOD_YEARLY }}{% endif %}
+            </a>
+            {% endfor %}
+            <a
+                href="/admin?period={{ selected_period }}&{% if selected_period == 'daily' %}day={{ today_value }}{% elif selected_period == 'weekly' %}week={{ today_value }}{% elif selected_period == 'monthly' %}month={{ today_value }}{% else %}year={{ today_value }}{% endif %}&page=1"
+                class="rounded-button border border-accent bg-accent-subtle px-3 py-2 text-sm font-semibold text-accent-text"
+            >
+                {{ strings.ADMIN_VISITOR_TODAY }}
+            </a>
+        </div>
+    </div>
+
+    {% if selector %}
+    {% include "components/_admin_selector.html.jinja2" with context %}
+    {% endif %}
+</section>

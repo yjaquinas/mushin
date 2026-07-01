@@ -17,7 +17,9 @@ from fastapi.responses import HTMLResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
 from app.auth.passwords import verify_password
+from app.models import db
 from app.routes.web._shared import templates
+from app.services import visitor_reports
 
 router = APIRouter()
 
@@ -47,9 +49,44 @@ def _require_admin(credentials: Annotated[HTTPBasicCredentials, Depends(_securit
 
 @router.get("/admin", response_class=HTMLResponse, dependencies=[Depends(_require_admin)])
 async def admin_dashboard(request: Request) -> HTMLResponse:
-    """Placeholder admin dashboard. No features yet."""
+    """Operator dashboard for visitor analytics."""
+    period = request.query_params.get("period", "daily")
+    page = _int_param(request, "page", default=1, minimum=1)
+    selected_value = _selected_value(request, period)
+    calendar_month = request.query_params.get("calendar_month")
+    calendar_year = request.query_params.get("calendar_year")
+    with db.connect() as conn:
+        context = visitor_reports.dashboard_context(
+            conn,
+            period=period,
+            selected_value=selected_value,
+            calendar_month=calendar_month,
+            calendar_year=calendar_year,
+            page=page,
+        )
     return templates.TemplateResponse(
         request=request,
         name="admin/dashboard.html.jinja2",
-        context={},
+        context=context,
     )
+
+
+def _int_param(request: Request, name: str, *, default: int, minimum: int) -> int:
+    raw = request.query_params.get(name)
+    if raw is None:
+        return default
+    try:
+        value = int(raw)
+    except ValueError:
+        return default
+    return max(minimum, value)
+
+
+def _selected_value(request: Request, period: str) -> str | None:
+    key_by_period = {
+        "daily": "day",
+        "weekly": "week",
+        "monthly": "month",
+        "yearly": "year",
+    }
+    return request.query_params.get(key_by_period.get(period, "day"))
