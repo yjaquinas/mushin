@@ -233,6 +233,7 @@ HISTORY_PERIOD_ALL = "All"
 
 HISTORY_PREV_WEEK = "Previous week"
 HISTORY_NEXT_WEEK = "Next week"
+HISTORY_TODAY = "Today"
 
 HISTORY_LOG_TITLE = "Log"
 HISTORY_LOG_EMPTY = "Nothing logged in this period."

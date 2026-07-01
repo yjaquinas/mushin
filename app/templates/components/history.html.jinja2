@@ -89,9 +89,22 @@
         >
             &lt;
         </button>
-        <h3 class="text-body font-medium text-text-primary" aria-live="polite">
-            {{ history.label }}
-        </h3>
+        <div class="flex items-center gap-2">
+            <h3 class="text-body font-medium text-text-primary" aria-live="polite">
+                {{ history.label }}
+            </h3>
+            {% if history.today_anchor < history.start or history.today_anchor > history.end %}
+            <button
+                type="button"
+                hx-get="/activities/{{ activity_id }}/history?period={{ history.period }}&anchor={{ history.today_anchor }}"
+                hx-target="#history-{{ activity_id }}"
+                hx-swap="outerHTML"
+                class="rounded-button border border-border px-2 py-0.5 text-caption text-text-secondary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-strong"
+            >
+                {{ strings.HISTORY_TODAY }}
+            </button>
+            {% endif %}
+        </div>
         <button
             type="button"
             hx-get="/activities/{{ activity_id }}/history?period={{ history.period }}&anchor={{ history.next_anchor }}"
@@ -124,10 +137,11 @@
                         {% for day in week %}
                             <td class="text-center">
                                 {% if day is not none %}
+                                    {% if day.marked %}
                                     <button
                                         type="button"
                                         aria-pressed="{{ 'true' if day.selected else 'false' }}"
-                                        class="cal-day{% if day.marked %} cal-day--marked{% endif %}{% if day.today %} cal-day--today{% endif %}{% if day.selected %} cal-day--selected{% endif %}"
+                                        class="cal-day cal-day--marked{% if day.today %} cal-day--today{% endif %}{% if day.selected %} cal-day--selected{% endif %}"
                                         {% if day.selected %}
                                         hx-get="/activities/{{ activity_id }}/history?period=month&anchor={{ history.anchor }}"
                                         {% else %}
@@ -138,6 +152,11 @@
                                     >
                                         {{ day.day }}
                                     </button>
+                                    {% else %}
+                                    <span class="cal-day cal-day--empty{% if day.today %} cal-day--today{% endif %}">
+                                        {{ day.day }}
+                                    </span>
+                                    {% endif %}
                                 {% endif %}
                             </td>
                         {% endfor %}
