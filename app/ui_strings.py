@@ -18,7 +18,6 @@ from __future__ import annotations
 
 APP_NAME = "Mushin"
 APP_NAME_HANJA = "無心"
-APP_WORDMARK = "Mushin 無心"
 APP_GLOSS = "No-mind. Just show up, and watch it add up."
 
 # ---------------------------------------------------------------------------
@@ -41,26 +40,11 @@ ENTRY_FIELD_EMAIL_HELP = "For account recovery. Optional."
 
 ENTRY_CONSENT_CHECKBOX = "I agree to the Privacy Policy"
 
-# RETIRED — guest mode removed 2026-06-16, drain-window cleanup pending
-ENTRY_GUEST_LINK = "Continue without an account"
-# RETIRED — guest mode removed 2026-06-16, drain-window cleanup pending
-ENTRY_GUEST_SUB = (
-    "Start now, connect an account later — your record is kept on our server either way."
-)
-
 ENTRY_DEMO_LINK = "See an example record →"
 
 ENTRY_CONSENT_NOTICE = "By creating an account or continuing, you agree to our"
 ENTRY_CONSENT_LINK_TEXT = "Privacy Policy"
 ENTRY_CONSENT_SUFFIX = " (required)."
-
-# Inline form errors — mirror app/auth/routes.py's HTTPException details.
-ENTRY_ERROR_USERNAME_SHAPE = (
-    "Username must be 3-20 characters: lowercase letters, numbers, and underscores only."
-)
-ENTRY_ERROR_USERNAME_TAKEN = "That username is already taken."
-ENTRY_ERROR_LOGIN_FAILED = "That username or password isn't right."
-ENTRY_ERROR_GENERIC = "Something went wrong. Please try again."
 
 # ---------------------------------------------------------------------------
 # Home (character sheet)
@@ -93,7 +77,6 @@ ACTIVITY_FORM_NAME_DUPLICATE = "An activity with this name already exists."
 
 # Hero numeral suffixes / labels
 HOME_COUNT_UNIT = "times"  # generic running-count unit ("3 times")
-HOME_RUNNING_LABEL = "Total"
 
 SUBTALLY_LOG_BUTTON = "New Entry"
 HOME_STREAK_LABEL = "Streak"
@@ -103,7 +86,6 @@ HOME_STREAK_DAYS_UNIT = " days"
 # Quick-add / log sheet
 # ---------------------------------------------------------------------------
 
-LOG_SHEET_TITLE = "Log"
 LOG_SUBMIT = "Save entry"
 LOG_CANCEL = "Close"
 
@@ -111,13 +93,9 @@ LOG_OCCURRED_AT_LABEL = "Date"
 LOG_TIME_ADD = "Add a time"
 LOG_MEMO_LABEL = "Memo"
 LOG_MEMO_PLACEHOLDER = "Optional description"
-LOG_COUNT_LABEL_SUFFIX = ""  # field_def.label is used directly
-LOG_SCALE_LABEL_SUFFIX = ""
 
 LOG_NOTES_LABEL = "Notes"
 LOG_NOTES_PLACEHOLDER = "How'd it go? Add #tags anywhere."
-
-LOG_SUCCESS_NOTICE = "Logged."
 
 # ---------------------------------------------------------------------------
 # Match-list sub-form (tournament entries)
@@ -137,8 +115,6 @@ MATCH_LIST_REMOVE_ROW = "Remove"
 # ---------------------------------------------------------------------------
 # Sub-tally detail screen
 # ---------------------------------------------------------------------------
-
-DETAIL_BACK = "Home"
 
 # Inline rename form (sub-tally heading)
 RENAME_SLUG_NOTICE = (
@@ -181,18 +157,12 @@ STATS_HEAD_TO_HEAD_EMPTY = "No opponent record yet."
 # Stats: counts, streak, calendar, heatmap
 # ---------------------------------------------------------------------------
 
-STATS_SUMMARY_TITLE = "Summary"
-STATS_COUNTS_LABEL = "Counts"
-STATS_STREAKS_LABEL = "Streaks"
-
 STATS_PERIOD_WEEK = "This week"
 STATS_PERIOD_MONTH = "This month"
 STATS_PERIOD_YEAR = "This year"
 STATS_PERIOD_LIFETIME = "All time"
-STATS_AVG_PER_WEEK = "Weekly average"
 
 STREAK_CURRENT_LABEL = "Current streak"
-STREAK_LONGEST_LABEL = "Longest streak"
 STREAK_DAY_UNIT = " day"
 STREAK_DAYS_UNIT = " days"
 
@@ -202,8 +172,6 @@ CALENDAR_NEXT_MONTH = "Next month"
 CALENDAR_WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 CALENDAR_DAY_ENTRIES_TITLE = "Entries on this day"
 CALENDAR_DAY_ENTRIES_EMPTY = "No entries on this day."
-CALENDAR_DAY_CLOSE = "Close"
-CALENDAR_BACK_TO_CALENDAR = "Calendar"
 
 # Heatmap strip: non-interactive, so HEATMAP_ARIA carries all the
 # accessibility information for the whole strip; individual week-bars are
@@ -235,7 +203,6 @@ HISTORY_PREV_WEEK = "Previous week"
 HISTORY_NEXT_WEEK = "Next week"
 HISTORY_TODAY = "Today"
 
-HISTORY_LOG_TITLE = "Log"
 HISTORY_LOG_EMPTY = "Nothing logged in this period."
 HISTORY_CLEAR_SELECTION = "Clear selection"
 
@@ -318,19 +285,10 @@ VISIBILITY_CONSENT_SUBMIT = "Continue"
 # the consequence briefly on each change (not the full first-run explainer).
 ACCOUNT_TITLE = "Account"
 
-# Secondary, in-content way back home — the global header logo already links
-# home on every page; this is a clearly labeled additional affordance, not a
-# new nav system.
-ACCOUNT_HOME_LINK = "Back to Home"
-
 ACCOUNT_VISIBILITY_HEADING = "Who can see your record"
 # The username doubles as a public handle — frame it as the share link.
 # {username} is interpolated by the template.
 ACCOUNT_VISIBILITY_SHARE_LINK = "Your profile is shareable at mushin.aqnas.xyz/@{username}"
-
-# Current state line shown above the toggle.
-ACCOUNT_VISIBILITY_CURRENT_PRIVATE = "Your record is private."
-ACCOUNT_VISIBILITY_CURRENT_PUBLIC = "Your record is public."
 
 # Radio labels mirror the consent screen.
 ACCOUNT_VISIBILITY_PRIVATE_LABEL = "Private"
@@ -418,13 +376,7 @@ PRIVACY_PAGE_TITLE = "Privacy Policy"
 # Public profiles (/@{username}, /@{username}/{slug})
 # ---------------------------------------------------------------------------
 
-# Retained for the legacy private-stub copy referenced in older tests/docs;
-# the limited (character-sheet) view below is what visitors actually see on
-# a private account now (three-tier visibility, see copy-patterns).
-PROFILE_PRIVATE = "This record is private."
-
 PROFILE_ACTIVITIES_EMPTY = "Nothing logged yet."
-PROFILE_BACK_TO_PROFILE = "Back to @{username}"
 
 # Quiet line under the character-sheet (limited) view of a private account —
 # factual, no lock icon, no "request access" framing.
@@ -499,7 +451,6 @@ CONNECT_ERROR_GENERIC = "That didn't go through."
 # ---------------------------------------------------------------------------
 
 SEARCH_TITLE = "Search"
-SEARCH_NAV_LABEL = "Search"
 SEARCH_INPUT_LABEL = "Search people and tags"
 SEARCH_INPUT_PLACEHOLDER = "Search by name or tag"
 SEARCH_PROMPT = "Search for people by name, or activities by tag."
@@ -546,9 +497,3 @@ COMMENTS_PAGE_SHOW_OLDER = "Show older"
 NAV_HOME = "Activities"
 NAV_SEARCH = "Search"
 NAV_ACCOUNT = "Account"
-
-# ---------------------------------------------------------------------------
-# Misc / a11y
-# ---------------------------------------------------------------------------
-
-ALT_LOGO = ""  # decorative
