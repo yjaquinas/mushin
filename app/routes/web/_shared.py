@@ -160,7 +160,7 @@ templates = Jinja2Templates(
     context_processors=[_theme_context, _home_url_context],
 )
 # Centralized copy is exposed to every template as `strings` — templates
-# never hardcode user-facing text (see .claude/skills/copy-patterns).
+# never hardcode user-facing text.
 templates.env.globals["strings"] = ui_strings
 templates.env.globals["icon"] = _icon
 

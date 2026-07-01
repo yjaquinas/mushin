@@ -13,7 +13,7 @@
 {% endif %}
 
 {# Visibility/share-link section is non-guest only — guests have no username
-   and thus no public profile (see .claude/rules/repo-wide.md). #}
+   and thus no public profile. #}
 {% if not is_guest %}
 <section class="flex flex-col gap-4">
     <div class="flex flex-col gap-1">

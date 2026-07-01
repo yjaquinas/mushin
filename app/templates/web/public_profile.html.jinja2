@@ -1,11 +1,10 @@
 {#
   Public profile (/@{username}) — read-only, unauthenticated or non-owner.
 
-  Dedicated read-only template per .claude/rules/web-templates.md: zero write
-  affordances. Do NOT include components that carry log/edit/tag forms
-  (activity_card.html.jinja2's `linked` mode only adds a navigation link, but
-  we render the card body inline here anyway to keep this template fully
-  self-contained and auditable).
+  Dedicated read-only template: zero write affordances. Do NOT include
+  components that carry log/edit/tag forms (activity_card.html.jinja2's
+  `linked` mode only adds a navigation link, but we render the card body inline
+  here anyway to keep this template fully self-contained and auditable).
 
   Context: username, view_mode ("connected" | "public" | "limited"), cards
   (list, see app.routes.web._build_card_context — each card's own `linked`

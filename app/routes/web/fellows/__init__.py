@@ -1,9 +1,8 @@
 """Fellows (social graph) — router assembly only.
 
-Per ``.claude/rules/route-structure.md``, this ``__init__.py`` is wiring
-only: it assembles one ``router`` from each leaf route-group module's own
-``APIRouter`` so ``app/routes/web/__init__.py`` can include it unchanged.
-No handler bodies belong here.
+This ``__init__.py`` is wiring only: it assembles one ``router`` from each leaf
+route-group module's own ``APIRouter`` so ``app/routes/web/__init__.py`` can
+include it unchanged. No handler bodies belong here.
 """
 
 from __future__ import annotations

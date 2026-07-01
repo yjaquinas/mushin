@@ -44,7 +44,8 @@ mobile-client/ # React Native shell
 tests/       # pytest (unit, integration, e2e)
 deploy/      # Caddy + systemd configs, bootstrap
 meetings/    # Meeting outputs from /run-meeting
-.claude/     # Project-scope Claude Code config
+.agents/     # Project-scope Codex skills/config
+AGENTS.md    # Project-level Codex instructions
 ```
 
 ## Deployment
@@ -62,7 +63,6 @@ GitHub secrets:
 
 - `SSH_HOST` — production host IP or DNS
 - `SSH_PRIVATE_KEY` — deploy user's SSH private key
--
 
 ## License
 

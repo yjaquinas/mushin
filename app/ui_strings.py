@@ -5,9 +5,9 @@ Every user-facing string in ``app/templates/web/**`` and
 in templates (grep-checked by
 ``tests/integration/test_web.py::test_no_hardcoded_copy_in_templates``).
 
-Voice (see ``.claude/skills/copy-patterns``): plain, warm, second person, no
-hype, no urgency/guilt framing. The "Mushin 無心" brand mark always ships
-together and is never explained beyond the one-line gloss.
+Voice: plain, warm, second person, no hype, no urgency/guilt framing. The
+"Mushin 無心" brand mark always ships together and is never explained beyond
+the one-line gloss.
 """
 
 from __future__ import annotations

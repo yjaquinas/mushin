@@ -2,7 +2,7 @@
 
 Thin handlers only — business logic lives in app/services/. Full pages render
 on initial navigation; fragments swap on interaction (detect via the
-HX-Request header). See .claude/rules/web-templates.md for conventions.
+HX-Request header).
 """
 
 from __future__ import annotations

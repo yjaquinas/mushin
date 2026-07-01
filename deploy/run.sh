@@ -24,7 +24,7 @@ echo "=== Deploying $SERVICE ==="
 # Uses `sg` to activate the mushin group for the wrapped command.
 # Without this, git's writes inside .git/objects/ can land as deploy:deploy
 # (despite the setgid bit on the repo dir), and the service user can't read
-# them. See: claude-config/skills/deploy-procedure/SKILL.md
+# them.
 #
 # Uses `git reset --hard` rather than `git pull` — if the server's state
 # diverged for any reason, reset wins; source of truth is origin/main.

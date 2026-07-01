@@ -2,13 +2,12 @@
   Public activity detail (/@{username}/{slug}) — read-only, for a public-account
   visitor or a consented fellow.
 
-  Dedicated read-only template per .claude/rules/web-templates.md: zero write
-  affordances (no log form, no edit/tag controls, no links into /activities/{id}
-  or any session-only route). Memo text IS shown — the route only reaches
-  this template for "connected" or "public" capability (per
-  profiles.can_view_activity_detail), so the viewer is either a consented
-  fellow or the owner chose `public` visibility; either way the whole record
-  is visible per the updated repo-wide.md privacy rules.
+  Dedicated read-only template: zero write affordances (no log form, no
+  edit/tag controls, no links into /activities/{id} or any session-only route).
+  Memo text IS shown — the route only reaches this template for "connected" or
+  "public" capability (per profiles.can_view_activity_detail), so the viewer is
+  either a consented fellow or the owner chose `public` visibility; either way
+  the whole record is visible per the project privacy rules.
 
   Context: username, view_mode ("connected" | "public"), card, slug,
   record/timeline/head_to_head (competition, or None/[]), counts, streaks,
@@ -21,7 +20,7 @@
   Write-affordance safety: this route (public.py's
   _render_readonly_activity_detail) never constructs an edit/delete/log-entry
   URL or context key — is_owner=False alone is defense in depth, not the
-  primary boundary (see .claude/rules/web-templates.md).
+  primary boundary.
 #}
 {% extends "web/base.html.jinja2" %}
 
@@ -41,9 +40,8 @@
     {% include "components/field_stats.html.jinja2" with context %}
 
     {# Merged calendar/log view — the same shared partial the owner dashboard
-       renders (components/history.html.jinja2, sanctioned by
-       .claude/rules/web-templates.md). `history.is_owner` is False (set by
-       the route, never by this template) so no edit pencil or write
+       renders (components/history.html.jinja2). `history.is_owner` is False
+       (set by the route, never by this template) so no edit pencil or write
        affordance renders; the comment toggle still works per
        `history.can_comment`/`entry.comment_count`. #}
     <section class="flex flex-col gap-3 rounded-card border border-border bg-surface-1 p-4">

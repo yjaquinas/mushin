@@ -1,10 +1,9 @@
 """Web (HTMX) surface — router assembly only.
 
-Per ``.claude/rules/route-structure.md``, a surface directory's
-``__init__.py`` is wiring only: it assembles one ``router`` from each leaf
-route-group module's own ``APIRouter`` so ``app/main.py``'s existing
-``from app.routes.web import router as web_router`` keeps working
-unchanged. No handler bodies belong here.
+A surface directory's ``__init__.py`` is wiring only: it assembles one
+``router`` from each leaf route-group module's own ``APIRouter`` so
+``app/main.py``'s existing ``from app.routes.web import router as web_router``
+keeps working unchanged. No handler bodies belong here.
 
 Re-exports
 ----------

@@ -208,10 +208,9 @@ def _render_readonly_activity_detail(
     context["back_url"] = f"/@{username}"
 
     # Merged calendar/log view — the same `components/history.html.jinja2`
-    # partial the owner dashboard renders (per .claude/rules/web-templates.md,
-    # this shared-partial sharing is sanctioned; the safety boundary is this
-    # route's context shape, not the template's `{% if %}`s). `is_owner` is
-    # explicitly `False` and NO write-action context key (entry edit/delete
+    # partial the owner dashboard renders; the safety boundary is this route's
+    # context shape, not the template's `{% if %}`s. `is_owner` is explicitly
+    # `False` and NO write-action context key (entry edit/delete
     # URL, log-new-entry trigger, etc.) is constructed or present anywhere in
     # this read-only path — `_build_history_context` itself takes no such
     # argument, and `is_owner=False` here is what suppresses the edit pencil

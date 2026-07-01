@@ -24,7 +24,7 @@ mushin/
 ├── .github/workflows/
 │   └── deploy.yml                # SSH deploy on push to main
 ├── run.sh                        # Local dev server (Tailwind watcher + uvicorn)
-├── CLAUDE.md                     # Project-level Claude Code context
+├── AGENTS.md                     # Project-level Codex instructions
 ├── pyproject.toml
 └── uv.lock
 ```
@@ -51,8 +51,7 @@ mushin/
 
 Blast radius containment: app exploit = trapped in `mushin` (no sudo,
 `NoNewPrivileges=true`). Deploy key leak = can push code but can't read `.env`
-or escalate. See `~/.claude/skills/deploy-procedure/SKILL.md` for the full
-ownership model.
+or escalate. See `deploy/run.sh` and the infra files for the ownership model.
 
 ### systemd sandboxing (`infra/mushin.service`)
 
