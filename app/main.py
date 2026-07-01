@@ -16,6 +16,7 @@ load_dotenv()
 from app.auth.routes import router as auth_router  # noqa: E402
 from app.models.db import DATABASE_PATH  # noqa: E402
 from app.models.migrate import run_migrations  # noqa: E402
+from app.routes.admin import router as admin_router  # noqa: E402
 from app.routes.data_io import router as data_io_router  # noqa: E402
 from app.routes.public import router as public_router  # noqa: E402
 from app.routes.web import router as web_router  # noqa: E402
@@ -54,6 +55,9 @@ app.include_router(public_router)
 
 # Data-portability routes (export download).
 app.include_router(data_io_router)
+
+# Operator dashboard, HTTP Basic Auth gated. No admin features yet.
+app.include_router(admin_router)
 
 
 @app.get("/health", response_class=HTMLResponse)

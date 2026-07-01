@@ -497,3 +497,10 @@ COMMENTS_PAGE_SHOW_OLDER = "Show older"
 NAV_HOME = "Activities"
 NAV_SEARCH = "Search"
 NAV_ACCOUNT = "Account"
+
+# ---------------------------------------------------------------------------
+# Admin (operator dashboard, HTTP Basic Auth gated)
+# ---------------------------------------------------------------------------
+
+ADMIN_DASHBOARD_TITLE = "Admin"
+ADMIN_DASHBOARD_PLACEHOLDER = "Dashboard coming soon."
