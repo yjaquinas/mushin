@@ -2,8 +2,6 @@
 
 Mushin is a social network for people who'd rather log than scroll: no feed, no followers, no strangers — just your record, and the fellows you connect with by mutual consent.
 
-Part of the [AQNAS](https://aqnas.xyz) studio.
-
 ## Stack
 
 - Python 3.12, FastAPI, uvicorn
@@ -29,19 +27,10 @@ uv run uvicorn app.main:app --reload --port 8000
 
 Visit `http://localhost:8000`.
 
-## Testing
+### Development workflow
 
-```sh
-uv run pytest
-```
-
-End-to-end tests use Playwright via the `playwright-cli` skill — see `tests/e2e/`.
-
-## Deploy
-
-Automated via GitHub Actions on push to `main`. The workflow SSHes to the production host, pulls, runs `uv sync`, and restarts the systemd service.
-
-First-time setup of a new deploy target requires manual bootstrap — see `deploy/bootstrap.sh` and the `deploy-procedure` skill in [aqnas-studio](https://github.com/yjaquinas/aqnas-studio).
+Local: `./run.sh` (starts uvicorn with `--reload` and, if applicable,
+the Tailwind watcher). URL: http://127.0.0.1:8000.
 
 ## Structure
 
@@ -57,6 +46,23 @@ deploy/      # Caddy + systemd configs, bootstrap
 meetings/    # Meeting outputs from /run-meeting
 .claude/     # Project-scope Claude Code config
 ```
+
+## Deployment
+
+Push to `main` triggers `.github/workflows/deploy.yml`, which SSHes into
+the production host and runs `deploy/run.sh` in this repo. See the studio's
+`deploy-procedure` skill for the full model.
+
+`deploy/run.sh` handles: git sync (`git fetch + reset --hard`),
+`uv sync --frozen --no-dev`, optional Tailwind build, conditional Caddy
+config sync from `infra/mushin.caddy`, `systemctl restart`, and
+health check via `GET /health`.
+
+GitHub secrets:
+
+- `SSH_HOST` — production host IP or DNS
+- `SSH_PRIVATE_KEY` — deploy user's SSH private key
+-
 
 ## License
 
