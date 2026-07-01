@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import ipaddress
 import os
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -78,13 +79,38 @@ def snapshot_from_request(request: Request) -> VisitorSnapshot:
 
 
 def _client_ip(request: Request) -> str:
-    forwarded = request.headers.get("x-forwarded-for", "")
-    if forwarded:
-        return forwarded.split(",", maxsplit=1)[0].strip()
-    real_ip = request.headers.get("x-real-ip")
-    if real_ip:
-        return real_ip.strip()
-    return request.client.host if request.client else ""
+    candidates = [
+        request.headers.get("cf-connecting-ip"),
+        request.headers.get("x-forwarded-for"),
+        request.headers.get("x-real-ip"),
+        request.client.host if request.client else None,
+    ]
+    public_ip: str | None = None
+    fallback_ip: str | None = None
+    for value in candidates:
+        for ip_address in _ip_candidates(value):
+            if fallback_ip is None:
+                fallback_ip = ip_address
+            if _is_public_ip(ip_address):
+                public_ip = ip_address
+                break
+        if public_ip is not None:
+            break
+    return public_ip or fallback_ip or ""
+
+
+def _ip_candidates(value: str | None) -> list[str]:
+    if not value:
+        return []
+    return [part.strip() for part in value.split(",") if part.strip()]
+
+
+def _is_public_ip(value: str) -> bool:
+    try:
+        ip_address = ipaddress.ip_address(value)
+    except ValueError:
+        return False
+    return ip_address.is_global
 
 
 def _visitor_key(ip_address: str, user_agent: str, accept_language: str) -> str:
