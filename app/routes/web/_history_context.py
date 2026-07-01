@@ -16,10 +16,80 @@ from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
+from typing import TYPE_CHECKING
+
 from app import ui_strings
+from app.auth import users
 from app.models import db
 from app.routes.web._calendar_context import _build_calendar_context, _entries_on_day
-from app.services import comments, entries, stats
+from app.services import comments, entries, profiles, stats
+
+if TYPE_CHECKING:
+    from fastapi.responses import HTMLResponse
+
+def resolve_history_viewer(
+    conn: Any,
+    activity_id: int,
+    current_uid: int | None,
+) -> "dict[str, Any] | HTMLResponse":
+    """Resolve viewer permissions for *activity_id*.
+
+    Returns a dict with keys ``owner_id``, ``is_owner``, ``can_comment``,
+    ``username``, ``slug``, ``profile_user`` on success, or an
+    ``HTMLResponse(404)`` when the activity is unknown or the viewer is
+    blocked/limited. Import lazily to avoid a circular dependency.
+    """
+    from fastapi.responses import HTMLResponse
+
+    owner_row = conn.execute(
+        """SELECT u.id, u.username, u.visibility, u.auth_provider, u.consent_seen_at,
+                  st.slug AS activity_slug
+             FROM activity st
+             JOIN user u ON u.id = st.owner_id
+            WHERE st.id = ?""",
+        (activity_id,),
+    ).fetchone()
+    if owner_row is None:
+        return HTMLResponse(status_code=404)
+
+    profile_user = {
+        "id": owner_row["id"],
+        "username": owner_row["username"],
+        "visibility": owner_row["visibility"],
+        "auth_provider": owner_row["auth_provider"],
+        "consent_seen_at": owner_row["consent_seen_at"],
+    }
+    owner_id = int(profile_user["id"])
+
+    cap = profiles.viewer_capability(conn, current_user_id=current_uid, profile_user=profile_user)
+    is_owner = cap == "owner"
+
+    if not is_owner and not profiles.can_view_activity_detail(
+        conn, current_user_id=current_uid, profile_user=profile_user
+    ):
+        return HTMLResponse(status_code=404)
+
+    can_comment = (
+        True
+        if is_owner
+        else profiles.can_comment_on_entry(
+            conn,
+            current_user_id=current_uid,
+            profile_user=profile_user,
+            activity_id=activity_id,
+        )
+    )
+
+    return {
+        "owner_id": owner_id,
+        "is_owner": is_owner,
+        "can_comment": can_comment,
+        "username": profile_user["username"],
+        "slug": owner_row["activity_slug"],
+        "profile_user": profile_user,
+        "tz": users.get_user_timezone(owner_id),
+    }
+
 
 _TAG_PERIOD_LABELS: dict[str, str] = {
     "week": ui_strings.TAG_FREQUENCY_THIS_WEEK,
@@ -122,6 +192,7 @@ def _build_history_context(
         return {
             "period": "all",
             "anchor": anchor.isoformat(),
+            "today_anchor": datetime.now(UTC).date().isoformat(),
             "label": None,
             "visual": None,
             "log": log,
@@ -197,6 +268,7 @@ def _build_history_context(
     return {
         "period": period,
         "anchor": anchor.isoformat(),
+        "today_anchor": today.isoformat(),
         "label": label,
         "visual": visual,
         "log": log,

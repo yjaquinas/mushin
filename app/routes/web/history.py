@@ -17,6 +17,7 @@ from app.routes.web._history_context import (
     _build_card_top_tags,
     _build_field_stats_context,
     _build_history_context,
+    resolve_history_viewer,
 )
 from app.routes.web._shared import _current_user, templates
 from app.services import _db, profiles, stats
@@ -82,64 +83,20 @@ async def activity_history(
 
     with db.connect() as conn:
         conn.execute("BEGIN")
-        owner_row = conn.execute(
-            """SELECT u.id, u.username, u.visibility, u.auth_provider, u.consent_seen_at,
-                      st.slug AS activity_slug
-                 FROM activity st
-                 JOIN user u ON u.id = st.owner_id
-                WHERE st.id = ?""",
-            (activity_id,),
-        ).fetchone()
-        if owner_row is None:
-            return HTMLResponse(status_code=404)
+        viewer = resolve_history_viewer(conn, activity_id, current_uid)
 
-        profile_user = {
-            "id": owner_row["id"],
-            "username": owner_row["username"],
-            "visibility": owner_row["visibility"],
-            "auth_provider": owner_row["auth_provider"],
-            "consent_seen_at": owner_row["consent_seen_at"],
-        }
-        owner_id = int(profile_user["id"])
+    if isinstance(viewer, HTMLResponse):
+        return viewer
 
-        cap = profiles.viewer_capability(
-            conn, current_user_id=current_uid, profile_user=profile_user
-        )
-        is_owner = cap == "owner"
+    owner_id = viewer["owner_id"]
+    is_owner = viewer["is_owner"]
+    can_comment = viewer["can_comment"]
+    username = viewer["username"]
+    slug = viewer["slug"]
+    tz = viewer["tz"]
 
-        if not is_owner and not profiles.can_view_activity_detail(
-            conn, current_user_id=current_uid, profile_user=profile_user
-        ):
-            # "blocked" or "limited" (non-connected visitor on a non-public
-            # account) — fail closed, no existence oracle.
-            return HTMLResponse(status_code=404)
-
-        can_comment = (
-            True
-            if is_owner
-            else profiles.can_comment_on_entry(
-                conn,
-                current_user_id=current_uid,
-                profile_user=profile_user,
-                activity_id=activity_id,
-            )
-        )
-
-    tz = users.get_user_timezone(owner_id)
-    username = profile_user["username"]
-    slug = owner_row["activity_slug"]
-
-    # Anonymous (no session) real visitor on an already-cleared-readable
-    # activity (blocked/limited 404s above before this point) — same
-    # "log in to comment" prompt the initial page load gets
-    # (`public/_activity_detail_handlers.py::_render_readonly_activity_detail`),
-    # threaded through this interactive fragment route too, since a visitor
-    # can reach a fresh period/day swap without ever re-loading the full
-    # page. `next` points at the canonical activity page (not this fragment
-    # URL, which isn't a navigable page on its own), built from
-    # `username`/`slug` rather than `request.url.path` — both are
-    # already-trusted server-derived strings, so `safe_next_path` here is
-    # defense in depth, not the primary guarantee.
+    # Anonymous visitor on a readable activity — build "log in to comment" URL.
+    # `next` points at the canonical activity page (not this fragment URL).
     login_redirect_url = None
     if not is_owner and current_uid is None and username is not None and slug is not None:
         target = profiles.safe_next_path(profiles.canonical_activity_url(username, slug))
