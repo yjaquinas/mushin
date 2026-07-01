@@ -20,14 +20,12 @@
         <p class="text-caption text-text-secondary">{{ strings.DELETE_DATA_BODY }}</p>
 
         <form
-            hx-post="/delete"
-            hx-swap="none"
-            hx-on::after-request="if(event.detail.successful)window.location.href='/'"
+            method="post"
+            action="/delete"
             class="flex flex-col gap-3"
         >
             <button
                 type="submit"
-                hx-disabled-elt="this"
                 class="min-h-tap w-full rounded-button bg-danger px-4 py-3 text-body font-semibold text-white transition hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-60"
             >
                 {{ strings.DELETE_DATA_CONFIRM }}
@@ -35,7 +33,6 @@
             <button
                 type="button"
                 id="delete-cancel-button"
-                hx-on:click="document.getElementById('delete-account-dialog').setAttribute('hidden','')"
                 class="min-h-tap w-full rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline-offset-2"
             >
                 {{ strings.DELETE_DATA_CANCEL }}

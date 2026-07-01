@@ -426,7 +426,7 @@ async def delete_account(
         raise HTTPException(status_code=401, detail="no active session")
 
     users.delete_user(current)
-    resp = JSONResponse({"deleted": True})
+    resp = RedirectResponse(url="/", status_code=303)
     resp.delete_cookie(key=sessions.COOKIE_NAME, path="/")
     log.info("auth.account.deleted", user_id=current)
     return resp

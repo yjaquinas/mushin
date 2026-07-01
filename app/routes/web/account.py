@@ -106,7 +106,7 @@ async def update_visibility(
 @router.post("/delete", response_model=None)
 async def delete_account(
     session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
-) -> HTMLResponse:
+) -> RedirectResponse | HTMLResponse:
     """Delete the current account and all its data, then redirect to /.
 
     ON DELETE CASCADE in the schema wipes every owned row (activities,
@@ -120,7 +120,7 @@ async def delete_account(
     if user["auth_provider"] == "guest":
         return HTMLResponse(status_code=400)
     users.delete_user(int(user["id"]))
-    response = HTMLResponse(content="")
+    response = RedirectResponse(url="/", status_code=303)
     response.delete_cookie(key=sessions.COOKIE_NAME, path="/")
     return response
 
