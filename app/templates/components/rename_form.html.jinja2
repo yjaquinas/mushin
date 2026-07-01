@@ -9,7 +9,6 @@
     current_name   str    — pre-fills the input
     error          str?   — validation error message (optional)
 #}
-{% from "components/_icon.html.jinja2" import icon %}
 <form
     hx-post="/activities/{{ activity_id }}/rename"
     hx-target="#rename-heading"

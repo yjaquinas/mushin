@@ -23,7 +23,6 @@
     current_user_id  int | None — for the per-comment delete affordance
     entry_owner_id    int       — for the per-comment delete affordance
 #}
-{% from "components/_icon.html.jinja2" import icon %}
 <div id="comment-thread-{{ entry_id }}" class="flex flex-col gap-3 rounded-card border border-border bg-surface-2 p-3">
     {% if not comments %}
     <p class="text-caption text-text-muted">{{ strings.COMMENTS_EMPTY }}</p>

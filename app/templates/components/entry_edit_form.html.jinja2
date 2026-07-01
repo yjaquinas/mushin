@@ -13,8 +13,6 @@
     fields         list   — field_def contexts [{id, kind, label, tags?}]
                            same shape as _build_card_context / log_sheet
 #}
-{% from "components/_icon.html.jinja2" import icon %}
-
 <li class="entry-row">
     <form
         hx-post="/activities/{{ activity_id }}/entries/{{ entry.id }}"

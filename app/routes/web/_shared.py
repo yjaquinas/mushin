@@ -17,17 +17,38 @@ and template globals stay identical across surfaces.
 from __future__ import annotations
 
 import os
+import re
 from datetime import datetime
+from functools import lru_cache
+from pathlib import Path
 from typing import Any
 
 from fastapi import Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from itsdangerous import BadSignature, URLSafeSerializer
+from markupsafe import Markup
 
 from app import ui_strings
 from app.auth import sessions, users
 from app.services import profiles
+
+_ICONS_DIR = Path(__file__).resolve().parent.parent.parent / "static" / "icons"
+
+
+@lru_cache(maxsize=None)
+def _load_icon_raw(name: str) -> str:
+    path = _ICONS_DIR / f"{name}.svg"
+    if not path.exists():
+        path = _ICONS_DIR / "circle-dot.svg"
+    return path.read_text()
+
+
+def _icon(name: str, size: int = 20) -> Markup:
+    content = _load_icon_raw(name)
+    content = re.sub(r'width="\d+"', f'width="{size}"', content, count=1)
+    content = re.sub(r'height="\d+"', f'height="{size}"', content, count=1)
+    return Markup(content)
 
 # Cookie holding the user's explicit theme choice: "light" | "dark".
 # Missing/invalid values default to "light" (no OS/prefers-color-scheme
@@ -141,6 +162,7 @@ templates = Jinja2Templates(
 # Centralized copy is exposed to every template as `strings` — templates
 # never hardcode user-facing text (see .claude/skills/copy-patterns).
 templates.env.globals["strings"] = ui_strings
+templates.env.globals["icon"] = _icon
 
 
 def _format_entry_time(occurred_at: str) -> str:
