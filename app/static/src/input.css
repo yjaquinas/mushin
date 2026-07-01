@@ -399,9 +399,10 @@
   /*
    * .cal-day — a single day cell in the month calendar.
    *
-   * INTERACTIVE: calendar days ARE tap targets (tapping a day opens that
-   * day's entries), so .cal-day enforces the ≥44px minimum via
-   * --spacing-tap on both axes.
+   * Only days with entries (--marked) are rendered as interactive <button>
+   * elements; days with no entries use <span class="cal-day--empty"> and
+   * are non-interactive. All cells share .cal-day's sizing (≥44px tap
+   * target) so the grid stays uniform.
    *
    * State affordances:
    *   .cal-day--marked — a day with at least one entry. Signaled by a
@@ -460,6 +461,17 @@
   .cal-day--selected {
     background:      var(--color-surface-2);
     font-weight:     var(--font-weight-semibold);
+  }
+
+  /* Empty: no entries — muted text, non-interactive. The today ring still
+   * applies if --today is also present. */
+  .cal-day--empty {
+    color:           var(--color-text-muted);
+    cursor:          default;
+  }
+
+  .cal-day--empty:hover {
+    background:      transparent;
   }
 
   /* Today: an outline ring distinguishes the current day by shape, separate

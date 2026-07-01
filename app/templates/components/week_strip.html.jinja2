@@ -16,10 +16,11 @@
             <span class="text-caption font-medium text-text-muted">
                 {{ strings.CALENDAR_WEEKDAYS[loop.index0] }}
             </span>
+            {% if cell.marked %}
             <button
                 type="button"
                 aria-pressed="{{ 'true' if cell.selected else 'false' }}"
-                class="cal-day{% if cell.marked %} cal-day--marked{% endif %}{% if cell.today %} cal-day--today{% endif %}{% if cell.selected %} cal-day--selected{% endif %}"
+                class="cal-day cal-day--marked{% if cell.today %} cal-day--today{% endif %}{% if cell.selected %} cal-day--selected{% endif %}"
                 {% if cell.selected %}
                 hx-get="/activities/{{ activity_id }}/history?period=week&anchor={{ history.anchor }}"
                 {% else %}
@@ -30,6 +31,11 @@
             >
                 {{ cell.day }}
             </button>
+            {% else %}
+            <span class="cal-day cal-day--empty{% if cell.today %} cal-day--today{% endif %}">
+                {{ cell.day }}
+            </span>
+            {% endif %}
         </div>
     {% endfor %}
 </div>
