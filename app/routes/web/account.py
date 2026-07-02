@@ -17,6 +17,7 @@ from app.routes.web._account_handlers import (
     delete_account_response,
     render_account_settings,
     toggle_theme_response,
+    update_email_response,
     update_visibility_response,
 )
 from app.routes.web._shared import _current_user
@@ -62,6 +63,19 @@ async def update_visibility(
     if user is None:
         return HTMLResponse(status_code=401)
     return update_visibility_response(user, visibility)
+
+
+@router.post("/account/email", response_model=None)
+async def update_email(
+    request: Request,
+    email: Annotated[str | None, Form()] = None,
+    session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
+) -> RedirectResponse | HTMLResponse:
+    """Change the current account's recovery email from the settings page."""
+    user = _current_user(session)
+    if user is None:
+        return HTMLResponse(status_code=401)
+    return update_email_response(request, user, email)
 
 
 @router.post("/delete", response_model=None)

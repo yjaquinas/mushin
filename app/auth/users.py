@@ -223,8 +223,8 @@ def create_username_user(
         cur = conn.execute(
             "INSERT INTO user"
             " (auth_provider, username, password_hash, email, display_name, timezone,"
-            " last_active_at)"
-            " VALUES ('email', ?, ?, ?, ?, ?, ?)",
+            " last_active_at, visibility)"
+            " VALUES ('email', ?, ?, ?, ?, ?, ?, 'public')",
             (username, password_hash, email, username, tz, _now_iso()),
         )
         return int(cur.lastrowid)
@@ -254,8 +254,8 @@ def create_oauth_user(
             raise IdentityTakenError(f"{auth_provider} identity {provider_id!r} already exists")
         cur = conn.execute(
             "INSERT INTO user (auth_provider, provider_id, display_name, timezone,"
-            " last_active_at)"
-            " VALUES (?, ?, ?, ?, ?)",
+            " last_active_at, visibility)"
+            " VALUES (?, ?, ?, ?, ?, 'public')",
             (auth_provider, provider_id, display_name, tz, _now_iso()),
         )
         return int(cur.lastrowid)
@@ -324,7 +324,7 @@ def attach_provider(
         if auth_provider == "email":
             conn.execute(
                 "UPDATE user SET auth_provider = ?, provider_id = ?, password_hash = ?,"
-                " username = ?, email = ?, display_name = ?, last_active_at = ?"
+                " username = ?, email = ?, display_name = ?, last_active_at = ?, visibility = 'public'"
                 " WHERE id = ?",
                 (
                     auth_provider,
@@ -340,7 +340,7 @@ def attach_provider(
         else:  # google — unchanged behavior
             conn.execute(
                 "UPDATE user SET auth_provider = ?, provider_id = ?, password_hash = ?,"
-                " display_name = ?, last_active_at = ? WHERE id = ?",
+                " display_name = ?, last_active_at = ?, visibility = 'public' WHERE id = ?",
                 (
                     auth_provider,
                     provider_id,
@@ -350,6 +350,28 @@ def attach_provider(
                     user_id,
                 ),
             )
+        row = conn.execute("SELECT * FROM user WHERE id = ?", (user_id,)).fetchone()
+        return dict(row)
+
+
+def update_email(user_id: int, email: str | None) -> dict[str, Any]:
+    """Update the recovery email for an existing live account."""
+    with db.connect() as conn:
+        conn.execute("BEGIN")
+        target = conn.execute(
+            "SELECT * FROM user WHERE id = ? AND deleted_at IS NULL",
+            (user_id,),
+        ).fetchone()
+        if target is None:
+            raise AccountError(f"user {user_id} does not exist")
+        if email is not None:
+            clash = conn.execute(
+                "SELECT id FROM user WHERE email = ? AND id != ? AND deleted_at IS NULL",
+                (email, user_id),
+            ).fetchone()
+            if clash is not None:
+                raise EmailTakenError(f"email {email!r} is already taken")
+        conn.execute("UPDATE user SET email = ? WHERE id = ?", (email, user_id))
         row = conn.execute("SELECT * FROM user WHERE id = ?", (user_id,)).fetchone()
         return dict(row)
 

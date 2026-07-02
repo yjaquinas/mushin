@@ -1,4 +1,4 @@
-// Account-page dialogs: import-data and delete-account.
+// Account-page dialogs plus profile sharing.
 
 (function () {
   "use strict";
@@ -16,7 +16,45 @@
   var importDlg = initDialog("import-data-dialog");
   var deleteDlg = initDialog("delete-account-dialog");
 
+  async function shareProfile(button) {
+    if (!button) return;
+    var rawUrl = button.getAttribute("data-share-url");
+    var label = button.getAttribute("data-share-label");
+    var copied = button.getAttribute("data-share-copied");
+    var failed = button.getAttribute("data-share-failed");
+    var url = rawUrl ? new URL(rawUrl, window.location.origin).toString() : "";
+    if (!url) return;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: label, url: url });
+      } else if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(url);
+        if (window.showToast) window.showToast(copied);
+      } else {
+        throw new Error("share unavailable");
+      }
+    } catch (error) {
+      if (error && error.name === "AbortError") return;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        try {
+          await navigator.clipboard.writeText(url);
+          if (window.showToast) window.showToast(copied);
+          return;
+        } catch (_clipboardError) {
+        }
+      }
+      if (window.showToast) window.showToast(failed, "warning");
+    }
+  }
+
   document.addEventListener("click", function (event) {
+    var shareButton = event.target.closest("[data-share-profile]");
+    if (shareButton) {
+      shareProfile(shareButton);
+      return;
+    }
+
     var importOpen = event.target.closest("#import-open-button");
     if (importOpen && importDlg) {
       importDlg.open();

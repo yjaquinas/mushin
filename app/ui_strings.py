@@ -60,6 +60,7 @@ HOME_EMPTY = "Nothing started yet."
 # Carries only the public/private state — no other personal data.
 HOME_FLASH_VISIBILITY_PUBLIC = "Profile set to public."
 HOME_FLASH_VISIBILITY_PRIVATE = "Profile set to private."
+HOME_FLASH_EMAIL_UPDATED = "Email address updated."
 
 # ---------------------------------------------------------------------------
 # Empty-state example categories + create-category
@@ -290,10 +291,10 @@ ACCOUNT_TITLE = "Account"
 ACCOUNT_PRIVACY_LINK = "Privacy Policy"
 ACCOUNT_TERMS_LINK = "Terms of Service"
 
-ACCOUNT_VISIBILITY_HEADING = "Who can see your record"
-# The username doubles as a public handle — frame it as the share link.
-# {username} is interpolated by the template.
-ACCOUNT_VISIBILITY_SHARE_LINK = "Your profile is shareable at mushin.aqnas.xyz/@{username}"
+ACCOUNT_VISIBILITY_HEADING = "Account privacy"
+ACCOUNT_SHARE = "Share"
+ACCOUNT_SHARE_COPIED = "Profile link copied."
+ACCOUNT_SHARE_FAILED = "Couldn't share the profile link."
 
 # Radio labels mirror the consent screen.
 ACCOUNT_VISIBILITY_PRIVATE_LABEL = "Private"
@@ -308,6 +309,12 @@ ACCOUNT_VISIBILITY_PUBLIC_DESC = (
 )
 
 ACCOUNT_VISIBILITY_SAVE = "Save"
+ACCOUNT_EMAIL_HEADING = "Email address"
+ACCOUNT_EMAIL_LABEL = "Email"
+ACCOUNT_EMAIL_HELP = "For account recovery. Optional."
+ACCOUNT_EMAIL_SAVE = "Save email"
+ACCOUNT_EMAIL_INVALID = "Enter a valid email address."
+ACCOUNT_EMAIL_TAKEN = "That email address is already in use."
 
 # ---------------------------------------------------------------------------
 # Sharing consent (connection-accept consequence screen)

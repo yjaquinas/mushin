@@ -16,6 +16,7 @@ _FLASH_MAX_AGE = 30
 _FLASH_MESSAGES: dict[str, str] = {
     "visibility_public": ui_strings.HOME_FLASH_VISIBILITY_PUBLIC,
     "visibility_private": ui_strings.HOME_FLASH_VISIBILITY_PRIVATE,
+    "email_updated": ui_strings.HOME_FLASH_EMAIL_UPDATED,
 }
 
 
@@ -49,4 +50,3 @@ def _read_flash(request: Request) -> str | None:
 
 def _clear_flash(response: HTMLResponse) -> None:
     response.delete_cookie(key=FLASH_COOKIE, path="/", secure=True, httponly=True, samesite="lax")
-

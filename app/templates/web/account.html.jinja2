@@ -11,14 +11,10 @@
 {# Visibility/share-link section is non-guest only — guests have no username
    and thus no public profile. #}
 {% if not is_guest %}
-<section class="flex flex-col gap-4">
+<section class="flex flex-col gap-4 pb-4">
     <div class="flex flex-col gap-1">
         <h2 class="text-body font-semibold text-text-primary">{{ strings.ACCOUNT_VISIBILITY_HEADING }}</h2>
-        <p class="text-caption text-text-secondary">
-            {{ strings.ACCOUNT_VISIBILITY_SHARE_LINK.format(username=username) }}
-        </p>
     </div>
-
     <form method="post" action="/account" class="flex flex-col gap-4" id="visibility-form" data-current-visibility="{{ visibility }}">
         <fieldset class="flex flex-col gap-3">
             <legend class="sr-only">{{ strings.ACCOUNT_VISIBILITY_HEADING }}</legend>
@@ -60,17 +56,30 @@
         </button>
     </form>
 
+    <button
+        type="button"
+        data-share-profile
+        data-share-url="{{ profile_url }}"
+        data-share-label="{{ strings.ACCOUNT_SHARE }}"
+        data-share-copied="{{ strings.ACCOUNT_SHARE_COPIED }}"
+        data-share-failed="{{ strings.ACCOUNT_SHARE_FAILED }}"
+        class="flex min-h-tap w-full items-center justify-center gap-2 rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline-offset-2"
+    >
+        {{ icon("share", size=20) }}
+        {{ strings.ACCOUNT_SHARE }}
+    </button>
+
 </section>
 {% endif %}
 
 {# Theme toggle — available to every account. #}
-<section class="flex flex-col gap-4 border-t border-border pt-4">
+<section class="flex flex-col gap-4 border-t border-border py-4">
     <h2 class="text-body font-semibold text-text-primary">Theme</h2>
     {% include "components/theme_toggle_account.html.jinja2" with context %}
 </section>
 
 {# Data actions: export / import — available to every account, including guests. #}
-<section class="flex flex-col gap-4 border-t border-border pt-4">
+<section class="flex flex-col gap-4 border-t border-border py-4">
     <h2 class="text-body font-semibold text-text-primary">Data</h2>
     <div class="flex gap-3">
         <a
@@ -93,7 +102,7 @@
 </section>
 
 {# Session actions: logout #}
-<section class="flex flex-col gap-4 border-t border-border pt-4">
+<section class="flex flex-col gap-4 border-t border-border py-4">
     <h2 class="text-body font-semibold text-text-primary">Session</h2>
     <button
         type="button"
@@ -109,7 +118,7 @@
 
 {# Danger zone: delete account — only for non-guest accounts. #}
 {% if not is_guest %}
-<section class="flex flex-col gap-4 border-t border-border pt-4">
+<section class="flex flex-col gap-4 border-t border-border py-4">
     <h2 class="text-body font-semibold text-text-primary">Danger zone</h2>
     <button
         type="button"
@@ -124,11 +133,11 @@
 </section>
 {% endif %}
 
-<section class="flex flex-grow flex-col items-center justify-end gap-3 pt-4">
-    <a href="/privacy" class="text-caption text-text-secondary focus-visible:outline-offset-2">
+<section class="flex flex-col flex-grow items-center justify-end gap-3 py-4">
+    <a href="/privacy" target="_blank" rel="noopener noreferrer" class="text-caption text-text-secondary focus-visible:outline-offset-2">
         {{ strings.ACCOUNT_PRIVACY_LINK }}
     </a>
-    <a href="/terms" class="text-caption text-text-secondary focus-visible:outline-offset-2">
+    <a href="/terms" target="_blank" rel="noopener noreferrer" class="text-caption text-text-secondary focus-visible:outline-offset-2">
         {{ strings.ACCOUNT_TERMS_LINK }}
     </a>
 </section>
