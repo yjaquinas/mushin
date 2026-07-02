@@ -50,7 +50,7 @@
             {% if fellows.pending_count > 0 %}
             <span>{{ strings.REQUESTS_PENDING_BADGE.format(count=fellows.pending_count) }}</span>
             {% endif %}
-            <span aria-hidden="true" class="transition group-open:rotate-180">{{ icon("chevron-up", size=18) }}</span>
+            <span aria-hidden="true" class="rotate-180 transition group-open:rotate-0">{{ icon("chevron-up", size=18) }}</span>
         </span>
     </summary>
     <section class="flex flex-col gap-3 pt-2">

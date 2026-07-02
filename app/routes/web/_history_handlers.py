@@ -59,7 +59,7 @@ def activity_history_response(
     login_redirect_url = None
     if not viewer["is_owner"] and current_uid is None and viewer["username"] and viewer["slug"]:
         target = profiles.safe_next_path(profiles.canonical_activity_url(viewer["username"], viewer["slug"]))
-        login_redirect_url = f"/login?next={quote(target or '', safe='')}"
+        login_redirect_url = f"/?next={quote(target or '', safe='')}"
 
     history_ctx = _build_history_context(
         activity_id,

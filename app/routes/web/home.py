@@ -21,6 +21,7 @@ from app.routes.web._home_handlers import (
     render_home,
 )
 from app.routes.web._shared import _current_user, templates
+from app.services import profiles
 
 router = APIRouter()
 
@@ -48,12 +49,21 @@ async def terms(request: Request) -> HTMLResponse:
 @router.get("/", response_class=HTMLResponse, response_model=None)
 async def index(
     request: Request,
+    next: str | None = None,  # noqa: A002 - query-param name is part of the public URL contract
     session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
 ) -> HTMLResponse | RedirectResponse:
-    """Entry screen for logged-out visitors, permanent redirect for known users."""
+    """Entry screen for logged-out visitors, redirect for known users.
+
+    ``?next=`` is accepted here too because anonymous public-page affordances
+    return visitors to the entry screen at ``/`` rather than relying on a
+    dedicated ``/login`` route.
+    """
     user = _current_user(session)
+    safe_next = profiles.safe_next_path(next)
     if user is None:
-        return render_entry_page(request)
+        return render_entry_page(request, next_path=safe_next)
+    if safe_next:
+        return RedirectResponse(url=safe_next, status_code=303)
     return redirect_logged_in_home(user)
 
 

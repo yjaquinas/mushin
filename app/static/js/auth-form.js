@@ -5,7 +5,7 @@
 // swap a JSON body into the page. On success, the response body carries a
 // `redirect_url` (the user's canonical /@{username} profile); we navigate there,
 // falling back to /home only if the field is missing. A form-local hidden
-// `next` field (set server-side only by GET /login, already validated as a
+// `next` field (set server-side by the entry/login GET route, already validated as a
 // same-origin path by profiles.safe_next_path) takes priority over
 // `redirect_url` when present, so a visitor who hit "log in to comment" lands
 // back on the activity they were reading rather than their own profile. On

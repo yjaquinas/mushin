@@ -15,7 +15,7 @@
     this fragment is server-rendered directly (currently always empty; the
     JS path fills [data-auth-error] client-side).
     next (str, optional) — a same-origin path to return to after a successful
-    login (already validated server-side by GET /login via
+    login (already validated server-side by the entry/login GET route via
     profiles.safe_next_path before reaching this template). Carried as a
     hidden field so MushinAuth.handle can redirect there instead of the
     default /@{username} profile. Absent/None renders no hidden field, and

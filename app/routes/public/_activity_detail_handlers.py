@@ -192,7 +192,7 @@ def _render_readonly_activity_detail(
     # as readable here (this branch only runs for connected/public
     # capabilities; a blocked/limited viewer 404s/redirects in
     # `public_activity` before this function is ever reached) gets a
-    # same-origin `/login?next=...` link
+    # same-origin `/?next=...` link
     # instead of a silently-missing composer. `safe_next_path` is the only
     # thing that decides "safe" here, so this can never become an open
     # redirect even though `request.url.path` is otherwise untrusted input.
@@ -200,7 +200,7 @@ def _render_readonly_activity_detail(
     is_anonymous_real_visitor = profile_user is not None and current_user_id is None
     if is_anonymous_real_visitor:
         target = profiles.safe_next_path(request.url.path)
-        login_redirect_url = f"/login?next={quote(target or '', safe='')}"
+        login_redirect_url = f"/?next={quote(target or '', safe='')}"
     context["login_redirect_url"] = login_redirect_url
     context["current_page"] = None
     context["page_title"] = f"{username} | {card['name']}"
