@@ -10,8 +10,9 @@ These two surfaces have different, deliberately narrow contracts:
 
 * ``search_people`` returns ONLY ``{id, username, display_name, visibility,
   relationship_state}`` — never any activity / entry / tag / note / memo data.
-  All real accounts (public AND private) are findable, including the searcher
-  themselves; guests and anyone blocked in either direction are excluded.
+  All live real accounts (public AND private) are findable, including the
+  searcher themselves; guests, deleted accounts, and anyone blocked in either
+  direction are excluded.
 
 * ``search_tags_public`` is structurally incapable of returning private or
   limited accounts: ``user.visibility = 'public'`` is a join predicate, not a
@@ -74,10 +75,11 @@ def search_people(searcher_id: int, query: str, *, limit: int = 20) -> list[dict
     ``connections.relationship_state(searcher_id, row_id)`` and picks the
     Connect / Requested / Respond / "fellows" affordance.
 
-    Excluded: guests (``auth_provider='guest'`` or NULL username), and any
-    account the searcher is blocked-with in EITHER direction (a ``block`` row
-    either way). The searcher themselves IS included in results. Results are
-    capped at ``limit`` (≤ MAX_LIMIT).
+    Excluded: guests (``auth_provider='guest'`` or NULL username), deleted
+    accounts (``deleted_at IS NOT NULL``), and any account the searcher is
+    blocked-with in EITHER direction (a ``block`` row either way). The
+    searcher themselves IS included in results. Results are capped at
+    ``limit`` (≤ MAX_LIMIT).
     """
     q = query.strip()
     if not q:
@@ -91,6 +93,7 @@ def search_people(searcher_id: int, query: str, *, limit: int = 20) -> list[dict
         rows = conn.execute(
             "SELECT id, username, display_name, visibility FROM user"
             " WHERE auth_provider != 'guest'"
+            " AND deleted_at IS NULL"
             " AND username IS NOT NULL"
             " AND ("
             "   username LIKE ? || '%' ESCAPE ?"
@@ -147,8 +150,9 @@ def search_tags_public(searcher_id: int, query: str, *, limit: int = 20) -> list
     entry equal to the query string can never surface here.
 
     Each result is ``{username, activity_slug, activity_name, tag}``, de-duped.
-    A blank query returns ``[]``. Owners the searcher is blocked-with (either
-    direction) are excluded. Results are capped at ``limit`` (≤ MAX_LIMIT).
+    A blank query returns ``[]``. Deleted owners and owners the searcher is
+    blocked-with (either direction) are excluded. Results are capped at
+    ``limit`` (≤ MAX_LIMIT).
     """
     q = query.strip()
     if not q:
@@ -170,6 +174,7 @@ def search_tags_public(searcher_id: int, query: str, *, limit: int = 20) -> list
             " JOIN user u ON u.id = a.owner_id"
             " WHERE u.visibility = 'public'"
             "   AND u.auth_provider != 'guest'"
+            "   AND u.deleted_at IS NULL"
             "   AND u.username IS NOT NULL"
             "   AND t.archived_at IS NULL"
             "   AND a.archived_at IS NULL"

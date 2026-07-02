@@ -13,10 +13,11 @@ from app.services import comments, entries, stats
 
 
 def _build_history_context(activity_id: int, owner_id: int, *, period: str, anchor: date, tz: ZoneInfo, selected: date | None = None, is_owner: bool = False, can_comment: bool = False, username: str | None = None, slug: str | None = None, expand_comment_entry_id: int | None = None, login_redirect_url: str | None = None) -> dict[str, Any]:
+    expanded_entry_id = expand_comment_entry_id if selected is not None else None
     if period == "all":
         log = _group_log(entries.list_for_activity(owner_id, activity_id), tz)
         _decorate_comment_counts(log, None)
-        return {"period": "all", "anchor": anchor.isoformat(), "today_anchor": datetime.now(UTC).date().isoformat(), "label": None, "visual": None, "log": log, "prev_anchor": None, "next_anchor": None, "start": None, "end": None, "selected_day": None, "day_entries": None, "is_owner": is_owner, "can_comment": can_comment, "username": username, "slug": slug, "expand_comment_entry_id": expand_comment_entry_id, "login_redirect_url": login_redirect_url}
+        return {"period": "all", "anchor": anchor.isoformat(), "today_anchor": datetime.now(UTC).date().isoformat(), "label": None, "visual": None, "log": log, "prev_anchor": None, "next_anchor": None, "start": None, "end": None, "selected_day": None, "day_entries": None, "is_owner": is_owner, "can_comment": can_comment, "username": username, "slug": slug, "expand_comment_entry_id": None, "login_redirect_url": login_redirect_url}
     start = stats._shift_period(anchor, period, 0)
     end = stats._shift_period(anchor, period, 1) - timedelta(days=1)
     today = datetime.now(UTC).date()
@@ -24,7 +25,7 @@ def _build_history_context(activity_id: int, owner_id: int, *, period: str, anch
     log = _group_log(stats.period_entries(activity_id, owner_id, start, end, tz=tz), tz)
     day_entries = _entries_on_day(activity_id, owner_id, selected, tz=tz) if selected is not None else None
     _decorate_comment_counts(log, day_entries)
-    return {"period": period, "anchor": anchor.isoformat(), "today_anchor": today.isoformat(), "label": label, "visual": visual, "log": log, "prev_anchor": stats._shift_period(anchor, period, -1).isoformat(), "next_anchor": stats._shift_period(anchor, period, 1).isoformat(), "start": start.isoformat(), "end": end.isoformat(), "selected_day": selected.isoformat() if selected is not None else None, "day_entries": day_entries, "is_owner": is_owner, "can_comment": can_comment, "username": username, "slug": slug, "expand_comment_entry_id": expand_comment_entry_id, "login_redirect_url": login_redirect_url}
+    return {"period": period, "anchor": anchor.isoformat(), "today_anchor": today.isoformat(), "label": label, "visual": visual, "log": log, "prev_anchor": stats._shift_period(anchor, period, -1).isoformat(), "next_anchor": stats._shift_period(anchor, period, 1).isoformat(), "start": start.isoformat(), "end": end.isoformat(), "selected_day": selected.isoformat() if selected is not None else None, "day_entries": day_entries, "is_owner": is_owner, "can_comment": can_comment, "username": username, "slug": slug, "expand_comment_entry_id": expanded_entry_id, "login_redirect_url": login_redirect_url}
 
 
 def _group_log(rows: list[dict[str, Any]], tz: ZoneInfo) -> list[dict[str, Any]]:
@@ -58,4 +59,3 @@ def _decorate_comment_counts(log: list[dict[str, Any]], day_entries: list[dict[s
         counts = comments.counts_for_entries(conn, [e["id"] for e in all_entries])
     for e in all_entries:
         e["comment_count"] = counts.get(e["id"], 0)
-
