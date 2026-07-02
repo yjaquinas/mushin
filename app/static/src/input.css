@@ -33,9 +33,9 @@
    * hero numeral. Obsidian-based rather than pure black — slightly warm so
    * Korean glyphs render with weight on white.
    */
-  --color-brand:         #0F172A;
-  --color-brand-subtle:  #334155;
-  --color-on-brand:      #ffffff;
+  --color-brand: #0f172a;
+  --color-brand-subtle: #334155;
+  --color-on-brand: #ffffff;
 
   /*
    * Fixed, non-theme-swapping brand tokens. Unlike every other --color-*
@@ -44,8 +44,8 @@
    * where the color must not flip with theme. Never a substitute for the
    * swapping surface/accent roles in ordinary UI.
    */
-  --color-obsidian:      #0F172A;
-  --color-cinnabar:      #E34234;
+  --color-obsidian: #0f172a;
+  --color-cinnabar: #e34234;
 
   /*
    * Surface — background layers. surface-0 is the canvas; surface-1 is the
@@ -55,15 +55,15 @@
    * why a third tone was needed to keep that ordering distinct).
    * Dark: obsidian / surface-dark family.
    */
-  --color-surface-0:     #F8FAFC;
-  --color-surface-1:     #FFFFFF;
-  --color-surface-2:     #F1F5F9;
+  --color-surface-0: #f8fafc;
+  --color-surface-1: #ffffff;
+  --color-surface-2: #f1f5f9;
 
   /*
    * Border — used for card outlines, dividers, chip outlines.
    */
-  --color-border:        #E2E8F0;
-  --color-border-strong: #7C8AA0;
+  --color-border: #e2e8f0;
+  --color-border-strong: #7c8aa0;
 
   /*
    * Text roles — semantic aliases on top of the palette.
@@ -75,9 +75,9 @@
    * light mode — slate-on-alabaster-dim is ~2:1, far under the 4.5:1 text
    * minimum. Reserve slate for borders/icons/disabled states only.
    */
-  --color-text-primary:   #0F172A;
+  --color-text-primary: #0f172a;
   --color-text-secondary: #475569;
-  --color-text-muted:     #64748B;
+  --color-text-muted: #64748b;
 
   /*
    * Accent — cinnabar, the studio's brand red. Used sparingly: selected
@@ -94,9 +94,9 @@
    * must independently clear 4.5:1. Never use --color-accent itself for
    * body-size text on a light surface.
    */
-  --color-accent:        #E34234;
-  --color-accent-subtle: #FBE7E4;
-  --color-accent-text:   #982015;
+  --color-accent: #e34234;
+  --color-accent-subtle: #fbe7e4;
+  --color-accent-text: #982015;
 
   /*
    * Danger — account deletion, irreversible destructive actions only.
@@ -106,8 +106,8 @@
    * accent. Pairs with icon + label per the "never color alone" rule —
    * that pairing is a template/component concern, this is just the color.
    */
-  --color-danger:        #A6471C;
-  --color-danger-subtle: #FBEAE3;
+  --color-danger: #a6471c;
+  --color-danger-subtle: #fbeae3;
 
   /*
    * Heatmap trend strip (activity-detail summary card, 84 trailing days as
@@ -133,8 +133,8 @@
    * below), so the floor sliver is guaranteed visible without a new
    * standalone value to maintain.
    */
-  --color-heatmap-bar:      #E34234; /* = accent; 4.12:1 on surface-1 */
-  --color-heatmap-baseline: #7C8AA0; /* = border-strong; 3.50:1 on surface-1 */
+  --color-heatmap-bar: #e34234; /* = accent; 4.12:1 on surface-1 */
+  --color-heatmap-baseline: #7c8aa0; /* = border-strong; 3.50:1 on surface-1 */
 
   /* ── Type scale ───────────────────────────────────────────────────────── */
 
@@ -151,11 +151,11 @@
    * Base is 16 px (1 rem). Scale chosen to stay legible at 1.5× system
    * font scaling and to give Korean glyphs comfortable line cadence.
    */
-  --font-size-hero-numeral: 3rem;     /* 48 px — the single dominant numeral */
-  --font-size-title:        1.125rem; /* 18 px — activity name, section head  */
-  --font-size-body:         1rem;     /* 16 px — default                       */
-  --font-size-caption:      0.8125rem;/* 13 px — demoted metrics, timestamps   */
-  --font-size-micro:        0.6875rem;/* 11 px — legal only                    */
+  --font-size-hero-numeral: 3rem; /* 48 px — the single dominant numeral */
+  --font-size-title: 1.125rem; /* 18 px — activity name, section head  */
+  --font-size-body: 1rem; /* 16 px — default                       */
+  --font-size-caption: 0.8125rem; /* 13 px — demoted metrics, timestamps   */
+  --font-size-micro: 0.6875rem; /* 11 px — legal only                    */
 
   /* ── Font weights ─────────────────────────────────────────────────────── */
 
@@ -163,9 +163,9 @@
    * Chips use weight to distinguish selected vs unselected state — never
    * color alone (colorblind + bright-sun safe). See component-patterns skill.
    */
-  --font-weight-normal:     400;
-  --font-weight-medium:     500;
-  --font-weight-semibold:   600;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
 
   /* ── Border radius ────────────────────────────────────────────────────── */
 
@@ -174,11 +174,11 @@
    * Chips use pill radius when selected and a slightly smaller radius when
    * unselected, so shape itself communicates state.
    */
-  --radius-card:            0.75rem;  /* 12 px — activity card, sheets         */
-  --radius-chip-selected:   9999px;   /* pill — selected chip shape            */
+  --radius-card: 0.75rem; /* 12 px — activity card, sheets         */
+  --radius-chip-selected: 9999px; /* pill — selected chip shape            */
   --radius-chip-unselected: 0.375rem; /* 6 px  — unselected chip shape         */
-  --radius-button:          0.5rem;   /* 8 px  — primary / secondary buttons   */
-  --radius-input:           0.5rem;   /* 8 px  — text inputs                   */
+  --radius-button: 0.5rem; /* 8 px  — primary / secondary buttons   */
+  --radius-input: 0.5rem; /* 8 px  — text inputs                   */
 
   /* ── Spacing ──────────────────────────────────────────────────────────── */
 
@@ -186,14 +186,14 @@
    * Minimum tap target: 44 px on each axis (WCAG 2.5.5 / Apple HIG).
    * Applied as min-h / min-w on every interactive element.
    */
-  --spacing-tap:            2.75rem;  /* 44 px */
+  --spacing-tap: 2.75rem; /* 44 px */
 
   /* ── Line height ──────────────────────────────────────────────────────── */
 
-  --line-height-tight:      1.25;     /* hero numeral, large headings          */
-  --line-height-snug:       1.4;      /* titles, chips                         */
-  --line-height-normal:     1.6;      /* body copy (generous for Korean)       */
-  --line-height-relaxed:    1.75;     /* long-form prose                       */
+  --line-height-tight: 1.25; /* hero numeral, large headings          */
+  --line-height-snug: 1.4; /* titles, chips                         */
+  --line-height-normal: 1.6; /* body copy (generous for Korean)       */
+  --line-height-relaxed: 1.75; /* long-form prose                       */
 
   /* ── Icon sizing ──────────────────────────────────────────────────────── */
 
@@ -210,8 +210,8 @@
    * icon-lg : the empty-state 無心 glyph — large but quiet, no decoration.
    *           Use as `size-icon-lg`.
    */
-  --spacing-icon:    1.25rem; /* 20 px */
-  --spacing-icon-lg: 4rem;    /* 64 px */
+  --spacing-icon: 1.25rem; /* 20 px */
+  --spacing-icon-lg: 4rem; /* 64 px */
 }
 
 /* ── Dark mode tokens ─────────────────────────────────────────────────────── */
@@ -263,24 +263,24 @@
  * accepted, documented shortfall rather than a silent one.
  */
 [data-theme="dark"] {
-  --color-brand:         #5A6B85;
-  --color-surface-0:     #0F172A;
-  --color-surface-1:     #1E293B;
-  --color-surface-2:     #2A3950;
+  --color-brand: #5a6b85;
+  --color-surface-0: #0f172a;
+  --color-surface-1: #1e293b;
+  --color-surface-2: #2a3950;
 
-  --color-border:        #334155;
-  --color-border-strong: #73839A;
+  --color-border: #334155;
+  --color-border-strong: #73839a;
 
-  --color-text-primary:   #F8FAFC;
-  --color-text-secondary: #94A3B8;
-  --color-text-muted:     #96A2B4;
+  --color-text-primary: #f8fafc;
+  --color-text-secondary: #94a3b8;
+  --color-text-muted: #96a2b4;
 
-  --color-accent:        #FF6B5B;
-  --color-accent-subtle: #3A2422;
-  --color-accent-text:   #FF6B5B; /* already clears 4.5:1 on dark surfaces */
+  --color-accent: #ff6b5b;
+  --color-accent-subtle: #3a2422;
+  --color-accent-text: #ff6b5b; /* already clears 4.5:1 on dark surfaces */
 
-  --color-danger:        #E8855E;
-  --color-danger-subtle: #3D2A20;
+  --color-danger: #e8855e;
+  --color-danger-subtle: #3d2a20;
 
   --color-on-brand: #f0eeec;
 
@@ -289,8 +289,8 @@
    * --color-heatmap-baseline = border-strong (3.79:1 on surface-1, clears
    * 3:1 — see the contrast-fix note above this block for how that value was
    * derived). */
-  --color-heatmap-bar:      #FF6B5B; /* = accent; 5.23:1 on surface-1 */
-  --color-heatmap-baseline: #73839A; /* = border-strong; 3.79:1 on surface-1 */
+  --color-heatmap-bar: #ff6b5b; /* = accent; 5.23:1 on surface-1 */
+  --color-heatmap-baseline: #73839a; /* = border-strong; 3.79:1 on surface-1 */
 }
 
 /* ── Focus-visible: global baseline ──────────────────────────────────────── */
@@ -347,34 +347,37 @@
  */
 @layer components {
   .chip {
-    display:         inline-flex;
-    align-items:     center;
-    min-height:      var(--spacing-tap);   /* ≥44 px tap target */
-    padding-block:   0.375rem;             /* 6 px  */
-    padding-inline:  0.75rem;              /* 12 px */
-    font-size:       var(--font-size-caption);
-    font-weight:     var(--font-weight-normal);
-    line-height:     var(--line-height-snug);
-    border:          1.5px solid var(--color-border);
-    border-radius:   var(--radius-chip-unselected);
-    background:      var(--color-surface-2);
-    color:           var(--color-text-secondary);
-    cursor:          pointer;
-    transition:      border-radius 120ms ease, border-color 120ms ease,
-                     background 120ms ease, font-weight 120ms ease;
-    user-select:     none;
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--spacing-tap); /* ≥44 px tap target */
+    padding-block: 0.375rem; /* 6 px  */
+    padding-inline: 0.75rem; /* 12 px */
+    font-size: var(--font-size-caption);
+    font-weight: var(--font-weight-normal);
+    line-height: var(--line-height-snug);
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius-chip-unselected);
+    background: var(--color-surface-2);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition:
+      border-radius 120ms ease,
+      border-color 120ms ease,
+      background 120ms ease,
+      font-weight 120ms ease;
+    user-select: none;
     /* No gap here — the glyph is inline text via ::before */
   }
 
   .chip--selected {
-    border-radius:   var(--radius-chip-selected);  /* shape change: pill */
-    border-color:    var(--color-accent);
-    background:      var(--color-accent-subtle);
+    border-radius: var(--radius-chip-selected); /* shape change: pill */
+    border-color: var(--color-accent);
+    background: var(--color-accent-subtle);
     /* accent-text, not accent: plain cinnabar tops out ~4.1:1 on a light
      * surface and can't clear the 4.5:1 text minimum. accent-text is the
      * same hue family, darkened to clear it. */
-    color:           var(--color-accent-text);
-    font-weight:     var(--font-weight-semibold);  /* weight change */
+    color: var(--color-accent-text);
+    font-weight: var(--font-weight-semibold); /* weight change */
   }
 
   /*
@@ -384,9 +387,9 @@
    * state on the button is the semantic signal).
    */
   .chip--selected::before {
-    content:         "✓\00a0"; /* checkmark + narrow no-break space */
-    font-weight:     var(--font-weight-semibold);
-    aria-hidden:     true;
+    content: "✓\00a0"; /* checkmark + narrow no-break space */
+    font-weight: var(--font-weight-semibold);
+    aria-hidden: true;
   }
 
   /* Focus ring on chip buttons uses the global :focus-visible rule above.
@@ -420,64 +423,66 @@
    * independent affordances that layer without colliding.
    */
   .cal-day {
-    display:         flex;
-    align-items:     center;
+    display: flex;
+    align-items: center;
     justify-content: center;
-    position:        relative;
-    min-width:       var(--spacing-tap);   /* ≥44 px tap target */
-    min-height:      var(--spacing-tap);   /* ≥44 px tap target */
-    margin-inline:   auto;   /* centers the fixed-size button within its <td> */
-    border-radius:   var(--radius-button);
-    font-size:       var(--font-size-body);
-    font-weight:     var(--font-weight-normal);
-    color:           var(--color-text-primary);
-    background:      transparent;
-    cursor:          pointer;
-    transition:      background 120ms ease, font-weight 120ms ease;
+    position: relative;
+    min-width: var(--spacing-tap); /* ≥44 px tap target */
+    min-height: var(--spacing-tap); /* ≥44 px tap target */
+    margin-inline: auto; /* centers the fixed-size button within its <td> */
+    border-radius: var(--radius-button);
+    font-size: var(--font-size-body);
+    font-weight: var(--font-weight-normal);
+    color: var(--color-text-primary);
+    background: transparent;
+    cursor: pointer;
+    transition:
+      background 120ms ease,
+      font-weight 120ms ease;
   }
 
   .cal-day:hover {
-    background:      var(--color-surface-2);
+    background: var(--color-surface-2);
   }
 
   /* Marked: bolder numeral + a small dot beneath it (shape, not color, carries
    * the signal — the dot uses accent as a secondary affordance only). */
   .cal-day--marked {
-    font-weight:     var(--font-weight-semibold);
+    font-weight: var(--font-weight-semibold);
   }
 
   .cal-day--marked::after {
-    content:         "";
-    position:        absolute;
-    bottom:          0.375rem; /* 6 px */
-    width:           0.25rem;  /* 4 px */
-    height:          0.25rem;  /* 4 px */
-    border-radius:   9999px;
-    background:      var(--color-accent);
+    content: "";
+    position: absolute;
+    bottom: 0.375rem; /* 6 px */
+    width: 0.25rem; /* 4 px */
+    height: 0.25rem; /* 4 px */
+    border-radius: 9999px;
+    background: var(--color-accent);
   }
 
   /* Selected: a background fill + weight change marks the day whose entries
    * are showing in the detail panel below the grid. */
   .cal-day--selected {
-    background:      var(--color-surface-2);
-    font-weight:     var(--font-weight-semibold);
+    background: var(--color-surface-2);
+    font-weight: var(--font-weight-semibold);
   }
 
   /* Empty: no entries — muted text, non-interactive. The today ring still
    * applies if --today is also present. */
   .cal-day--empty {
-    color:           var(--color-text-muted);
-    cursor:          default;
+    color: var(--color-text-muted);
+    cursor: default;
   }
 
   .cal-day--empty:hover {
-    background:      transparent;
+    background: transparent;
   }
 
   /* Today: an outline ring distinguishes the current day by shape, separate
    * from the focus-visible ring (which uses outline, not box-shadow). */
   .cal-day--today {
-    box-shadow:      inset 0 0 0 1.5px var(--color-border-strong);
+    box-shadow: inset 0 0 0 1.5px var(--color-border-strong);
   }
 
   /* ── Admin visitor selectors ───────────────────────────────────────── */
@@ -532,7 +537,11 @@
 
   .admin-day--outside,
   .admin-week-day--outside {
-    color: color-mix(in srgb, var(--color-text-muted) 72%, var(--color-surface-1));
+    color: color-mix(
+      in srgb,
+      var(--color-text-muted) 72%,
+      var(--color-surface-1)
+    );
   }
 
   .admin-week-row {
@@ -581,7 +590,11 @@
   .admin-week-day--outside,
   .admin-week-day--selected.admin-week-day--outside,
   .admin-week-row:hover .admin-week-day--outside {
-    color: color-mix(in srgb, var(--color-text-muted) 72%, var(--color-surface-1));
+    color: color-mix(
+      in srgb,
+      var(--color-text-muted) 72%,
+      var(--color-surface-1)
+    );
   }
 
   .admin-week-day--today::before {
@@ -620,40 +633,40 @@
    * Body gets padding-bottom so content isn't hidden behind the bar.
    */
   .bottom-nav {
-    position:        fixed;
-    bottom:          0;
-    left:            0;
-    right:           0;
-    z-index:         40;
-    background:      var(--color-surface-0);
-    border-top:      1px solid var(--color-border);
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 40;
+    background: var(--color-surface-0);
+    border-top: 1px solid var(--color-border);
   }
 
   .bottom-nav__inner {
-    display:         flex;
-    align-items:     end;
+    display: flex;
+    align-items: end;
     justify-content: space-around;
-    width:           100%;
-    max-width:       48rem;
-    height:          64px;
-    margin-inline:   auto;
-    padding-inline:  1rem;
-    padding-bottom:  env(safe-area-inset-bottom, 0);
+    width: 100%;
+    max-width: 48rem;
+    height: 64px;
+    margin-inline: auto;
+    padding-inline: 1rem;
+    padding-bottom: env(safe-area-inset-bottom, 0);
   }
 
   .bottom-nav-tab {
-    display:         flex;
-    flex-direction:  column;
-    align-items:     center;
-    gap:             2px;
-    padding-block:   6px;
-    min-width:       0;
-    flex:            1;
-    color:           var(--color-text-muted);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding-block: 6px;
+    min-width: 0;
+    flex: 1;
+    color: var(--color-text-muted);
     text-decoration: none;
-    font-size:       var(--font-size-micro);
-    line-height:     var(--line-height-tight);
-    transition:      color 150ms ease;
+    font-size: var(--font-size-micro);
+    line-height: var(--line-height-tight);
+    transition: color 150ms ease;
   }
 
   .bottom-nav-tab:hover {
@@ -661,7 +674,11 @@
   }
 
   .bottom-nav-tab--active {
-    color: var(--color-obsidian);
+    color: var(--color-accent);
+  }
+
+  [data-theme="dark"] .bottom-nav-tab--active {
+    color: var(--color-accent);
   }
 
   .bottom-nav-tab svg {
