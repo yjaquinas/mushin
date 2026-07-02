@@ -65,6 +65,8 @@ _DEFAULT_TZ = ZoneInfo("UTC")
 _NUM_KINDS = frozenset({"count", "scale"})
 _TEXT_KINDS = frozenset({"level", "result"})
 _SCALAR_KINDS = _NUM_KINDS | _TEXT_KINDS
+_MEMO_MAX_CHARS = 1000
+_MEMO_MAX_LINES = 10
 
 
 class EntryNotFoundError(LookupError):
@@ -77,6 +79,20 @@ class SubTallyNotFoundError(LookupError):
 
 class PayloadError(ValueError):
     """Raised when a payload references field_defs/tags outside the sub-tally."""
+
+
+def _normalize_memo(memo: str | None) -> str | None:
+    """Validate and normalize free-text entry notes."""
+    if memo is None:
+        return None
+    normalized = str(memo).strip()
+    if not normalized:
+        return None
+    if len(normalized) > _MEMO_MAX_CHARS:
+        raise PayloadError("memo exceeds max characters")
+    if len(normalized.splitlines()) > _MEMO_MAX_LINES:
+        raise PayloadError("memo exceeds max lines")
+    return normalized
 
 
 # ---------------------------------------------------------------------------
@@ -492,6 +508,8 @@ def create(
     Returns the hydrated entry dict.
     """
     payload = payload or {}
+    payload = dict(payload)
+    payload["memo"] = _normalize_memo(payload.get("memo"))
     occurred = _normalize_occurred_at(occurred_at)
 
     with db.connect() as conn:
@@ -605,6 +623,7 @@ def update(
         if row is None:
             raise EntryNotFoundError(f"entry {entry_id} not found for owner {owner_id}")
         activity_id = row["activity_id"]
+        memo = _normalize_memo(memo)
 
         assignments = ["memo = ?", "updated_at = ?"]
         assignment_params: list[Any] = [memo, _now_iso()]
@@ -809,7 +828,7 @@ def payload_from_form(form: Any, field_defs: list[sqlite3.Row]) -> tuple[dict[st
         elif kind == "memo":
             raw_memo = form.get(f"value_{fid}")
             if raw_memo:
-                memo = str(raw_memo)
+                memo = _normalize_memo(str(raw_memo))
         # 'level' / 'result' / 'match_list' fields are not part of quick-add v1.
 
     payload: dict[str, Any] = {"tags": sorted(selected_tags), "values": values}

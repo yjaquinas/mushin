@@ -38,6 +38,14 @@
     <main class="mx-auto flex w-full max-w-screen-md grow flex-col gap-4 px-4 py-4">
         {% block content %}{% endblock %}
     </main>
+    <div
+        id="toast"
+        hidden
+        role="status"
+        aria-live="polite"
+        data-toast-variant="informative"
+        class="pointer-events-none fixed inset-x-4 bottom-24 z-50 mx-auto max-w-screen-sm rounded-card border px-4 py-3 text-body shadow-soft"
+    ></div>
 
     {# Bottom navigation bar — always visible. #}
     <nav class="bottom-nav" aria-label="{{ strings.NAV_HOME }}">

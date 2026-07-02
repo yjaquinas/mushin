@@ -23,4 +23,4 @@
 #}
 {% from "components/_entry_row.html.jinja2" import entry_row %}
 
-{{ entry_row(entry, activity_id, is_owner=True, can_comment=True, username=username, slug=slug) }}
+{{ entry_row(entry, activity_id, is_owner=True, can_comment=True, username=username, slug=slug, expand_comment_entry_id=expand_comment_entry_id | default(None)) }}

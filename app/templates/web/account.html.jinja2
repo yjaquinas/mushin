@@ -4,11 +4,7 @@
 
 {% block content %}
 {% if flash_message %}
-<p
-    role="status"
-    class="rounded-card border border-border bg-surface-2 px-4 py-2 text-caption font-medium text-text-primary"
-    data-flash-dismiss
->{{ flash_message }}</p>
+<div hidden data-toast-message="{{ flash_message }}"></div>
 {% endif %}
 
 {# Visibility/share-link section is non-guest only — guests have no username

@@ -25,6 +25,11 @@ from app.routes.web._shared import templates
 from app.services import _db, comments, entries, profiles
 
 EntryNotFoundError = entries.EntryNotFoundError
+PayloadError = entries.PayloadError
+
+
+def _render_template_html(name: str, context: dict[str, Any]) -> str:
+    return templates.env.get_template(name).render(context)
 
 
 def _build_edit_fields_context(
@@ -108,6 +113,7 @@ def _render_entry_row(
             "entry": entry,
             "username": username,
             "slug": slug,
+            "expand_comment_entry_id": entry["id"],
         },
     )
 
@@ -129,6 +135,7 @@ async def update_entry_body(
     Ownership checks are the caller's responsibility (same as the GET).
     """
     tz = users.get_user_timezone(owner_id)
+    now = datetime.now(tz)
 
     try:
         existing = entries.get(owner_id, entry_id)
@@ -183,18 +190,53 @@ async def update_entry_body(
         raw_memo = str(form.get("memo") or "").strip()
         memo = raw_memo or None
 
-    updated = entries.update(
-        owner_id,
-        entry_id,
-        memo=memo,
-        occurred_at=occurred_at,
-        time_known=time_known,
-        values=values if values else None,
-        tags=all_tag_ids,
-        tz=tz,
-    )
+    try:
+        updated = entries.update(
+            owner_id,
+            entry_id,
+            memo=memo,
+            occurred_at=occurred_at,
+            time_known=time_known,
+            values=values if values else None,
+            tags=all_tag_ids,
+            tz=tz,
+        )
+    except PayloadError:
+        return HTMLResponse(status_code=422)
 
-    return _render_entry_row(request, activity_id, owner_id, updated)
+    user = users.get_user(owner_id)
+    username = user.get("username") if user is not None else None
+
+    with db.connect() as conn:
+        conn.execute("BEGIN")
+        activity_row = profiles.get_activity_for_owner(
+            conn, activity_id=activity_id, owner_id=owner_id
+        )
+        slug = activity_row["slug"] if activity_row is not None else None
+        counts = comments.counts_for_entries(conn, [updated["id"]])
+
+    updated = dict(updated)
+    updated["comment_count"] = counts.get(updated["id"], 0)
+    row_html = _render_template_html(
+        "components/entry_row.html.jinja2",
+        {
+            "activity_id": activity_id,
+            "entry": updated,
+            "username": username,
+            "slug": slug,
+            "expand_comment_entry_id": updated["id"],
+        },
+    )
+    row_html = row_html.replace(
+        f'<li id="entry-row-{updated["id"]}"',
+        f'<li id="entry-row-{updated["id"]}" hx-swap-oob="outerHTML"',
+        1,
+    )
+    dialog_reset = f'<div id="entry-edit-dialog-{updated["id"]}"></div>'
+    return HTMLResponse(
+        content=f"{row_html}{dialog_reset}",
+        status_code=200,
+    )
 
 
 async def log_sheet_body(
@@ -210,6 +252,7 @@ async def log_sheet_body(
     expands inline in the activity detail page instead of opening as a modal.
     """
     tz = users.get_user_timezone(owner_id)
+    now = datetime.now(tz)
 
     with db.connect() as conn:
         conn.execute("BEGIN")
@@ -232,7 +275,9 @@ async def log_sheet_body(
         "activity_id": activity_id,
         "name": row["name"],
         "fields": fields,
-        "today": datetime.now(tz).strftime("%Y-%m-%d"),
+        "today": now.strftime("%Y-%m-%d"),
+        "time_known": True,
+        "time_value": now.strftime("%H:%M"),
         "inline": inline,
     }
     return templates.TemplateResponse(

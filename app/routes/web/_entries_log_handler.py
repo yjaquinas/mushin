@@ -17,6 +17,7 @@ from app.models import db
 from app.routes.web._contexts import _field_defs_for_activity
 from app.routes.web._shared import templates
 from app.services import competition, entries
+from app.services.entries import PayloadError
 
 
 async def create_log_body(
@@ -47,7 +48,10 @@ async def create_log_body(
             return HTMLResponse(status_code=404)
         field_defs = _field_defs_for_activity(conn, activity_id)
 
-    result = entries.create_log_from_form(owner_id, activity_id, form, field_defs, tz=tz)
+    try:
+        result = entries.create_log_from_form(owner_id, activity_id, form, field_defs, tz=tz)
+    except PayloadError:
+        return HTMLResponse(status_code=422)
     has_match_list = result["has_match_list"]
 
     html = ""

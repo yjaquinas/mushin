@@ -625,13 +625,20 @@
     left:            0;
     right:           0;
     z-index:         40;
+    background:      var(--color-surface-0);
+    border-top:      1px solid var(--color-border);
+  }
+
+  .bottom-nav__inner {
     display:         flex;
     align-items:     end;
     justify-content: space-around;
+    width:           100%;
+    max-width:       48rem;
     height:          64px;
+    margin-inline:   auto;
+    padding-inline:  1rem;
     padding-bottom:  env(safe-area-inset-bottom, 0);
-    background:      var(--color-surface-0);
-    border-top:      1px solid var(--color-border);
   }
 
   .bottom-nav-tab {

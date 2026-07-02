@@ -70,12 +70,28 @@ async def get_entry_edit_form(
         conn.execute("BEGIN")
         if not _db.exists(conn, "activity", owner_id, where="id = ?", params=(activity_id,)):
             return HTMLResponse(status_code=404)
+        activity_row = _db.fetch_one(
+            conn,
+            "activity",
+            owner_id,
+            where="id = ?",
+            params=(activity_id,),
+            columns="name",
+        )
         fields = _build_edit_fields_context(conn, owner_id, activity_id, entry)
 
     return templates.TemplateResponse(
         request=request,
         name="components/entry_edit_form.html.jinja2",
-        context={"activity_id": activity_id, "entry": entry, "fields": fields},
+        context={
+            "activity_id": activity_id,
+            "entry": entry,
+            "fields": fields,
+            "activity_name": activity_row["name"] if activity_row is not None else "",
+            "today": entry["occurred_at"][:10],
+            "time_known": entry["time_known"] == 1,
+            "time_value": entry["occurred_at"][11:16] if entry["time_known"] == 1 else "",
+        },
     )
 
 

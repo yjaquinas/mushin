@@ -32,6 +32,7 @@ DialogManager.prototype = {
 
     // Window keydown → Escape closes.
     this._keydown = function (e) {
+      if (el.hasAttribute("data-disable-escape-close")) return;
       if (e.key === "Escape") {
         dialogManagerRegistry.remove(this);
         this.close();
@@ -41,6 +42,7 @@ DialogManager.prototype = {
 
     // Backdrop click (outside the dialog panel) → close.
     this._overlayClick = function (e) {
+      if (el.hasAttribute("data-disable-backdrop-close")) return;
       var panel = el.querySelector('[role="dialog"]');
       if (panel && !panel.contains(e.target)) {
         dialogManagerRegistry.remove(this);

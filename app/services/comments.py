@@ -39,6 +39,9 @@ from app.services import profiles
 
 log = structlog.get_logger()
 
+_COMMENT_MAX_CHARS = 200
+_COMMENT_MAX_LINES = 5
+
 
 class CommentNotFoundError(LookupError):
     """Raised when a comment row doesn't exist (or is already soft-deleted)."""
@@ -154,6 +157,10 @@ def create_comment(conn: sqlite3.Connection, entry_id: int, *, author_id: int, b
     trimmed = body.strip()
     if not trimmed:
         raise ValueError("comment body must not be empty")
+    if len(trimmed) > _COMMENT_MAX_CHARS:
+        raise ValueError("comment body exceeds max characters")
+    if len(trimmed.splitlines()) > _COMMENT_MAX_LINES:
+        raise ValueError("comment body exceeds max lines")
 
     cur = conn.execute(
         "INSERT INTO comment (entry_id, author_id, body, created_at) VALUES (?, ?, ?, ?)",

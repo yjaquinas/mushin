@@ -14,9 +14,12 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.auth import sessions, users
 from app.routes.web._shared import (
+    _clear_flash,
     THEME_COOKIE,
     THEME_CYCLE,
     _current_user,
+    _read_flash,
+    _set_flash,
     _theme_from_cookie,
     templates,
 )
@@ -47,10 +50,11 @@ async def account_settings(
     if user is None:
         return RedirectResponse(url="/", status_code=303)
     is_guest = user["auth_provider"] == "guest"
-    return templates.TemplateResponse(
+    response = templates.TemplateResponse(
         request=request,
         name="web/account.html.jinja2",
         context={
+            "flash_message": _read_flash(request),
             "is_guest": is_guest,
             "username": user["username"],
             "visibility": user["visibility"],
@@ -59,6 +63,8 @@ async def account_settings(
             "show_back": False,
         },
     )
+    _clear_flash(response)
+    return response
 
 
 @router.post("/account", response_model=None)
@@ -66,7 +72,7 @@ async def update_visibility(
     request: Request,
     visibility: Annotated[str | None, Form()],
     session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
-) -> HTMLResponse:
+) -> RedirectResponse | HTMLResponse:
     """Change the current account's ``visibility`` from the settings page.
 
     Validates *visibility* against ``users.VALID_VISIBILITIES`` (400 otherwise),
@@ -86,23 +92,12 @@ async def update_visibility(
     if visibility not in users.VALID_VISIBILITIES:
         return HTMLResponse(status_code=400)
     users.set_visibility_consent(int(user["id"]), visibility)
-    return templates.TemplateResponse(
-        request=request,
-        name="web/account.html.jinja2",
-        context={
-            "is_guest": False,
-            "username": user["username"],
-            "visibility": visibility,
-            "current_page": "account",
-            "page_title": strings.ACCOUNT_TITLE,
-            "show_back": False,
-            "flash_message": (
-                strings.HOME_FLASH_VISIBILITY_PUBLIC
-                if visibility == "public"
-                else strings.HOME_FLASH_VISIBILITY_PRIVATE
-            ),
-        },
+    response = RedirectResponse(url="/account", status_code=303)
+    _set_flash(
+        response,
+        "visibility_public" if visibility == "public" else "visibility_private",
     )
+    return response
 
 
 @router.post("/delete", response_model=None)

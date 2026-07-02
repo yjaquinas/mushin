@@ -9,18 +9,86 @@
     if (el) el.removeAttribute("hidden");
   }
 
-  function setCommentToggleState(slotId, open) {
-    if (!slotId) return;
-    document.querySelectorAll('[data-comment-toggle][data-comment-slot="' + slotId + '"]').forEach(function (button) {
-      button.setAttribute("aria-expanded", open ? "true" : "false");
-      button.classList.toggle("text-accent-text", open);
-      button.classList.toggle("text-text-muted", !open);
+  var toastTimer = null;
+  var TOAST_VARIANT_CLASSES = {
+    informative: ["border-border", "bg-surface-2", "text-text-primary"],
+    warning: ["border-accent", "bg-accent-subtle", "text-accent-text"],
+    error: ["border-danger", "bg-danger-subtle", "text-danger"]
+  };
+
+  function applyToastVariant(toast, variant) {
+    if (!toast) return;
+    Object.keys(TOAST_VARIANT_CLASSES).forEach(function (key) {
+      TOAST_VARIANT_CLASSES[key].forEach(function (className) {
+        toast.classList.remove(className);
+      });
     });
+    (TOAST_VARIANT_CLASSES[variant] || TOAST_VARIANT_CLASSES.informative).forEach(function (className) {
+      toast.classList.add(className);
+    });
+    toast.dataset.toastVariant = variant;
+  }
+
+  function showToast(message, variant) {
+    if (!message) return;
+    var toast = document.getElementById("toast");
+    if (!toast) return;
+    applyToastVariant(toast, variant || "informative");
+    toast.textContent = message;
+    show(toast);
+    if (toastTimer) window.clearTimeout(toastTimer);
+    toastTimer = window.setTimeout(function () {
+      hide(toast);
+      toast.textContent = "";
+    }, 2500);
   }
 
   function syncCommentToggle(target) {
     if (!target || !target.id || !target.id.startsWith("comment-slot-")) return;
-    setCommentToggleState(target.id, target.childElementCount > 0);
+  }
+
+  function setEntryExpandedState(entryId, open) {
+    if (!entryId) return;
+    document.querySelectorAll('[data-entry-toggle][data-entry-id="' + entryId + '"]').forEach(function (button) {
+      button.setAttribute("aria-expanded", open ? "true" : "false");
+
+      var indicator = button.querySelector("[data-entry-comment-indicator]");
+      if (!indicator) return;
+
+      var collapsedIcon = indicator.querySelector("[data-entry-comment-icon-collapsed]");
+      var expandedIcon = indicator.querySelector("[data-entry-comment-icon-expanded]");
+
+      if (collapsedIcon) {
+        if (open) hide(collapsedIcon);
+        else show(collapsedIcon);
+      }
+
+      if (expandedIcon) {
+        if (open) show(expandedIcon);
+        else hide(expandedIcon);
+      }
+    });
+
+    document.querySelectorAll("#entry-expanded-" + entryId).forEach(function (panel) {
+      if (open) show(panel);
+      else hide(panel);
+    });
+  }
+
+  function maybeLoadEntryComments(entryId) {
+    var slot = document.getElementById("comment-slot-" + entryId);
+    var loader = document.getElementById("comment-loader-" + entryId);
+    if (!slot || !loader || slot.childElementCount > 0) return;
+    if (window.htmx) window.htmx.trigger(loader, "load-comments");
+  }
+
+  function syncExpandedEntries(root) {
+    (root || document).querySelectorAll("[data-entry-toggle]").forEach(function (button) {
+      var entryId = button.getAttribute("data-entry-id");
+      var open = button.getAttribute("aria-expanded") === "true";
+      setEntryExpandedState(entryId, open);
+      if (open) maybeLoadEntryComments(entryId);
+    });
   }
 
   function syncHistoryFocus(target) {
@@ -59,29 +127,95 @@
     saveButton.disabled = !selected || selected.value === currentValue;
   }
 
-  function closeInlineLogSheet() {
-    hide(document.getElementById("log-panel"));
-    var panel = document.getElementById("log-panel");
-    if (panel) panel.innerHTML = "";
+  function resetLogTrigger() {
     var trigger = document.querySelector("[data-log-trigger]");
     if (trigger) trigger.setAttribute("aria-expanded", "false");
-    var icon = document.querySelector('[id^="log-trigger-icon-"]');
-    if (icon) icon.classList.remove("rotate-45");
   }
 
   function resetFormFields(form) {
     if (!form) return;
     form.reset();
     form.querySelectorAll("[data-toggle-time]").forEach(function (checkbox) {
-      var timeBlock = checkbox.closest("label");
-      timeBlock = timeBlock ? timeBlock.nextElementSibling : null;
-      if (timeBlock) {
-        if (checkbox.checked) {
-          show(timeBlock);
-        } else {
-          hide(timeBlock);
-        }
+      var fieldGroup = checkbox.closest("[data-time-field-group]");
+      var timeInput = fieldGroup ? fieldGroup.querySelector('input[type="time"]') : null;
+      if (!timeInput) return;
+      if (checkbox.checked) {
+        hide(timeInput);
+        timeInput.disabled = true;
+      } else {
+        show(timeInput);
+        timeInput.disabled = false;
       }
+    });
+  }
+
+  function autosizeTextarea(textarea) {
+    if (!textarea) return;
+    textarea.style.height = "auto";
+    textarea.style.height = textarea.scrollHeight + "px";
+  }
+
+  function formatBoundedCount(value) {
+    return Number(value || 0).toLocaleString("en-US");
+  }
+
+  function enforceBoundedTextareaLimits(textarea) {
+    if (!textarea) return;
+
+    var value = textarea.value;
+    var maxChars = parseInt(textarea.dataset.boundedMaxChars || textarea.dataset.commentMaxChars || "0", 10);
+    var maxLines = parseInt(textarea.dataset.boundedMaxLines || textarea.dataset.commentMaxLines || "0", 10);
+    var lineCount = value.length === 0 ? 1 : value.split("\n").length;
+    var lastValidValue = textarea.dataset.lastValidValue || "";
+
+    if (maxChars > 0 && value.length > maxChars) {
+      textarea.value = lastValidValue;
+      showToast(textarea.dataset.boundedMaxCharsMessage || textarea.dataset.commentMaxCharsMessage, "warning");
+      autosizeTextarea(textarea);
+      return;
+    }
+
+    if (maxLines > 0 && lineCount > maxLines) {
+      textarea.value = lastValidValue;
+      showToast(textarea.dataset.boundedMaxLinesMessage || textarea.dataset.commentMaxLinesMessage, "warning");
+      autosizeTextarea(textarea);
+      return;
+    }
+
+    textarea.dataset.lastValidValue = value;
+  }
+
+  function updateBoundedTextareaCharCount(textarea) {
+    if (!textarea) return;
+    var container = textarea.parentElement;
+    if (!container) return;
+    var counter = container.querySelector("[data-bounded-char-count]") || container.querySelector("[data-comment-char-count]");
+    if (!counter) return;
+    var maxChars = textarea.dataset.boundedMaxChars || textarea.dataset.commentMaxChars || textarea.getAttribute("maxlength") || "";
+    counter.textContent = formatBoundedCount(textarea.value.length) + "/" + formatBoundedCount(maxChars);
+  }
+
+  function syncCommentFormState(scope) {
+    (scope || document).querySelectorAll("[data-comment-form]").forEach(function (form) {
+      var textarea = form.querySelector('textarea[name="body"]');
+      if (!textarea) return;
+      if (textarea.dataset.lastValidValue === undefined) {
+        textarea.dataset.lastValidValue = textarea.value;
+      }
+      enforceBoundedTextareaLimits(textarea);
+      autosizeTextarea(textarea);
+      updateBoundedTextareaCharCount(textarea);
+    });
+  }
+
+  function syncBoundedTextareas(scope) {
+    (scope || document).querySelectorAll("[data-bounded-textarea]").forEach(function (textarea) {
+      if (textarea.dataset.lastValidValue === undefined) {
+        textarea.dataset.lastValidValue = textarea.value;
+      }
+      enforceBoundedTextareaLimits(textarea);
+      autosizeTextarea(textarea);
+      updateBoundedTextareaCharCount(textarea);
     });
   }
 
@@ -118,50 +252,30 @@
     var logTrigger = event.target.closest("[data-log-trigger]");
     if (logTrigger) {
       var open = logTrigger.getAttribute("aria-expanded") === "true";
-      var panel = document.getElementById("log-panel");
-      var iconEl = document.querySelector('[id^="log-trigger-icon-"]');
       if (open) {
         logTrigger.setAttribute("aria-expanded", "false");
-        if (panel) {
-          hide(panel);
-          panel.innerHTML = "";
-        }
-        if (iconEl) iconEl.classList.remove("rotate-45");
         event.preventDefault();
         return;
       }
 
       logTrigger.setAttribute("aria-expanded", "true");
-      if (panel) show(panel);
-      if (iconEl) iconEl.classList.add("rotate-45");
       return;
     }
 
-    var commentClose = event.target.closest("[data-comment-close]");
-    if (commentClose) {
-      var closeSlot = commentClose.getAttribute("data-comment-slot");
-      var closeTarget = closeSlot ? document.getElementById(closeSlot) : null;
-      if (closeTarget) {
-        closeTarget.innerHTML = "";
-        setCommentToggleState(closeSlot, false);
-      }
+    var entryCollapse = event.target.closest("[data-entry-collapse]");
+    if (entryCollapse) {
+      var collapseId = entryCollapse.getAttribute("data-entry-id");
+      setEntryExpandedState(collapseId, false);
       return;
     }
 
-    var commentToggle = event.target.closest("[data-comment-toggle]");
-    if (commentToggle) {
-      var slotId = commentToggle.getAttribute("data-comment-slot");
-      var slot = slotId ? document.getElementById(slotId) : null;
-      var expanded = commentToggle.getAttribute("aria-expanded") === "true";
-      if (expanded && slot) {
-        slot.innerHTML = "";
-        setCommentToggleState(slotId, false);
-        event.preventDefault();
-        event.stopPropagation();
-        if (typeof event.stopImmediatePropagation === "function") {
-          event.stopImmediatePropagation();
-        }
-      }
+    var entryToggle = event.target.closest("[data-entry-toggle]");
+    if (entryToggle) {
+      var entryId = entryToggle.getAttribute("data-entry-id");
+      var expanded = entryToggle.getAttribute("aria-expanded") === "true";
+      setEntryExpandedState(entryId, !expanded);
+      if (!expanded) maybeLoadEntryComments(entryId);
+      event.preventDefault();
       return;
     }
   }, true);
@@ -173,23 +287,59 @@
     }
 
     if (!event.target.matches("[data-toggle-time]")) return;
-    var timeBlock = event.target.closest("label");
-    timeBlock = timeBlock ? timeBlock.nextElementSibling : null;
-    if (!timeBlock) return;
+    var fieldGroup = event.target.closest("[data-time-field-group]");
+    var timeInput = fieldGroup ? fieldGroup.querySelector('input[type="time"]') : null;
+    if (!timeInput) return;
     if (event.target.checked) {
-      show(timeBlock);
+      hide(timeInput);
+      timeInput.disabled = true;
     } else {
-      hide(timeBlock);
+      show(timeInput);
+      timeInput.disabled = false;
     }
   });
 
+  document.addEventListener("input", function (event) {
+    if (event.target.matches('[data-comment-form] textarea[name="body"]')) {
+      enforceBoundedTextareaLimits(event.target);
+      autosizeTextarea(event.target);
+      updateBoundedTextareaCharCount(event.target);
+      return;
+    }
+
+    if (!event.target.matches("[data-bounded-textarea]")) return;
+    enforceBoundedTextareaLimits(event.target);
+    autosizeTextarea(event.target);
+    updateBoundedTextareaCharCount(event.target);
+  });
+
+  document.addEventListener("submit", function (event) {
+    var form = event.target.closest("[data-comment-form]");
+    if (!form) return;
+    var textarea = form.querySelector('textarea[name="body"]');
+    if (!textarea) return;
+    if (textarea.value.trim().length === 0) {
+      textarea.value = "";
+      textarea.dataset.lastValidValue = "";
+      autosizeTextarea(textarea);
+      updateBoundedTextareaCharCount(textarea);
+    }
+  }, true);
+
   document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll("[data-toast-message]").forEach(function (messageNode) {
+      showToast(messageNode.dataset.toastMessage, messageNode.dataset.toastVariant || "informative");
+      messageNode.remove();
+    });
     document.querySelectorAll("[data-flash-dismiss]").forEach(function (flash) {
       window.setTimeout(function () {
         flash.remove();
       }, 5000);
     });
     syncVisibilityForm();
+    syncExpandedEntries(document);
+    syncCommentFormState(document);
+    syncBoundedTextareas(document);
   });
 
   document.body.addEventListener("htmx:afterSwap", function (event) {
@@ -198,6 +348,9 @@
     syncHomeCards(target);
     syncVisibilityForm();
     syncCommentToggle(target);
+    syncExpandedEntries(target);
+    syncCommentFormState(target);
+    syncBoundedTextareas(target);
   });
 
   document.body.addEventListener("htmx:afterRequest", function (event) {
@@ -208,10 +361,7 @@
     }
 
     if (elt && elt.matches("[data-log-trigger]")) {
-      var panel = document.getElementById("log-panel");
-      if (panel) show(panel);
-      var icon = document.querySelector('[id^="log-trigger-icon-"]');
-      if (icon) icon.classList.remove("rotate-45");
+      return;
     }
   });
 
@@ -219,7 +369,7 @@
     document.querySelectorAll("#log-sheet-inline form, #log-sheet-dialog form").forEach(function (form) {
       resetFormFields(form);
     });
-    closeInlineLogSheet();
+    resetLogTrigger();
     hide(document.getElementById("log-sheet-dialog"));
   });
 })();

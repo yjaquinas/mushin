@@ -64,7 +64,11 @@
       return;
     }
 
-    if (target.id.startsWith("entry-delete-dialog-") || target.id.startsWith("comment-delete-dialog-")) {
+    if (
+      target.id.startsWith("entry-delete-dialog-") ||
+      target.id.startsWith("comment-delete-dialog-") ||
+      target.id.startsWith("entry-edit-dialog-")
+    ) {
       dynamicDialogs[target.id] = initDialog(target.id) || dynamicDialogs[target.id];
       autoOpenDialog(target.id, dynamicDialogs[target.id]);
     }

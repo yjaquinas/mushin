@@ -93,7 +93,9 @@ extract a shared helper in the nearest `_` companion module.
 
 SVG icons should live as standalone files and be rendered through shared
 template utilities. Do not inline SVG in templates. Keep icon styling
-consistent and based on `currentColor`.
+consistent and based on `currentColor`. For mobile-facing icon buttons,
+prefer larger glyph sizes (roughly `18-20` px) inside the existing tap
+targets to reduce fat-finger misses.
 
 Context processors, globals, and filters must be registered once and reused by
 every template surface.

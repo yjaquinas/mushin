@@ -1,0 +1,111 @@
+{#
+  Shared entry form fields used by both the new-entry dialog and the edit-entry
+  dialog. Renders the activity-specific field list, date/time picker, notes
+  textarea, and the bottom action row.
+
+  Context: fields (field-priority order), today (YYYY-MM-DD), submit_label,
+           cancel_label, cancel_button_id (optional), cancel_dialog_close
+           (optional), notes_value (str, default ""), has_tag_group (bool).
+#}
+<div class="flex flex-col gap-2" data-time-field-group>
+    <div class="flex flex-col gap-1">
+        <label for="date" class="text-caption font-medium text-text-secondary">
+            {{ strings.LOG_OCCURRED_AT_LABEL }}
+        </label>
+        <input
+            type="date"
+            id="date"
+            name="date"
+            value="{{ today }}"
+            required
+            class="min-h-tap rounded-input border border-border bg-surface-1 px-3 py-2 text-body text-text-primary focus-visible:outline-2"
+        >
+    </div>
+    <div class="flex flex-col gap-1">
+      <div class="flex items-center justify-between gap-2">
+
+        <label for="time" class="text-caption font-medium text-text-secondary">
+            {{ strings.LOG_TIME_LABEL }}
+        </label>
+        <label class="flex min-h-tap items-center gap-2 text-body text-text-secondary">
+            <input
+                type="checkbox"
+                name="no_time"
+                class="rounded border-border"
+                data-toggle-time
+                {% if not time_known | default(false) %}checked{% endif %}
+            >
+            {{ strings.LOG_TIME_NONE }}
+        </label>
+      </div>
+        <input
+            type="time"
+            id="time"
+            name="time"
+            value="{{ time_value | default("") }}"
+            {% if not time_known | default(false) %}disabled{% endif %}
+            class="min-h-tap rounded-input border border-border bg-surface-1 px-3 py-2 text-body text-text-primary focus-visible:outline-2"
+            {% if not time_known | default(false) %}hidden{% endif %}
+        >
+    </div>
+</div>
+
+{% for field in fields %}
+    {% if field.kind == "tag_group" %}
+        {% include "components/tag_group.html.jinja2" with context %}
+    {% elif field.kind in ("count", "scale") %}
+        <div class="flex flex-col gap-1">
+            <label for="value_{{ field.id }}" class="text-caption font-medium text-text-secondary">
+                {{ field.label }}
+            </label>
+            <input
+                type="number"
+                inputmode="decimal"
+                step="any"
+                id="value_{{ field.id }}"
+                name="value_{{ field.id }}"
+                class="min-h-tap rounded-input border border-border bg-surface-1 px-3 py-2 text-body text-text-primary focus-visible:outline-2"
+            >
+        </div>
+    {% elif field.kind == "match_list" %}
+        {% set rows = field.rows %}
+        {% include "components/match_rows.html.jinja2" with context %}
+    {% elif field.kind == "memo" and not has_tag_group %}
+        <div class="flex flex-col gap-1">
+            <label for="value_{{ field.id }}" class="text-caption font-medium text-text-secondary">
+                {{ strings.LOG_MEMO_LABEL }}
+            </label>
+            <textarea
+                id="value_{{ field.id }}"
+                name="value_{{ field.id }}"
+                rows="3"
+                placeholder="{{ strings.LOG_MEMO_PLACEHOLDER }}"
+                data-bounded-textarea
+                data-bounded-max-lines="10"
+                data-bounded-max-chars="1000"
+                data-bounded-max-lines-message="{{ strings.LOG_NOTES_MAX_LINES_REACHED }}"
+                data-bounded-max-chars-message="{{ strings.LOG_NOTES_MAX_CHARS_REACHED }}"
+                class="resize-none overflow-hidden rounded-input border border-border bg-surface-1 px-3 py-2 text-body text-text-primary focus-visible:outline-2"
+            >{{ notes_value | default("") }}</textarea>
+            <span class="self-end text-caption text-text-muted" data-bounded-char-count>{{ notes_value | default("") | length }}/1,000</span>
+        </div>
+    {% endif %}
+{% endfor %}
+
+<div class="flex items-center gap-2">
+    <button
+        type="submit"
+        hx-disabled-elt="this"
+        class="min-h-tap flex-1 rounded-button bg-brand px-4 py-3 text-title font-semibold text-on-brand transition focus-visible:outline-offset-2 disabled:opacity-60"
+    >
+        {{ submit_label }}
+    </button>
+    <button
+        type="button"
+        {% if cancel_button_id %}id="{{ cancel_button_id }}"{% endif %}
+        {% if cancel_dialog_close %}data-dialog-close="{{ cancel_dialog_close }}"{% endif %}
+        class="min-h-tap rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline-offset-2"
+    >
+        {{ cancel_label }}
+    </button>
+</div>

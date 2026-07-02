@@ -59,12 +59,12 @@ async def privacy(request: Request) -> HTMLResponse:
     )
 
 
-@router.get("/", response_class=HTMLResponse)
+@router.get("/", response_class=HTMLResponse, response_model=None)
 async def index(
     request: Request,
     session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
-) -> HTMLResponse:
-    """First-run entry screen, or the character-sheet home for a known session."""
+) -> HTMLResponse | RedirectResponse:
+    """Entry screen for logged-out visitors, permanent redirect for known users."""
     user = _current_user(session)
     if user is None:
         demo_username = os.getenv("DEMO_PROFILE_USERNAME", "")
@@ -78,7 +78,7 @@ async def index(
                 "current_page": None,
             },
         )
-    return await _render_home(request, user)
+    return RedirectResponse(url=_home_url_for(user), status_code=308)
 
 
 @router.get("/login", response_class=HTMLResponse, response_model=None)

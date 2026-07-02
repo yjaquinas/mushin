@@ -41,28 +41,20 @@
     </form>
 </div>
 {% else %}
-<div
-    id="log-sheet-dialog"
-    hidden
-    class="flex max-h-[90vh] w-full max-w-screen-sm flex-col gap-4 overflow-y-auto rounded-t-card bg-surface-1 p-4 sm:rounded-card"
->
-    <header class="flex items-center justify-between">
-        <h2 class="text-title font-semibold text-text-primary">{{ name }}</h2>
-        <button
-            type="button"
-            id="log-sheet-cancel"
-            class="min-h-tap min-w-tap rounded-button px-3 text-body text-text-secondary transition hover:bg-surface-2"
-        >
-            {{ strings.LOG_CANCEL }}
-        </button>
-    </header>
-
-    <form
-        hx-post="/activities/{{ activity_id }}/log"
-        hx-swap="none"
-        class="flex flex-col gap-4"
-    >
-        {% include "components/_log_form_body.html.jinja2" with context %}
-    </form>
-</div>
+{% set dialog_id = "log-sheet-dialog" %}
+{% set form_action = "/activities/" ~ activity_id ~ "/log" %}
+{% set form_swap = "none" %}
+{% set title = name %}
+{% set submit_label = strings.LOG_SUBMIT %}
+{% set cancel_label = strings.LOG_CANCEL %}
+{% set cancel_button_id = "log-sheet-cancel" %}
+{% set auto_open = true %}
+{% set disable_backdrop_close = true %}
+{% set disable_escape_close = true %}
+{% set show_delete_button = false %}
+{% set delete_url = None %}
+{% set delete_target = None %}
+{% set form_target = None %}
+{% set notes_value = "" %}
+{% include "components/entry_form_dialog.html.jinja2" with context %}
 {% endif %}
