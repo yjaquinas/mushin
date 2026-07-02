@@ -29,11 +29,11 @@ Output shape
 ::
 
     {
-        "schema_version": 1,
+        "schema_version": 2,
         "exported_at": "<ISO 8601 UTC timestamp, e.g. 2026-06-12T09:30:00Z>",
         "data": {
             "categories": [...],
-            "sub_tallies": [...],
+            "activities": [...],
             "field_defs": [...],
             "tags": [...],
             "entries": [...],
@@ -100,12 +100,12 @@ from app.models import db
 from app.models.db import connect
 from app.services import entries
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 # Columns to emit per table, in declaration order. ``owner_id`` and the derived
 # cache columns are intentionally absent — see the module docstring.
 _CATEGORY_COLUMNS = ("id", "name", "color", "icon", "sort_order", "archived_at", "created_at")
-_SUB_TALLY_COLUMNS = (
+_ACTIVITY_COLUMNS = (
     "id",
     "category_id",
     "name",
@@ -144,7 +144,7 @@ def export_data(owner_id: int) -> dict[str, Any]:
         conn.execute("BEGIN")
         # Parent tables: directly owner-scoped.
         categories = _select(conn, "category", _CATEGORY_COLUMNS, "owner_id = ?", (owner_id,))
-        sub_tallies = _select(conn, "activity", _SUB_TALLY_COLUMNS, "owner_id = ?", (owner_id,))
+        activities = _select(conn, "activity", _ACTIVITY_COLUMNS, "owner_id = ?", (owner_id,))
         tags = _select(conn, "tag", _TAG_COLUMNS, "owner_id = ?", (owner_id,))
         entries = _select(conn, "entry", _ENTRY_COLUMNS, "owner_id = ?", (owner_id,))
         matches = _select(conn, "match", _MATCH_COLUMNS, "owner_id = ?", (owner_id,))
@@ -180,7 +180,7 @@ def export_data(owner_id: int) -> dict[str, Any]:
         "exported_at": _now_iso_utc(),
         "data": {
             "categories": categories,
-            "sub_tallies": sub_tallies,
+            "activities": activities,
             "field_defs": field_defs,
             "tags": tags,
             "entries": entries,
@@ -325,7 +325,7 @@ MAX_TEXT_LEN = 500
 # the key-set check in ``_validate_payload`` — never validated, never inserted.
 _DATA_TABLES = (
     "categories",
-    "sub_tallies",
+    "activities",
     "field_defs",
     "tags",
     "entries",
@@ -389,7 +389,7 @@ _TABLE_SPECS: dict[str, dict[str, str]] = {
         "archived_at": _NULL_TEXT,
         "created_at": _TEXT,
     },
-    "sub_tallies": {
+    "activities": {
         "id": _INT,
         "category_id": _INT,
         "name": _TEXT,
@@ -446,7 +446,7 @@ _TABLE_SPECS: dict[str, dict[str, str]] = {
 # Per-table length caps: column -> max length. Only listed columns are capped.
 _LENGTH_CAPS: dict[str, dict[str, int]] = {
     "categories": {"name": MAX_NAME_LEN},
-    "sub_tallies": {"name": MAX_NAME_LEN},
+    "activities": {"name": MAX_NAME_LEN},
     "tags": {"name": MAX_NAME_LEN},
     "field_defs": {"label": MAX_NAME_LEN},
     "entries": {"memo": MAX_TEXT_LEN},
@@ -456,7 +456,7 @@ _LENGTH_CAPS: dict[str, dict[str, int]] = {
 
 # Per-table enum constraints: column -> allowed value set.
 _ENUM_CAPS: dict[str, dict[str, frozenset[str]]] = {
-    "sub_tallies": {"count_mode": _COUNT_MODES},
+    "activities": {"count_mode": _COUNT_MODES},
     "field_defs": {"kind": _FIELD_KINDS},
     "matches": {"result": _MATCH_RESULTS},
 }
@@ -475,7 +475,7 @@ def import_data(owner_id: int, payload: dict[str, Any]) -> dict[str, int]:
     foreign keys remapped to those fresh keys. Every inserted row gets
     ``owner_id = owner_id`` (the authenticated caller's id) set explicitly —
     nothing in the payload can override the owner. Finally, each imported
-    sub-tally's cache (``cached_count`` / ``cached_streak`` / ``last_entry_at``)
+    activity's cache (``cached_count`` / ``cached_streak`` / ``last_entry_at``)
     is rebuilt from the imported entries.
 
     Returns a per-table count of inserted rows.
@@ -495,8 +495,8 @@ def import_data(owner_id: int, payload: dict[str, Any]) -> dict[str, int]:
         # (entries.recompute opens its own connection and would not see these
         # still-uncommitted rows). _refresh_cache uses the identical truth-from-
         # entries computation that recompute does, so values match exactly.
-        for new_sub_id in activity_ids:
-            entries._refresh_cache(conn, new_sub_id, owner_id)
+        for new_activity_id in activity_ids:
+            entries._refresh_cache(conn, new_activity_id, owner_id)
 
     return summary
 
@@ -645,7 +645,7 @@ def _validate_references(data: dict[str, list[dict[str, Any]]]) -> None:
     """Check every payload-internal foreign-key reference resolves within the
     payload's own tables (these are pre-remap export ids, not live-DB ids)."""
     category_ids = {r["id"] for r in data["categories"]}
-    activity_ids = {r["id"] for r in data["sub_tallies"]}
+    activity_ids = {r["id"] for r in data["activities"]}
     field_def_ids = {r["id"] for r in data["field_defs"]}
     tag_ids = {r["id"] for r in data["tags"]}
     entry_ids = {r["id"] for r in data["entries"]}
@@ -656,8 +656,8 @@ def _validate_references(data: dict[str, list[dict[str, Any]]]) -> None:
                 f"{table}[{i}].{col} references an id not present in the payload"
             )
 
-    for i, r in enumerate(data["sub_tallies"]):
-        _require("sub_tallies", i, "category_id", r["category_id"], category_ids)
+    for i, r in enumerate(data["activities"]):
+        _require("activities", i, "category_id", r["category_id"], category_ids)
     for i, r in enumerate(data["field_defs"]):
         _require("field_defs", i, "activity_id", r["activity_id"], activity_ids)
     for i, r in enumerate(data["tags"]):
@@ -701,13 +701,13 @@ def _insert_payload(
     """Insert every payload row with fresh PKs and remapped FKs.
 
     Returns ``(summary, new_activity_ids)`` where *summary* is a per-table
-    inserted-row count and *new_activity_ids* are the freshly-assigned sub-tally
+    inserted-row count and *new_activity_ids* are the freshly-assigned activity
     ids (for the post-insert cache rebuild). Insert order respects dependencies:
-    categories → sub_tallies → field_defs → tags → entries →
+    categories → activities → field_defs → tags → entries →
     (entry_tags, entry_values, matches).
     """
     cat_map: dict[int, int] = {}
-    sub_map: dict[int, int] = {}
+    activity_map: dict[int, int] = {}
     field_map: dict[int, int] = {}
     tag_map: dict[int, int] = {}
     entry_map: dict[int, int] = {}
@@ -729,7 +729,7 @@ def _insert_payload(
         )
         cat_map[r["id"]] = cur.lastrowid
 
-    for r in data["sub_tallies"]:
+    for r in data["activities"]:
         cur = conn.execute(
             "INSERT INTO activity"
             " (owner_id, category_id, name, count_mode, config_json, sort_order,"
@@ -746,14 +746,14 @@ def _insert_payload(
                 r["created_at"],
             ),
         )
-        sub_map[r["id"]] = cur.lastrowid
+        activity_map[r["id"]] = cur.lastrowid
 
     for r in data["field_defs"]:
         cur = conn.execute(
             "INSERT INTO field_def (activity_id, kind, label, config_json, sort_order)"
             " VALUES (?, ?, ?, ?, ?)",
             (
-                sub_map[r["activity_id"]],
+                activity_map[r["activity_id"]],
                 r["kind"],
                 r["label"],
                 r["config_json"],
@@ -784,7 +784,7 @@ def _insert_payload(
             " VALUES (?, ?, ?, ?, ?, ?)",
             (
                 owner_id,
-                sub_map[r["activity_id"]],
+                activity_map[r["activity_id"]],
                 r["occurred_at"],
                 r["memo"],
                 r["created_at"],
@@ -826,4 +826,4 @@ def _insert_payload(
         )
 
     summary = {table: len(data[table]) for table in _DATA_TABLES}
-    return summary, list(sub_map.values())
+    return summary, list(activity_map.values())

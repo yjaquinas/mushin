@@ -1,4 +1,4 @@
-"""Slug generation for sub-tally public URLs (``/u/{username}/{slug}``).
+"""Slug generation for activity public URLs (``/u/{username}/{slug}``).
 
 Renderer-agnostic: no HTTP, no templates. ``slugify`` is a pure function;
 ``unique_slug`` adds a per-owner uniqueness check against the DB.
@@ -13,7 +13,7 @@ so a slug minted at create-time is indistinguishable from a back-filled one:
 * trim leading/trailing ``-``,
 * fall back to a non-empty placeholder when nothing alphanumeric survives.
 
-The migration's placeholder is ``sub-tally-<id>`` (it has a row id). A *new*
+The migration's placeholder is a legacy row-id-based fallback value. A *new*
 row has no id yet, so :func:`slugify` falls back to ``"activity"`` and
 :func:`unique_slug` lets the numeric-suffix collision logic disambiguate.
 
@@ -62,7 +62,8 @@ _ACCENT_FOLD = str.maketrans(
 )
 
 #: Fallback when a name slugifies to nothing (the migration used
-#: ``sub-tally-<id>``; a not-yet-inserted row has no id, so use this and let
+#: the legacy row-id-based fallback form; a not-yet-inserted row has no id, so
+#: use this and let
 #: :func:`unique_slug` append a numeric suffix if it collides).
 FALLBACK_SLUG = "activity"
 
@@ -93,7 +94,7 @@ def slugify(name: str) -> str:
 
 
 def unique_slug(conn: sqlite3.Connection, owner_id: int, name: str) -> str:
-    """Return a slug for *name* unique among *owner_id*'s active sub-tallies.
+    """Return a slug for *name* unique among *owner_id*'s active activities.
 
     Slugifies *name*, then checks ``activity(owner_id, slug)`` among
     non-archived rows. On collision it appends ``-2``, ``-3``, ... to the base
@@ -101,7 +102,7 @@ def unique_slug(conn: sqlite3.Connection, owner_id: int, name: str) -> str:
 
     Operates on an already-open connection (the caller owns the transaction
     boundary) so the slug can be chosen inside the same transaction as the
-    sub-tally INSERT. ``owner_id`` is required — the lookup is always scoped.
+    activity INSERT. ``owner_id`` is required — the lookup is always scoped.
     """
     base = slugify(name)
     candidate = base
@@ -113,7 +114,7 @@ def unique_slug(conn: sqlite3.Connection, owner_id: int, name: str) -> str:
 
 
 def _slug_taken(conn: sqlite3.Connection, owner_id: int, slug: str) -> bool:
-    """Whether *slug* is already used by an active sub-tally of *owner_id*."""
+    """Whether *slug* is already used by an active activity of *owner_id*."""
     row = conn.execute(
         "SELECT 1 FROM activity WHERE owner_id = ? AND slug = ? AND archived_at IS NULL LIMIT 1",
         (owner_id, slug),

@@ -3,6 +3,7 @@
 {% block title %}{{ strings.ACCOUNT_TITLE }} · {{ strings.APP_NAME }}{% endblock %}
 
 {% block content %}
+<div class="flex flex-grow flex-col">
 {% if flash_message %}
 <div hidden data-toast-message="{{ flash_message }}"></div>
 {% endif %}
@@ -122,4 +123,14 @@
     {% include "components/delete_account_confirm.html.jinja2" %}
 </section>
 {% endif %}
+
+<section class="flex flex-grow flex-col items-center justify-end gap-3 pt-4">
+    <a href="/privacy" class="text-caption text-text-secondary focus-visible:outline-offset-2">
+        {{ strings.ACCOUNT_PRIVACY_LINK }}
+    </a>
+    <a href="/terms" class="text-caption text-text-secondary focus-visible:outline-offset-2">
+        {{ strings.ACCOUNT_TERMS_LINK }}
+    </a>
+</section>
+</div>
 {% endblock %}

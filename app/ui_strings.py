@@ -121,7 +121,7 @@ MATCH_LIST_REMOVE_ROW = "Remove"
 # Sub-tally detail screen
 # ---------------------------------------------------------------------------
 
-# Inline rename form (sub-tally heading)
+# Inline rename form (activity heading)
 RENAME_SLUG_NOTICE = "Renaming will change your share link. The old link will stop working."
 RENAME_LABEL = "Rename activity"
 RENAME_SAVE = "Save"
@@ -136,7 +136,7 @@ ACTIVITY_DELETE_CONFIRM = "Delete activity"
 ACTIVITY_DELETE_CANCEL = "Keep"
 
 # ---------------------------------------------------------------------------
-# Competition stats (tournament sub-tallies with a match_list field)
+# Competition stats (tournament activities with a match_list field)
 # ---------------------------------------------------------------------------
 
 STATS_TITLE = "Record"
@@ -241,7 +241,7 @@ DELETE_DATA_CANCEL = "Go back"
 
 # Import-data confirm dialog (footer)
 IMPORT_DATA_TITLE = "Replace all data with this file?"
-IMPORT_DATA_BODY = "This replaces everything currently stored under this account — activities, sub-tallies, entries, and memos — with the contents of the uploaded file. This can't be undone."
+IMPORT_DATA_BODY = "This replaces everything currently stored under this account — categories, activities, entries, and memos — with the contents of the uploaded file. This can't be undone."
 IMPORT_DATA_FILE_LABEL = "Export file (.json)"
 IMPORT_DATA_CONFIRM = "Replace my data"
 IMPORT_DATA_CANCEL = "Go back"
@@ -287,6 +287,8 @@ VISIBILITY_CONSENT_SUBMIT = "Continue"
 # Same factual, no-alarm register as the consent screen. The toggle restates
 # the consequence briefly on each change (not the full first-run explainer).
 ACCOUNT_TITLE = "Account"
+ACCOUNT_PRIVACY_LINK = "Privacy Policy"
+ACCOUNT_TERMS_LINK = "Terms of Service"
 
 ACCOUNT_VISIBILITY_HEADING = "Who can see your record"
 # The username doubles as a public handle — frame it as the share link.
@@ -374,6 +376,7 @@ REDEFINITION_ACKNOWLEDGE = "Got it"
 # ---------------------------------------------------------------------------
 
 PRIVACY_PAGE_TITLE = "Privacy Policy"
+TERMS_PAGE_TITLE = "Terms of Service"
 
 # ---------------------------------------------------------------------------
 # Public profiles (/@{username}, /@{username}/{slug})

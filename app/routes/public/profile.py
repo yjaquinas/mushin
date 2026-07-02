@@ -41,7 +41,7 @@ from app.routes.web import (
     _build_home_context,
     _clear_flash,
     _home_url_for,
-    _list_sub_tallies,
+    _list_activities,
     _read_flash,
     consent_gate_redirect,
 )
@@ -73,8 +73,8 @@ def _read_only_profile_context(
     ``connections.relationship_state``.
     """
     linked = cap in ("connected", "public")
-    sub_tallies = _list_sub_tallies(conn, owner_id)
-    cards = [_build_card_context(conn, owner_id, row, tz=tz, linked=linked) for row in sub_tallies]
+    activities = _list_activities(conn, owner_id)
+    cards = [_build_card_context(conn, owner_id, row, tz=tz, linked=linked) for row in activities]
     fellows_context = _build_fellows_context(owner_id, viewer_id=current_uid, is_owner=False)
     state = (
         connections.relationship_state(current_uid, owner_id) if current_uid is not None else "none"

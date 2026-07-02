@@ -1,32 +1,21 @@
-"""Create activity + activity detail (owner dashboard for one activity)."""
+"""Thin route declarations for activity creation and owner detail pages."""
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
-from typing import Annotated, Any
+from typing import Annotated
 
 from fastapi import APIRouter, Cookie, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
-from app import ui_strings
-from app.auth import sessions, users
-from app.models import db
-from app.routes.web._calendar_context import _resolve_comment_deep_link
-from app.routes.web._contexts import _build_card_context, _field_defs_for_activity
-from app.routes.web._history_context import (
-    _build_card_top_tags,
-    _build_field_stats_context,
-    _build_history_context,
+from app.auth import sessions
+from app.routes.web._activities_handlers import (
+    activity_detail_response,
+    create_activity_response,
+    new_activity_response,
 )
-from app.routes.web._shared import _current_user, templates
-from app.services import categories, competition, profiles, stats
+from app.routes.web._shared import _current_user
 
 router = APIRouter()
-
-
-# ---------------------------------------------------------------------------
-# Create activity
-# ---------------------------------------------------------------------------
 
 
 @router.get("/activities/new", response_class=HTMLResponse)
@@ -43,12 +32,7 @@ async def new_activity(
     user = _current_user(session)
     if user is None:
         return RedirectResponse(url="/", status_code=303)
-
-    return templates.TemplateResponse(
-        request=request,
-        name="components/category_sheet.html.jinja2",
-        context={},
-    )
+    return new_activity_response(request)
 
 
 @router.post("/activities", response_model=None)
@@ -65,67 +49,7 @@ async def create_activity(
     user = _current_user(session)
     if user is None:
         return RedirectResponse(url="/", status_code=303)
-    owner_id = int(user["id"])
-
-    name = name.strip()
-    if not name:
-        if request.headers.get("HX-Request") == "true":
-            return templates.TemplateResponse(
-                request=request,
-                name="components/category_form.html.jinja2",
-                context={
-                    "hx_post": "/activities",
-                    "hx_target": "#cards",
-                    "hx_swap": "beforeend",
-                    "name_error": ui_strings.ACTIVITY_FORM_NAME_REQUIRED,
-                },
-                status_code=400,
-            )
-
-        return RedirectResponse(url="/home", status_code=303)
-
-    # Reject duplicate active-activity names for this owner.
-    with db.connect() as conn:
-        if conn.execute(
-            "SELECT 1 FROM category"
-            " WHERE owner_id = ? AND LOWER(name) = LOWER(?) AND archived_at IS NULL"
-            " LIMIT 1",
-            (owner_id, name),
-        ).fetchone():
-            if request.headers.get("HX-Request") == "true":
-                return templates.TemplateResponse(
-                    request=request,
-                    name="components/category_form.html.jinja2",
-                    context={
-                        "hx_post": "/activities",
-                        "hx_target": "#cards",
-                        "hx_swap": "beforeend",
-                        "name_error": ui_strings.ACTIVITY_FORM_NAME_DUPLICATE,
-                    },
-                    status_code=400,
-                )
-            return RedirectResponse(url="/home", status_code=303)
-
-    result = categories.create_activity(owner_id, name=name)
-
-    with db.connect() as conn:
-        slug = conn.execute(
-            "SELECT slug FROM activity WHERE id = ? AND owner_id = ?",
-            (result["activity_id"], owner_id),
-        ).fetchone()["slug"]
-
-    username = user.get("username")
-    if username is not None:
-        dest = profiles.canonical_activity_url(username, slug)
-        response = HTMLResponse(content="", status_code=201)
-        response.headers["HX-Redirect"] = dest
-        return response
-    return RedirectResponse(url="/home", status_code=303)
-
-
-# ---------------------------------------------------------------------------
-# Activity detail
-# ---------------------------------------------------------------------------
+    return create_activity_response(request, user, name)
 
 
 @router.get("/activities/{activity_id}", response_class=HTMLResponse, response_model=None)
@@ -147,84 +71,4 @@ async def activity_detail(
     user = _current_user(session)
     if user is None:
         return RedirectResponse(url="/", status_code=303)
-    owner_id = int(user["id"])
-    tz = users.get_user_timezone(owner_id)
-
-    with db.connect() as conn:
-        conn.execute("BEGIN")
-        row = profiles.get_activity_for_owner(conn, activity_id=activity_id, owner_id=owner_id)
-        if row is None:
-            return HTMLResponse(status_code=404)
-
-        # Redirect active, slugged activities to the canonical URL —
-        # only when the owner has a username (guests have username=None and
-        # have no public profile URL to redirect to).
-        username = user.get("username")
-        if username is not None and row["slug"] is not None and row["archived_at"] is None:
-            return RedirectResponse(
-                url=profiles.canonical_activity_url(username, row["slug"]), status_code=301
-            )
-
-        sub_row = conn.execute(
-            """SELECT st.id, st.name, st.slug, st.count_mode, st.cached_count, st.cached_streak,
-                      st.last_entry_at, st.category_id, c.name AS category_name, c.icon AS icon
-                 FROM activity st
-                 JOIN category c ON c.id = st.category_id
-                WHERE st.id = ? AND st.owner_id = ?""",
-            (activity_id, owner_id),
-        ).fetchone()
-        if sub_row is None:
-            return HTMLResponse(status_code=404)
-        field_defs = _field_defs_for_activity(conn, activity_id)
-        has_match_list = any(fd["kind"] == "match_list" for fd in field_defs)
-        card = _build_card_context(conn, owner_id, sub_row, tz=tz)
-
-    context: dict[str, Any] = {"card": card}
-
-    if has_match_list:
-        context["record"] = competition.record(owner_id, activity_id)
-        context["timeline"] = competition.results_timeline(owner_id, activity_id)
-        context["head_to_head"] = competition.head_to_head(owner_id, activity_id)
-    else:
-        context["record"] = None
-        context["timeline"] = []
-        context["head_to_head"] = []
-
-    today = datetime.now(UTC).date()
-
-    # `?c={entry_id}` (a notification click-through) pre-selects that entry's
-    # calendar day and pre-expands its comment thread. Silently ignored — no
-    # error, no 500 — when missing/non-numeric/unknown/cross-activity.
-    deep_link = _resolve_comment_deep_link(
-        request.query_params.get("c"), activity_id=activity_id, owner_id=owner_id, tz=tz
-    )
-    expand_comment_entry_id, selected_day = deep_link if deep_link is not None else (None, None)
-
-    context["activity_id"] = activity_id
-    cs = stats.card_stats(activity_id, owner_id, tz=tz)
-    context["counts"] = cs["counts"]
-    context["streaks"] = cs["streaks"]
-    context["heatmap"] = cs["heatmap"]
-    context["top_tags"] = _build_card_top_tags(activity_id, owner_id, field_defs, tz=tz)
-    context["history"] = _build_history_context(
-        activity_id,
-        owner_id,
-        period="month",
-        anchor=selected_day or today,
-        tz=tz,
-        selected=selected_day,
-        is_owner=True,
-        can_comment=True,
-        username=username,
-        slug=sub_row["slug"],
-        expand_comment_entry_id=expand_comment_entry_id,
-    )
-    context["field_stats"] = _build_field_stats_context(activity_id, owner_id, field_defs, tz=tz)
-    context["public_notice"] = None
-    context["is_owner"] = True
-
-    return templates.TemplateResponse(
-        request=request,
-        name="web/activity_detail.html.jinja2",
-        context=context,
-    )
+    return activity_detail_response(request, activity_id, user)

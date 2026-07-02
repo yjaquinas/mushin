@@ -4,12 +4,12 @@ Renderer-agnostic: no HTTP, no Jinja, no HXML. Functions take ``owner_id`` as a
 required argument and return plain Python data structures (dicts) that either
 renderer can consume.
 
-An *entry* belongs to a sub-tally and is recipe-driven: its values are written
+An *entry* belongs to an activity and is recipe-driven: its values are written
 to ``entry_value`` (scalar count/scale/level/result fields) and ``entry_tag``
 (tag-group selections), plus a free-text ``memo`` on the entry row itself. The
-recipe is the set of ``field_def`` rows on the sub-tally; we validate every
-referenced field_def / tag actually belongs to that sub-tally and owner before
-writing, so a payload can't reach across sub-tallies or tenants.
+recipe is the set of ``field_def`` rows on the activity; we validate every
+referenced field_def / tag actually belongs to that activity and owner before
+writing, so a payload can't reach across activities or tenants.
 
 Cache discipline
 ----------------
@@ -73,12 +73,12 @@ class EntryNotFoundError(LookupError):
     """Raised when an entry doesn't exist for the given owner."""
 
 
-class SubTallyNotFoundError(LookupError):
-    """Raised when a sub-tally doesn't exist for the given owner."""
+class ActivityNotFoundError(LookupError):
+    """Raised when an activity doesn't exist for the given owner."""
 
 
 class PayloadError(ValueError):
-    """Raised when a payload references field_defs/tags outside the sub-tally."""
+    """Raised when a payload references field_defs/tags outside the activity."""
 
 
 def _normalize_memo(memo: str | None) -> str | None:
@@ -187,7 +187,7 @@ def _refresh_cache(
     owner_id: int,
     tz: ZoneInfo = _DEFAULT_TZ,
 ) -> dict[str, Any]:
-    """Recompute and persist the sub-tally cache. Caller owns the transaction.
+    """Recompute and persist the activity cache. Caller owns the transaction.
 
     *tz* defines the calendar day for the streak run (defaults to UTC for callers
     that rebuild caches without a user-timezone context, e.g. data import).
@@ -215,7 +215,7 @@ def _refresh_cache(
 
 
 def _field_defs_for(conn: sqlite3.Connection, activity_id: int) -> dict[int, str]:
-    """Map field_def id -> kind for a sub-tally (field_def has no owner_id column;
+    """Map field_def id -> kind for an activity (field_def has no owner_id column;
     ownership is enforced by joining through the owner-scoped activity)."""
     rows = conn.execute(
         "SELECT id, kind FROM field_def WHERE activity_id = ?",
@@ -230,7 +230,7 @@ def _validate_and_collect(
     activity_id: int,
     payload: dict[str, Any],
 ) -> tuple[list[tuple[int, str]], list[tuple[int, float | None, str | None]]]:
-    """Validate payload against the sub-tally recipe.
+    """Validate payload against the activity recipe.
 
     Returns ``(tag_rows, value_rows)`` ready to insert: ``tag_rows`` is a list of
     ``(tag_id,)`` selections and ``value_rows`` is a list of
@@ -260,7 +260,7 @@ def _validate_and_collect(
     tag_ids = [int(t) for t in (payload.get("tags") or [])]
     if tag_ids:
         placeholders = ",".join("?" for _ in tag_ids)
-        # Tags are owner-scoped AND must hang off a field_def on this sub-tally.
+        # Tags are owner-scoped AND must hang off a field_def on this activity.
         valid = {
             r["id"]
             for r in conn.execute(
@@ -430,7 +430,7 @@ def find_or_create_tags(
 
 def _require_activity(conn: sqlite3.Connection, owner_id: int, activity_id: int) -> None:
     if not _db.exists(conn, "activity", owner_id, where="id = ?", params=(activity_id,)):
-        raise SubTallyNotFoundError(f"activity {activity_id} not found for owner {owner_id}")
+        raise ActivityNotFoundError(f"activity {activity_id} not found for owner {owner_id}")
 
 
 # ---------------------------------------------------------------------------
@@ -564,7 +564,7 @@ def list_for_activity(
     *,
     limit: int | None = None,
 ) -> list[dict[str, Any]]:
-    """List a sub-tally's entries newest-first, scoped to *owner_id*.
+    """List an activity's entries newest-first, scoped to *owner_id*.
 
     Uses ``ORDER BY occurred_at DESC`` so the ``idx_entry_activity_time`` index
     serves the scan.
@@ -607,7 +607,7 @@ def update(
       values / tag selections (after the same recipe validation as create). When
       ``None``, they are left untouched.
 
-    If ``occurred_at`` changes, the owning sub-tally's cache is refreshed in the
+    If ``occurred_at`` changes, the owning activity's cache is refreshed in the
     same transaction (the entry's local calendar day, in *tz*, may shift, moving
     count/streak).
     """
@@ -647,8 +647,10 @@ def update(
         )
 
         if values is not None or tags is not None:
-            sub_payload = {"values": values or {}, "tags": tags or []}
-            tag_rows, value_rows = _validate_and_collect(conn, owner_id, activity_id, sub_payload)
+            activity_payload = {"values": values or {}, "tags": tags or []}
+            tag_rows, value_rows = _validate_and_collect(
+                conn, owner_id, activity_id, activity_payload
+            )
             if values is not None:
                 conn.execute("DELETE FROM entry_value WHERE entry_id = ?", (entry_id,))
                 for fid, num_value, text_value in value_rows:
@@ -682,7 +684,7 @@ def update(
 def delete(owner_id: int, entry_id: int, *, tz: ZoneInfo) -> bool:
     """Delete an entry, scoped to *owner_id*. Returns True if a row was removed.
 
-    The delete and the sub-tally cache refresh happen in one transaction (the
+    The delete and the activity cache refresh happen in one transaction (the
     streak is recomputed in the caller-supplied timezone *tz*). entry_tag /
     entry_value rows cascade via FK.
     """

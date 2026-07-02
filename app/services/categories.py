@@ -21,14 +21,14 @@ import structlog
 
 from app.models import db
 from app.services import _db
-from app.services.entries import SubTallyNotFoundError
+from app.services.entries import ActivityNotFoundError
 from app.services.slugs import unique_slug
 
 log = structlog.get_logger()
 
-#: Maximum length (characters) of a sub-tally name accepted by
+#: Maximum length (characters) of an activity name accepted by
 #: :func:`rename_activity`. Mirrors the cap used elsewhere for short names.
-RENAME_SUB_TALLY_MAX_NAME = 200
+RENAME_ACTIVITY_MAX_NAME = 200
 
 # ---------------------------------------------------------------------------
 # Importable constants — used by routes (the icon picker / example cards) and
@@ -63,7 +63,7 @@ EXAMPLE_CATEGORIES: list[dict[str, str]] = [
 
 
 # ---------------------------------------------------------------------------
-# General-log field recipe — the two field_def rows on the running sub-tally.
+# General-log field recipe — the two field_def rows on the running activity.
 # Labels/sort_order follow the conventions in seed_data.py.
 # ---------------------------------------------------------------------------
 
@@ -93,7 +93,7 @@ def create_activity(owner_id: int, *, name: str, icon: str | None = None) -> dic
       * one ``activity`` row (``count_mode="running"``, a per-owner-unique
         ``slug`` derived from *name*, cache fields at their DB defaults of
         ``0`` / ``NULL``),
-      * two ``field_def`` rows on that sub-tally: ``memo`` and ``tag_group``.
+      * two ``field_def`` rows on that activity: ``memo`` and ``tag_group``.
 
     Returns ``{"category_id": int, "activity_id": int}``.
 
@@ -146,7 +146,7 @@ def rename_activity(
     activity_id: int,
     new_name: str,
 ) -> str:
-    """Rename a sub-tally and re-derive its slug, returning the new slug.
+    """Rename an activity and re-derive its slug, returning the new slug.
 
     Operates on an *already-open* connection — the caller owns the transaction
     boundary (same convention as the ``_db`` helpers and the cache writes in
@@ -154,20 +154,20 @@ def rename_activity(
     consistent view and commit atomically with whatever else the caller does.
 
     *new_name* is trimmed of surrounding whitespace, then validated: it must be
-    non-empty and at most :data:`RENAME_SUB_TALLY_MAX_NAME` characters, else a
+    non-empty and at most :data:`RENAME_ACTIVITY_MAX_NAME` characters, else a
     :class:`ValueError`. The new slug is :func:`unique_slug` of the new name —
     so a name whose slug collides with one of *owner_id*'s other active
-    sub-tallies gets a ``-2`` (``-3``, ...) suffix.
+    activities gets a ``-2`` (``-3``, ...) suffix.
 
     The write is scoped by ``owner_id``: a *activity_id* not owned by
     *owner_id* (or that does not exist) updates zero rows and raises
-    :class:`~app.services.entries.SubTallyNotFoundError`.
+    :class:`~app.services.entries.ActivityNotFoundError`.
     """
     name = new_name.strip()
     if not name:
-        raise ValueError("sub-tally name must not be empty")
-    if len(name) > RENAME_SUB_TALLY_MAX_NAME:
-        raise ValueError(f"sub-tally name must be at most {RENAME_SUB_TALLY_MAX_NAME} characters")
+        raise ValueError("activity name must not be empty")
+    if len(name) > RENAME_ACTIVITY_MAX_NAME:
+        raise ValueError(f"activity name must be at most {RENAME_ACTIVITY_MAX_NAME} characters")
 
     slug = unique_slug(conn, owner_id, name)
 
@@ -181,7 +181,7 @@ def rename_activity(
         params=(activity_id,),
     )
     if rows == 0:
-        raise SubTallyNotFoundError(f"activity {activity_id} not found for owner {owner_id}")
+        raise ActivityNotFoundError(f"activity {activity_id} not found for owner {owner_id}")
 
     log.info(
         "categories.rename_activity",

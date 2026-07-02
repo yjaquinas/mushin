@@ -7,46 +7,22 @@ HX-Request header).
 
 from __future__ import annotations
 
-import os
 from typing import Annotated
 
 from fastapi import APIRouter, Cookie, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
-from app.auth import sessions, users
-from app.models import db
-from app.routes.web._contexts import _build_home_context
-from app.routes.web._shared import (
-    _clear_flash,
-    _current_user,
-    _home_url_for,
-    _read_flash,
-    consent_gate_redirect,
-    templates,
+from app.auth import sessions
+from app.routes.web._home_handlers import (
+    home_gate_response,
+    login_page_response,
+    redirect_logged_in_home,
+    render_entry_page,
+    render_home,
 )
-from app.services import profiles
+from app.routes.web._shared import _current_user, templates
 
 router = APIRouter()
-
-
-async def _render_home(request: Request, user: dict) -> HTMLResponse:
-    owner_id = int(user["id"])
-    tz = users.get_user_timezone(owner_id)
-    with db.connect() as conn:
-        conn.execute("BEGIN")
-        context = _build_home_context(conn, owner_id, tz)
-    context["flash_message"] = _read_flash(request)
-    context["current_page"] = "home"
-    context["page_title"] = None
-    context["show_back"] = False
-
-    response = templates.TemplateResponse(
-        request=request,
-        name="web/home.html.jinja2",
-        context=context,
-    )
-    _clear_flash(response)
-    return response
 
 
 @router.get("/privacy", response_class=HTMLResponse)
@@ -59,6 +35,16 @@ async def privacy(request: Request) -> HTMLResponse:
     )
 
 
+@router.get("/terms", response_class=HTMLResponse)
+async def terms(request: Request) -> HTMLResponse:
+    """The terms page. Reachable logged-out."""
+    return templates.TemplateResponse(
+        request=request,
+        name="web/terms.html.jinja2",
+        context={"current_page": None},
+    )
+
+
 @router.get("/", response_class=HTMLResponse, response_model=None)
 async def index(
     request: Request,
@@ -67,18 +53,8 @@ async def index(
     """Entry screen for logged-out visitors, permanent redirect for known users."""
     user = _current_user(session)
     if user is None:
-        demo_username = os.getenv("DEMO_PROFILE_USERNAME", "")
-        return templates.TemplateResponse(
-            request=request,
-            name="web/entry.html.jinja2",
-            context={
-                "active": "login",
-                "demo_username": demo_username,
-                "next": None,
-                "current_page": None,
-            },
-        )
-    return RedirectResponse(url=_home_url_for(user), status_code=308)
+        return render_entry_page(request)
+    return redirect_logged_in_home(user)
 
 
 @router.get("/login", response_class=HTMLResponse, response_model=None)
@@ -97,22 +73,8 @@ async def login(
     straight to the (validated) target, or their home/profile if there is
     none — there's nothing to log into here.
     """
-    safe_next = profiles.safe_next_path(next)
     user = _current_user(session)
-    if user is not None:
-        return RedirectResponse(url=safe_next or _home_url_for(user), status_code=303)
-
-    demo_username = os.getenv("DEMO_PROFILE_USERNAME", "")
-    return templates.TemplateResponse(
-        request=request,
-        name="web/entry.html.jinja2",
-        context={
-            "active": "login",
-            "demo_username": demo_username,
-            "next": safe_next,
-            "current_page": None,
-        },
-    )
+    return login_page_response(request, user, next)
 
 
 @router.get("/auth/login-form", response_class=HTMLResponse)
@@ -154,9 +116,7 @@ async def home(
     one-time visibility-consent gate for non-guest accounts.
     """
     user = _current_user(session)
-    if user is None:
-        return RedirectResponse(url="/", status_code=303)
-    gate = consent_gate_redirect(user)
+    gate = home_gate_response(user)
     if gate is not None:
         return gate
-    return await _render_home(request, user)
+    return await render_home(request, user)

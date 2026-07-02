@@ -8,174 +8,133 @@ centralization. #}
 <article class="flex flex-col gap-6 text-body leading-relaxed text-text-primary">
     <header class="flex flex-col gap-2">
         <h1 class="text-title font-semibold text-text-primary">Mushin (無心) Privacy Policy</h1>
+        <p class="text-text-secondary">Last updated: 2026-07-02</p>
     </header>
 
     <div class="rounded-card bg-surface-2 p-4 text-body text-text-primary">
         <p class="font-semibold">In short...</p>
         <p class="mt-2">
-            Mushin stores the activity entries you log so it can show your counts and
-            progress. Even if you use "Get started" without an account, your record
-            is stored on <strong>Mushin's servers</strong>, not just on your device.
-            Anything you write in a note is never sent to any outside company or AI
-            service. If you delete your account, your record and notes are deleted
-            together, and guest records are automatically removed after a period of
-            inactivity.
+            Mushin stores the account and activity data needed to run your record:
+            your username or guest account, your activities, entries, notes,
+            comments, connections, and account settings. You can export that data,
+            replace it by importing a Mushin export file, or delete it. Deleting
+            your account removes the data owned by that account, and inactive guest
+            accounts are removed automatically on a retention schedule.
         </p>
     </div>
 
     <p>
-        AQNAS ("we", "us", or "the operator") respects your privacy and is
-        committed to protecting the personal information you share with us. This
-        policy explains what information we collect, how we use it, and the
-        choices you have.
-    </p>
-    <p>
-        This policy applies to the personal progress tracking service "Mushin"
-        (https://mushin.aqnas.xyz, the "Service") provided by the operator.
+        This policy explains what AQNAS collects for the Mushin service, how it is
+        used, when it is deleted, and what controls you have over it.
     </p>
 
     <section class="flex flex-col gap-3">
-        <h2 class="text-title font-semibold text-text-primary">1. Information we collect</h2>
+        <h2 class="text-title font-semibold text-text-primary">1. What we collect</h2>
         <p>
-            We process personal information for everyone who uses the Service,
-            including guests who use it without creating an account. The specific
-            information depends on how you use the Service.
+            We collect the information needed to create and operate your Mushin
+            record. What we collect depends on how you use the service.
         </p>
 
-        <h3 class="text-body font-semibold text-text-primary">a. Account holders (social login — Google)</h3>
+        <h3 class="text-body font-semibold text-text-primary">a. Account identity and login data</h3>
         <ul class="list-disc pl-6">
-            <li>(Required) Your Google account identifier, email address, and profile name (used as your display name in the Service)</li>
-            <li>The scope we request from Google is <code>openid email profile</code>.</li>
-        </ul>
-
-        <h3 class="text-body font-semibold text-text-primary">b. Account holders (email/password signup)</h3>
-        <ul class="list-disc pl-6">
-            <li>(Required) Email address (used as your account identifier) and password</li>
             <li>
-                Your password is never stored or logged in plain text. It is stored
-                only as an irreversible <strong>Argon2id hash</strong>. We have no way
-                to see your original password.
+                If you create a password account, we collect your username, your
+                password hash, and your optional recovery email address.
+            </li>
+            <li>
+                Passwords are not stored in plain text. Mushin stores only an
+                Argon2id password hash.
+            </li>
+            <li>
+                If a deployment offers OAuth sign-in, Mushin may collect the
+                provider account identifier and profile name needed to attach that
+                identity to your account.
+            </li>
+            <li>
+                If you use Mushin as a guest, Mushin creates a guest account tied
+                to the signed session cookie in your browser.
             </li>
         </ul>
 
-        <h3 class="text-body font-semibold text-text-primary">c. Guests ("Get started" without an account)</h3>
+        <h3 class="text-body font-semibold text-text-primary">b. Account metadata</h3>
         <ul class="list-disc pl-6">
-            <li>
-                If you use the Service without signing up or logging in, we create an
-                <strong>anonymous server account</strong> linked to a <strong>device
-                identifier cookie</strong>.
-            </li>
-            <li>
-                We don't collect your name, email, or phone number this way, but
-                <strong>everything you log — entries, notes, and other data — is
-                stored on our servers (a SQLite database), not on your device.</strong>
-                Guest data is personal information and is protected the same way as
-                an account holder's data.
-            </li>
+            <li>Your timezone setting</li>
+            <li>Your visibility setting</li>
+            <li>Account timestamps such as created-at, last-active-at, and deletion status</li>
         </ul>
 
-        <h3 class="text-body font-semibold text-text-primary">
-            d. Information created while using the Service (account holders and guests alike, isolated per account)
-        </h3>
+        <h3 class="text-body font-semibold text-text-primary">c. Data you create in Mushin</h3>
         <ul class="list-disc pl-6">
-            <li>The activities (categories) and sub-tallies you create</li>
-            <li>
-                Entries: when something happened (<code>occurred_at</code>), any
-                <strong>free-text notes</strong> you write (we treat these as
-                potentially sensitive, since you can write anything — health
-                details, names, locations, etc.), selected tags, and numeric values
-                (counts, scales)
-            </li>
-            <li>Match records: opponent, score, and result</li>
-            <li>Account activity timestamps: when your account was created (<code>created_at</code>) and when you were last active (<code>last_active_at</code>)</li>
+            <li>Categories and activities</li>
+            <li>Entries, including occurred-at timestamps, notes, tags, and numeric values</li>
+            <li>Match records for competition-style activities</li>
+            <li>Comments you write on entries</li>
+            <li>Connection and block records used for fellows and profile access</li>
         </ul>
 
-        <h3 class="text-body font-semibold text-text-primary">e. Automatically collected information</h3>
+        <h3 class="text-body font-semibold text-text-primary">d. Technical and operational data</h3>
         <ul class="list-disc pl-6">
             <li>
-                Standard web server access logs (IP address, access time, browser and
-                device information, and other connection metadata) may be generated
-                automatically as you use the Service.
+                Standard connection metadata such as IP address, request time, and
+                browser or device information may appear in server and proxy logs.
             </li>
             <li>
-                Since our traffic passes through Cloudflare, Cloudflare may process
-                connection metadata such as your IP address (see section 4).
+                Mushin uses a signed session cookie to keep you logged in or to
+                keep a guest account attached to your browser session.
             </li>
         </ul>
     </section>
 
     <section class="flex flex-col gap-3">
-        <h2 class="text-title font-semibold text-text-primary">2. How we use your information</h2>
+        <h2 class="text-title font-semibold text-text-primary">2. How we use it</h2>
+        <ul class="list-disc pl-6">
+            <li>To create your account or guest record and keep you signed in</li>
+            <li>To store your activities, entries, notes, comments, and stats</li>
+            <li>To apply your visibility, fellow, and block settings</li>
+            <li>To let you export, import, or delete your data</li>
+            <li>To operate, secure, and troubleshoot the service</li>
+        </ul>
         <p>
-            We use the information we collect only for the purposes below. If that
-            ever changes, we'll update this policy and seek your consent as
-            required.
+            Mushin does not use your entries or notes for advertising, profiling,
+            or third-party analytics.
         </p>
-        <ol class="list-decimal pl-6">
-            <li><strong>Account identification and authentication</strong> — verifying who you are via social login or email/password, and keeping you signed in</li>
-            <li><strong>Providing the Service</strong> — storing and retrieving your entries, and powering totals, statistics, and streaks</li>
-            <li><strong>Guest mode and account switching</strong> — letting you use the Service without signing up, connecting your guest record to a real account later, and either deleting your guest data immediately or letting it expire under our retention schedule (section 3) when you switch to an existing account</li>
-            <li><strong>Operating and securing the Service</strong> — preventing abuse, troubleshooting, and maintaining security through access logs</li>
-            <li><strong>Responding to your requests</strong> — handling requests to access, correct, delete, or withdraw consent for your data</li>
-        </ol>
     </section>
 
     <section class="flex flex-col gap-3">
-        <h2 class="text-title font-semibold text-text-primary">3. How long we keep your information</h2>
+        <h2 class="text-title font-semibold text-text-primary">3. Who can see your data</h2>
         <p>
-            As a general rule, we delete personal information without delay once the
-            purpose for collecting it has been fulfilled. The specific retention
-            periods are below.
+            Mushin is a multi-user service, so some data can be visible to other
+            people depending on your settings.
         </p>
-
-        <h3 class="text-body font-semibold text-text-primary">a. Account holders (Google, email/password)</h3>
         <ul class="list-disc pl-6">
-            <li>Retention period: <strong>until you delete your account</strong></li>
             <li>
-                When you delete your account, all of your data (activities,
-                sub-tallies, tags, entries, notes, match records, and
-                so on) is deleted along with it (see section 5).
+                <strong>Private accounts:</strong> other people can still discover
+                your username and activity names, but they cannot open the private
+                activity detail pages or see your notes unless they are accepted
+                mutual connections ("fellows").
             </li>
-        </ul>
-
-        <h3 class="text-body font-semibold text-text-primary">b. Guests</h3>
-        <ul class="list-disc pl-6">
-            <li>Guests can delete their own data at any time using the delete control in the Service.</li>
             <li>
-                In addition, we run an automated retention job that removes guest data
-                under the following schedule:
-                <ul class="list-disc pl-6">
-                    <li><strong>Guests with no entries:</strong> removed automatically about <strong>7 days</strong> after the account is created</li>
-                    <li><strong>Inactive guests:</strong> removed automatically about <strong>30 days</strong> after the last activity</li>
-                </ul>
+                <strong>Public accounts:</strong> your full record, including
+                entries and notes, can be viewed by anyone with your profile link.
             </li>
-            <li>These periods are the current defaults and may be adjusted as we operate the Service.</li>
-        </ul>
-
-        <h3 class="text-body font-semibold text-text-primary">c. Web server access logs</h3>
-        <ul class="list-disc pl-6">
-            <li>Retention period: 30 days for operational and security purposes, or until log rotation</li>
-            <li>Access logs are deleted after this period.</li>
+            <li>
+                <strong>Fellows:</strong> accepted mutual connections can see the
+                full record, including notes, even if the account is otherwise
+                private.
+            </li>
+            <li>
+                Comments and connections are visible where needed for the shared
+                social features to work.
+            </li>
         </ul>
     </section>
 
     <section class="flex flex-col gap-3">
-        <h2 class="text-title font-semibold text-text-primary">4. Sharing and third-party processing</h2>
-
-        <h3 class="text-body font-semibold text-text-primary">a. Sharing with third parties</h3>
+        <h2 class="text-title font-semibold text-text-primary">4. Sharing and service providers</h2>
         <p>
-            We do not share your personal information with third parties beyond what
-            is described in this policy, except in the following cases:
-        </p>
-        <ul class="list-disc pl-6">
-            <li>You have given separate, prior consent</li>
-            <li>Disclosure is required by law or requested by a law enforcement agency through lawful procedure</li>
-        </ul>
-
-        <h3 class="text-body font-semibold text-text-primary">b. Service providers and third-party processing</h3>
-        <p>
-            To operate the Service reliably, we rely on the following third parties,
-            which may process your personal information:
+            Mushin does not sell your data. We share data only when needed to run
+            the service, comply with the law, or when you intentionally expose data
+            through Mushin's own sharing and visibility features.
         </p>
         <div class="overflow-x-auto">
             <table class="w-full border-collapse text-left text-caption">
@@ -183,375 +142,94 @@ centralization. #}
                     <tr class="border-b border-border">
                         <th class="py-2 pr-3 font-semibold text-text-primary">Provider</th>
                         <th class="py-2 pr-3 font-semibold text-text-primary">Purpose</th>
-                        <th class="py-2 font-semibold text-text-primary">Information processed</th>
+                        <th class="py-2 font-semibold text-text-primary">Data involved</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr class="border-b border-border">
-                        <td class="py-2 pr-3">Google</td>
-                        <td class="py-2 pr-3">Social login (authentication)</td>
-                        <td class="py-2">Google account identifier, email, name</td>
+                        <td class="py-2 pr-3">Cloudflare</td>
+                        <td class="py-2 pr-3">Traffic routing, DNS, TLS, and edge proxying</td>
+                        <td class="py-2">Connection metadata such as IP address</td>
                     </tr>
                     <tr class="border-b border-border">
-                        <td class="py-2 pr-3">Oracle Cloud</td>
-                        <td class="py-2 pr-3">Server and database hosting (data storage)</td>
-                        <td class="py-2">All data stored by the Service</td>
+                        <td class="py-2 pr-3">Server and database host</td>
+                        <td class="py-2 pr-3">Application hosting and storage</td>
+                        <td class="py-2">The account and activity data stored by Mushin</td>
                     </tr>
                     <tr>
-                        <td class="py-2 pr-3">Cloudflare</td>
-                        <td class="py-2 pr-3">DNS, TLS, CDN/proxy (traffic routing)</td>
-                        <td class="py-2">IP address and other connection metadata</td>
+                        <td class="py-2 pr-3">OAuth provider, if enabled</td>
+                        <td class="py-2 pr-3">Authentication</td>
+                        <td class="py-2">Provider identifier and profile details used for sign-in</td>
                     </tr>
                 </tbody>
             </table>
         </div>
-
-        <h3 class="text-body font-semibold text-text-primary">c. We don't send your data to outside APIs</h3>
         <p>
-            We <strong>never send your account data — including your notes, entries,
-            tags, or match records — to any third-party API.</strong>
-            Specifically:
-        </p>
-        <ul class="list-disc pl-6">
-            <li>We don't offer any summary or analysis features powered by external AI/LLM services,</li>
-            <li>We don't use third-party analytics tools, and</li>
-            <li>We don't use any external error-tracking tool that could log what you've typed.</li>
-        </ul>
-        <p>
-            If we ever introduce a feature like this in the future, we'll update this
-            policy in advance and only proceed after obtaining your
-            <strong>separate, explicit consent</strong> — never as a quiet addition.
-        </p>
-        <p>
-            The same applies to the export/import feature described in section 6: any
-            file you download or upload is generated and processed
-            <strong>entirely on our own server</strong>. No third-party API, AI/LLM
-            service, or analytics tool ever sees the contents of an export or import
-            file.
-        </p>
-
-        <h3 class="text-body font-semibold text-text-primary">d. Profile visibility (three tiers)</h3>
-        <p>
-            Every account holder has a <strong>visibility</strong> setting:
-            <strong>private</strong> (the default), <strong>public</strong>, or
-            the access a <strong>connection ("fellow")</strong> can be granted on
-            top of either. This setting controls what other people using the
-            Service — or anyone with your profile link — can see at
-            <code>mushin.aqnas.xyz/@{username}</code>. It is separate from, and
-            does not change, the third-party rules in section 4c above: changing
-            your visibility never sends any data to an outside company or AI/LLM
-            service, it only affects what other people on Mushin can see.
-        </p>
-        <ul class="list-disc pl-6">
-            <li>
-                <strong>Private (default):</strong> your profile page at
-                <code>/@{username}</code> shows your activity <strong>names</strong>
-                and their progress and counts to anyone with the link or
-                who finds you through search. It does <strong>not</strong> show
-                your individual entries or free-text notes. A non-connected
-                visitor cannot open an activity's detail page
-                (<code>/@{username}/{activity}</code>) on a private account — that
-                page redirects back to your profile instead.
-            </li>
-            <li>
-                <strong>Public:</strong> your entire record — including free-text
-                notes, individual entries, stats, and streaks —
-                is visible to anyone who has your profile link, whether or not they
-                have an account.
-            </li>
-            <li>
-                <strong>Connections (fellows):</strong> a mutual connection you've
-                separately granted sharing consent to (see "Connections" below) can
-                see your full record, including entries and notes, even while your
-                account is set to private.
-            </li>
-            <li>
-                Switching to public is your own explicit choice. Before it can take
-                effect for the first time, you're shown a one-time screen that plainly
-                explains what each setting shows. You can change this setting again at
-                any time from your account settings, and the change takes effect
-                immediately.
-            </li>
-            <li>
-                If you were already using a private account before this three-tier
-                model took effect, you were shown a one-time notice explaining what
-                changed before your activity names became visible under the new
-                rules.
-            </li>
-            <li>
-                <strong>Guest accounts cannot have a public profile.</strong> Guests
-                have no username and no <code>/@...</code> page, so this setting does
-                not apply to them.
-            </li>
-        </ul>
-
-        <h3 class="text-body font-semibold text-text-primary">e. Connections ("fellows")</h3>
-        <p>
-            You can send another account holder a connection request. A
-            connection only becomes mutual — a <strong>"fellow"</strong> — once
-            the other person accepts it; they can also decline it.
-        </p>
-        <ul class="list-disc pl-6">
-            <li>
-                Becoming connected does not, by itself, expose your private
-                entries or notes. That requires a <strong>separate, explicit
-                sharing consent</strong> from you, given through a dedicated
-                consent step that states plainly what you're allowing the other
-                person to see.
-            </li>
-            <li>
-                Either person can remove the connection at any time. Doing so
-                immediately revokes any sharing consent in both directions — your
-                former fellow can no longer see your private entries and notes, and
-                you can no longer see theirs.
-            </li>
-            <li>
-                You can also <strong>block</strong> another account. Blocking
-                immediately removes any existing connection and sharing access in
-                both directions, and is <strong>silent</strong> — the blocked
-                person is not notified that they've been blocked.
-            </li>
-            <li>
-                Connection requests, acceptances, and removals generate
-                <strong>in-app, content-free notifications</strong> only (for
-                example, "so-and-so wants to connect"). We do not send these as
-                email or push notifications, and they never include your entries
-                or notes.
-            </li>
-        </ul>
-
-        <h3 class="text-body font-semibold text-text-primary">f. Discoverability and search</h3>
-        <p>
-            All accounts — public and private alike — can be found by searching
-            for a username or display name. For a private account, this means
-            your <strong>activity names</strong> (not your entries or notes) may
-            be visible to someone who finds you this way, the same as if they had
-            visited your profile link directly.
-        </p>
-        <ul class="list-disc pl-6">
-            <li>
-                <strong>Tag search is public-only.</strong> Searching by tag only
-                returns activities belonging to <strong>public</strong> accounts.
-                It cannot return a private or connections-only account, and it
-                never searches the text of your entries or notes.
-            </li>
-            <li>
-                If you've blocked someone, neither of you can find the other
-                through search.
-            </li>
-        </ul>
-
-        <h3 class="text-body font-semibold text-text-primary">g. The third-party rule still applies, unchanged</h3>
-        <p>
-            Connections and visibility settings only ever make your data visible
-            to <strong>other people using Mushin</strong> — never to a
-            third-party API. The rule in section 4c above is unchanged by any of
-            this: no entry, note, tag, or match record is ever
-            sent to an outside company or AI/LLM service because of a connection,
-            a visibility setting, or a search.
+            Mushin does not send your notes, entries, or export files to outside AI
+            services or third-party analytics tools.
         </p>
     </section>
 
     <section class="flex flex-col gap-3">
-        <h2 class="text-title font-semibold text-text-primary">5. How we delete your information</h2>
-
-        <h3 class="text-body font-semibold text-text-primary">a. Deletion process</h3>
+        <h2 class="text-title font-semibold text-text-primary">5. Retention and deletion</h2>
+        <h3 class="text-body font-semibold text-text-primary">a. Logged-in accounts</h3>
         <ul class="list-disc pl-6">
+            <li>Your account data is kept until you delete the account.</li>
             <li>
-                When you request account deletion, or when a guest record passes its
-                retention period (section 3), we mark that information for deletion
-                and delete it without delay.
+                Deleting an account deletes the user row and the data that account
+                owns through database cascade deletion, including activities,
+                entries, notes, tags, values, matches, comments, and relationship
+                records tied to that account.
             </li>
         </ul>
 
-        <h3 class="text-body font-semibold text-text-primary">b. Deletion method</h3>
+        <h3 class="text-body font-semibold text-text-primary">b. Guest accounts</h3>
         <ul class="list-disc pl-6">
-            <li>Electronic records are permanently deleted from our database in a way that cannot be recovered.</li>
+            <li>Guests can also delete their data through the in-product delete flow.</li>
             <li>
-                When an account is deleted, our database's
-                <strong>cascading delete (<code>ON DELETE CASCADE</code>)</strong>
-                structure removes everything linked to that account — categories,
-                sub-tallies, field definitions, tags, entries, notes, entry values,
-                match records, and
-                <strong>connection and block records in both directions</strong>
-                (so a deleted account also disappears from any other user's
-                fellows list and pending requests). The design leaves no orphaned
-                data behind, so deletion is complete.
+                Mushin also removes stale guest accounts automatically. The current
+                schedule is about 7 days for guests with no entries and about 30
+                days for inactive guests.
             </li>
-            <li>Guest data is removed the same way by the automated retention job.</li>
+        </ul>
+
+        <h3 class="text-body font-semibold text-text-primary">c. Logs</h3>
+        <ul class="list-disc pl-6">
+            <li>
+                Operational logs are kept only as long as needed for security,
+                abuse prevention, and troubleshooting, then rotated or removed.
+            </li>
         </ul>
     </section>
 
     <section class="flex flex-col gap-3">
-        <h2 class="text-title font-semibold text-text-primary">6. Your rights and how to exercise them</h2>
-        <ol class="list-decimal pl-6">
+        <h2 class="text-title font-semibold text-text-primary">6. Your controls</h2>
+        <ul class="list-disc pl-6">
+            <li>You can change your visibility setting in your account page.</li>
             <li>
-                You (including guests) can exercise the following rights at any time:
-                <ul class="list-disc pl-6">
-                    <li>Request <strong>access</strong> to your personal information</li>
-                    <li>Request <strong>correction</strong> of any errors</li>
-                    <li>Request <strong>deletion</strong></li>
-                    <li>Request that we <strong>stop processing</strong> your data or <strong>withdraw consent</strong></li>
-                </ul>
+                You can export your current Mushin data as a JSON file from the
+                account page.
             </li>
             <li>
-                <strong>How to exercise these rights</strong>
-                <ul class="list-disc pl-6">
-                    <li>
-                        <strong>Delete control in the Service:</strong> account holders
-                        can delete their account, and guests can delete their own
-                        data, directly from within the Service. Doing so triggers the
-                        complete deletion described in section 5.
-                    </li>
-                    <li>
-                        <strong>By contacting us:</strong> for access, correction, or
-                        consent withdrawal requests, you can contact the privacy
-                        contact listed in section 9 in writing or by email, and we
-                        will respond without undue delay.
-                    </li>
-                </ul>
+                You can import a Mushin export file to replace the data currently
+                stored under your account.
             </li>
             <li>
-                <strong>Guests have these rights too.</strong> A guest's data, even
-                without logging in, is personal information stored on our servers, so
-                guests have the same rights as account holders and can delete the
-                data linked to their device cookie directly.
+                You can delete your account or guest record from within Mushin.
             </li>
             <li>
-                You're responsible for protecting your own personal information and
-                for not including someone else's sensitive information without their
-                consent — particularly in free-text fields like notes.
+                Logging out clears the session cookie but does not delete your
+                stored account data.
             </li>
-            <li>
-                <strong>Exporting and importing your data:</strong> from the Service
-                you can download a copy of all your data — including your notes,
-                your <strong>connection list, and any pending connection
-                requests</strong> — as a file (data portability), and you can
-                upload a previously exported file to replace an account's data
-                with it (for example, to carry your record over to a new
-                account). An uploaded file completely replaces the destination
-                account's existing data, so the Service asks you to confirm
-                before proceeding. Because an exported file may contain personal
-                data (including notes and connections), only import a file that
-                is your own.
-            </li>
-        </ol>
+        </ul>
     </section>
 
     <section class="flex flex-col gap-3">
-        <h2 class="text-title font-semibold text-text-primary">7. How we protect your information</h2>
-        <p>We take the following measures to keep your information secure.</p>
-        <ol class="list-decimal pl-6">
-            <li>
-                <strong>Secure password storage</strong> — for email/password
-                accounts, passwords are never stored in plain text. They are
-                converted to an irreversible <strong>Argon2id hash</strong> before
-                storage.
-            </li>
-            <li>
-                <strong>Encryption in transit</strong> — all communication is
-                encrypted with <strong>HTTPS/TLS</strong>, with HSTS and related
-                security policies applied.
-            </li>
-            <li>
-                <strong>Access control and data isolation</strong> — all data is
-                isolated by account identifier (<code>owner_id</code>), so you can
-                only access your own data. Access to our servers and database is
-                restricted to the minimum necessary.
-            </li>
-            <li>
-                <strong>Session protection</strong> — login sessions are managed via
-                signed cookies with the <strong>HttpOnly</strong> (blocks script
-                access), <strong>Secure</strong> (HTTPS only), and
-                <strong>SameSite=Lax</strong> (mitigates cross-site request forgery)
-                attributes. Authentication information is never stored in browser
-                localStorage.
-            </li>
-            <li>
-                <strong>Data minimization</strong> — we collect only the minimum
-                personal information needed to provide the Service (for example, with
-                Google sign-in we request only the <code>openid email profile</code>
-                scope).
-            </li>
-        </ol>
-    </section>
-
-    <section class="flex flex-col gap-3">
-        <h2 class="text-title font-semibold text-text-primary">8. Cookies</h2>
-        <ol class="list-decimal pl-6">
-            <li>
-                We use the following cookies to keep you signed in and to identify
-                guest sessions:
-                <ul class="list-disc pl-6">
-                    <li><strong>Session/authentication cookie (<code>mushin_session</code>)</strong> — a signed cookie that keeps you signed in</li>
-                    <li><strong>Guest identifier cookie</strong> — links a guest's data to their server account without requiring sign-in</li>
-                </ul>
-            </li>
-            <li>We <strong>do not use advertising, tracking, or third-party analytics cookies.</strong></li>
-            <li>
-                You can refuse cookies through your browser settings, but doing so may
-                limit your ability to stay signed in or use guest mode.
-            </li>
-            <li>
-                If a guest signs in to an existing account, the cookie that identified
-                their previous session is invalidated and removed, and that guest
-                session can no longer be reused on that device. This prevents a
-                previous user's session from persisting on a shared device.
-            </li>
-        </ol>
-    </section>
-
-    <section class="flex flex-col gap-3">
-        <h2 class="text-title font-semibold text-text-primary">9. Privacy contact</h2>
+        <h2 class="text-title font-semibold text-text-primary">7. Contact and updates</h2>
         <p>
-            The following contact is responsible for handling all matters related to
-            personal information processing and for resolving complaints and
-            disputes from users.
+            If this policy changes, the updated version will be published at this
+            page. Material changes will be reflected in the policy text before they
+            take effect in the service.
         </p>
-        <ul class="list-disc pl-6">
-            <li>
-                <strong>Privacy contact</strong>
-                <ul class="list-disc pl-6">
-                    <li>Name: Aquinas</li>
-                    <li>Email: mushin@aqnas.xyz</li>
-                </ul>
-            </li>
-        </ul>
-        <p>
-            If you have any questions, complaints, or requests related to privacy
-            while using the Service, you can contact this person, and we will respond
-            without undue delay.
-        </p>
-    </section>
-
-    <section class="flex flex-col gap-3">
-        <h2 class="text-title font-semibold text-text-primary">10. Remedies for privacy violations</h2>
-        <p>
-            If you believe your privacy rights have been violated, please contact the
-            privacy contact in section 9 first so we can address it directly. If
-            you're not satisfied with our response, you may also have the right to
-            lodge a complaint with your local data protection or consumer protection
-            authority.
-        </p>
-    </section>
-
-    <section class="flex flex-col gap-3">
-        <h2 class="text-title font-semibold text-text-primary">11. Changes to this policy</h2>
-        <ol class="list-decimal pl-6">
-            <li>This privacy policy is effective from its stated effective date.</li>
-        </ol>
-        <h3 class="text-body font-semibold text-text-primary">Change history</h3>
-        <ul class="list-disc pl-6">
-            <li>2026-06-22 — Removed the level/progression feature; activities now track entries and running counts only — level and progression history no longer exists and the corresponding data-category mentions above are removed</li>
-            <li>2026-06-18 — Redefined "private" from section 4d (no longer hidden: a private account's activity names, levels, progress, and counts are now visible at <code>/@{username}</code> and in search, while entries and notes stay gated); added the Connections ("fellows") feature (section 4e), including the separate sharing-consent step and that disconnecting or blocking immediately revokes access in both directions; added the discoverability/search section (section 4f), including that all accounts are searchable and tag search is public-only; reaffirmed the unchanged third-party rule for the social graph (section 4g); updated the deletion section (5b) to note that connection and block records cascade in both directions; updated the export section (6) to include the connection list and pending requests</li>
-            <li>2026-06-16 — Added the opt-in public profile feature (section 4d): describes the private/public visibility setting, what each shows at <code>/@{username}</code>, and that guests cannot have a public profile</li>
-            <li>2026-06-15 — Removed a discontinued social login option (Google, email/password, and guest accounts remain) and removed references to country-specific regulatory bodies; section 10 now points to the privacy contact and your local data protection authority</li>
-            <li>2026-06-12 — Added the data export/import (data portability) feature: described in sections 4c and 6, including that files are processed only on our server and that import replaces an account's data</li>
-            <li>2026-06-11 — Added details on guest data handling when switching to an existing account, and on session cookie handling (sections 2 and 8)</li>
-        </ul>
-        <ul class="list-disc pl-6">
-            <li><strong>Announcement date:</strong> 2026-06-22</li>
-            <li><strong>Effective date:</strong> 2026-06-22</li>
-        </ul>
     </section>
 </article>

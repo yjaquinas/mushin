@@ -13,34 +13,11 @@
   via data-toggle-time (shared with entry_edit_form).
 
   Context: activity_id, name, fields (field-priority order), today (default
-  occurred_at value, KST date YYYY-MM-DD), inline (bool — when True, renders
-  without the dialog wrapper for inline expansion in activity detail).
+  occurred_at value, KST date YYYY-MM-DD).
 #}
 {% set tag_group_fields = fields | selectattr("kind", "equalto", "tag_group") | list %}
 {% set has_tag_group = tag_group_fields | length > 0 %}
 
-{% if inline %}
-<div id="log-sheet-inline" data-inline="true" class="flex flex-col gap-4 rounded-card border border-border bg-surface-1 p-4">
-    <div class="flex items-center justify-between">
-        <h2 class="text-title font-semibold text-text-primary">{{ name }}</h2>
-        <button
-            type="button"
-            id="log-sheet-inline-cancel"
-            class="min-h-tap min-w-tap rounded-button px-3 text-body text-text-secondary transition hover:bg-surface-2"
-        >
-            {{ strings.LOG_CANCEL }}
-        </button>
-    </div>
-
-    <form
-        hx-post="/activities/{{ activity_id }}/log"
-        hx-swap="none"
-        class="flex flex-col gap-4"
-    >
-        {% include "components/_log_form_body.html.jinja2" with context %}
-    </form>
-</div>
-{% else %}
 {% set dialog_id = "log-sheet-dialog" %}
 {% set form_action = "/activities/" ~ activity_id ~ "/log" %}
 {% set form_swap = "none" %}
@@ -57,4 +34,3 @@
 {% set form_target = None %}
 {% set notes_value = "" %}
 {% include "components/entry_form_dialog.html.jinja2" with context %}
-{% endif %}

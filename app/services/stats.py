@@ -20,9 +20,9 @@ Scoping + batching
 Counting / streak / heatmap functions read ``entry`` rows scoped to the owner.
 Field-level functions (tag-group, scale, count) read ``entry_value`` / ``tag`` /
 ``entry_tag`` joined back through the owner-scoped ``entry`` table so a value
-can never reach across tenants. ``counts_for_sub_tallies`` accepts a *list* of
+can never reach across tenants. ``counts_for_activities`` accepts a *list* of
 activity ids and answers in **one** query (``WHERE activity_id IN (...)``) to
-avoid N+1 fan-out when a category renders many sub-tallies at once.
+avoid N+1 fan-out when a category renders many activities at once.
 """
 
 from __future__ import annotations
@@ -116,7 +116,7 @@ def _shift_period(anchor: date, kind: str, n: int) -> date:
 def _entry_days(
     conn: sqlite3.Connection, activity_id: int, owner_id: int, tz: ZoneInfo
 ) -> list[date]:
-    """Every entry's local day (in *tz*) for a sub-tally, newest day first, with
+    """Every entry's local day (in *tz*) for an activity, newest day first, with
     repeats.
 
     Repeats are preserved so callers that count occurrences (heatmap, period
@@ -140,7 +140,7 @@ def _entry_days(
 
 
 def _count_buckets(days: Sequence[date], today: date) -> dict[str, Any]:
-    """Build the count summary for a single sub-tally from its entry days."""
+    """Build the count summary for a single activity from its entry days."""
     week0 = _week_start(today)
     month0 = _month_start(today)
     year0 = _year_start(today)
@@ -176,7 +176,7 @@ def _count_buckets(days: Sequence[date], today: date) -> dict[str, Any]:
 
 
 def counts(activity_id: int, owner_id: int, *, tz: ZoneInfo) -> dict[str, Any]:
-    """Count summary for one sub-tally: this week/month/year, lifetime, avg/week.
+    """Count summary for one activity: this week/month/year, lifetime, avg/week.
 
     All windows are calendar windows in the caller-supplied timezone *tz*,
     anchored on the current local day.
@@ -187,10 +187,10 @@ def counts(activity_id: int, owner_id: int, *, tz: ZoneInfo) -> dict[str, Any]:
     return _count_buckets(days, _today_local(tz))
 
 
-def counts_for_sub_tallies(
+def counts_for_activities(
     activity_ids: Iterable[int], owner_id: int, *, tz: ZoneInfo
 ) -> dict[int, dict[str, Any]]:
-    """Batched count summaries for many sub-tallies in **one** query (no N+1).
+    """Batched count summaries for many activities in **one** query (no N+1).
 
     Returns ``{activity_id: count_summary}`` for every requested id; ids with no
     entries get a zeroed summary so the caller can render every tile uniformly.
@@ -250,7 +250,7 @@ def _current_run(distinct_days_desc: Sequence[date]) -> int:
 
 
 def streaks(activity_id: int, owner_id: int, *, tz: ZoneInfo) -> dict[str, int]:
-    """Current + longest streak for a sub-tally.
+    """Current + longest streak for an activity.
 
     ``current`` matches ``entries.py``'s cached streak exactly when computed with
     the same *tz*: the run of consecutive local days ending on the most-recent
@@ -464,7 +464,7 @@ def _assert_field_kind(
 
 
 class FieldNotFoundError(LookupError):
-    """Raised when a field_def doesn't belong to the sub-tally/owner."""
+    """Raised when a field_def doesn't belong to the activity/owner."""
 
 
 class FieldKindError(ValueError):

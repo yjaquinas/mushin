@@ -59,6 +59,14 @@ class IdentityTakenError(AccountError):
     """Raised when an identity (provider+provider_id, or email) already exists."""
 
 
+class UsernameTakenError(IdentityTakenError):
+    """Raised when a username is already attached to another live account."""
+
+
+class EmailTakenError(IdentityTakenError):
+    """Raised when a recovery email is already attached to another live account."""
+
+
 def _now_iso() -> str:
     return datetime.now(UTC).isoformat()
 
@@ -204,14 +212,14 @@ def create_username_user(
             (username,),
         ).fetchone()
         if existing is not None:
-            raise IdentityTakenError(f"username {username!r} is already taken")
+            raise UsernameTakenError(f"username {username!r} is already taken")
         if email is not None:
             email_taken = conn.execute(
                 "SELECT 1 FROM user WHERE email = ?",
                 (email,),
             ).fetchone()
             if email_taken is not None:
-                raise IdentityTakenError(f"email {email!r} is already taken")
+                raise EmailTakenError(f"email {email!r} is already taken")
         cur = conn.execute(
             "INSERT INTO user"
             " (auth_provider, username, password_hash, email, display_name, timezone,"
@@ -289,6 +297,7 @@ def attach_provider(
             raise AccountError(f"user {user_id} does not exist")
 
         # Final uniqueness guard against another row owning this identity.
+        clash_exc: type[IdentityTakenError] = IdentityTakenError
         if auth_provider == "google":
             clash = conn.execute(
                 "SELECT id FROM user WHERE auth_provider = ? AND provider_id = ? AND id != ?",
@@ -299,13 +308,16 @@ def attach_provider(
                 "SELECT id FROM user WHERE username = ? AND id != ?",
                 (username, user_id),
             ).fetchone()
+            clash_exc = UsernameTakenError
             if clash is None and email is not None:
                 clash = conn.execute(
                     "SELECT id FROM user WHERE email = ? AND id != ?",
                     (email, user_id),
                 ).fetchone()
+                if clash is not None:
+                    clash_exc = EmailTakenError
         if clash is not None:
-            raise IdentityTakenError(
+            raise clash_exc(
                 f"{auth_provider} identity already mapped to user {clash['id']}"
             )
 
@@ -407,7 +419,12 @@ def touch_last_active(user_id: int) -> None:
 
 
 def delete_user(user_id: int) -> bool:
-    """Remove account access while preserving owned history."""
+    """Remove account access while preserving owned history.
+
+    The tombstoned row keeps no reusable login identifiers: recovery email,
+    provider id, and password hash are cleared so a future signup can claim the
+    same email address without colliding with the deleted account.
+    """
     with db.connect() as conn:
         conn.execute("BEGIN")
         cur = conn.execute(

@@ -220,10 +220,13 @@ async def username_signup(
     # above keeps the timezone already stamped on the guest row at guest-create).
     try:
         user_id = users.create_username_user(username, password_hash, email, timezone)
-    except users.IdentityTakenError as exc:
-        # Generic message: don't leak whether the username or email collided.
+    except users.UsernameTakenError as exc:
         raise HTTPException(
             status_code=409, detail="That username is already in use."
+        ) from exc
+    except users.EmailTakenError as exc:
+        raise HTTPException(
+            status_code=409, detail="That email address is already in use."
         ) from exc
 
     resp = JSONResponse(

@@ -35,7 +35,7 @@ from app.routes.web._contexts import (
     _field_defs_for_activity as _field_defs_for_activity,
 )
 from app.routes.web._contexts import (
-    _list_sub_tallies as _list_sub_tallies,
+    _list_activities as _list_activities,
 )
 from app.routes.web._history_context import (
     _build_card_top_tags as _build_card_top_tags,

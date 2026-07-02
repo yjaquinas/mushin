@@ -68,7 +68,7 @@
   /*
    * Text roles — semantic aliases on top of the palette.
    * text-primary  : body copy and labels
-   * text-secondary: demoted labels (sub-tally name on card, timestamps)
+   * text-secondary: demoted labels (activity name on card, timestamps)
    * text-muted    : captions, placeholder copy, disabled states
    *
    * slate-mid (#64748B) carries text here, never raw slate (#94A3B8) in
@@ -143,7 +143,7 @@
    * scale). One hero numeral per card; everything else demoted.
    *
    * hero-numeral  : the single big count / current level per activity card
-   * title         : category / sub-tally name (secondary to hero)
+   * title         : category / activity name (secondary to hero)
    * body          : default prose, form labels, field content
    * caption       : demoted stats, timestamps, chip labels
    * micro         : legal / footnote only

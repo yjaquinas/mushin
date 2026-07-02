@@ -12,27 +12,16 @@ from typing import Annotated
 from fastapi import APIRouter, Cookie, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
-from app.auth import sessions, users
-from app.routes.web._shared import (
-    _clear_flash,
-    THEME_COOKIE,
-    THEME_CYCLE,
-    _current_user,
-    _read_flash,
-    _set_flash,
-    _theme_from_cookie,
-    templates,
+from app.auth import sessions
+from app.routes.web._account_handlers import (
+    delete_account_response,
+    render_account_settings,
+    toggle_theme_response,
+    update_visibility_response,
 )
-from app.routes.web._shared import (
-    ui_strings as strings,
-)
+from app.routes.web._shared import _current_user
 
 router = APIRouter()
-
-
-# ---------------------------------------------------------------------------
-# Account settings (/account) — visibility toggle
-# ---------------------------------------------------------------------------
 
 
 @router.get("/account", response_class=HTMLResponse, response_model=None)
@@ -49,22 +38,7 @@ async def account_settings(
     user = _current_user(session)
     if user is None:
         return RedirectResponse(url="/", status_code=303)
-    is_guest = user["auth_provider"] == "guest"
-    response = templates.TemplateResponse(
-        request=request,
-        name="web/account.html.jinja2",
-        context={
-            "flash_message": _read_flash(request),
-            "is_guest": is_guest,
-            "username": user["username"],
-            "visibility": user["visibility"],
-            "current_page": "account",
-            "page_title": strings.ACCOUNT_TITLE,
-            "show_back": False,
-        },
-    )
-    _clear_flash(response)
-    return response
+    return render_account_settings(request, user)
 
 
 @router.post("/account", response_model=None)
@@ -87,17 +61,7 @@ async def update_visibility(
     user = _current_user(session)
     if user is None:
         return HTMLResponse(status_code=401)
-    if user["auth_provider"] == "guest":
-        return HTMLResponse(status_code=400)
-    if visibility not in users.VALID_VISIBILITIES:
-        return HTMLResponse(status_code=400)
-    users.set_visibility_consent(int(user["id"]), visibility)
-    response = RedirectResponse(url="/account", status_code=303)
-    _set_flash(
-        response,
-        "visibility_public" if visibility == "public" else "visibility_private",
-    )
-    return response
+    return update_visibility_response(user, visibility)
 
 
 @router.post("/delete", response_model=None)
@@ -108,17 +72,7 @@ async def delete_account(
     user = _current_user(session)
     if user is None:
         return HTMLResponse(status_code=401)
-    if user["auth_provider"] == "guest":
-        return HTMLResponse(status_code=400)
-    users.delete_user(int(user["id"]))
-    response = RedirectResponse(url="/", status_code=303)
-    response.delete_cookie(key=sessions.COOKIE_NAME, path="/")
-    return response
-
-
-# ---------------------------------------------------------------------------
-# Theme toggle
-# ---------------------------------------------------------------------------
+    return delete_account_response(user)
 
 
 @router.post("/preferences/theme", response_class=HTMLResponse)
@@ -130,24 +84,4 @@ async def toggle_theme(request: Request) -> HTMLResponse:
     future client-side enhancement needs it, but is otherwise set the same
     way as the app's other preference cookies.
     """
-    current = _theme_from_cookie(request.cookies.get(THEME_COOKIE))
-    next_theme = THEME_CYCLE[current]
-
-    # Render directly rather than via templates.TemplateResponse: the
-    # _theme_context context processor would overwrite "theme" with the
-    # (stale) request-cookie value before the new cookie is set on the
-    # response.
-    fragment = templates.get_template("components/theme_toggle_account.html.jinja2").render(
-        request=request, theme=next_theme
-    )
-    response = HTMLResponse(content=fragment)
-    response.headers["HX-Refresh"] = "true"
-    response.set_cookie(
-        key=THEME_COOKIE,
-        value=next_theme,
-        max_age=60 * 60 * 24 * 365,
-        secure=True,
-        samesite="lax",
-        path="/",
-    )
-    return response
+    return toggle_theme_response(request)

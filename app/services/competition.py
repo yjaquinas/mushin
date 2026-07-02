@@ -17,7 +17,7 @@ Owner isolation
 ---------------
 Persistence validates the parent entry belongs to *owner_id* before writing any
 match row, and stamps that same ``owner_id`` onto each row. Every read filters by
-``owner_id`` — the per-sub-tally stats join ``match -> entry`` and scope **both**
+``owner_id`` — the per-activity stats join ``match -> entry`` and scope **both**
 sides to the owner, so a user can never aggregate another user's bouts even if an
 id were guessed.
 
@@ -202,7 +202,7 @@ def delete_matches(owner_id: int, entry_id: int) -> int:
 def _scoped_matches_for_activity(
     conn: sqlite3.Connection, owner_id: int, activity_id: int
 ) -> list[sqlite3.Row]:
-    """All match rows under a sub-tally's entries, owner-scoped on both sides.
+    """All match rows under an activity's entries, owner-scoped on both sides.
 
     Joins ``match -> entry`` so a bout is only counted when *both* the match and
     its parent entry belong to *owner_id* and the entry sits under
@@ -225,7 +225,7 @@ def _scoped_matches_for_activity(
 
 
 def record(owner_id: int, activity_id: int) -> dict[str, Any]:
-    """W/L/D record + win rate for a tournament sub-tally, scoped to *owner_id*.
+    """W/L/D record + win rate for a tournament activity, scoped to *owner_id*.
 
     Returns ``{wins, losses, draws, total, decided, win_rate}`` where ``decided``
     is ``wins + losses + draws`` (every bout is decided, so ``decided == total``;
@@ -255,7 +255,7 @@ def _record_from_matches(matches: Sequence[sqlite3.Row]) -> dict[str, Any]:
 
 
 def results_timeline(owner_id: int, activity_id: int) -> list[dict[str, Any]]:
-    """Chronological list of bout results for a tournament sub-tally.
+    """Chronological list of bout results for a tournament activity.
 
     Each item is ``{occurred_at, opponent, result, score}`` ordered oldest-first
     by the parent entry's ``occurred_at`` (ties broken by ``sort_order``), so a
@@ -276,9 +276,9 @@ def results_timeline(owner_id: int, activity_id: int) -> list[dict[str, Any]]:
 
 
 def head_to_head(owner_id: int, activity_id: int) -> list[dict[str, Any]]:
-    """W/L/D vs each opponent for a tournament sub-tally, scoped to *owner_id*.
+    """W/L/D vs each opponent for a tournament activity, scoped to *owner_id*.
 
-    Groups every bout under the sub-tally by ``opponent`` — the same opponent met
+    Groups every bout under the activity by ``opponent`` — the same opponent met
     across different tournament entries aggregates into one record. Returns a list
     of ``{opponent, wins, losses, draws, total, win_rate}`` ordered by most bouts
     played (then opponent name) so the biggest rivalries surface first.

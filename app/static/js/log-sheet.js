@@ -1,8 +1,4 @@
-// Log sheet: quick-add / entry logging panel.
-//
-// Uses DialogManager for focus-trap and explicit close behavior when
-// rendered as a modal dialog. Skips DialogManager when rendered inline
-// (data-inline="true") — the form is already visible in the page flow.
+// Log sheet: quick-add / entry logging modal.
 
 (function () {
   "use strict";
@@ -12,8 +8,6 @@
   function initLogSheet() {
     var sheet = document.getElementById("log-sheet-dialog");
     if (!sheet) return null;
-
-    if (sheet.getAttribute("data-inline") === "true") return null;
     if (!sheet.querySelector('[role="dialog"]')) return null;
     if (sheet.getAttribute("data-log-sheet-init")) return sheet;
 
@@ -31,10 +25,16 @@
     if (form) {
       form.reset();
       form.querySelectorAll("[data-toggle-time]").forEach(function (checkbox) {
-        checkbox.checked = false;
-        var timeBlock = checkbox.closest("label");
-        timeBlock = timeBlock ? timeBlock.nextElementSibling : null;
-        if (timeBlock) timeBlock.setAttribute("hidden", "");
+        var fieldGroup = checkbox.closest("[data-time-field-group]");
+        var timeInput = fieldGroup ? fieldGroup.querySelector('input[type="time"]') : null;
+        if (!timeInput) return;
+        if (checkbox.checked) {
+          timeInput.setAttribute("hidden", "");
+          timeInput.disabled = true;
+        } else {
+          timeInput.removeAttribute("hidden");
+          timeInput.disabled = false;
+        }
       });
     }
     dlg.close();

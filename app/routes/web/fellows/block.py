@@ -14,19 +14,17 @@ from fastapi import APIRouter, Cookie, Query, Request
 from fastapi.responses import HTMLResponse
 
 from app.auth import sessions
-from app.routes.web._shared import _current_user, templates
-from app.routes.web.fellows._shared import (
-    _connect_error_message,
-    _relationship_dom_id,
-    _render_relationship_affordance,
-    _resolve_other_user,
+from app.routes.web._shared import _current_user
+from app.routes.web.fellows._block_handlers import (
+    block_cancel_response,
+    block_confirm_response,
+    block_user_response,
+    remove_fellow_confirm_response,
+    remove_fellow_response,
+    unblock_user_response,
 )
-from app.services import connections
 
 router = APIRouter()
-
-
-# --- Disconnect (remove a fellow) — two-step inline confirm ---------------
 
 
 @router.get("/fellows/{username}/remove-confirm", response_class=HTMLResponse)
@@ -40,18 +38,7 @@ async def remove_fellow_confirm(
     user = _current_user(session)
     if user is None:
         return HTMLResponse(status_code=401)
-    other = _resolve_other_user(username)
-    if other is None:
-        return HTMLResponse(status_code=404)
-
-    return templates.TemplateResponse(
-        request=request,
-        name="components/connect_remove_confirm.html.jinja2",
-        context={
-            "username": username,
-            "dom_id": _relationship_dom_id(username, from_search=source == "search"),
-        },
-    )
+    return remove_fellow_confirm_response(request, username, source == "search")
 
 
 @router.post("/fellows/{username}/remove", response_class=HTMLResponse)
@@ -65,19 +52,7 @@ async def remove_fellow(
     user = _current_user(session)
     if user is None:
         return HTMLResponse(status_code=401)
-    other = _resolve_other_user(username)
-    if other is None:
-        return HTMLResponse(status_code=404)
-    viewer_id = int(user["id"])
-
-    connections.disconnect(viewer_id, int(other["id"]))
-
-    return _render_relationship_affordance(
-        request, username, int(other["id"]), viewer_id, from_search=source == "search"
-    )
-
-
-# --- Block / unblock --------------------------------------------------------
+    return remove_fellow_response(request, username, int(user["id"]), source == "search")
 
 
 @router.get("/fellows/{username}/block-confirm", response_class=HTMLResponse)
@@ -91,18 +66,7 @@ async def block_confirm(
     user = _current_user(session)
     if user is None:
         return HTMLResponse(status_code=401)
-    other = _resolve_other_user(username)
-    if other is None:
-        return HTMLResponse(status_code=404)
-
-    return templates.TemplateResponse(
-        request=request,
-        name="components/connect_block_confirm.html.jinja2",
-        context={
-            "username": username,
-            "dom_id": _relationship_dom_id(username, from_search=source == "search"),
-        },
-    )
+    return block_confirm_response(request, username, source == "search")
 
 
 @router.get("/fellows/{username}/block-cancel", response_class=HTMLResponse)
@@ -116,12 +80,7 @@ async def block_cancel(
     user = _current_user(session)
     if user is None:
         return HTMLResponse(status_code=401)
-    other = _resolve_other_user(username)
-    if other is None:
-        return HTMLResponse(status_code=404)
-    return _render_relationship_affordance(
-        request, username, int(other["id"]), int(user["id"]), from_search=source == "search"
-    )
+    return block_cancel_response(request, username, int(user["id"]), source == "search")
 
 
 @router.post("/fellows/{username}/block", response_class=HTMLResponse)
@@ -135,22 +94,7 @@ async def block_user(
     user = _current_user(session)
     if user is None:
         return HTMLResponse(status_code=401)
-    other = _resolve_other_user(username)
-    if other is None:
-        return HTMLResponse(status_code=404)
-    viewer_id = int(user["id"])
-
-    error: str | None = None
-    try:
-        connections.block(viewer_id, int(other["id"]))
-    except connections.SelfConnectionError:
-        return HTMLResponse(status_code=400)
-    except connections.ConnectionError as exc:
-        error = _connect_error_message(exc)
-
-    return _render_relationship_affordance(
-        request, username, int(other["id"]), viewer_id, error=error, from_search=source == "search"
-    )
+    return block_user_response(request, username, int(user["id"]), source == "search")
 
 
 @router.post("/fellows/{username}/unblock", response_class=HTMLResponse)
@@ -164,13 +108,4 @@ async def unblock_user(
     user = _current_user(session)
     if user is None:
         return HTMLResponse(status_code=401)
-    other = _resolve_other_user(username)
-    if other is None:
-        return HTMLResponse(status_code=404)
-    viewer_id = int(user["id"])
-
-    connections.unblock(viewer_id, int(other["id"]))
-
-    return _render_relationship_affordance(
-        request, username, int(other["id"]), viewer_id, from_search=source == "search"
-    )
+    return unblock_user_response(request, username, int(user["id"]), source == "search")

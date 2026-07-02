@@ -43,9 +43,7 @@
     }, 2500);
   }
 
-  function syncCommentToggle(target) {
-    if (!target || !target.id || !target.id.startsWith("comment-slot-")) return;
-  }
+  window.showToast = showToast;
 
   function setEntryExpandedState(entryId, open) {
     if (!entryId) return;
@@ -331,11 +329,6 @@
       showToast(messageNode.dataset.toastMessage, messageNode.dataset.toastVariant || "informative");
       messageNode.remove();
     });
-    document.querySelectorAll("[data-flash-dismiss]").forEach(function (flash) {
-      window.setTimeout(function () {
-        flash.remove();
-      }, 5000);
-    });
     syncVisibilityForm();
     syncExpandedEntries(document);
     syncCommentFormState(document);
@@ -347,7 +340,6 @@
     syncHistoryFocus(target);
     syncHomeCards(target);
     syncVisibilityForm();
-    syncCommentToggle(target);
     syncExpandedEntries(target);
     syncCommentFormState(target);
     syncBoundedTextareas(target);
@@ -366,7 +358,7 @@
   });
 
   document.body.addEventListener("log-saved", function () {
-    document.querySelectorAll("#log-sheet-inline form, #log-sheet-dialog form").forEach(function (form) {
+    document.querySelectorAll("#log-sheet-dialog form").forEach(function (form) {
       resetFormFields(form);
     });
     resetLogTrigger();

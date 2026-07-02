@@ -63,7 +63,7 @@ def get_public_user(conn: sqlite3.Connection, username: str) -> dict | None:
 
 
 def resolve_activity_slug(conn: sqlite3.Connection, owner_id: int, slug: str) -> int | None:
-    """Resolve a sub-tally *slug* to its id for *owner_id*.
+    """Resolve an activity *slug* to its id for *owner_id*.
 
     Looks up the active (``archived_at IS NULL``) ``activity`` owned by
     *owner_id* with the given *slug*. Returns the id, or ``None`` when there is
