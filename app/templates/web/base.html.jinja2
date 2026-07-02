@@ -9,6 +9,7 @@
     <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.10/dist/htmx.min.js" integrity="sha384-H5SrcfygHmAuTDZphMHqBJLc3FhssKjG7w/CeCpFReSfwBWDTKpkzPP8c+cLsK+V" crossorigin="anonymous"></script>
     <script defer src="{{ static_asset('/static/js/dialogs.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/account-dialogs.js') }}"></script>
+    <script defer src="{{ static_asset('/static/js/activity-dialogs.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/auth-form.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/base-behavior.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/category-sheet.js') }}"></script>
@@ -40,27 +41,29 @@
 
     {# Bottom navigation bar — always visible. #}
     <nav class="bottom-nav" aria-label="{{ strings.NAV_HOME }}">
-        <a
-            href="{{ home_url }}"
-            class="bottom-nav-tab{% if current_page == 'home' %} bottom-nav-tab--active{% endif %}"
-        >
-            {{ icon("footprints", size=22) }}
-            <span>{{ strings.NAV_HOME }}</span>
-        </a>
-        <a
-            href="/search"
-            class="bottom-nav-tab{% if current_page == 'search' %} bottom-nav-tab--active{% endif %}"
-        >
-            {{ icon("search", size=22) }}
-            <span>{{ strings.NAV_SEARCH }}</span>
-        </a>
-        <a
-            href="/account"
-            class="bottom-nav-tab{% if current_page == 'account' %} bottom-nav-tab--active{% endif %}"
-        >
-            {{ icon("circle-user", size=22) }}
-            <span>{{ strings.NAV_ACCOUNT }}</span>
-        </a>
+        <div class="bottom-nav__inner">
+            <a
+                href="{{ home_url }}"
+                class="bottom-nav-tab{% if current_page == 'home' %} bottom-nav-tab--active{% endif %}"
+            >
+                {{ icon("footprints", size=22) }}
+                <span>{{ strings.NAV_HOME }}</span>
+            </a>
+            <a
+                href="/search"
+                class="bottom-nav-tab{% if current_page == 'search' %} bottom-nav-tab--active{% endif %}"
+            >
+                {{ icon("search", size=22) }}
+                <span>{{ strings.NAV_SEARCH }}</span>
+            </a>
+            <a
+                href="/account"
+                class="bottom-nav-tab{% if current_page == 'account' %} bottom-nav-tab--active{% endif %}"
+            >
+                {{ icon("circle-user", size=22) }}
+                <span>{{ strings.NAV_ACCOUNT }}</span>
+            </a>
+        </div>
     </nav>
 </body>
 </html>

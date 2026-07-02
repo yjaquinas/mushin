@@ -23,7 +23,7 @@
     current_user_id  int | None — for the per-comment delete affordance
     entry_owner_id    int       — for the per-comment delete affordance
 #}
-<div id="comment-thread-{{ entry_id }}" class="flex flex-col gap-3 rounded-card border border-border bg-surface-2 p-3">
+<div id="comment-thread-{{ entry_id }}" class="flex flex-col gap-3 pt-2">
     {% if not comments %}
     <p class="text-caption text-text-muted">{{ strings.COMMENTS_EMPTY }}</p>
     {% else %}
@@ -46,13 +46,14 @@
                 <button
                     type="button"
                     aria-label="{{ strings.COMMENTS_DELETE }}"
-                    hx-post="/@{{ username }}/{{ slug }}/entries/{{ entry_id }}/comments/{{ comment.id }}/delete"
-                    hx-target="#comment-thread-{{ entry_id }}"
+                    hx-get="/@{{ username }}/{{ slug }}/entries/{{ entry_id }}/comments/{{ comment.id }}/delete-confirm"
+                    hx-target="#comment-delete-dialog-{{ comment.id }}"
                     hx-swap="outerHTML"
                     class="min-h-tap min-w-tap flex shrink-0 items-center justify-center rounded text-text-muted transition hover:text-danger focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
                 >{{ icon('trash', size=14) }}<span class="sr-only">{{ strings.COMMENTS_DELETE }}</span></button>
                 {% endif %}
             </div>
+            <div id="comment-delete-dialog-{{ comment.id }}"></div>
         </li>
         {% endfor %}
     </ul>

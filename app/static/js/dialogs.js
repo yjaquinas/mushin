@@ -39,9 +39,10 @@ DialogManager.prototype = {
     };
     window.addEventListener("keydown", this._keydown.bind(this));
 
-    // Overlay click (not inner content) → close.
+    // Backdrop click (outside the dialog panel) → close.
     this._overlayClick = function (e) {
-      if (e.target === el) {
+      var panel = el.querySelector('[role="dialog"]');
+      if (panel && !panel.contains(e.target)) {
         dialogManagerRegistry.remove(this);
         this.close();
       }

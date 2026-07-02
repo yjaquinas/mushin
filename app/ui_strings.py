@@ -470,6 +470,7 @@ SEARCH_TAGS_EMPTY = "No public records with that tag yet."
 # {count} interpolated by the template.
 COMMENTS_COUNT_LABEL = "{count}"
 COMMENTS_TOGGLE_ARIA = "Comments"
+COMMENTS_CLOSE = "Close comments"
 
 COMMENTS_EMPTY = "No comments yet."
 COMMENTS_LOGIN_TO_COMMENT = "Log in to comment."
@@ -478,6 +479,9 @@ COMMENTS_BODY_LABEL = "Add a comment"
 COMMENTS_BODY_PLACEHOLDER = "Say something"
 COMMENTS_SUBMIT = "Post"
 COMMENTS_DELETE = "Delete"
+COMMENTS_DELETE_CONFIRM_BODY = "Delete this comment. This can't be undone."
+COMMENTS_DELETE_CONFIRM = "Delete"
+COMMENTS_DELETE_CANCEL = "Keep"
 COMMENTS_HIDDEN_BY_MODERATOR = "Hidden by moderator"
 
 # Quiet, content-free unseen-comment badge on home (mirrors REQUESTS_PENDING_BADGE).

@@ -1,4 +1,4 @@
-"""Inline rename and category-delete admin actions for an activity."""
+"""Rename and category-delete admin actions for an activity."""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ router = APIRouter()
 
 
 # ---------------------------------------------------------------------------
-# Inline rename (activity heading)
+# Rename dialog
 # ---------------------------------------------------------------------------
 
 
@@ -27,11 +27,7 @@ async def rename_form(
     activity_id: int,
     session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
 ) -> HTMLResponse:
-    """Return the inline rename form fragment for *activity_id*.
-
-    Detected as an HTMX fragment — the caller swaps ``#rename-heading``
-    with the returned form via ``hx-swap="outerHTML"``.
-    """
+    """Return the rename-dialog fragment for *activity_id*."""
     user = _current_user(session)
     if user is None:
         return HTMLResponse(status_code=401)
@@ -50,34 +46,6 @@ async def rename_form(
     )
 
 
-@router.get("/activities/{activity_id}/rename-form-cancel", response_class=HTMLResponse)
-async def rename_form_cancel(
-    request: Request,
-    activity_id: int,
-    session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
-) -> HTMLResponse:
-    """Return the plain heading fragment (cancel path).
-
-    Swaps ``#rename-heading`` back to the read-only heading without a page reload.
-    """
-    user = _current_user(session)
-    if user is None:
-        return HTMLResponse(status_code=401)
-    owner_id = int(user["id"])
-
-    with db.connect() as conn:
-        conn.execute("BEGIN")
-        row = _db.fetch_one(conn, "activity", owner_id, where="id = ?", params=(activity_id,))
-    if row is None:
-        return HTMLResponse(status_code=404)
-
-    return templates.TemplateResponse(
-        request=request,
-        name="components/rename_heading.html.jinja2",
-        context={"activity_id": activity_id, "current_name": row["name"]},
-    )
-
-
 @router.post("/activities/{activity_id}/rename", response_class=HTMLResponse, response_model=None)
 async def rename_activity(
     request: Request,
@@ -89,8 +57,8 @@ async def rename_activity(
 
     On success: 200 with ``HX-Redirect`` to ``/@{username}/{new_slug}``.
     On ``SubTallyNotFoundError``: 404.
-    On ``ValueError`` (empty / too-long name): return the rename form fragment
-    with an inline error message (no 400 full-page, preserves the HTMX context).
+    On ``ValueError`` (empty / too-long name): return the rename dialog fragment
+    with an inline error message and auto-open it again.
     """
     user = _current_user(session)
     if user is None:
@@ -114,6 +82,7 @@ async def rename_activity(
                 "activity_id": activity_id,
                 "current_name": name,
                 "error": str(exc),
+                "open_on_error": True,
             },
             status_code=422,
         )
@@ -125,7 +94,7 @@ async def rename_activity(
 
 
 # ---------------------------------------------------------------------------
-# Category delete (two-step confirm from rename form)
+# Category delete dialog
 # ---------------------------------------------------------------------------
 
 
@@ -135,7 +104,7 @@ async def category_delete_confirm(
     activity_id: int,
     session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
 ) -> HTMLResponse:
-    """Return the inline delete-confirm fragment for the category that owns *activity_id*.
+    """Return the delete-confirm dialog for the category that owns *activity_id*.
 
     Ownership check: the sub-tally must exist and belong to the session user — 404 otherwise.
     """

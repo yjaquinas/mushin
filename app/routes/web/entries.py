@@ -142,7 +142,7 @@ async def get_entry_delete_confirm(
     entry_id: int,
     session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
 ) -> HTMLResponse:
-    """Return the inline delete-confirm fragment for *entry_id* under *activity_id*.
+    """Return the delete-confirm dialog for *entry_id* under *activity_id*.
 
     Ownership checks (in order):
     1. Session required — 401 if not authenticated.

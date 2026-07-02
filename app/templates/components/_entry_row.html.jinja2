@@ -45,18 +45,20 @@
 #}
 
 {% macro entry_row(entry, activity_id, is_owner=False, can_comment=False, username=None, slug=None, expand_comment_entry_id=None, login_redirect_url=None) %}
-<li class="entry-row flex flex-col gap-1">
+<li class="entry-row flex flex-col gap-1 py-2">
     <div class="flex items-center justify-between gap-2">
-        <span class="text-body text-text-primary">
-            <span class="text-caption text-text-muted">
+        <span class="min-w-0 flex flex-1 items-baseline gap-2 text-body text-text-primary">
+            <span class="shrink-0 text-caption text-text-muted">
                 {%- if entry.time_known == 1 -%}
                     {{ entry.occurred_at | format_entry_time }}
+                {%- else -%}
+                    {{ entry.occurred_at[:10] }}
                 {%- endif -%}
             </span>
             {%- if entry.hidden_at -%}
-                <span class="{% if entry.time_known == 1 %}ms-2{% endif %}text-text-muted italic">{{ strings.ENTRY_HIDDEN_BY_MODERATOR }}</span>
+                <span class="min-w-0 truncate text-text-muted italic">{{ strings.ENTRY_HIDDEN_BY_MODERATOR }}</span>
             {%- elif entry.memo -%}
-                <span class="{% if entry.time_known == 1 %}ms-2{% endif %}">{{ entry.memo }}</span>
+                <span class="min-w-0 truncate">{{ entry.memo }}</span>
             {%- endif -%}
         </span>
         <span class="flex shrink-0 items-center gap-1">
@@ -64,12 +66,18 @@
                 <button
                     type="button"
                     aria-label="{{ strings.COMMENTS_TOGGLE_ARIA }}"
+                    aria-expanded="false"
                     hx-get="/@{{ username }}/{{ slug }}/entries/{{ entry.id }}/comments"
                     hx-target="#comment-slot-{{ entry.id }}"
                     hx-swap="innerHTML"
                     {% if expand_comment_entry_id == entry.id %}hx-trigger="click, load"{% endif %}
+                    data-comment-toggle
+                    data-comment-slot="comment-slot-{{ entry.id }}"
                     class="min-h-tap flex shrink-0 items-center gap-1 rounded px-1 text-caption text-text-muted transition hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-                >{{ icon('message-circle', size=16) }}{% if entry.comment_count %}<span>{{ strings.COMMENTS_COUNT_LABEL.format(count=entry.comment_count) }}</span>{% endif %}</button>
+                >
+                    <span data-comment-icon>{{ icon('message-circle', size=16) }}</span>
+                    {% if entry.comment_count %}<span>{{ strings.COMMENTS_COUNT_LABEL.format(count=entry.comment_count) }}</span>{% endif %}
+                </button>
             {% elif not entry.comment_count and login_redirect_url %}
                 <a
                     href="{{ login_redirect_url }}"

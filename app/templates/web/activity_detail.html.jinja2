@@ -4,21 +4,10 @@
 
 {% block content %}
 <div class="flex flex-col gap-6">
-
-    {# 1. Activity identity + rename trigger #}
-    <div class="flex items-center gap-2 pb-2">
-        <div id="rename-heading" class="flex items-center gap-2">
-            <h1 class="text-title font-semibold text-text-primary">{{ card.name }}</h1>
-            <button
-                type="button"
-                aria-label="{{ strings.RENAME_LABEL }}"
-                hx-get="/activities/{{ card.id }}/rename-form"
-                hx-target="#rename-heading"
-                hx-swap="innerHTML"
-                class="min-h-tap min-w-tap flex items-center justify-center rounded text-text-muted transition hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-            >{{ icon('pencil', size=16) }}</button>
-        </div>
-    </div>
+    {# 1. Summary card #}
+    {% with card_name=card.name, title_editable=true %}
+    {% include "components/stats_summary.html.jinja2" with context %}
+    {% endwith %}
 
     {# 2. Log button + panel #}
     <div>
@@ -45,9 +34,6 @@
         {% include "components/competition_stats.html.jinja2" with context %}
     {% endif %}
 
-    {# 4. Stats summary #}
-    {% include "components/stats_summary.html.jinja2" with context %}
-
     {# 5. History #}
     <section class="flex flex-col gap-3 rounded-card border border-border bg-surface-1 p-4">
         {% include "components/history.html.jinja2" with context %}
@@ -56,11 +42,20 @@
     {# 6. Field stats — analytics tail, correctly last #}
     {% include "components/field_stats.html.jinja2" with context %}
 
+    <section class="flex flex-col gap-3 pt-2">
+        <button
+            type="button"
+            hx-get="/activities/{{ activity_id }}/delete-confirm"
+            hx-target="#activity-delete-dialog"
+            hx-swap="outerHTML"
+            class="min-h-tap w-full rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-danger transition hover:bg-surface-2 focus-visible:outline-offset-2"
+        >
+            {{ strings.ACTIVITY_DELETE }}
+        </button>
+    </section>
+
 </div>
 
-{% if public_notice %}
-<p class="text-caption text-text-muted">
-    {{ public_notice }}
-</p>
-{% endif %}
+<div id="rename-activity-dialog"></div>
+<div id="activity-delete-dialog"></div>
 {% endblock %}

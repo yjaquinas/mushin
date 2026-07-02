@@ -22,30 +22,23 @@
 {% else %}
 <div class="flex flex-col gap-3">
     {% for card in cards %}
-    <article class="rounded-card border border-border bg-surface-1">
+    <article>
         {% if card.linked %}
         <a
             href="/@{{ username }}/{{ card.slug }}"
-            class="flex flex-col gap-3 rounded-card p-4 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-strong"
+            class="flex flex-col rounded-card transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-strong"
         >
         {% else %}
-        <div class="flex flex-col gap-3 rounded-card p-4">
+        <div class="flex flex-col rounded-card">
         {% endif %}
-            <header class="flex flex-col">
+            {% if card.show_breadcrumb %}
+            <header class="flex flex-col gap-0.5 px-1 pb-2">
                 <span class="text-caption text-text-muted">{{ card.category_name }}</span>
-                <h2 class="text-title font-medium text-text-secondary">{{ card.name }}</h2>
             </header>
-
-            <p class="text-hero-numeral font-semibold leading-tight text-text-primary">
-                {{ card.hero_label }}<span class="text-title font-normal text-text-muted"> {{ strings.HOME_COUNT_UNIT }}</span>
-            </p>
-
-            <p class="text-caption text-text-muted">
-                {% if card.advance_line %}{{ card.advance_line }}{% endif %}
-                {% if card.streak %}
-                    <span class="ms-2">{{ strings.HOME_STREAK_LABEL }} {{ card.streak }}{{ strings.HOME_STREAK_DAYS_UNIT }}</span>
-                {% endif %}
-            </p>
+            {% endif %}
+            {% with activity_id=card.id, counts=card.counts, streaks=card.streaks, heatmap=card.heatmap, top_tags=card.top_tags, card_name=card.name %}
+            {% include "components/stats_summary.html.jinja2" with context %}
+            {% endwith %}
         {% if card.linked %}
         </a>
         {% else %}

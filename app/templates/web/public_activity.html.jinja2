@@ -27,6 +27,8 @@
 {% block title %}{% if card %}{{ card.name }} · {% endif %}{{ username }} · {{ strings.APP_NAME }}{% endblock %}
 
 {% block content %}
+    <h1 class="text-title font-semibold text-text-primary">{{ card.name }}</h1>
+
     {% if card.show_breadcrumb %}
     <p class="text-caption text-text-muted">{{ card.category_name }}</p>
     {% endif %}
@@ -35,7 +37,9 @@
         {% include "components/competition_stats.html.jinja2" with context %}
     {% endif %}
 
+    {% with card_name=card.name %}
     {% include "components/stats_summary.html.jinja2" with context %}
+    {% endwith %}
 
     {% include "components/field_stats.html.jinja2" with context %}
 

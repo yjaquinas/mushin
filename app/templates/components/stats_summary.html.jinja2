@@ -1,20 +1,5 @@
-{#
-  Summary card — counts + streak ("glance"), a calendar-year heatmap strip
-  with quarter labels, and (when the activity has a tag-group field) a top-3
-  tags block. Shared by the activity-detail screen and the home-card list
-  (see components/activity_card.html.jinja2) — the home-card path only ever
-  supplies `counts`/`streaks`, so the heatmap/tags blocks below guard on
-  `heatmap is defined` / `top_tags is not none` rather than assuming they
-  exist.
-
-  Context: counts (stats.counts output), streaks (stats.streaks output),
-  heatmap (optional — stats.card_stats()'s weekly series for the current
-  calendar year, oldest-first, Monday-anchored, each bucket
-  {"week_start", "intensity", "quarter_month"} — intensity bounded 0-7,
-  quarter_month is 1/4/7/10 on the one week labeled Jan/Apr/Jul/Oct, else
-  None), top_tags (optional — None, or {"label", "tags"} from
-  app.routes.web._history_context._build_card_top_tags).
-#}
+{# Shared summary card: title (optional), current streak, all-time count,
+   current-year heatmap, and top tags. #}
 <section
     id="stats-summary-{{ activity_id }}"
     class="flex flex-col gap-4 rounded-card border border-border bg-surface-1 p-4"
@@ -24,48 +9,40 @@
     hx-swap="outerHTML"
     {% endif %}
 >
+    {% if card_name is defined and card_name %}
+    {% if title_editable | default(false) %}
+    <div id="rename-heading" class="flex items-center justify-center gap-2">
+        <h1 class="text-title font-semibold text-text-primary">{{ card_name }}</h1>
+        <button
+            type="button"
+            aria-label="{{ strings.RENAME_LABEL }}"
+            hx-get="/activities/{{ activity_id }}/rename-form"
+            hx-target="#rename-activity-dialog"
+            hx-swap="outerHTML"
+            class="min-h-tap min-w-tap flex items-center justify-center rounded text-text-muted transition hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+        >{{ icon('pencil', size=16) }}</button>
+    </div>
+    {% else %}
+    <h2 class="flex flex-wrap items-baseline justify-center gap-1.5 text-center text-text-primary">
+        <span class="text-title font-semibold">{{ card_name }}</span>
+    </h2>
+    {% endif %}
+    <div class="-mx-4 border-t border-border"></div>
+    {% endif %}
 
-    {# 1. Glance section: name (home-card only), counts grid, current
-       streak. Most prominent text in the card. #}
     <div class="flex flex-col gap-2">
-        {% if card_name is defined and card_name %}
-        <h2 class="flex flex-wrap items-baseline gap-1.5 text-text-primary">
-            <span class="text-title font-semibold">{{ card_name }}</span>
-        </h2>
-        {% endif %}
-
-        <dl class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div class="flex flex-col items-center text-center">
-                <dt class="text-caption text-text-muted">{{ strings.STATS_PERIOD_WEEK }}</dt>
-                <dd class="text-title font-medium text-text-primary">{{ counts.this_week | format_count }}</dd>
+        <dl class="grid grid-cols-2 gap-3">
+            <div class="flex flex-col gap-1 rounded-card bg-surface-0 px-3 py-2 text-center">
+                <dt class="text-caption text-text-muted">{{ strings.STREAK_CURRENT_LABEL }}</dt>
+                <dd class="text-title font-medium text-text-primary">{{ streaks.current | streak_days }}</dd>
             </div>
-            <div class="flex flex-col items-center text-center">
-                <dt class="text-caption text-text-muted">{{ strings.STATS_PERIOD_MONTH }}</dt>
-                <dd class="text-title font-medium text-text-primary">{{ counts.this_month | format_count }}</dd>
-            </div>
-            <div class="flex flex-col items-center text-center">
-                <dt class="text-caption text-text-muted">{{ strings.STATS_PERIOD_YEAR }}</dt>
-                <dd class="text-title font-medium text-text-primary">{{ counts.this_year | format_count }}</dd>
-            </div>
-            <div class="flex flex-col items-center text-center">
+            <div class="flex flex-col gap-1 rounded-card bg-surface-0 px-3 py-2 text-center">
                 <dt class="text-caption text-text-muted">{{ strings.STATS_PERIOD_LIFETIME }}</dt>
                 <dd class="text-title font-medium text-text-primary">{{ counts.lifetime | format_count }}</dd>
             </div>
         </dl>
-
-        <dl class="flex items-baseline justify-center gap-1.5">
-            <dt class="text-caption text-text-muted">{{ strings.STREAK_CURRENT_LABEL }}</dt>
-            <dd class="text-body font-medium text-text-primary">{{ streaks.current | streak_days }}</dd>
-        </dl>
     </div>
-
-    {% if heatmap is defined or top_tags is defined %}
-    <div class="border-t border-border"></div>
-
     <div class="flex flex-col gap-4">
-        {# 2. Heatmap strip — non-interactive, height-encoded, single fill.
-           Secondary visual priority: smaller/muted relative to the glance
-           section above. #}
         {% if heatmap is defined %}
         {% set active_weeks = heatmap | selectattr('intensity', 'gt', 0) | list | length %}
         <div class="flex flex-col gap-1">
@@ -104,9 +81,6 @@
         </div>
         {% endif %}
 
-        {# 3. Top-3 tags — only when the activity has a tag-group field.
-           Lowest visual priority: smallest/most muted text of the three
-           additions. #}
         {% if top_tags is defined and top_tags is not none %}
         <div class="flex flex-col gap-1.5">
             <h3 class="text-caption font-medium text-text-muted">{{ strings.TAGS_TOP_HEADING }}</h3>
@@ -132,6 +106,4 @@
         </div>
         {% endif %}
     </div>
-    {% endif %}
-
 </section>

@@ -1,9 +1,10 @@
 """Entry comment threads on a public activity (collapsed affordance + fragment).
 
 Three routes, all scoped under ``/@{username}/{slug}/entries/{entry_id}/comments``:
-fetch the thread fragment (HTMX swap target), post a new comment, soft-delete
-a comment. All three share a visibility gate (``_resolve_entry_for_comments``)
-and a render helper (``_render_comment_thread``).
+fetch the thread fragment (HTMX swap target), post a new comment, fetch the
+delete-confirm dialog, and soft-delete a comment. All four share a visibility
+gate (``_resolve_entry_for_comments``) and a render helper
+(``_render_comment_thread``).
 
 THE SINGLE VISIBILITY AUTHORITY
 --------------------------------
@@ -196,6 +197,50 @@ async def post_entry_comment(
             entry_id=entry_id,
             current_uid=current_uid,
             user=user,
+        )
+
+
+@router.get(
+    "/@{username}/{slug}/entries/{entry_id}/comments/{comment_id}/delete-confirm",
+    response_class=HTMLResponse,
+    response_model=None,
+)
+async def get_delete_entry_comment_confirm(
+    request: Request,
+    username: str,
+    slug: str,
+    entry_id: int,
+    comment_id: int,
+    session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
+) -> HTMLResponse:
+    """Return the comment-delete confirm dialog for *comment_id*."""
+    current_uid = sessions.read_uid(session)
+    if current_uid is None:
+        return HTMLResponse(status_code=401)
+
+    with db.connect() as conn:
+        conn.execute("BEGIN")
+        resolved = _resolve_entry_for_comments(conn, username, slug, entry_id, current_uid)
+        if isinstance(resolved, HTMLResponse):
+            return resolved
+        _user, owner_id, _activity_id, _entry = resolved
+
+        rows = comments_service.list_comments(conn, entry_id, viewer_id=current_uid)
+        comment = next((row for row in rows if row["id"] == comment_id), None)
+        if comment is None:
+            return HTMLResponse(status_code=404)
+        if current_uid != comment["author_id"] and current_uid != owner_id:
+            return HTMLResponse(status_code=403)
+
+        return templates.TemplateResponse(
+            request=request,
+            name="components/comment_delete_confirm.html.jinja2",
+            context={
+                "username": username,
+                "slug": slug,
+                "entry_id": entry_id,
+                "comment_id": comment_id,
+            },
         )
 
 

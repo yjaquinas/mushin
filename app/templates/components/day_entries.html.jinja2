@@ -72,7 +72,7 @@
     {% if not entries %}
         <p class="text-caption text-text-muted">{{ strings.CALENDAR_DAY_ENTRIES_EMPTY }}</p>
     {% else %}
-        <ul class="flex flex-col gap-1">
+        <ul class="divide-y divide-border">
             {% for entry in entries %}
                 {{ entry_row(
                     entry,

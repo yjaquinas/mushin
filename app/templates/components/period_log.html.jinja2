@@ -40,24 +40,21 @@
     {% if not history.log %}
         <p class="text-caption text-text-muted">{{ strings.HISTORY_LOG_EMPTY }}</p>
     {% else %}
-        {% for day_group in history.log %}
-            <div class="flex flex-col gap-1">
-                <p class="text-caption font-medium text-text-muted">{{ day_group.day }}</p>
-                <ul class="flex flex-col gap-1">
-                    {% for entry in day_group.entries %}
-                        {{ entry_row(
-                            entry,
-                            activity_id,
-                            is_owner=history.is_owner,
-                            can_comment=history.can_comment,
-                            username=history.username,
-                            slug=history.slug,
-                            expand_comment_entry_id=history.expand_comment_entry_id,
-                            login_redirect_url=history.login_redirect_url,
-                        ) }}
-                    {% endfor %}
-                </ul>
-            </div>
-        {% endfor %}
+        <ul class="divide-y divide-border">
+            {% for day_group in history.log %}
+                {% for entry in day_group.entries %}
+                    {{ entry_row(
+                        entry,
+                        activity_id,
+                        is_owner=history.is_owner,
+                        can_comment=history.can_comment,
+                        username=history.username,
+                        slug=history.slug,
+                        expand_comment_entry_id=history.expand_comment_entry_id,
+                        login_redirect_url=history.login_redirect_url,
+                    ) }}
+                {% endfor %}
+            {% endfor %}
+        </ul>
     {% endif %}
 </div>

@@ -1,6 +1,6 @@
-{# Activity-delete confirm dialog. HTMX swaps this whole component into
-   #activity-delete-dialog and JS opens it automatically. #}
-<div id="activity-delete-dialog" hidden data-auto-open>
+{# Comment-delete confirm dialog. HTMX swaps this whole component into the
+   per-comment dialog slot and JS opens it automatically. #}
+<div id="comment-delete-dialog-{{ comment_id }}" hidden data-auto-open>
     <div
         class="fixed inset-0 z-50 flex items-end justify-center bg-text-primary/50 sm:items-center"
         role="presentation"
@@ -8,30 +8,30 @@
         <div
             role="dialog"
             aria-modal="true"
-            aria-labelledby="activity-delete-title"
+            aria-labelledby="comment-delete-title-{{ comment_id }}"
             tabindex="-1"
             class="flex w-full max-w-md flex-col gap-4 rounded-card border border-border bg-surface-1 p-4 sm:rounded-card"
         >
-            <h2 id="activity-delete-title" class="text-body font-semibold text-text-primary">
-                {{ strings.ACTIVITY_DELETE }}
+            <h2 id="comment-delete-title-{{ comment_id }}" class="text-body font-semibold text-text-primary">
+                {{ strings.COMMENTS_DELETE }}
             </h2>
-            <p class="text-caption text-text-muted">{{ strings.ACTIVITY_DELETE_CONFIRM_BODY }}</p>
+            <p class="text-caption text-text-muted">{{ strings.COMMENTS_DELETE_CONFIRM_BODY }}</p>
             <div class="flex flex-col gap-3">
                 <button
                     type="button"
-                    hx-post="/activities/{{ activity_id }}/delete"
-                    hx-target="#activity-delete-dialog"
+                    hx-post="/@{{ username }}/{{ slug }}/entries/{{ entry_id }}/comments/{{ comment_id }}/delete"
+                    hx-target="#comment-thread-{{ entry_id }}"
                     hx-swap="outerHTML"
                     class="min-h-tap w-full rounded-button bg-danger px-4 py-3 text-body font-semibold text-white transition hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
                 >
-                    {{ strings.ACTIVITY_DELETE_CONFIRM }}
+                    {{ strings.COMMENTS_DELETE_CONFIRM }}
                 </button>
                 <button
                     type="button"
-                    id="activity-delete-cancel-button"
+                    data-dialog-close="comment-delete"
                     class="min-h-tap w-full rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline-offset-2"
                 >
-                    {{ strings.ACTIVITY_DELETE_CANCEL }}
+                    {{ strings.COMMENTS_DELETE_CANCEL }}
                 </button>
             </div>
         </div>

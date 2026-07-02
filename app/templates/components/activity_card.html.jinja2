@@ -25,7 +25,7 @@
         </header>
         {% endif %}
 
-        {% with activity_id=card.id, counts=card.counts, streaks=card.streaks, is_owner=false, card_name=card.name %}
+        {% with activity_id=card.id, counts=card.counts, streaks=card.streaks, heatmap=card.heatmap, top_tags=card.top_tags, is_owner=false, card_name=card.name %}
         {% include "components/stats_summary.html.jinja2" with context %}
         {% endwith %}
     </a>

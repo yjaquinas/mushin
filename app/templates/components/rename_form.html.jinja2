@@ -1,55 +1,63 @@
-{#
-  Inline rename form fragment — swaps #rename-heading's innerHTML on the
-  sub-tally detail page. Submitting POSTs to /activities/{id}/rename which
-  on success redirects to the new canonical URL. Cancel swaps back to the
-  plain heading via rename-form-cancel.
-
-  Context:
-    activity_id   int    — the sub-tally being renamed
-    current_name   str    — pre-fills the input
-    error          str?   — validation error message (optional)
-#}
-<form
-    hx-post="/activities/{{ activity_id }}/rename"
-    hx-target="#rename-heading"
-    hx-swap="innerHTML"
-    class="flex flex-col gap-2"
+{# Activity-rename dialog. HTMX swaps this whole component into
+   #rename-activity-dialog and JS opens it automatically. #}
+<div
+    id="rename-activity-dialog"
+    hidden
+    data-auto-open
 >
-    <div class="flex items-center gap-2">
-        <label for="rename-input" class="sr-only">{{ strings.RENAME_SAVE }}</label>
-        <input
-            id="rename-input"
-            type="text"
-            name="name"
-            value="{{ current_name }}"
-            maxlength="200"
-            required
-            autofocus
-            class="flex-1 rounded border border-border bg-surface-1 px-3 py-1 text-title font-semibold text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+    <div
+        class="fixed inset-0 z-50 flex items-end justify-center bg-text-primary/50 sm:items-center"
+        role="presentation"
+    >
+        <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="rename-activity-title"
+            tabindex="-1"
+            class="flex w-full max-w-md flex-col gap-4 rounded-card border border-border bg-surface-1 p-4 sm:rounded-card"
         >
-        <button
-            type="submit"
-            class="min-h-tap rounded-button bg-brand px-3 text-body font-semibold text-on-brand transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-        >{{ strings.RENAME_SAVE }}</button>
-        <button
-            type="button"
-            hx-get="/activities/{{ activity_id }}/rename-form-cancel"
-            hx-target="#rename-heading"
-            hx-swap="innerHTML"
-            class="min-h-tap rounded-button border border-border px-3 text-body text-text-secondary transition hover:bg-surface-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-        >{{ strings.RENAME_CANCEL }}</button>
+            <h2 id="rename-activity-title" class="text-body font-semibold text-text-primary">
+                {{ strings.RENAME_LABEL }}
+            </h2>
+
+            <form
+                hx-post="/activities/{{ activity_id }}/rename"
+                hx-target="#rename-activity-dialog"
+                hx-swap="outerHTML"
+                class="flex flex-col gap-4"
+            >
+                <div class="flex flex-col gap-1">
+                    <label for="rename-input" class="text-caption font-medium text-text-secondary">
+                        {{ strings.RENAME_LABEL }}
+                    </label>
+                    <input
+                        id="rename-input"
+                        type="text"
+                        name="name"
+                        value="{{ current_name }}"
+                        maxlength="200"
+                        required
+                        autofocus
+                        class="min-h-tap rounded-input border border-border bg-surface-1 px-3 py-2 text-body text-text-primary focus-visible:outline-2"
+                    >
+                </div>
+
+                {% if error %}
+                <p class="text-caption text-danger" role="alert">{{ error }}</p>
+                {% endif %}
+
+                <p class="text-caption text-text-muted">{{ strings.RENAME_SLUG_NOTICE }}</p>
+
+                <button
+                    type="submit"
+                    class="min-h-tap w-full rounded-button bg-brand px-4 py-3 text-body font-semibold text-on-brand transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                >{{ strings.RENAME_SAVE }}</button>
+                <button
+                    type="button"
+                    id="rename-activity-cancel-button"
+                    class="min-h-tap w-full rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline-offset-2"
+                >{{ strings.RENAME_CANCEL }}</button>
+            </form>
+        </div>
     </div>
-    {% if error %}
-    <p class="text-caption text-danger" role="alert">{{ error }}</p>
-    {% endif %}
-    <p class="text-caption text-text-muted">{{ strings.RENAME_SLUG_NOTICE }}</p>
-    <div class="mt-4 border-t border-border pt-4">
-        <button
-            type="button"
-            hx-get="/activities/{{ activity_id }}/delete-confirm"
-            hx-target="#rename-heading"
-            hx-swap="innerHTML"
-            class="min-h-tap text-body text-danger transition hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-        >{{ strings.ACTIVITY_DELETE }}</button>
-    </div>
-</form>
+</div>

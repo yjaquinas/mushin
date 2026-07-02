@@ -97,16 +97,17 @@
             {% endif %}
         {% endfor %}
 
-        {# Action row: Delete on the left (demoted, text-only), Save+Cancel on the right #}
+        {# Action row: Delete on the left, Save+Cancel on the right #}
         <div class="flex items-center justify-between gap-2">
             <button
                 type="button"
                 hx-get="/activities/{{ activity_id }}/entries/{{ entry.id }}/delete-confirm"
-                hx-target="closest .entry-row"
+                hx-target="#entry-delete-dialog-{{ entry.id }}"
                 hx-swap="outerHTML"
-                class="min-h-tap px-2 text-body text-danger focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                class="min-h-tap min-w-tap flex items-center justify-center rounded text-text-muted transition hover:text-danger focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
             >
-                {{ strings.ENTRY_DELETE }}
+                {{ icon('trash', size=16) }}
+                <span class="sr-only">{{ strings.ENTRY_DELETE }}</span>
             </button>
             <div class="flex gap-2">
                 <button
@@ -128,4 +129,5 @@
             </div>
         </div>
     </form>
+    <div id="entry-delete-dialog-{{ entry.id }}"></div>
 </li>

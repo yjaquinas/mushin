@@ -9,6 +9,20 @@
     if (el) el.removeAttribute("hidden");
   }
 
+  function setCommentToggleState(slotId, open) {
+    if (!slotId) return;
+    document.querySelectorAll('[data-comment-toggle][data-comment-slot="' + slotId + '"]').forEach(function (button) {
+      button.setAttribute("aria-expanded", open ? "true" : "false");
+      button.classList.toggle("text-accent-text", open);
+      button.classList.toggle("text-text-muted", !open);
+    });
+  }
+
+  function syncCommentToggle(target) {
+    if (!target || !target.id || !target.id.startsWith("comment-slot-")) return;
+    setCommentToggleState(target.id, target.childElementCount > 0);
+  }
+
   function syncHistoryFocus(target) {
     if (!target || !target.id || !target.id.startsWith("history-")) return;
     var focusTarget = target.querySelector("[data-history-focus]");
@@ -122,7 +136,35 @@
       if (iconEl) iconEl.classList.add("rotate-45");
       return;
     }
-  });
+
+    var commentClose = event.target.closest("[data-comment-close]");
+    if (commentClose) {
+      var closeSlot = commentClose.getAttribute("data-comment-slot");
+      var closeTarget = closeSlot ? document.getElementById(closeSlot) : null;
+      if (closeTarget) {
+        closeTarget.innerHTML = "";
+        setCommentToggleState(closeSlot, false);
+      }
+      return;
+    }
+
+    var commentToggle = event.target.closest("[data-comment-toggle]");
+    if (commentToggle) {
+      var slotId = commentToggle.getAttribute("data-comment-slot");
+      var slot = slotId ? document.getElementById(slotId) : null;
+      var expanded = commentToggle.getAttribute("aria-expanded") === "true";
+      if (expanded && slot) {
+        slot.innerHTML = "";
+        setCommentToggleState(slotId, false);
+        event.preventDefault();
+        event.stopPropagation();
+        if (typeof event.stopImmediatePropagation === "function") {
+          event.stopImmediatePropagation();
+        }
+      }
+      return;
+    }
+  }, true);
 
   document.addEventListener("change", function (event) {
     if (event.target.matches('#visibility-form input[name="visibility"]')) {
@@ -155,6 +197,7 @@
     syncHistoryFocus(target);
     syncHomeCards(target);
     syncVisibilityForm();
+    syncCommentToggle(target);
   });
 
   document.body.addEventListener("htmx:afterRequest", function (event) {

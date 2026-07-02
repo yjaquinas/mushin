@@ -21,6 +21,7 @@ from datetime import UTC, datetime
 from typing import Any
 from zoneinfo import ZoneInfo
 
+from app.routes.web._history_context import _build_card_top_tags
 from app.services import categories, comments, connections, entries, stats
 
 _EMPTY_MATCH_ROW: dict[str, str] = entries.EMPTY_MATCH_ROW
@@ -72,14 +73,14 @@ def _build_card_context(
     """
     activity_id = activity_row["id"]
 
+    field_defs = _field_defs_for_activity(conn, activity_id)
+    card_stats = stats.card_stats(activity_id, owner_id, tz=tz)
+    counts = card_stats["counts"]
+    streaks = card_stats["streaks"]
     progress: dict[str, Any] | None = None
     advance_line: str | None = None
-    counts = stats.counts_for_sub_tallies([activity_id], owner_id, tz=tz).get(activity_id, {})
     hero_label = counts.get("lifetime", activity_row["cached_count"] or 0)
     streak = activity_row["cached_streak"] or 0
-    streaks = stats.streaks(activity_id, owner_id, tz=tz)
-
-    field_defs = _field_defs_for_activity(conn, activity_id)
     fields = []
     for fd in field_defs:
         field_ctx: dict[str, Any] = {
@@ -111,6 +112,8 @@ def _build_card_context(
         "streak": streak,
         "counts": counts,
         "streaks": streaks,
+        "heatmap": card_stats["heatmap"],
+        "top_tags": _build_card_top_tags(activity_id, owner_id, field_defs, tz=tz),
         "fields": fields,
         "now": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M"),
         "linked": linked,
