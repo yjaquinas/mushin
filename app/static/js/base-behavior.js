@@ -45,9 +45,9 @@
 
   window.showToast = showToast;
 
-  function setEntryExpandedState(entryId, open) {
+  function setEntryExpandedState(entryId, open, root) {
     if (!entryId) return;
-    document.querySelectorAll('[data-entry-toggle][data-entry-id="' + entryId + '"]').forEach(function (button) {
+    (root || document).querySelectorAll('[data-entry-toggle][data-entry-id="' + entryId + '"]').forEach(function (button) {
       button.setAttribute("aria-expanded", open ? "true" : "false");
 
       var indicator = button.querySelector("[data-entry-comment-indicator]");
@@ -67,7 +67,7 @@
       }
     });
 
-    document.querySelectorAll("#entry-expanded-" + entryId).forEach(function (panel) {
+    (root || document).querySelectorAll("#entry-expanded-" + entryId).forEach(function (panel) {
       if (open) show(panel);
       else hide(panel);
     });
@@ -84,9 +84,28 @@
     (root || document).querySelectorAll("[data-entry-toggle]").forEach(function (button) {
       var entryId = button.getAttribute("data-entry-id");
       var open = button.getAttribute("aria-expanded") === "true";
-      setEntryExpandedState(entryId, open);
+      setEntryExpandedState(entryId, open, root || document);
       if (open) maybeLoadEntryComments(entryId);
     });
+  }
+
+  function collapseExpandedEntries(root) {
+    (root || document).querySelectorAll("[data-entry-toggle]").forEach(function (button) {
+      var entryId = button.getAttribute("data-entry-id");
+      setEntryExpandedState(entryId, false, root || document);
+    });
+  }
+
+  function isHistoryPeriodSwitch(trigger) {
+    return !!(trigger && trigger.matches('[role="tab"][id^="history-tab-"]'));
+  }
+
+  function isHistoryTarget(target) {
+    return !!(target && target.id && target.id.startsWith("history-"));
+  }
+
+  function htmxTrigger(event) {
+    return event.detail && event.detail.requestConfig ? event.detail.requestConfig.elt : event.detail.elt;
   }
 
   function syncHistoryFocus(target) {
@@ -358,7 +377,11 @@
     syncHomeCards(target);
     syncAccountEmailForm();
     syncVisibilityForm();
-    syncExpandedEntries(target);
+    if (isHistoryTarget(target) && isHistoryPeriodSwitch(htmxTrigger(event))) {
+      collapseExpandedEntries(target);
+    } else {
+      syncExpandedEntries(target);
+    }
     syncCommentFormState(target);
     syncBoundedTextareas(target);
   });
@@ -373,6 +396,14 @@
     if (elt && elt.matches("[data-log-trigger]")) {
       return;
     }
+  });
+
+  document.body.addEventListener("htmx:beforeRequest", function (event) {
+    var trigger = htmxTrigger(event);
+    if (!isHistoryPeriodSwitch(trigger)) return;
+    var historyRoot = trigger.closest('[id^="history-"]');
+    if (!historyRoot) return;
+    collapseExpandedEntries(historyRoot);
   });
 
   document.body.addEventListener("log-saved", function () {
