@@ -661,7 +661,7 @@
   }
 
   .bottom-nav-tab--active {
-    color: var(--color-accent-text);
+    color: var(--color-obsidian);
   }
 
   .bottom-nav-tab svg {

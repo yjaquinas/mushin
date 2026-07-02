@@ -50,6 +50,17 @@
     (root || document).querySelectorAll('[data-entry-toggle][data-entry-id="' + entryId + '"]').forEach(function (button) {
       button.setAttribute("aria-expanded", open ? "true" : "false");
 
+      var summary = button.querySelector("[data-entry-summary]");
+      var time = button.querySelector("[data-entry-time]");
+      if (summary) {
+        if (open) hide(summary);
+        else show(summary);
+      }
+      if (time) {
+        if (open) show(time);
+        else hide(time);
+      }
+
       var indicator = button.querySelector("[data-entry-comment-indicator]");
       if (!indicator) return;
 
@@ -187,6 +198,33 @@
     return Number(value || 0).toLocaleString("en-US");
   }
 
+  function formatLocalTimestamp(timestamp) {
+    if (!timestamp) return "";
+
+    var date = new Date(timestamp);
+    if (Number.isNaN(date.getTime())) return "";
+
+    var parts = new Intl.DateTimeFormat("en-US", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23"
+    }).formatToParts(date);
+
+    var values = {};
+    parts.forEach(function (part) {
+      values[part.type] = part.value;
+    });
+
+    if (!values.year || !values.month || !values.day || !values.hour || !values.minute) return "";
+    var hour = parseInt(values.hour, 10);
+    var hour12 = hour % 12 || 12;
+    var ampm = hour < 12 ? "AM" : "PM";
+    return values.year + "-" + values.month + "-" + values.day + " " + hour12 + ":" + values.minute + " " + ampm;
+  }
+
   function enforceBoundedTextareaLimits(textarea) {
     if (!textarea) return;
 
@@ -244,6 +282,15 @@
       enforceBoundedTextareaLimits(textarea);
       autosizeTextarea(textarea);
       updateBoundedTextareaCharCount(textarea);
+    });
+  }
+
+  function syncLocalTimestamps(scope) {
+    (scope || document).querySelectorAll("[data-local-timestamp]").forEach(function (node) {
+      var localTimestamp = formatLocalTimestamp(node.dataset.localTimestamp);
+      if (localTimestamp) {
+        node.textContent = localTimestamp;
+      }
     });
   }
 
@@ -369,6 +416,7 @@
     syncExpandedEntries(document);
     syncCommentFormState(document);
     syncBoundedTextareas(document);
+    syncLocalTimestamps(document);
   });
 
   document.body.addEventListener("htmx:afterSwap", function (event) {
@@ -384,6 +432,7 @@
     }
     syncCommentFormState(target);
     syncBoundedTextareas(target);
+    syncLocalTimestamps(target);
   });
 
   document.body.addEventListener("htmx:afterRequest", function (event) {

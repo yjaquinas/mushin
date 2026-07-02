@@ -60,7 +60,7 @@
                     </span>
                     {% endif %}
                 </span>
-                <span class="text-caption text-text-muted">{{ comment.created_at[:10] }}</span>
+                <span class="text-caption text-text-muted" data-local-timestamp="{{ comment.created_at }}">{{ comment.created_at | format_comment_timestamp }}</span>
             </div>
             <div class="flex items-start justify-between gap-2">
                 {% if comment.hidden_at %}

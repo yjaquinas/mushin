@@ -35,6 +35,7 @@
 {% set memo_lines = memo_text.split('\n') %}
 {% set collapsed_memo = memo_lines[0] if memo_lines else "" %}
 {% set show_full_memo = memo_text | length > 80 or memo_lines | length > 1 %}
+{% set entry_time = entry.occurred_at | format_entry_time %}
 <li id="entry-row-{{ entry.id }}" class="entry-row flex flex-col gap-1 py-2">
     <div class="flex items-center gap-2">
         <button
@@ -46,13 +47,28 @@
         >
             <span class="min-w-0 flex flex-1 items-baseline gap-2 text-body text-text-primary">
                 <span class="shrink-0 text-caption text-text-muted">{{ entry.occurred_at[:10] }}</span>
-                {%- if entry.hidden_at -%}
-                    <span class="block min-w-0 flex-1 truncate text-text-muted italic">{{ strings.ENTRY_HIDDEN_BY_MODERATOR }}</span>
-                {%- elif entry.memo -%}
-                    <span class="block min-w-0 flex-1 truncate">
-                        {{ collapsed_memo }}{% if show_full_memo %} ...{% endif %}
-                    </span>
-                {%- endif -%}
+                {% if entry_time %}
+                <span
+                    class="shrink-0 text-caption text-text-muted"
+                    data-entry-time
+                    {% if expand_comment_entry_id != entry.id %}hidden{% endif %}
+                >{{ entry_time }}</span>
+                {% endif %}
+                {% if entry.hidden_at %}
+                <span
+                    class="block min-w-0 flex-1 truncate text-text-muted italic"
+                    data-entry-summary
+                    {% if expand_comment_entry_id == entry.id %}hidden{% endif %}
+                >{{ strings.ENTRY_HIDDEN_BY_MODERATOR }}</span>
+                {% elif entry.memo %}
+                <span
+                    class="block min-w-0 flex-1 truncate"
+                    data-entry-summary
+                    {% if expand_comment_entry_id == entry.id %}hidden{% endif %}
+                >
+                    {{ collapsed_memo }}{% if show_full_memo %} ...{% endif %}
+                </span>
+                {% endif %}
             </span>
             <span class="flex shrink-0 items-center gap-2 text-caption text-text-muted">
             {% if username is not none and slug is not none %}
@@ -94,17 +110,9 @@
     >
         {% if entry.hidden_at %}
         <p class="whitespace-pre-wrap break-words text-body text-text-muted italic">{{ strings.ENTRY_HIDDEN_BY_MODERATOR }}</p>
-        {% elif show_full_memo %}
+        {% elif memo_text %}
         <p class="whitespace-pre-wrap break-words text-body text-text-primary">{{ memo_text }}</p>
         {% endif %}
-
-        <div class="flex items-start justify-between gap-3">
-            {% if entry.time_known == 1 %}
-            <p class="text-caption text-text-muted">{{ entry.occurred_at | format_entry_time }}</p>
-            {% else %}
-            <span></span>
-            {% endif %}
-        </div>
 
         {% if (entry.comment_count or can_comment) and username is not none and slug is not none %}
         <div id="comment-slot-{{ entry.id }}"></div>

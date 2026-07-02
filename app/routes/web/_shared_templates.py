@@ -63,6 +63,14 @@ def _format_entry_time(occurred_at: str) -> str:
         return ""
 
 
+def _format_comment_timestamp(created_at: str) -> str:
+    try:
+        dt = datetime.fromisoformat(created_at)
+        return f"{dt.strftime('%Y-%m-%d')} {dt.hour % 12 or 12}:{dt.minute:02d} {'AM' if dt.hour < 12 else 'PM'}"
+    except (ValueError, AttributeError):
+        return ""
+
+
 def _format_count(n: int) -> str:
     if n < 1000:
         return str(n)
@@ -78,6 +86,6 @@ def _format_streak_days(n: int) -> str:
 
 
 templates.env.filters["format_entry_time"] = _format_entry_time
+templates.env.filters["format_comment_timestamp"] = _format_comment_timestamp
 templates.env.filters["format_count"] = _format_count
 templates.env.filters["streak_days"] = _format_streak_days
-
