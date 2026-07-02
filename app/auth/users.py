@@ -202,9 +202,11 @@ def create_username_user(
     optional recovery address. *timezone* is the untrusted browser-detected IANA
     name, validated (``'UTC'`` fallback) and stored at creation only. Raises
     ``IdentityTakenError`` if the username is already taken, or if *email* is
-    given and already taken.
+    given and already taken. New real accounts start ``public`` and stamped as
+    having already cleared the legacy welcome-sharing gate.
     """
     tz = _normalize_timezone(timezone)
+    now = _now_iso()
     with db.connect() as conn:
         conn.execute("BEGIN")
         existing = conn.execute(
@@ -223,9 +225,9 @@ def create_username_user(
         cur = conn.execute(
             "INSERT INTO user"
             " (auth_provider, username, password_hash, email, display_name, timezone,"
-            " last_active_at, visibility)"
-            " VALUES ('email', ?, ?, ?, ?, ?, ?, 'public')",
-            (username, password_hash, email, username, tz, _now_iso()),
+            " last_active_at, visibility, consent_seen_at, private_redefinition_seen_at)"
+            " VALUES ('email', ?, ?, ?, ?, ?, ?, 'public', ?, ?)",
+            (username, password_hash, email, username, tz, now, now, now),
         )
         return int(cur.lastrowid)
 
@@ -239,11 +241,13 @@ def create_oauth_user(
     """Create a fresh OAuth user (no guest to upgrade). Returns its id.
 
     *timezone* is the untrusted browser-detected IANA name, validated (``'UTC'``
-    fallback) and stored at creation only.
+    fallback) and stored at creation only. New real accounts start ``public``
+    and stamped as having already cleared the legacy welcome-sharing gate.
     """
     if auth_provider != "google":
         raise AccountError(f"{auth_provider!r} is not an OAuth provider")
     tz = _normalize_timezone(timezone)
+    now = _now_iso()
     with db.connect() as conn:
         conn.execute("BEGIN")
         existing = conn.execute(
@@ -254,9 +258,9 @@ def create_oauth_user(
             raise IdentityTakenError(f"{auth_provider} identity {provider_id!r} already exists")
         cur = conn.execute(
             "INSERT INTO user (auth_provider, provider_id, display_name, timezone,"
-            " last_active_at, visibility)"
-            " VALUES (?, ?, ?, ?, ?, 'public')",
-            (auth_provider, provider_id, display_name, tz, _now_iso()),
+            " last_active_at, visibility, consent_seen_at, private_redefinition_seen_at)"
+            " VALUES (?, ?, ?, ?, ?, 'public', ?, ?)",
+            (auth_provider, provider_id, display_name, tz, now, now, now),
         )
         return int(cur.lastrowid)
 
@@ -282,14 +286,17 @@ def attach_provider(
     row already pointing at it is preserved with zero migration — only the
     identity columns change.
 
-    The caller is responsible for having verified consent and for resolving the
-    edge case where the identity already maps to a *different* account (see
-    ``find_by_provider`` / ``find_by_email`` before calling). This function does
-    a final guard so a race can't create a duplicate identity.
+    The caller is responsible for having verified signup consent and for
+    resolving the edge case where the identity already maps to a *different*
+    account (see ``find_by_provider`` / ``find_by_email`` before calling). This
+    function does a final guard so a race can't create a duplicate identity.
+    Upgraded rows become ``public`` and stamped as having already cleared the
+    legacy welcome-sharing gate.
     """
     if auth_provider not in {"google", "email"}:
         raise AccountError(f"{auth_provider!r} is not a real provider")
 
+    now = _now_iso()
     with db.connect() as conn:
         conn.execute("BEGIN")
         target = conn.execute("SELECT * FROM user WHERE id = ?", (user_id,)).fetchone()
@@ -324,7 +331,8 @@ def attach_provider(
         if auth_provider == "email":
             conn.execute(
                 "UPDATE user SET auth_provider = ?, provider_id = ?, password_hash = ?,"
-                " username = ?, email = ?, display_name = ?, last_active_at = ?, visibility = 'public'"
+                " username = ?, email = ?, display_name = ?, last_active_at = ?, visibility = 'public',"
+                " consent_seen_at = ?, private_redefinition_seen_at = ?"
                 " WHERE id = ?",
                 (
                     auth_provider,
@@ -333,20 +341,25 @@ def attach_provider(
                     username,
                     email,
                     username,
-                    _now_iso(),
+                    now,
+                    now,
+                    now,
                     user_id,
                 ),
             )
         else:  # google — unchanged behavior
             conn.execute(
                 "UPDATE user SET auth_provider = ?, provider_id = ?, password_hash = ?,"
-                " display_name = ?, last_active_at = ?, visibility = 'public' WHERE id = ?",
+                " display_name = ?, last_active_at = ?, visibility = 'public',"
+                " consent_seen_at = ?, private_redefinition_seen_at = ? WHERE id = ?",
                 (
                     auth_provider,
                     provider_id,
                     password_hash,
                     display_name,
-                    _now_iso(),
+                    now,
+                    now,
+                    now,
                     user_id,
                 ),
             )

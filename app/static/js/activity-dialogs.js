@@ -67,7 +67,9 @@
     if (
       target.id.startsWith("entry-delete-dialog-") ||
       target.id.startsWith("comment-delete-dialog-") ||
-      target.id.startsWith("entry-edit-dialog-")
+      target.id.startsWith("entry-edit-dialog-") ||
+      target.id.startsWith("connect-remove-dialog") ||
+      target.id.startsWith("connect-cancel-dialog")
     ) {
       dynamicDialogs[target.id] = initDialog(target.id) || dynamicDialogs[target.id];
       autoOpenDialog(target.id, dynamicDialogs[target.id]);

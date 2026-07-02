@@ -1,8 +1,7 @@
 {#
   Relationship-state affordance on another user's read-only profile —
-  one control reflecting `connections.relationship_state`, plus a quiet
-  Block affordance. Swappable as a whole fragment after any action (see
-  app.routes.web._render_relationship_affordance).
+  one control reflecting `connections.relationship_state`. Swappable as a
+  whole fragment after any action (see app.routes.web._render_relationship_affordance).
 
   Context: `username` (the profile being viewed), `state` (one of
   "self" | "blocked" | "fellow" | "pending_outgoing" | "pending_incoming" |
@@ -20,9 +19,12 @@
   the page-singleton fellows section / use the per-row dom_id downstream.
 #}
 {% set dom_id = dom_id | default("relationship-affordance") %}
+{% set remove_dialog_id = remove_dialog_id | default("connect-remove-dialog") %}
+{% set cancel_request_dialog_id = cancel_request_dialog_id | default("connect-cancel-dialog") %}
 {% set pending_incoming_target_id = pending_incoming_target_id | default("fellows-section") %}
 {% set from_search = from_search | default(false) %}
 {% set qs = "?source=search" if from_search else "" %}
+{% set cancel_qs = "?source=search" if from_search else "?source=profile" %}
 <div id="{{ dom_id }}" class="flex flex-col gap-2">
     {% if error %}
     <p class="text-caption text-danger" role="alert">{{ error }}</p>
@@ -32,27 +34,27 @@
     <div class="flex flex-wrap items-center gap-2">
         <button
             type="button"
-            hx-get="/fellows/{{ username }}/connect-confirm{{ qs }}"
+            hx-post="/fellows/{{ username }}/connect{{ qs }}"
             hx-target="#{{ dom_id }}"
             hx-swap="outerHTML"
-            class="min-h-tap rounded-button bg-brand px-4 text-body font-semibold text-on-brand transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-        >{{ strings.CONNECT_ACTION }}</button>
-        {% include "components/_block_link.html.jinja2" with context %}
+            class="inline-flex min-h-tap items-center gap-2 rounded-button bg-brand px-4 text-body font-semibold text-on-brand transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+        ><span aria-hidden="true">{{ icon("user-plus", size=18) }}</span><span>{{ strings.CONNECT_ACTION }}</span></button>
     </div>
 
     {% elif state == "pending_outgoing" %}
-    <div class="flex flex-wrap items-center gap-2">
-        <span class="min-h-tap inline-flex items-center rounded-button border border-border px-4 text-body text-text-secondary">
-            {{ strings.CONNECT_REQUESTED }}
-        </span>
-        {% include "components/_block_link.html.jinja2" with context %}
-    </div>
+    <button
+        type="button"
+        hx-get="/fellows/requests/{{ username }}/cancel-confirm{{ cancel_qs }}"
+        hx-target="#{{ cancel_request_dialog_id }}"
+        hx-swap="outerHTML"
+        class="min-h-tap self-start rounded-button border border-border px-4 text-body text-text-secondary transition hover:bg-surface-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+    >{{ strings.CONNECT_REQUESTED }}</button>
 
     {% elif state == "pending_incoming" %}
     <div class="flex flex-wrap items-center gap-2">
         <button
             type="button"
-            hx-get="/fellows/requests/{{ username }}/accept-confirm{{ qs }}"
+            hx-post="/fellows/requests/{{ username }}/accept{{ qs }}"
             hx-target="#{{ pending_incoming_target_id }}"
             hx-swap="outerHTML"
             class="min-h-tap rounded-button bg-brand px-4 text-body font-semibold text-on-brand transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
@@ -64,20 +66,16 @@
             hx-swap="outerHTML"
             class="min-h-tap rounded-button border border-border px-3 text-body text-text-secondary transition hover:bg-surface-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
         >{{ strings.REQUESTS_DECLINE }}</button>
-        {% include "components/_block_link.html.jinja2" with context %}
     </div>
 
     {% elif state == "fellow" %}
-    <div class="flex flex-wrap items-center gap-2">
-        <span class="text-body font-medium text-text-primary">{{ strings.CONNECT_FELLOWS_LABEL }}</span>
-        <button
-            type="button"
-            hx-get="/fellows/{{ username }}/remove-confirm{{ qs }}"
-            hx-target="#{{ dom_id }}"
-            hx-swap="outerHTML"
-            class="min-h-tap rounded-button text-caption text-text-muted underline-offset-2 transition hover:underline focus-visible:outline-offset-2"
-        >{{ strings.CONNECT_REMOVE }}</button>
-    </div>
+    <button
+        type="button"
+        hx-get="/fellows/{{ username }}/remove-confirm{{ qs }}"
+        hx-target="#{{ remove_dialog_id }}"
+        hx-swap="outerHTML"
+        class="min-h-tap self-start rounded-button border border-border px-4 text-body text-text-secondary transition hover:bg-surface-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+    >{{ strings.CONNECT_REMOVE }}</button>
 
     {% elif state == "blocked" %}
     <button
@@ -88,4 +86,6 @@
         class="min-h-tap rounded-button border border-border px-4 text-body text-text-secondary transition hover:bg-surface-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
     >{{ strings.CONNECT_UNBLOCK }}</button>
     {% endif %}
+    <div id="{{ cancel_request_dialog_id }}"></div>
+    <div id="{{ remove_dialog_id }}"></div>
 </div>

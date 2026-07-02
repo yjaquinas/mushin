@@ -391,9 +391,8 @@ TERMS_PAGE_TITLE = "Terms of Service"
 
 PROFILE_ACTIVITIES_EMPTY = "Nothing logged yet."
 
-# Quiet line under the character-sheet (limited) view of a private account —
-# factual, no lock icon, no "request access" framing.
-PROFILE_LIMITED_NOTICE = "Fellows see the full record, including notes."
+# Quiet line above the character-sheet (limited) view of a private account.
+PROFILE_LIMITED_NOTICE = "{username} is a private user. Connect to see more."
 
 # Owner-view notice on a public activity page — factual, no alarm framing.
 ACTIVITY_PUBLIC_NOTICE = "This page is public — anyone with the link sees it, notes included."
@@ -435,9 +434,10 @@ REQUESTS_PENDING_BADGE = "{count}"
 CONNECT_ACTION = "Connect"
 CONNECT_REQUESTED = "Requested"
 CONNECT_FELLOWS_LABEL = "You're fellows"
-CONNECT_REMOVE = "Remove"
+CONNECT_REMOVE = "Remove connection"
 CONNECT_BLOCK = "Block"
 CONNECT_UNBLOCK = "Unblock"
+CONNECT_CANCEL_REQUEST = "Cancel request"
 
 # Two-step inline confirms (mirrors the delete-confirm pattern — never a
 # naked destructive button).
@@ -446,6 +446,9 @@ CONNECT_REMOVE_CONFIRM_BODY = (
 )
 CONNECT_REMOVE_CONFIRM = "Remove"
 CONNECT_REMOVE_CANCEL = "Keep"
+CONNECT_CANCEL_REQUEST_CONFIRM_BODY = "Cancel this pending connection request?"
+CONNECT_CANCEL_REQUEST_CONFIRM = "Cancel request"
+CONNECT_CANCEL_REQUEST_KEEP = "Keep request"
 
 CONNECT_BLOCK_CONFIRM_BODY = (
     "Block this account. This also removes any fellow connection or pending request between you."

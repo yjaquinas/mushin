@@ -71,6 +71,20 @@ def _relationship_dom_id(username: str, *, from_search: bool) -> str:
     return "relationship-affordance"
 
 
+def _remove_dialog_dom_id(username: str, *, from_search: bool) -> str:
+    """The id used for the remove-connection confirm dialog host."""
+    if from_search:
+        return f"connect-remove-dialog-{username}"
+    return "connect-remove-dialog"
+
+
+def _cancel_request_dialog_dom_id(username: str, *, from_search: bool) -> str:
+    """The id used for the cancel-request confirm dialog host."""
+    if from_search:
+        return f"connect-cancel-dialog-{username}"
+    return "connect-cancel-dialog"
+
+
 def _render_relationship_affordance(
     request: Request,
     profile_username: str,
@@ -91,6 +105,8 @@ def _render_relationship_affordance(
             "state": state,
             "error": error,
             "dom_id": dom_id,
+            "remove_dialog_id": _remove_dialog_dom_id(profile_username, from_search=from_search),
+            "cancel_request_dialog_id": _cancel_request_dialog_dom_id(profile_username, from_search=from_search),
             "pending_incoming_target_id": dom_id,
             "from_search": from_search,
         },

@@ -1,9 +1,9 @@
-{# Remove-connection confirm dialog. HTMX swaps this whole component into the
+{# Cancel-request confirm dialog. HTMX swaps this whole component into the
    per-affordance dialog slot and JS opens it automatically. #}
 {% set dom_id = dom_id | default("relationship-affordance") %}
-{% set dialog_id = dialog_id | default("connect-remove-dialog") %}
+{% set dialog_id = dialog_id | default("connect-cancel-dialog") %}
 {% set from_search = from_search | default(false) %}
-{% set qs = "?source=search" if from_search else "" %}
+{% set qs = "?source=search" if from_search else "?source=profile" %}
 <div id="{{ dialog_id }}" hidden data-auto-open>
     <div
         class="fixed inset-0 z-50 flex items-end justify-center bg-text-primary/50 sm:items-center"
@@ -17,22 +17,22 @@
             class="flex w-full max-w-md flex-col gap-4 rounded-card border border-border bg-surface-1 p-4 sm:rounded-card"
         >
             <h2 id="{{ dialog_id }}-title" class="text-body font-semibold text-text-primary">
-                {{ strings.CONNECT_REMOVE }}
+                {{ strings.CONNECT_CANCEL_REQUEST }}
             </h2>
-            <p class="text-caption text-text-muted">{{ strings.CONNECT_REMOVE_CONFIRM_BODY }}</p>
+            <p class="text-caption text-text-muted">{{ strings.CONNECT_CANCEL_REQUEST_CONFIRM_BODY }}</p>
             <div class="flex flex-col gap-3">
                 <button
                     type="button"
-                    hx-post="/fellows/{{ username }}/remove{{ qs }}"
+                    hx-post="/fellows/requests/{{ username }}/cancel{{ qs }}"
                     hx-target="#{{ dom_id }}"
                     hx-swap="outerHTML"
                     class="min-h-tap w-full rounded-button bg-danger px-4 py-3 text-body font-semibold text-white transition hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-                >{{ strings.CONNECT_REMOVE_CONFIRM }}</button>
+                >{{ strings.CONNECT_CANCEL_REQUEST_CONFIRM }}</button>
                 <button
                     type="button"
-                    data-dialog-close="connect-remove"
+                    data-dialog-close="connect-cancel"
                     class="min-h-tap w-full rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline-offset-2"
-                >{{ strings.CONNECT_REMOVE_CANCEL }}</button>
+                >{{ strings.CONNECT_CANCEL_REQUEST_KEEP }}</button>
             </div>
         </div>
     </div>

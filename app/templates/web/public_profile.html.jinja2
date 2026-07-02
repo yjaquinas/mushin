@@ -17,6 +17,14 @@
 {% block content %}
 {% include "components/fellows_section.html.jinja2" with context %}
 
+{% if viewer_logged_in %}
+{% include "components/relationship_affordance.html.jinja2" with context %}
+{% endif %}
+
+{% if view_mode == "limited" %}
+<p class="text-caption text-text-muted">{{ strings.PROFILE_LIMITED_NOTICE.format(username=username) }}</p>
+{% endif %}
+
 {% if not cards %}
 <p class="text-body text-text-secondary">{{ strings.PROFILE_ACTIVITIES_EMPTY }}</p>
 {% else %}
@@ -47,13 +55,5 @@
     </article>
     {% endfor %}
 </div>
-{% endif %}
-
-{% if view_mode == "limited" %}
-<p class="text-caption text-text-muted">{{ strings.PROFILE_LIMITED_NOTICE }}</p>
-{% endif %}
-
-{% if viewer_logged_in %}
-{% include "components/relationship_affordance.html.jinja2" with context %}
 {% endif %}
 {% endblock %}

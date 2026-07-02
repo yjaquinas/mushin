@@ -29,8 +29,6 @@ def _home_url_context(request: Request) -> dict[str, str]:
 def consent_gate_redirect(user: dict[str, Any]) -> RedirectResponse | None:
     if user["auth_provider"] == "guest":
         return None
-    if user["consent_seen_at"] is None:
-        return RedirectResponse(url="/welcome-sharing", status_code=303)
     if user["visibility"] == "private" and user["private_redefinition_seen_at"] is None:
         return RedirectResponse(url="/visibility-update", status_code=303)
     return None
