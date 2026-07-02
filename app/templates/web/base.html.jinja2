@@ -32,7 +32,11 @@
         <span class="min-w-[44px]"></span>
         {% endif %}
         <h1 class="text-title font-semibold text-text-primary">{{ page_title }}</h1>
+        {% if profile_url %}
+        {% include "components/_profile_share_button.html.jinja2" with context %}
+        {% else %}
         <span class="min-w-[44px]"></span>
+        {% endif %}
     </header>
     {% endif %}
     <main class="mx-auto flex w-full max-w-screen-md grow flex-col gap-4 px-4 py-4">
@@ -44,7 +48,7 @@
         role="status"
         aria-live="polite"
         data-toast-variant="informative"
-        class="pointer-events-none fixed inset-x-4 bottom-24 z-50 mx-auto max-w-screen-sm rounded-card border px-4 py-3 text-body shadow-soft"
+        class="pointer-events-none fixed left-1/2 top-6 z-50 w-[calc(100%-2rem)] max-w-screen-sm -translate-x-1/2 rounded-card border px-4 py-3 text-body shadow-soft"
     ></div>
 
     {# Bottom navigation bar — always visible. #}

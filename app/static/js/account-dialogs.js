@@ -16,6 +16,16 @@
   var importDlg = initDialog("import-data-dialog");
   var deleteDlg = initDialog("delete-account-dialog");
 
+  async function copyShareLink(url) {
+    if (!url || !navigator.clipboard || !navigator.clipboard.writeText) return false;
+    try {
+      await navigator.clipboard.writeText(url);
+      return true;
+    } catch (_error) {
+      return false;
+    }
+  }
+
   async function shareProfile(button) {
     if (!button) return;
     var rawUrl = button.getAttribute("data-share-url");
@@ -26,23 +36,20 @@
     if (!url) return;
 
     try {
-      if (navigator.share) {
+      if (navigator.share && (!navigator.canShare || navigator.canShare({ url: url }))) {
         await navigator.share({ title: label, url: url });
-      } else if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(url);
-        if (window.showToast) window.showToast(copied);
-      } else {
-        throw new Error("share unavailable");
+        return;
       }
+      if (await copyShareLink(url)) {
+        if (window.showToast) window.showToast(copied);
+        return;
+      }
+      throw new Error("share unavailable");
     } catch (error) {
       if (error && error.name === "AbortError") return;
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        try {
-          await navigator.clipboard.writeText(url);
-          if (window.showToast) window.showToast(copied);
-          return;
-        } catch (_clipboardError) {
-        }
+      if (await copyShareLink(url)) {
+        if (window.showToast) window.showToast(copied);
+        return;
       }
       if (window.showToast) window.showToast(failed, "warning");
     }

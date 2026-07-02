@@ -184,7 +184,7 @@ CALENDAR_DAY_ENTRIES_EMPTY = "No entries on this day."
 # labels (HEATMAP_QUARTER_LABELS) orient the reader within the strip instead
 # of a window-length caption.
 HEATMAP_ARIA = "Activity this year, {active_weeks} weeks with activity"
-HEATMAP_EMPTY = "No activity yet"
+HEATMAP_EMPTY = "No entries yet"
 
 # Quarter-start month labels placed along the heatmap strip (sparse — every
 # week is a column, but only the week containing a quarter's 1st gets a text
@@ -312,7 +312,7 @@ ACCOUNT_VISIBILITY_SAVE = "Save"
 ACCOUNT_EMAIL_HEADING = "Email address"
 ACCOUNT_EMAIL_LABEL = "Email"
 ACCOUNT_EMAIL_HELP = "For account recovery. Optional."
-ACCOUNT_EMAIL_SAVE = "Save email"
+ACCOUNT_EMAIL_UPDATE = "Update email"
 ACCOUNT_EMAIL_INVALID = "Enter a valid email address."
 ACCOUNT_EMAIL_TAKEN = "That email address is already in use."
 

@@ -18,9 +18,6 @@ from app.routes.web._shared import (
     templates,
 )
 from app.routes.web._shared import ui_strings as strings
-from app.services import profiles
-
-
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
@@ -52,7 +49,6 @@ def render_account_settings(
             "username": user["username"],
             "email": email_value if email_value is not None else user["email"],
             "email_error": email_error,
-            "profile_url": profiles.canonical_profile_url(user["username"]) if user["username"] else None,
             "visibility": user["visibility"],
             "current_page": "account",
             "page_title": strings.ACCOUNT_TITLE,

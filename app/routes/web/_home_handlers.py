@@ -17,9 +17,6 @@ from app.routes.web._shared import (
     consent_gate_redirect,
     templates,
 )
-from app.services import profiles
-
-
 async def render_home(request: Request, user: dict) -> HTMLResponse:
     """Render the signed-in home page for the current user."""
     owner_id = int(user["id"])

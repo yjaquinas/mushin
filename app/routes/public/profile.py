@@ -139,6 +139,7 @@ async def profile(
             context["flash_message"] = _read_flash(request)
             context["current_page"] = "home"
             context["page_title"] = username
+            context["profile_url"] = profiles.canonical_profile_url(username)
             context["show_back"] = False
             response = templates.TemplateResponse(
                 request=request,
@@ -157,6 +158,7 @@ async def profile(
         )
         context["current_page"] = None
         context["page_title"] = username
+        context["profile_url"] = profiles.canonical_profile_url(username)
         context["show_back"] = False
         context["back_url"] = "/"
 

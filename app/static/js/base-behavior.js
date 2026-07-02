@@ -125,6 +125,17 @@
     saveButton.disabled = !selected || selected.value === currentValue;
   }
 
+  function syncAccountEmailForm() {
+    var form = document.getElementById("account-email-form");
+    if (!form) return;
+    var input = form.querySelector('input[name="email"]');
+    var saveButton = form.querySelector('button[type="submit"]');
+    if (!input || !saveButton) return;
+    var currentValue = (form.dataset.currentEmail || "").trim();
+    var enteredValue = input.value.trim();
+    saveButton.disabled = enteredValue === currentValue;
+  }
+
   function resetLogTrigger() {
     var trigger = document.querySelector("[data-log-trigger]");
     if (trigger) trigger.setAttribute("aria-expanded", "false");
@@ -298,6 +309,11 @@
   });
 
   document.addEventListener("input", function (event) {
+    if (event.target.matches('#account-email-form input[name="email"]')) {
+      syncAccountEmailForm();
+      return;
+    }
+
     if (event.target.matches('[data-comment-form] textarea[name="body"]')) {
       enforceBoundedTextareaLimits(event.target);
       autosizeTextarea(event.target);
@@ -330,6 +346,7 @@
       messageNode.remove();
     });
     syncVisibilityForm();
+    syncAccountEmailForm();
     syncExpandedEntries(document);
     syncCommentFormState(document);
     syncBoundedTextareas(document);
@@ -339,6 +356,7 @@
     var target = event.detail.target;
     syncHistoryFocus(target);
     syncHomeCards(target);
+    syncAccountEmailForm();
     syncVisibilityForm();
     syncExpandedEntries(target);
     syncCommentFormState(target);
