@@ -15,12 +15,6 @@ def _build_edit_fields_context(conn: sqlite3.Connection, owner_id: int, activity
             "label": "Memo",
             "prefilled_value": entry.get("memo") or "",
         },
-        {
-            "id": "num_value",
-            "kind": "count",
-            "label": "Value",
-            "prefilled_value": entry.get("num_value") or "",
-        },
     ]
 
 

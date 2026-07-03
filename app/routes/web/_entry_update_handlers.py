@@ -36,15 +36,8 @@ async def update_entry_body(request: Request, activity_id: int, entry_id: int, o
         occurred_at_utc=str(form.get("occurred_at_utc") or "").strip() or None,
     )
 
-    # Extract memo and num_value from form.
+    # Extract memo from form. Numeric value is not editable here.
     memo = str(form.get("memo") or "").strip() or None
-    num_value_raw = str(form.get("num_value") or "").strip()
-    num_value = None
-    if num_value_raw:
-        try:
-            num_value = float(num_value_raw)
-        except ValueError:
-            pass
 
     try:
         updated = entries.update(
@@ -52,7 +45,6 @@ async def update_entry_body(request: Request, activity_id: int, entry_id: int, o
             memo=memo,
             occurred_at=occurred_at,
             time_known=time_known,
-            num_value=num_value,
             tags=None,
             tz=tz,
         )
