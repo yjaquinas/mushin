@@ -1,11 +1,12 @@
 {#
-  Grouped People search results.
-  Context: query, people (id, username, visibility, relationship_state), tags.
+  Prefix-routed search results.
+  Context: query, kind, people, tags, activities.
 #}
 {% if not query %}
 <p class="py-6 text-center text-caption text-text-secondary">{{ strings.SEARCH_PROMPT }}</p>
 {% else %}
 <div class="flex flex-col gap-6">
+    {% if kind == "people" %}
     <section class="flex flex-col gap-2">
         <h2 class="text-body font-medium text-text-secondary">{{ strings.SEARCH_PEOPLE_HEADING }}</h2>
         {% if not people %}
@@ -35,5 +36,46 @@
         </ul>
         {% endif %}
     </section>
+    {% elif kind == "tags" %}
+    <section class="flex flex-col gap-2">
+        <h2 class="text-body font-medium text-text-secondary">{{ strings.SEARCH_TAGS_HEADING }}</h2>
+        {% if not tags %}
+        <p class="text-caption text-text-secondary">{{ strings.SEARCH_TAGS_EMPTY }}</p>
+        {% else %}
+        <ul class="flex flex-col gap-2">
+            {% for tag in tags %}
+            <li class="flex min-h-tap items-center justify-between gap-3 rounded-card px-3 py-2 text-body text-text-primary">
+                <span class="font-medium">#{{ tag.name }}</span>
+                <span class="text-caption text-text-secondary">{{ strings.SEARCH_TAG_COUNT.format(count=tag.total) }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </section>
+    {% elif kind == "activities" %}
+    <section class="flex flex-col gap-2">
+        <h2 class="text-body font-medium text-text-secondary">{{ strings.SEARCH_ACTIVITIES_HEADING }}</h2>
+        {% if not activities %}
+        <p class="text-caption text-text-secondary">{{ strings.SEARCH_ACTIVITIES_EMPTY }}</p>
+        {% else %}
+        <ul class="flex flex-col gap-2">
+            {% for activity in activities %}
+            <li>
+                <a
+                    href="{{ activity.url }}"
+                    class="flex min-h-tap items-center justify-between gap-3 rounded-card px-3 py-2 text-body text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                >
+                    <span class="flex min-w-0 flex-col">
+                        <span class="truncate font-medium">{{ activity.name }}</span>
+                        <span class="text-caption text-text-secondary">@{{ activity.username }}</span>
+                    </span>
+                    <span class="shrink-0 text-caption text-text-secondary">{{ strings.SEARCH_ACTIVITY_COUNT.format(count=activity.count) }}</span>
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </section>
+    {% endif %}
 </div>
 {% endif %}

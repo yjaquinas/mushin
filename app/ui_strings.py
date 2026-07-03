@@ -481,19 +481,24 @@ CONNECT_ERROR_NOT_FOUND = "That request is no longer there."
 CONNECT_ERROR_GENERIC = "That didn't go through."
 
 # ---------------------------------------------------------------------------
-# People + tag search (Tasks 9-10, social graph)
+# People, tag, and activity search
 # ---------------------------------------------------------------------------
 
 SEARCH_TITLE = "Search"
-SEARCH_INPUT_LABEL = "Search people, activites, and tags"
-SEARCH_INPUT_PLACEHOLDER = "Search"
-SEARCH_PROMPT = "Search for people, activities, and tags."
+SEARCH_INPUT_LABEL = "Search @people, #tags, or activities"
+SEARCH_INPUT_PLACEHOLDER = "@username, #tag, or activity"
+SEARCH_PROMPT = "Use @username for people, #tag for tags, or type an activity name."
 
 SEARCH_PEOPLE_HEADING = "People"
 SEARCH_PEOPLE_EMPTY = "No one by that name."
 
 SEARCH_TAGS_HEADING = "Tags"
-SEARCH_TAGS_EMPTY = "No public records with that tag yet."
+SEARCH_TAGS_EMPTY = "No visible records with that tag yet."
+SEARCH_TAG_COUNT = "{count} uses"
+
+SEARCH_ACTIVITIES_HEADING = "Activities"
+SEARCH_ACTIVITIES_EMPTY = "No activities by that name."
+SEARCH_ACTIVITY_COUNT = "{count} times"
 
 # ---------------------------------------------------------------------------
 # Entry comments

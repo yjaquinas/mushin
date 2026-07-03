@@ -1,4 +1,4 @@
-"""Search service: people search (all real accounts).
+"""Search service: people, tag, and activity discovery.
 
 Renderer-agnostic — no HTTP, no templates. Each function opens its own
 ``db.connect()`` and returns plain Python data (lists of dicts).
@@ -11,34 +11,22 @@ All live real accounts (public AND private) are findable, including the
 searcher themselves; deleted accounts and anyone blocked in either direction
 are excluded.
 
+Activity search returns only public-profile-safe activity metadata. Tag search
+returns aggregate tag names/counts from public users, the searcher, and accepted
+fellows.
+
 LIKE WILDCARD ESCAPING
 ----------------------
 Both queries do a prefix match with ``LIKE ? || '%' ESCAPE '\\'``. The user's
-query is run through ``_escape_like`` first.
+query is run through shared LIKE escaping first.
 """
 
 from __future__ import annotations
 
 from app.models import db
 from app.services import connections
-
-MAX_LIMIT = 50
-_LIKE_ESCAPE = "\\"
-
-
-def _escape_like(text: str) -> str:
-    """Escape LIKE wildcards and the escape char itself."""
-    return (
-        text.replace(_LIKE_ESCAPE, _LIKE_ESCAPE + _LIKE_ESCAPE)
-        .replace("%", _LIKE_ESCAPE + "%")
-        .replace("_", _LIKE_ESCAPE + "_")
-    )
-
-
-def _clamp_limit(limit: int) -> int:
-    if limit < 1:
-        return 1
-    return min(limit, MAX_LIMIT)
+from app.services._search_common import LIKE_ESCAPE, clamp_limit, escape_like
+from app.services._search_discovery import search_activities, search_tags
 
 
 def search_people(searcher_id: int, query: str, *, limit: int = 20) -> list[dict]:
@@ -56,8 +44,8 @@ def search_people(searcher_id: int, query: str, *, limit: int = 20) -> list[dict
     if not q:
         return []
 
-    pattern = _escape_like(q)
-    capped = _clamp_limit(limit)
+    pattern = escape_like(q)
+    capped = clamp_limit(limit)
 
     with db.connect() as conn:
         conn.execute("BEGIN")
@@ -75,7 +63,7 @@ def search_people(searcher_id: int, query: str, *, limit: int = 20) -> list[dict
             " LIMIT ?",
             (
                 pattern,
-                _LIKE_ESCAPE,
+                LIKE_ESCAPE,
                 searcher_id,
                 searcher_id,
                 capped,
@@ -93,15 +81,20 @@ def search_people(searcher_id: int, query: str, *, limit: int = 20) -> list[dict
     ]
 
 
-def search_tags_public(searcher_id: int, query: str, *, limit: int = 20) -> list[dict]:
-    """Search PUBLIC accounts' entries by tag name prefix.
-
-    With the new flat schema, tags are stored as comma-separated ids on the
-    entry row. This function is kept as a stub — tag-based public search
-    requires a tag lookup table that no longer exists.
-    """
-    q = query.strip()
-    if not q:
-        return []
-
-    return []
+def grouped_results(searcher_id: int, query: str, *, limit: int = 20) -> dict:
+    """Interpret the search prefix and return the matching result group."""
+    raw = query.strip()
+    result = {"kind": "", "query": raw, "people": [], "tags": [], "activities": []}
+    if not raw:
+        return result
+    if raw.startswith("@"):
+        result["kind"] = "people"
+        result["people"] = search_people(searcher_id, raw[1:].strip(), limit=limit)
+        return result
+    if raw.startswith("#"):
+        result["kind"] = "tags"
+        result["tags"] = search_tags(searcher_id, raw[1:].strip(), limit=limit)
+        return result
+    result["kind"] = "activities"
+    result["activities"] = search_activities(searcher_id, raw, limit=limit)
+    return result
