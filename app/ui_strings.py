@@ -259,6 +259,7 @@ IMPORT_ENTRIES_BODY = "Merge activities and entries from a previous export. Exis
 IMPORT_ENTRIES_FILE_LABEL = "Entries file (.json)"
 IMPORT_ENTRIES_CONFIRM = "Import entries"
 IMPORT_ENTRIES_CANCEL = "Cancel"
+IMPORT_ENTRIES_CLOSE = "Close"
 IMPORT_ENTRIES_SUCCESS = "Import complete"
 IMPORT_ENTRIES_ACTIVITIES_CREATED = "Activities created"
 IMPORT_ENTRIES_ENTRIES_IMPORTED = "Entries added"

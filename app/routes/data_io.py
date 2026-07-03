@@ -8,6 +8,7 @@ the "replace all my data" upload endpoint, both reached via footer links.
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Cookie, File, Request, UploadFile
@@ -15,6 +16,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from app.auth import sessions, users
 from app.routes.web._shared import _home_url_for, templates
+from app import ui_strings
 from app.services import portability
 
 router = APIRouter()
@@ -30,6 +32,11 @@ def _resolve_user(session: str | None) -> dict[str, Any] | None:
     """Resolve the current user from the session cookie (guest or real)."""
     uid = sessions.read_uid(session)
     return users.get_user(uid) if uid is not None else None
+
+
+def _timestamped_export_filename(prefix: str) -> str:
+    timestamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
+    return f"{prefix}-{timestamp}.json"
 
 
 @router.get("/export")
@@ -51,7 +58,9 @@ async def export_data(
     return Response(
         content=body,
         media_type="application/json",
-        headers={"Content-Disposition": 'attachment; filename="mushin-export.json"'},
+        headers={
+            "Content-Disposition": f'attachment; filename="{_timestamped_export_filename("mushin-export")}"'
+        },
     )
 
 
@@ -123,11 +132,10 @@ MAX_ENTRY_IMPORT_BYTES = 2 * 1024 * 1024
 async def export_entries(
     session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
 ) -> Response:
-    """Download the current user's categories and entries as a lightweight JSON file.
+    """Download the current user's activities and entries as a lightweight JSON file.
 
-    Exports only categories, activities, and entry timestamps — no memos,
-    comments, tags, or field values. Suitable for a quick data snapshot
-    or migration between accounts.
+    Exports only activity names plus entry data needed to recreate entries.
+    Notes/comments, tags, and other activity metadata are not included.
     """
     user = _resolve_user(session)
     if user is None:
@@ -138,7 +146,9 @@ async def export_entries(
     return Response(
         content=body,
         media_type="application/json",
-        headers={"Content-Disposition": 'attachment; filename="mushin-entries.json"'},
+        headers={
+            "Content-Disposition": f'attachment; filename="{_timestamped_export_filename("mushin-entries")}"'
+        },
     )
 
 
@@ -148,11 +158,11 @@ async def import_entries(
     file: Annotated[UploadFile, File()],
     session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
 ) -> Response:
-    """Import categories and entries, merging with existing data.
+    """Import activities and entries, merging with existing data.
 
-    Accepts an entry-only export file (``.json``). Categories and activities
-    are created if they don't exist; entries are skipped if they already exist
-    (matched by activity + timestamp). Nothing is erased.
+    Accepts an entry-only export file (``.json``). Activities are created if
+    they don't exist; entries are skipped if they already exist in the account
+    or appear more than once in the uploaded file. Nothing is erased.
 
     On success, re-renders the import dialog with a summary. On failure,
     shows an inline error.

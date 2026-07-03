@@ -64,6 +64,7 @@ DialogManager.prototype = {
   close: function () {
     if (!this.el) return;
     this.el.setAttribute("hidden", "");
+    this.el.dispatchEvent(new CustomEvent("dialog:close", { bubbles: true }));
     dialogManagerRegistry.remove(this);
   },
 };

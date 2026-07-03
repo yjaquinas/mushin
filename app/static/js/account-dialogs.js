@@ -13,6 +13,16 @@
     return dlg;
   }
 
+  function resetImportDialog() {
+    var template = document.getElementById("entry-import-data-dialog-template");
+    var dialog = document.getElementById("entry-import-data-dialog");
+    if (!template || !dialog) return;
+    var replacement = template.content.firstElementChild;
+    if (!replacement) return;
+    dialog.replaceWith(replacement.cloneNode(true));
+    importDlg = initDialog("entry-import-data-dialog") || importDlg;
+  }
+
   var importDlg = initDialog("entry-import-data-dialog");
   var deleteDlg = initDialog("delete-account-dialog");
 
@@ -94,6 +104,12 @@
   }
 
   autoOpenImportDialog();
+
+  document.body.addEventListener("dialog:close", function (event) {
+    if (event.target && event.target.id === "entry-import-data-dialog") {
+      resetImportDialog();
+    }
+  });
 
   document.body.addEventListener("htmx:afterSwap", function () {
     importDlg = initDialog("entry-import-data-dialog") || importDlg;
