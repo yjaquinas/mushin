@@ -12,6 +12,7 @@ from fastapi.templating import Jinja2Templates
 from markupsafe import Markup
 
 from app import ui_strings
+from app.services import entries
 
 _STATIC_DIR = Path(__file__).resolve().parent.parent.parent / "static"
 _ICONS_DIR = _STATIC_DIR / "icons"
@@ -41,6 +42,10 @@ def _static_asset(path: str) -> str:
     return f"{path}?v={_asset_version(path)}" if path.startswith("/static/") else path
 
 
+def _entry_tags_csv(memo: str | None) -> str:
+    return ",".join(entries.parse_hashtags(memo or ""))
+
+
 def _theme_from_cookie(value: str | None) -> str:
     return value if value in THEME_VALUES else "light"
 
@@ -53,6 +58,7 @@ templates = Jinja2Templates(directory="app/templates", context_processors=[_them
 templates.env.globals["strings"] = ui_strings
 templates.env.globals["icon"] = _icon
 templates.env.globals["static_asset"] = _static_asset
+templates.env.filters["entry_tags_csv"] = _entry_tags_csv
 
 
 def _format_entry_time(occurred_at: str) -> str:

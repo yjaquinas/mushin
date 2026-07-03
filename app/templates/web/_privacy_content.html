@@ -1,9 +1,4 @@
-{# Privacy policy content partial — long-form legal prose, NOT UI chrome.
-
-Exempted from the strings-centralization guard
-(tests/integration/test_web.py::test_no_hardcoded_copy_in_templates):
-this is long-form legal content, not a UI string subject to i18n
-centralization. #}
+{# Privacy policy content partial — long-form legal prose, NOT UI chrome. #}
 
 <article class="flex flex-col gap-6 text-body leading-relaxed text-text-primary">
     <header class="flex flex-col gap-2">
@@ -15,11 +10,10 @@ centralization. #}
         <p class="font-semibold">In short...</p>
         <p class="mt-2">
             Mushin stores the account and activity data needed to run your record:
-            your username or guest account, your activities, entries, notes,
-            comments, connections, and account settings. You can export that data,
-            replace it by importing a Mushin export file, or delete it. Deleting
-            your account removes the data owned by that account, and inactive guest
-            accounts are removed automatically on a retention schedule.
+            your username, your activities, entries, notes, and account settings.
+            You can export that data, replace it by importing a Mushin export file,
+            or delete it. Deleting your account removes the data owned by that
+            account.
         </p>
     </div>
 
@@ -32,42 +26,30 @@ centralization. #}
         <h2 class="text-title font-semibold text-text-primary">1. What we collect</h2>
         <p>
             We collect the information needed to create and operate your Mushin
-            record. What we collect depends on how you use the service.
+            record.
         </p>
 
         <h3 class="text-body font-semibold text-text-primary">a. Account identity and login data</h3>
         <ul class="list-disc pl-6">
             <li>
-                If you create a password account, we collect your username, your
-                password hash, and your optional recovery email address.
+                We collect your username and your password hash.
             </li>
             <li>
                 Passwords are not stored in plain text. Mushin stores only an
                 Argon2id password hash.
             </li>
-            <li>
-                If a deployment offers OAuth sign-in, Mushin may collect the
-                provider account identifier and profile name needed to attach that
-                identity to your account.
-            </li>
-            <li>
-                If you use Mushin as a guest, Mushin creates a guest account tied
-                to the signed session cookie in your browser.
-            </li>
         </ul>
 
         <h3 class="text-body font-semibold text-text-primary">b. Account metadata</h3>
         <ul class="list-disc pl-6">
-            <li>Your timezone setting</li>
             <li>Your visibility setting</li>
-            <li>Account timestamps such as created-at, last-active-at, and deletion status</li>
+            <li>Account timestamps such as created-at and deletion status</li>
         </ul>
 
         <h3 class="text-body font-semibold text-text-primary">c. Data you create in Mushin</h3>
         <ul class="list-disc pl-6">
-            <li>Categories and activities</li>
-            <li>Entries, including occurred-at timestamps, notes, tags, and numeric values</li>
-            <li>Match records for competition-style activities</li>
+            <li>Activities</li>
+            <li>Entries, including occurred-at timestamps, notes, and numeric values</li>
             <li>Comments you write on entries</li>
             <li>Connection and block records used for fellows and profile access</li>
         </ul>
@@ -79,8 +61,7 @@ centralization. #}
                 browser or device information may appear in server and proxy logs.
             </li>
             <li>
-                Mushin uses a signed session cookie to keep you logged in or to
-                keep a guest account attached to your browser session.
+                Mushin uses a signed session cookie to keep you logged in.
             </li>
         </ul>
     </section>
@@ -88,9 +69,9 @@ centralization. #}
     <section class="flex flex-col gap-3">
         <h2 class="text-title font-semibold text-text-primary">2. How we use it</h2>
         <ul class="list-disc pl-6">
-            <li>To create your account or guest record and keep you signed in</li>
-            <li>To store your activities, entries, notes, comments, and stats</li>
-            <li>To apply your visibility, fellow, and block settings</li>
+            <li>To create your account and keep you signed in</li>
+            <li>To store your activities, entries, notes, and stats</li>
+            <li>To apply your visibility and block settings</li>
             <li>To let you export, import, or delete your data</li>
             <li>To operate, secure, and troubleshoot the service</li>
         </ul>
@@ -106,25 +87,31 @@ centralization. #}
             Mushin is a multi-user service, so some data can be visible to other
             people depending on your settings.
         </p>
+
+        <h3 class="text-body font-semibold text-text-primary">a. Public accounts</h3>
         <ul class="list-disc pl-6">
             <li>
-                <strong>Private accounts:</strong> other people can still discover
-                your username and activity names, but they cannot open the private
-                activity detail pages or see your notes unless they are accepted
-                mutual connections ("fellows").
+                If your account is public, anyone can see your activities, entries,
+                and notes.
             </li>
             <li>
-                <strong>Public accounts:</strong> your full record, including
-                entries and notes, can be viewed by anyone with your profile link.
+                Your username is visible to everyone and is used in your profile URL.
             </li>
+        </ul>
+
+        <h3 class="text-body font-semibold text-text-primary">b. Private accounts</h3>
+        <ul class="list-disc pl-6">
             <li>
-                <strong>Fellows:</strong> accepted mutual connections can see the
-                full record, including notes, even if the account is otherwise
-                private.
+                If your account is private, only accepted fellow connections can
+                see your full record.
             </li>
+        </ul>
+
+        <h3 class="text-body font-semibold text-text-primary">c. Fellows</h3>
+        <ul class="list-disc pl-6">
             <li>
-                Comments and connections are visible where needed for the shared
-                social features to work.
+                Fellows are mutual connections who have both consented to see each
+                other's full records, including notes.
             </li>
         </ul>
     </section>
@@ -156,11 +143,6 @@ centralization. #}
                         <td class="py-2 pr-3">Application hosting and storage</td>
                         <td class="py-2">The account and activity data stored by Mushin</td>
                     </tr>
-                    <tr>
-                        <td class="py-2 pr-3">OAuth provider, if enabled</td>
-                        <td class="py-2 pr-3">Authentication</td>
-                        <td class="py-2">Provider identifier and profile details used for sign-in</td>
-                    </tr>
                 </tbody>
             </table>
         </div>
@@ -172,28 +154,18 @@ centralization. #}
 
     <section class="flex flex-col gap-3">
         <h2 class="text-title font-semibold text-text-primary">5. Retention and deletion</h2>
-        <h3 class="text-body font-semibold text-text-primary">a. Logged-in accounts</h3>
+        <h3 class="text-body font-semibold text-text-primary">a. Accounts</h3>
         <ul class="list-disc pl-6">
             <li>Your account data is kept until you delete the account.</li>
             <li>
                 Deleting an account deletes the user row and the data that account
                 owns through database cascade deletion, including activities,
-                entries, notes, tags, values, matches, comments, and relationship
-                records tied to that account.
+                entries, notes, comments, and relationship records tied to that
+                account.
             </li>
         </ul>
 
-        <h3 class="text-body font-semibold text-text-primary">b. Guest accounts</h3>
-        <ul class="list-disc pl-6">
-            <li>Guests can also delete their data through the in-product delete flow.</li>
-            <li>
-                Mushin also removes stale guest accounts automatically. The current
-                schedule is about 7 days for guests with no entries and about 30
-                days for inactive guests.
-            </li>
-        </ul>
-
-        <h3 class="text-body font-semibold text-text-primary">c. Logs</h3>
+        <h3 class="text-body font-semibold text-text-primary">b. Logs</h3>
         <ul class="list-disc pl-6">
             <li>
                 Operational logs are kept only as long as needed for security,
@@ -215,7 +187,7 @@ centralization. #}
                 stored under your account.
             </li>
             <li>
-                You can delete your account or guest record from within Mushin.
+                You can delete your account from within Mushin.
             </li>
             <li>
                 Logging out clears the session cookie but does not delete your

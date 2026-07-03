@@ -1,0 +1,91 @@
+{#
+  Import entries — quiet dialog for uploading a previously-exported
+  entries JSON file and merging it into the current account.
+
+  The form posts to /import-entries (multipart/form-data) and targets
+  this whole component (#entry-import-data-dialog) so the route can
+  re-render it in place with an inline error on failure, or show a
+  success summary on success.
+
+  Auto-open on error uses account-dialogs.js with a data-auto-open flag.
+
+  Optional context (set by the route on an error re-render):
+    import_error      - error string shown inline above the form.
+    import_success    - summary dict with counts on successful import.
+    open_on_error     - when true, the dialog opens immediately on swap-in.
+#}
+<div
+    id="entry-import-data-dialog"
+    hidden
+    {% if open_on_error %}data-auto-open{% endif %}
+>
+    <div
+        class="fixed inset-0 z-50 flex items-end justify-center bg-text-primary/50 sm:items-center"
+        role="presentation"
+    >
+        <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="entry-import-data-title"
+            class="flex w-full max-w-md flex-col gap-4 rounded-card border border-border bg-surface-1 p-4 sm:rounded-card"
+        >
+            <h2 id="entry-import-data-title" class="text-body font-semibold text-text-primary">
+                {{ strings.IMPORT_ENTRIES_TITLE }}
+            </h2>
+            <p class="text-caption text-text-secondary">{{ strings.IMPORT_ENTRIES_BODY }}</p>
+
+            {% if import_error %}
+                <p class="text-caption text-danger">{{ import_error }}</p>
+            {% endif %}
+
+            {% if import_success %}
+                <div class="flex flex-col gap-1 rounded-input border border-border p-3">
+                    <p class="text-caption font-medium text-text-primary">{{ strings.IMPORT_ENTRIES_SUCCESS }}</p>
+                    <ul class="text-caption text-text-secondary">
+                        <li>{{ strings.IMPORT_ENTRIES_ACTIVITIES_CREATED }}: {{ import_success.activities_created }}</li>
+                        <li>{{ strings.IMPORT_ENTRIES_ENTRIES_IMPORTED }}: {{ import_success.entries_imported }}</li>
+                        <li>{{ strings.IMPORT_ENTRIES_ENTRIES_SKIPPED }}: {{ import_success.entries_skipped }}</li>
+                    </ul>
+                </div>
+            {% endif %}
+
+            <form
+                hx-post="/import-entries"
+                hx-encoding="multipart/form-data"
+                hx-target="#entry-import-data-dialog"
+                hx-swap="outerHTML"
+                class="flex flex-col gap-4"
+            >
+                <div class="flex flex-col gap-1">
+                    <label for="entry-import-data-file" class="text-caption font-medium text-text-secondary">
+                        {{ strings.IMPORT_ENTRIES_FILE_LABEL }}
+                    </label>
+                    <input
+                        type="file"
+                        id="entry-import-data-file"
+                        name="file"
+                        accept=".json,application/json"
+                        required
+                        class="min-h-tap rounded-input border border-border bg-surface-1 px-3 py-2 text-body text-text-primary focus-visible:outline-2"
+                    >
+                </div>
+
+                <button
+                    type="submit"
+                    hx-disabled-elt="this"
+                    class="min-h-tap w-full rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline-offset-2 disabled:opacity-60"
+                >
+                    {{ strings.IMPORT_ENTRIES_CONFIRM }}
+                </button>
+
+                <button
+                    type="button"
+                    id="entry-import-cancel-button"
+                    class="min-h-tap w-full rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline-offset-2"
+                >
+                    {{ strings.IMPORT_ENTRIES_CANCEL }}
+                </button>
+            </form>
+        </div>
+    </div>
+</div>

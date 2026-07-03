@@ -50,20 +50,12 @@ async def visibility_update(
     request: Request,
     session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
 ) -> HTMLResponse | RedirectResponse:
-    """The one-time "what Private means has changed" interstitial.
-
-    Shown once to a pre-existing private account whose meaning of ``private``
-    changed under them. Self-guards the same way ``welcome_sharing`` does: a
-    guest, a still-unconsented account (gate 1 owns them), a public account, or
-    an account that has already acknowledged the change is bounced straight
-    home — so a direct visit can't show the screen out of turn.
-    """
+    """The one-time "what Private means has changed" interstitial."""
     user = _current_user(session)
     if user is None:
         return RedirectResponse(url="/", status_code=303)
     if (
-        user["auth_provider"] == "guest"
-        or user["consent_seen_at"] is None
+        user["consent_seen_at"] is None
         or user["visibility"] != "private"
         or user["private_redefinition_seen_at"] is not None
     ):
@@ -79,13 +71,7 @@ async def visibility_update(
 async def submit_visibility_update(
     session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
 ) -> RedirectResponse:
-    """Acknowledge the private-redefinition interstitial, then go to ``/home``.
-
-    Stamps ``private_redefinition_seen_at`` for the session user via
-    ``users.mark_redefinition_seen`` so the re-consent gate never fires again,
-    then redirects to the owner's home/profile URL. No body to validate — this
-    is a single affirmative acknowledgement, not a re-choice.
-    """
+    """Acknowledge the private-redefinition interstitial, then go to ``/home``."""
     user = _current_user(session)
     if user is None:
         return RedirectResponse(url="/", status_code=303)

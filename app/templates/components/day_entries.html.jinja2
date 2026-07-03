@@ -72,7 +72,8 @@
     {% if not entries %}
         <p class="text-caption text-text-muted">{{ strings.CALENDAR_DAY_ENTRIES_EMPTY }}</p>
     {% else %}
-        <ul class="divide-y divide-border">
+        <p class="text-caption text-text-muted" data-history-empty hidden>{{ strings.HISTORY_LOG_EMPTY_TAG }}</p>
+        <ul class="divide-y divide-border" data-history-entry-list>
             {% for entry in entries %}
                 {{ entry_row(
                     entry,

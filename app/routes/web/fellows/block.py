@@ -1,7 +1,7 @@
 """Fellows: disconnect (remove a fellow) and block/unblock.
 
 Disconnect and block each sit behind a two-step inline confirm (mirroring
-``category_delete_confirm``); unblock is direct, no confirm step. See
+``activity_delete_confirm``); unblock is direct, no confirm step. See
 ``connection.py`` for the send/accept/decline/cancel request flow and the
 module-level notes on session/ownership conventions shared by both files.
 """

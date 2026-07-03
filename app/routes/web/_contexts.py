@@ -1,7 +1,6 @@
 """Re-export web surface card and home context helpers."""
 
 from app.routes.web._context_cards import (
-    _EMPTY_MATCH_ROW,
     _build_card_context,
     _build_fellows_context,
     _build_home_context,

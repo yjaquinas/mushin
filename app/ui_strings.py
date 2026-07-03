@@ -192,7 +192,9 @@ HEATMAP_EMPTY = "No entries yet"
 # bucket's `quarter_month`).
 HEATMAP_QUARTER_LABELS = {1: "JAN", 4: "APR", 7: "JUL", 10: "OCT"}
 
-TAGS_TOP_HEADING = "Top tags"
+TAGS_HEADING = "Tags"
+TAG_FILTER_CLEAR = "All entries"
+TAGS_SHOW_ALL = "Show all"
 
 # ---------------------------------------------------------------------------
 # History: period switcher + actual log
@@ -208,6 +210,7 @@ HISTORY_NEXT_WEEK = "Next week"
 HISTORY_TODAY = "Today"
 
 HISTORY_LOG_EMPTY = "Nothing logged in this period."
+HISTORY_LOG_EMPTY_TAG = "No entries found for this tag in this period."
 HISTORY_CLEAR_SELECTION = "Clear selection"
 
 # ---------------------------------------------------------------------------
@@ -403,7 +406,8 @@ TERMS_PAGE_TITLE = "Terms of Service"
 # Public profiles (/@{username}, /@{username}/{slug})
 # ---------------------------------------------------------------------------
 
-PROFILE_ACTIVITIES_EMPTY = "Nothing logged yet."
+PROFILE_ACTIVITIES_EMPTY = "No activities logged yet."
+PROFILE_ACTIVITIES_HEADING = "Activities"
 
 # Quiet line above the character-sheet (limited) view of a private account.
 PROFILE_LIMITED_NOTICE = "{username} is a private user. Connect to see more."
@@ -447,7 +451,7 @@ REQUESTS_PENDING_BADGE = "{count}"
 # Relationship-state affordance on another user's profile.
 CONNECT_ACTION = "Connect"
 CONNECT_REQUESTED = "Requested"
-CONNECT_REMOVE = "Remove fellows connection"
+CONNECT_REMOVE = "Remove connection"
 CONNECT_BLOCK = "Block"
 CONNECT_UNBLOCK = "Unblock"
 CONNECT_CANCEL_REQUEST = "Cancel request"
@@ -481,9 +485,9 @@ CONNECT_ERROR_GENERIC = "That didn't go through."
 # ---------------------------------------------------------------------------
 
 SEARCH_TITLE = "Search"
-SEARCH_INPUT_LABEL = "Search people and tags"
-SEARCH_INPUT_PLACEHOLDER = "Search by name or tag"
-SEARCH_PROMPT = "Search for people by name, or activities by tag."
+SEARCH_INPUT_LABEL = "Search people, activites, and tags"
+SEARCH_INPUT_PLACEHOLDER = "Search"
+SEARCH_PROMPT = "Search for people, activities, and tags."
 
 SEARCH_PEOPLE_HEADING = "People"
 SEARCH_PEOPLE_EMPTY = "No one by that name."

@@ -106,16 +106,16 @@
     <h2 class="text-body font-semibold text-text-primary">Data</h2>
     <div class="flex gap-3">
         <a
-            href="/export"
+            href="/export-entries"
             class="flex min-h-tap flex-1 items-center justify-center gap-2 rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline-offset-2"
         >
             {{ icon("arrow-up-tray", size=18) }}
             {{ strings.FOOTER_EXPORT_ENTRIES }}
         </a>
-        {% include "components/import_data_dialog.html.jinja2" with context %}
+        {% include "components/entry_import_dialog.html.jinja2" with context %}
         <button
             type="button"
-            id="import-open-button"
+            id="entry-import-open-button"
             class="flex min-h-tap flex-1 items-center justify-center gap-2 rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline-offset-2"
         >
             {{ icon("arrow-down-tray", size=18) }}

@@ -45,7 +45,7 @@ def rename_activity_response(request: Request, activity_id: int, owner_id: int, 
     return response
 
 
-def category_delete_confirm_response(request: Request, activity_id: int, owner_id: int) -> HTMLResponse:
+def activity_delete_confirm_response(request: Request, activity_id: int, owner_id: int) -> HTMLResponse:
     with db.connect() as conn:
         conn.execute("BEGIN")
         row = conn.execute(
@@ -56,21 +56,15 @@ def category_delete_confirm_response(request: Request, activity_id: int, owner_i
         return HTMLResponse(status_code=404)
     return templates.TemplateResponse(
         request=request,
-        name="components/category_delete_confirm.html.jinja2",
+        name="components/activity_delete_confirm.html.jinja2",
         context={"activity_id": activity_id, "activity_name": row["name"]},
     )
 
 
-def delete_category_response(activity_id: int, owner_id: int, user: dict) -> HTMLResponse:
+def delete_activity_response(activity_id: int, owner_id: int, user: dict) -> HTMLResponse:
     with db.connect() as conn:
         conn.execute("BEGIN")
-        row = conn.execute(
-            "SELECT category_id FROM activity WHERE id = ? AND owner_id = ?",
-            (activity_id, owner_id),
-        ).fetchone()
-        if row is None:
-            return HTMLResponse(status_code=404)
-        categories.delete_category(conn, owner_id=owner_id, category_id=row["category_id"])
+        categories.delete_activity(conn, owner_id=owner_id, activity_id=activity_id)
     response = HTMLResponse(content="", status_code=200)
     response.headers["HX-Redirect"] = _home_url_for(user)
     return response

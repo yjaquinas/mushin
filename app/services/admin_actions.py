@@ -12,32 +12,34 @@ from app.auth.passwords import hash_password
 from app.services import entries
 
 _USERNAME_RE = re.compile(r"^[a-z0-9_]{3,20}$")
-_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
 class AdminValidationError(ValueError):
     """Raised when an admin form value is invalid."""
+
 
 def update_user(
     conn: sqlite3.Connection,
     user_id: int,
     *,
     username: str,
-    email: str | None,
-    password: str | None,
+    email: str | None = None,
+    password: str | None = None,
 ) -> None:
     normalized_username = _normalize_username(username)
-    normalized_email = _normalize_email(email)
-    _ensure_unique_identity(conn, user_id, normalized_username, normalized_email)
+    _ensure_unique_identity(conn, user_id, normalized_username)
 
-    assignments = ["username = ?", "display_name = ?", "email = ?"]
-    params: list[object] = [normalized_username, normalized_username, normalized_email]
+    assignments = ["username = ?"]
+    params: list[object] = [normalized_username]
+    if email is not None:
+        assignments.append("email = ?")
+        params.append(email.strip() or None)
     if password:
         assignments.append("password_hash = ?")
         params.append(hash_password(password))
     params.append(user_id)
     conn.execute(
-        f"UPDATE user SET {', '.join(assignments)} WHERE id = ?",  # noqa: S608
+        f"UPDATE user SET {', '.join(assignments)} WHERE id = ?",
         params,
     )
 
@@ -46,6 +48,21 @@ def set_user_suspended(conn: sqlite3.Connection, user_id: int, *, suspended: boo
     conn.execute(
         "UPDATE user SET suspended_at = ? WHERE id = ?",
         (_now_iso() if suspended else None, user_id),
+    )
+
+
+def delete_user(conn: sqlite3.Connection, user_id: int) -> None:
+    """Soft-delete a user: rename username, remove password, mark deleted."""
+    conn.execute(
+        """
+        UPDATE user
+        SET username = 'deleted-user-' || id,
+            password_hash = '',
+            deleted_at = ?,
+            suspended_at = NULL
+        WHERE id = ?
+        """,
+        (_now_iso(), user_id),
     )
 
 
@@ -116,19 +133,8 @@ def _normalize_username(username: str) -> str:
     return normalized
 
 
-def _normalize_email(email: str | None) -> str | None:
-    if email is None:
-        return None
-    cleaned = email.strip().lower()
-    if not cleaned:
-        return None
-    if not _EMAIL_RE.match(cleaned):
-        raise AdminValidationError("Enter a valid email address.")
-    return cleaned
-
-
 def _ensure_unique_identity(
-    conn: sqlite3.Connection, user_id: int, username: str, email: str | None
+    conn: sqlite3.Connection, user_id: int, username: str
 ) -> None:
     username_row = conn.execute(
         "SELECT id FROM user WHERE username = ? AND id != ?",
@@ -136,14 +142,6 @@ def _ensure_unique_identity(
     ).fetchone()
     if username_row is not None:
         raise AdminValidationError("That username is already in use.")
-    if email is None:
-        return
-    email_row = conn.execute(
-        "SELECT id FROM user WHERE email = ? AND id != ?",
-        (email, user_id),
-    ).fetchone()
-    if email_row is not None:
-        raise AdminValidationError("That email address is already in use.")
 
 
 def _now_iso() -> str:

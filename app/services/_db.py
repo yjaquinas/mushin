@@ -24,11 +24,8 @@ from typing import Any
 # produce an unscoped query against the wrong table.
 _OWNED_TABLES = frozenset(
     {
-        "category",
         "activity",
         "entry",
-        "tag",
-        "match",
     }
 )
 
@@ -54,12 +51,7 @@ def fetch_one(
     params: Iterable[Any] = (),
     columns: str = "*",
 ) -> sqlite3.Row | None:
-    """Fetch a single row from *table*, always scoped to *owner_id*.
-
-    ``owner_id`` is required and prepended to the WHERE clause; *where* holds any
-    additional predicate (e.g. ``"id = ?"``) with its own *params*. There is no
-    code path that omits the ``owner_id`` predicate.
-    """
+    """Fetch a single row from *table*, always scoped to *owner_id*."""
     _assert_owned_table(table)
     clause, all_params = _scoped_where(owner_id, where, params)
     sql = f"SELECT {columns} FROM {table} WHERE {clause}"  # noqa: S608 - table is allow-listed
@@ -112,12 +104,7 @@ def update(
     where: str = "",
     params: Iterable[Any] = (),
 ) -> int:
-    """Run an owner-scoped UPDATE. Returns the affected row count.
-
-    *assignments* is the ``SET`` body (e.g. ``"memo = ?, updated_at = ?"``); the
-    ``owner_id`` predicate is always appended to the WHERE clause so a write can
-    never escape the owner's partition.
-    """
+    """Run an owner-scoped UPDATE. Returns the affected row count."""
     _assert_owned_table(table)
     clause, where_params = _scoped_where(owner_id, where, params)
     sql = f"UPDATE {table} SET {assignments} WHERE {clause}"  # noqa: S608 - table is allow-listed
@@ -142,10 +129,7 @@ def delete(
 
 
 def _scoped_where(owner_id: int, where: str, params: Iterable[Any]) -> tuple[str, tuple[Any, ...]]:
-    """Build a WHERE clause that always begins with ``owner_id = ?``.
-
-    Returns the clause text and the full parameter tuple in matching order.
-    """
+    """Build a WHERE clause that always begins with ``owner_id = ?``."""
     clause = "owner_id = ?"
     all_params: tuple[Any, ...] = (owner_id, *tuple(params))
     if where:

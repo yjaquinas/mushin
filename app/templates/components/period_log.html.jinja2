@@ -40,7 +40,8 @@
     {% if not history.log %}
         <p class="text-caption text-text-muted">{{ strings.HISTORY_LOG_EMPTY }}</p>
     {% else %}
-        <ul class="divide-y divide-border">
+        <p class="text-caption text-text-muted" data-history-empty hidden>{{ strings.HISTORY_LOG_EMPTY_TAG }}</p>
+        <ul class="divide-y divide-border" data-history-entry-list>
             {% for day_group in history.log %}
                 {% for entry in day_group.entries %}
                     {{ entry_row(

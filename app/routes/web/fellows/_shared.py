@@ -1,10 +1,4 @@
-"""Shared render helpers for the ``fellows`` route group.
-
-Both ``connection.py`` and ``block.py`` mutate the social graph and then
-re-render one of two fragments — the owner's fellows section, or a single
-relationship-affordance row — so the common "mutate then refresh" plumbing
-lives here once rather than duplicated across the two leaf modules.
-"""
+"""Shared render helpers for the ``fellows`` route group."""
 
 from __future__ import annotations
 
@@ -41,12 +35,7 @@ def _render_fellows_section(
     is_owner: bool,
     error: str | None = None,
 ) -> HTMLResponse:
-    """Re-render the ``fellows_section`` fragment for *profile_user_id*'s page.
-
-    The common "mutate then refresh the fragment" return shape for every
-    fellows/requests action below — keeps the fellow list, requests cluster,
-    and pending badge all in sync after any action without a full reload.
-    """
+    """Re-render the ``fellows_section`` fragment for *profile_user_id*'s page."""
     fellows_context = _build_fellows_context(
         profile_user_id, viewer_id=viewer_id, is_owner=is_owner
     )
@@ -58,14 +47,7 @@ def _render_fellows_section(
 
 
 def _relationship_dom_id(username: str, *, from_search: bool) -> str:
-    """The id a relationship-affordance fragment should render with.
-
-    Search results render one ``relationship_affordance`` per row on the same
-    page, so each row needs a unique id (HTMX's id-selector swap is a global
-    ``document.querySelector`` — a shared id would always re-target the
-    first row). Single-instance contexts (profile pages) keep the original
-    plain id unchanged.
-    """
+    """The id a relationship-affordance fragment should render with."""
     if from_search:
         return f"relationship-affordance-{username}"
     return "relationship-affordance"
@@ -114,8 +96,8 @@ def _render_relationship_affordance(
 
 
 def _resolve_other_user(username: str) -> dict[str, Any] | None:
-    """Resolve a path ``{username}`` segment to a non-guest user row, or ``None``."""
+    """Resolve a path ``{username}`` segment to a user row, or ``None``."""
     other = users.find_by_username(username)
-    if other is None or other.get("auth_provider") == "guest":
+    if other is None:
         return None
     return other

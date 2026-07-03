@@ -1,4 +1,4 @@
-"""Thin route declarations for entry editing, logging, and match rows."""
+"""Thin route declarations for entry editing and logging."""
 
 from __future__ import annotations
 
@@ -9,7 +9,6 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.auth import sessions
 from app.routes.web._entries_route_handlers import (
-    add_match_row_response,
     cancel_entry_edit_response,
     create_log_response,
     delete_entry_response,
@@ -104,30 +103,7 @@ async def log_sheet(
         return owner_id
     return await log_sheet_response(request, activity_id, owner_id)
 
-@router.post("/activities/{activity_id}/match-rows/{field_def_id}/add", response_class=HTMLResponse)
-async def add_match_row(
-    request: Request,
-    activity_id: int,
-    field_def_id: int,
-    session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
-) -> HTMLResponse:
-    owner_id = _owner_gate(session)
-    if not isinstance(owner_id, int):
-        return owner_id
-    return await add_match_row_response(request, activity_id, field_def_id, owner_id)
-
-@router.post("/activities/{activity_id}/match-rows/{field_def_id}/remove/{row_index}", response_class=HTMLResponse)
-async def remove_match_row(
-    request: Request,
-    activity_id: int,
-    field_def_id: int,
-    row_index: int,
-    session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
-) -> HTMLResponse:
-    owner_id = _owner_gate(session)
-    if not isinstance(owner_id, int):
-        return owner_id
-    return await remove_match_row_response(request, activity_id, field_def_id, row_index, owner_id)
+# Match-row routes removed — match table dropped.
 
 @router.post("/activities/{activity_id}/log", response_class=HTMLResponse)
 async def create_log(

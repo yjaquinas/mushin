@@ -143,7 +143,7 @@
    * scale). One hero numeral per card; everything else demoted.
    *
    * hero-numeral  : the single big count / current level per activity card
-   * title         : category / activity name (secondary to hero)
+   * title         : activity name (secondary to hero)
    * body          : default prose, form labels, field content
    * caption       : demoted stats, timestamps, chip labels
    * micro         : legal / footnote only
@@ -204,7 +204,7 @@
    * work as utility classes. (--spacing-tap above is the same namespace,
    * used for tap-target min-h/min-w; these two are unrelated dimensions.)
    *
-   * icon    : the per-category icon in the activity card label row, sits
+   * icon    : the per-activity icon in the activity card label row, sits
    *           inline with the title — sized to not compete with the hero
    *           numeral. Use as `size-icon`.
    * icon-lg : the empty-state 無心 glyph — large but quiet, no decoration.
@@ -396,6 +396,21 @@
    * Add an explicit offset so the ring clears the pill shape. */
   .chip:focus-visible {
     outline-offset: 3px;
+  }
+
+  .chip--tag-active {
+    border-color: var(--color-border-strong);
+    border-width: 2px;
+  }
+
+  .chip--tag {
+    min-height: 0;
+    padding-block: 0.2rem;
+    line-height: 1.2;
+  }
+
+  [data-tag-list] > [hidden] {
+    display: none;
   }
 
   /* ── Calendar (month view with marked days) ──────────────────────────── */

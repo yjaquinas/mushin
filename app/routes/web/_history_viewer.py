@@ -15,8 +15,7 @@ def resolve_history_viewer(conn: Any, activity_id: int, current_uid: int | None)
     from fastapi.responses import HTMLResponse
 
     owner_row = conn.execute(
-        """SELECT u.id, u.username, u.visibility, u.auth_provider, u.consent_seen_at,
-                  st.slug AS activity_slug FROM activity st JOIN user u ON u.id = st.owner_id WHERE st.id = ?""",
+        """SELECT u.id, u.username, u.visibility, st.slug AS activity_slug FROM activity st JOIN user u ON u.id = st.owner_id WHERE st.id = ?""",
         (activity_id,),
     ).fetchone()
     if owner_row is None:
@@ -25,8 +24,6 @@ def resolve_history_viewer(conn: Any, activity_id: int, current_uid: int | None)
         "id": owner_row["id"],
         "username": owner_row["username"],
         "visibility": owner_row["visibility"],
-        "auth_provider": owner_row["auth_provider"],
-        "consent_seen_at": owner_row["consent_seen_at"],
     }
     owner_id = int(profile_user["id"])
     cap = profiles.viewer_capability(conn, current_user_id=current_uid, profile_user=profile_user)
@@ -43,4 +40,3 @@ def resolve_history_viewer(conn: Any, activity_id: int, current_uid: int | None)
         "profile_user": profile_user,
         "tz": users.get_user_timezone(owner_id),
     }
-

@@ -95,23 +95,51 @@ def _exec_transaction(conn: sqlite3.Connection, statements: list[str]) -> None:
 
 
 def _split_statements(sql: str) -> list[str]:
-    """Split a SQL script into individual statements, dropping blanks/comments."""
-    statements = []
-    for chunk in sql.split(";"):
-        stripped = chunk.strip()
-        if not stripped:
+    """Split a SQL script into individual statements, dropping blanks/comments.
+
+    Handles semicolons inside SQL line comments (``--``) correctly by
+    processing the file line-by-line and only splitting on ``;`` that
+    appear outside comments.
+    """
+    statements: list[str] = []
+    current: list[str] = []
+
+    for line in sql.splitlines():
+        stripped = line.strip()
+
+        # Skip pure comment lines but keep them in the current block
+        # so they travel with the statement they annotate.
+        if stripped.startswith("--"):
+            if current is not None:
+                current.append(line)
             continue
-        # Drop chunks that are entirely SQL line comments.
-        non_comment_lines = [
-            line
-            for line in stripped.splitlines()
-            if line.strip() and not line.strip().startswith("--")
+
+        # Accumulate lines into the current statement.
+        current.append(line)
+
+        # When we hit a ``;`` on a non-comment line, the statement is complete.
+        if stripped.endswith(";"):
+            block = "\n".join(current).strip()
+            current = []
+            # Skip blocks that have no non-comment content.
+            non_comment = [
+                l for l in block.splitlines()
+                if l.strip() and not l.strip().startswith("--")
+            ]
+            if non_comment:
+                statements.append(block)
+
+    # Flush any remaining lines (no trailing ``;``).
+    if current:
+        block = "\n".join(current).strip()
+        non_comment = [
+            l for l in block.splitlines()
+            if l.strip() and not l.strip().startswith("--")
         ]
-        if non_comment_lines:
-            statements.append(stripped)
+        if non_comment:
+            statements.append(block)
+
     return statements
-
-
 if __name__ == "__main__":
     path = sys.argv[1] if len(sys.argv) > 1 else os.getenv("DATABASE_PATH", "./data/app.db")
     applied = run_migrations(path)

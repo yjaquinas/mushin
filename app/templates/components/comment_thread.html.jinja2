@@ -1,27 +1,7 @@
 {#
-  Comment thread fragment for a single entry — swapped in place below the
-  entry row by the collapsed comment-count affordance's hx-get, and re-swapped
-  after a post/delete.
-
-  Density is intentionally low (per copy-patterns): a flat list, no replies,
-  no reactions. The composer is rendered ONLY when `can_comment` is true for
-  the current viewer — never CSS-hidden, never present-but-disabled. A
-  logged-out viewer (on an otherwise-visible public entry) sees the list
-  read-only plus a plain inline "Log in to comment" link. A viewer who fails
-  `can_view_activity_detail` entirely never reaches this template at all (the
-  route 404s/redirects before rendering).
-
-  Context:
-    activity_id    int
-    entry_id       int
-    username       str   — profile owner's username (for the route URLs)
-    comments       list[dict] — see app.services.comments.list_comments
-                     (id, author_id, author_username, author_display_name,
-                      body, created_at), oldest first
-    can_comment    bool  — true iff profiles.can_comment_on_entry for this viewer
-    viewer_logged_in bool
-    current_user_id  int | None — for the per-comment delete affordance
-    entry_owner_id    int       — for the per-comment delete affordance
+  Comment thread fragment for a single entry.
+  Context: activity_id, entry_id, username, comments, can_comment,
+           viewer_logged_in, current_user_id, entry_owner_id, slug
 #}
 <div id="comment-thread-{{ entry_id }}" class="flex flex-col gap-3 pt-2">
     {% if not comments %}
@@ -29,7 +9,7 @@
     {% else %}
         <ul class="flex flex-col gap-2">
         {% for comment in comments %}
-        {% set author_name = comment.author_display_name or comment.author_username %}
+        {% set author_name = comment.author_username %}
         {% set is_entry_owner_comment = comment.author_id == entry_owner_id %}
         {% set is_current_user_comment = current_user_id is not none and comment.author_id == current_user_id %}
         <li class="flex flex-col gap-0.5">

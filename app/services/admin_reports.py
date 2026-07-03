@@ -18,7 +18,7 @@ def monitor_context(conn: sqlite3.Connection) -> dict[str, object]:
 
 
 def users_context(conn: sqlite3.Connection) -> dict[str, object]:
-    """Return user summaries and suggested future tracking fields."""
+    """Return user summaries."""
     return {
         "users": _users(conn),
     }
@@ -45,7 +45,7 @@ def _recent_activities(
     return conn.execute(
         f"""
         SELECT a.id, a.name, a.slug, a.created_at, u.id AS user_id,
-               u.username, u.display_name
+               u.username
         FROM activity a
         JOIN user u ON u.id = a.owner_id
         WHERE a.archived_at IS NULL
@@ -64,7 +64,7 @@ def _recent_entries(conn: sqlite3.Connection, *, owner_id: int | None = None) ->
         f"""
         SELECT e.id, e.memo, e.created_at, e.hidden_at,
                a.name AS activity_name, a.slug,
-               u.id AS user_id, u.username, u.display_name
+               u.id AS user_id, u.username
         FROM entry e
         JOIN activity a ON a.id = e.activity_id
         JOIN user u ON u.id = e.owner_id
@@ -87,10 +87,8 @@ def _recent_comments(conn: sqlite3.Connection, *, user_id: int | None = None) ->
         f"""
         SELECT c.id, c.body, c.created_at, c.entry_id, c.hidden_at,
                owner.username AS entry_username,
-               owner.display_name AS entry_display_name,
                owner.id AS entry_user_id,
                commenter.username AS comment_username,
-               commenter.display_name AS comment_display_name,
                commenter.id AS comment_user_id,
                a.name AS activity_name,
                a.slug
@@ -111,7 +109,7 @@ def _recent_comments(conn: sqlite3.Connection, *, user_id: int | None = None) ->
 def _users(conn: sqlite3.Connection) -> list[sqlite3.Row]:
     return conn.execute(
         """
-        SELECT u.id, u.username, u.display_name, u.auth_provider, u.created_at,
+        SELECT u.id, u.username, u.created_at,
                u.last_active_at, u.visibility, u.suspended_at, u.deleted_at,
                COUNT(DISTINCT a.id) AS activity_count,
                COUNT(DISTINCT e.id) AS entry_count,
@@ -134,7 +132,7 @@ def _users(conn: sqlite3.Connection) -> list[sqlite3.Row]:
 def _admin_user(conn: sqlite3.Connection, user_id: int) -> sqlite3.Row | None:
     return conn.execute(
         """
-        SELECT id, username, email, display_name, auth_provider, created_at,
+        SELECT id, username, email, created_at,
                last_active_at, visibility, suspended_at, deleted_at
         FROM user
         WHERE id = ?

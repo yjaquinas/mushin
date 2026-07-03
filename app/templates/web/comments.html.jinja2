@@ -1,17 +1,6 @@
 {#
-  Comment notification history (GET /comments) — the dedicated page the
-  unseen-comment badge actually points to. Visiting THIS page (not home)
-  is what advances the comments_seen_at watermark; see app/routes/web.py.
-
-  Context:
-    comments        list[dict] — see app.services.comments.list_comments_for_owner
-                      (comment_id, body, created_at, author_username,
-                       author_display_name, entry_id, activity_id,
-                       activity_name, activity_slug, is_new), newest first
-    username         str — the current (owner) user's username, for building
-                      the click-through link to their own activity detail
-    has_more         bool — render the "show older" link when true
-    next_before_id   int | None — cursor for the "show older" link
+  Comment notification history (GET /comments).
+  Context: comments, username, has_more, next_before_id
 #}
 {% extends "web/base.html.jinja2" %}
 
@@ -47,7 +36,7 @@
                 </span>
             </div>
             <p class="line-clamp-1 text-body text-text-primary">
-                <span class="font-medium text-text-secondary">{{ comment.author_display_name or comment.author_username }}</span>
+                <span class="font-medium text-text-secondary">{{ comment.author_username }}</span>
                 {% if comment.hidden_at %}
                 <span class="ms-1 italic text-text-muted">{{ strings.COMMENTS_HIDDEN_BY_MODERATOR }}</span>
                 {% else %}

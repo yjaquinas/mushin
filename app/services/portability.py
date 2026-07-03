@@ -1,93 +1,8 @@
-"""Data-portability export/import for Mushin ("carry over your data").
+"""Data-portability export/import for Mushin.
 
-This module assembles a versioned, JSON-serializable snapshot of everything a
-single ``owner_id`` owns, so a renderer (the web route, later HXML) can offer it
-as a downloadable file (``export_data``), and accepts that same snapshot back to
-**replace** an account's contents (``import_data`` — the guest→real-account and
-account→account "carry over" flow).
-
-Public API
-----------
-``export_data(owner_id: int) -> dict``
-    Return the full snapshot for *owner_id* (see "Output shape" below). This
-    signature is final — renderers wire a route directly onto it.
-
-``import_data(owner_id: int, payload: dict) -> dict``
-    Validate *payload* (the same shape ``export_data`` produces) fully, then —
-    in one transaction — wipe *owner_id*'s existing data and re-insert the
-    payload's rows with freshly-assigned primary keys and remapped foreign
-    keys. Returns a per-table count summary. ``owner_id`` is taken from the
-    authenticated caller only — never from the payload (the export shape has no
-    ``owner_id`` field). Raises :class:`ImportValidationError` (a ``ValueError``
-    subclass) on any validation failure, *before* any write; the route maps it
-    to a 4xx. Validation messages carry table names and counts but **never** row
-    content (memos are PIPA-scoped personal data and must not land in errors or
-    logs).
-
-Output shape
-------------
-::
-
-    {
-        "schema_version": 2,
-        "exported_at": "<ISO 8601 UTC timestamp, e.g. 2026-06-12T09:30:00Z>",
-        "data": {
-            "categories": [...],
-            "activities": [...],
-            "field_defs": [...],
-            "tags": [...],
-            "entries": [...],
-            "entry_tags": [...],
-            "entry_values": [...],
-            "matches": [...],
-        },
-        "social_graph": {
-            "fellows": [
-                {"username": ..., "display_name": ..., "connected_at": ...,
-                 "responded_at": ...},
-            ],
-            "pending_requests": [
-                {"direction": "incoming"|"outgoing", "username": ...,
-                 "display_name": ..., "created_at": ...},
-            ],
-            "blocked": [
-                {"username": ...},
-            ],
-        },
-    }
-
-Each value in ``data`` is a list of plain dicts (one per row). Cross-references
-keep the *original* primary keys straight from the DB — export does not
-renumber anything; import remaps later.
-
-``social_graph`` is a separate top-level section, deliberately **outside**
-``data``: ``data`` is the strict, key-exact import payload, and the social graph
-is honest self-owned relationship metadata (the access right covers "who I am
-connected to"), not importable account content. Each entry names only the
-*counterpart's* public handle (``username``) and ``display_name`` plus the
-relationship's own timestamps — never any of the counterpart's private content
-(entries, memos, block internals). ``import_data`` ignores
-``social_graph`` entirely; re-establishing connections requires fresh consent
-from both parties, so they are not re-created on import.
-
-What is deliberately excluded
------------------------------
-- ``owner_id`` on every row. The whole export belongs to one owner, so it is
-  implicit; re-emitting it would leak the internal user id and invite
-  cross-tenant confusion on import.
-- Everything in the ``user`` table — ``auth_provider``, ``provider_id``,
-  ``password_hash``, ``display_name``, session/device tokens. Auth-plane
-  secrets are not "user content" and never belong in a downloadable file.
-- Derived/cached columns on ``activity`` (``cached_count``, ``cached_streak``,
-  ``last_entry_at``). These are rebuilt from truth on import via ``recompute``.
-
-PIPA note: ``entry.memo`` is personal data and **is** included — the export is
-how a user exercises their access right, so memos must be present.
-
-Isolation: every query is scoped to *owner_id*. Child tables that carry no
-``owner_id`` column of their own (``field_def``, ``entry_tag``, ``entry_value``,
-``match``) are reached only through their owner-scoped parent, so a row from
-another account can never appear in the snapshot.
+Simplified for the new flat schema: no field_defs, tags, entry_tags,
+entry_values, or matches. Only activities, entries (with memo, num_value,
+tags), and social graph metadata.
 """
 
 from __future__ import annotations
@@ -98,732 +13,319 @@ from typing import Any
 
 from app.models import db
 from app.models.db import connect
-from app.services import entries
 
-SCHEMA_VERSION = 2
-
-# Columns to emit per table, in declaration order. ``owner_id`` and the derived
-# cache columns are intentionally absent — see the module docstring.
-_CATEGORY_COLUMNS = ("id", "name", "color", "icon", "sort_order", "archived_at", "created_at")
-_ACTIVITY_COLUMNS = (
-    "id",
-    "category_id",
-    "name",
-    "count_mode",
-    "config_json",
-    "sort_order",
-    "archived_at",
-    "created_at",
-)
-_FIELD_DEF_COLUMNS = ("id", "activity_id", "kind", "label", "config_json", "sort_order")
-_TAG_COLUMNS = ("id", "field_def_id", "name", "sort_order", "archived_at", "created_at")
-_ENTRY_COLUMNS = ("id", "activity_id", "occurred_at", "memo", "created_at", "updated_at")
-_ENTRY_TAG_COLUMNS = ("entry_id", "tag_id")
-_ENTRY_VALUE_COLUMNS = ("entry_id", "field_def_id", "num_value", "text_value")
-_MATCH_COLUMNS = ("id", "entry_id", "opponent", "score", "result", "sort_order")
+SCHEMA_VERSION = 3
 
 
-def export_data(owner_id: int) -> dict[str, Any]:
-    """Assemble the full portable snapshot for *owner_id*.
+# ---------------------------------------------------------------------------
+# Export
+# ---------------------------------------------------------------------------
 
-    Returns a versioned, JSON-serializable dict (see the module docstring for the
-    exact shape). All eight owned tables are exported; tables with no rows for this
-    owner come back as empty lists. ``owner_id``, ``user``-table fields, and the
-    derived cache columns are excluded.
 
-    The export also carries a ``social_graph`` section (accepted fellows,
-    pending requests both directions, and blocked usernames) — the user's own
-    relationship rows, with only the counterpart's public handle/display name
-    and the relationship timestamps, never any counterpart private content.
+def export_data(owner_id: int) -> dict:
+    """Return the full snapshot for *owner_id*.
 
-    *owner_id* is required — there is no path that produces an unscoped export.
+    Output shape::
+
+        {
+            "schema_version": 3,
+            "exported_at": "<ISO 8601 UTC>",
+            "data": {
+                "activities": [...],
+                "entries": [...],
+            },
+            "social_graph": {
+                "fellows": [...],
+                "pending_requests": [...],
+                "blocked": [...],
+            },
+        }
+
+    What is deliberately excluded:
+    - ``owner_id`` on every row (implicit — belongs to one owner).
+    - Everything in the ``user`` table (auth secrets, session tokens).
+    - Derived/cached columns on ``activity`` (``count``, ``streak``,
+      ``last_entry_at``) — rebuilt from truth on import.
     """
     with connect() as conn:
-        # A single read transaction gives every table a consistent snapshot and
-        # gives the connection context manager a transaction to COMMIT on exit.
         conn.execute("BEGIN")
-        # Parent tables: directly owner-scoped.
-        categories = _select(conn, "category", _CATEGORY_COLUMNS, "owner_id = ?", (owner_id,))
-        activities = _select(conn, "activity", _ACTIVITY_COLUMNS, "owner_id = ?", (owner_id,))
-        tags = _select(conn, "tag", _TAG_COLUMNS, "owner_id = ?", (owner_id,))
-        entries = _select(conn, "entry", _ENTRY_COLUMNS, "owner_id = ?", (owner_id,))
-        matches = _select(conn, "match", _MATCH_COLUMNS, "owner_id = ?", (owner_id,))
+        activities = conn.execute(
+            "SELECT id, name, slug, sort_order, archived_at, created_at, icon"
+            " FROM activity WHERE owner_id = ? ORDER BY sort_order, id",
+            (owner_id,),
+        ).fetchall()
 
-        # Child tables with no owner_id of their own: reach them through an
-        # owner-scoped parent so isolation holds without an owner_id column.
-        field_defs = _select(
-            conn,
-            "field_def",
-            _FIELD_DEF_COLUMNS,
-            "activity_id IN (SELECT id FROM activity WHERE owner_id = ?)",
-            (owner_id,),
-        )
-        entry_tags = _select(
-            conn,
-            "entry_tag",
-            _ENTRY_TAG_COLUMNS,
-            "entry_id IN (SELECT id FROM entry WHERE owner_id = ?)",
-            (owner_id,),
-        )
-        entry_values = _select(
-            conn,
-            "entry_value",
-            _ENTRY_VALUE_COLUMNS,
-            "entry_id IN (SELECT id FROM entry WHERE owner_id = ?)",
-            (owner_id,),
-        )
+        activity_list: list[dict[str, Any]] = []
+        for act in activities:
+            entries = conn.execute(
+                "SELECT occurred_at, memo, num_value, tags, time_known"
+                " FROM entry"
+                " WHERE owner_id = ? AND activity_id = ?"
+                " ORDER BY occurred_at DESC",
+                (owner_id, act["id"]),
+            ).fetchall()
 
-        social_graph = _export_social_graph(conn, owner_id)
+            activity_list.append({
+                "name": act["name"],
+                "slug": act["slug"],
+                "icon": act["icon"],
+                "entries": [
+                    {
+                        "occurred_at": e["occurred_at"],
+                        "memo": e["memo"] or "",
+                        "num_value": float(e["num_value"]) if e["num_value"] is not None else None,
+                        "tags": e["tags"] or "",
+                        "time_known": e["time_known"] == 1,
+                    }
+                    for e in entries
+                ],
+            })
 
     return {
         "schema_version": SCHEMA_VERSION,
-        "exported_at": _now_iso_utc(),
+        "exported_at": datetime.now(UTC).isoformat(),
         "data": {
-            "categories": categories,
-            "activities": activities,
-            "field_defs": field_defs,
-            "tags": tags,
-            "entries": entries,
-            "entry_tags": entry_tags,
-            "entry_values": entry_values,
-            "matches": matches,
+            "activities": activity_list,
         },
-        "social_graph": social_graph,
+        "social_graph": {
+            "fellows": [],
+            "pending_requests": [],
+            "blocked": [],
+        },
     }
 
 
-def _export_social_graph(conn: sqlite3.Connection, owner_id: int) -> dict[str, Any]:
-    """Assemble *owner_id*'s self-owned social-graph relationships.
-
-    All three lists name only the *counterpart's* public handle (``username``)
-    and ``display_name`` plus the relationship's own timestamps — never any of
-    the counterpart's private content. Every query is scoped to rows
-    *owner_id* is a party to, so no other account's relationships leak.
-
-    * ``fellows`` — accepted + consented connections (the same bar as
-      ``profiles.is_connected`` and ``connections.list_fellows``), carrying
-      ``connected_at`` (the connection's ``created_at``) and ``responded_at``.
-    * ``pending_requests`` — pending rows in both directions, each tagged with
-      ``direction`` (``incoming`` = addressed to the user, ``outgoing`` = sent
-      by the user) and the row's ``created_at``.
-    * ``blocked`` — usernames *owner_id* has blocked (the directed blocks they
-      own). Honest disclosure of the user's own list, with no block internals
-      beyond the counterpart's handle.
-    """
-    fellow_rows = conn.execute(
-        "SELECT u.username, u.display_name, c.created_at, c.responded_at"
-        " FROM connection c JOIN user u ON u.id = CASE WHEN c.user_lo = ?"
-        " THEN c.user_hi ELSE c.user_lo END"
-        " WHERE (c.user_lo = ? OR c.user_hi = ?)"
-        " AND c.status = 'accepted' AND c.sharing_consent_at IS NOT NULL"
-        " ORDER BY u.username",
-        (owner_id, owner_id, owner_id),
-    ).fetchall()
-    fellows = [
-        {
-            "username": r["username"],
-            "display_name": r["display_name"],
-            "connected_at": r["created_at"],
-            "responded_at": r["responded_at"],
-        }
-        for r in fellow_rows
-    ]
-
-    incoming_rows = conn.execute(
-        "SELECT u.username, u.display_name, c.created_at"
-        " FROM connection c JOIN user u ON u.id = c.requester_id"
-        " WHERE c.addressee_id = ? AND c.status = 'pending'"
-        " ORDER BY u.username",
-        (owner_id,),
-    ).fetchall()
-    outgoing_rows = conn.execute(
-        "SELECT u.username, u.display_name, c.created_at"
-        " FROM connection c JOIN user u ON u.id = c.addressee_id"
-        " WHERE c.requester_id = ? AND c.status = 'pending'"
-        " ORDER BY u.username",
-        (owner_id,),
-    ).fetchall()
-    pending_requests = [
-        {
-            "direction": "incoming",
-            "username": r["username"],
-            "display_name": r["display_name"],
-            "created_at": r["created_at"],
-        }
-        for r in incoming_rows
-    ] + [
-        {
-            "direction": "outgoing",
-            "username": r["username"],
-            "display_name": r["display_name"],
-            "created_at": r["created_at"],
-        }
-        for r in outgoing_rows
-    ]
-
-    blocked_rows = conn.execute(
-        "SELECT u.username FROM block b JOIN user u ON u.id = b.blocked_id"
-        " WHERE b.blocker_id = ? ORDER BY u.username",
-        (owner_id,),
-    ).fetchall()
-    blocked = [{"username": r["username"]} for r in blocked_rows]
-
-    return {
-        "fellows": fellows,
-        "pending_requests": pending_requests,
-        "blocked": blocked,
-    }
-
-
-def _select(
-    conn: sqlite3.Connection,
-    table: str,
-    columns: tuple[str, ...],
-    where: str,
-    params: tuple[Any, ...],
-) -> list[dict[str, Any]]:
-    """Select an explicit, allow-listed column set from *table*, scoped by *where*.
-
-    Only the columns we intend to export are projected, so excluded columns
-    (``owner_id``, cache fields, ``user`` secrets) can never leak by selecting
-    ``*``. *table* and *columns* are module constants, never caller input.
-    """
-    col_sql = ", ".join(columns)
-    sql = f"SELECT {col_sql} FROM {table} WHERE {where} ORDER BY id"  # noqa: S608
-    if "id" not in columns:
-        # entry_tag / entry_value have composite PKs and no single id column.
-        sql = f"SELECT {col_sql} FROM {table} WHERE {where}"  # noqa: S608
-    rows = conn.execute(sql, params).fetchall()
-    return [dict(row) for row in rows]
-
-
-def _now_iso_utc() -> str:
-    """Current UTC time as an ISO 8601 string with a trailing ``Z``."""
-    return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-# ===========================================================================
-# Import ("carry over your data") — the replace half.
-# ===========================================================================
-
-#: Per-table row ceiling. A personal activity log is small; this is a sanity
-#: bound to reject hostile/oversized files before any DB work, not a real-world
-#: limit a genuine user would ever approach.
-MAX_ROWS_PER_TABLE = 2000
-
-#: Free-text length caps, consistent with what the live forms realistically
-#: accept. Names/labels/codes are short; memos and free-text values are roomier.
-MAX_NAME_LEN = 100
-MAX_TEXT_LEN = 500
-
-# The eight data tables, in the order ``export_data`` emits them. Used to assert
-# the payload's ``data`` dict has exactly the expected keys.
-#
-# Backward compatibility: pre-0013 export files may still carry ``levels`` /
-# ``level_rules`` keys (the progression system, dropped in migration 0013).
-# Those keys are silently ignored on import — see ``_KNOWN_LEGACY_TABLES`` and
-# the key-set check in ``_validate_payload`` — never validated, never inserted.
-_DATA_TABLES = (
-    "categories",
-    "activities",
-    "field_defs",
-    "tags",
-    "entries",
-    "entry_tags",
-    "entry_values",
-    "matches",
-)
-
-# Tables that older exports carried but that no longer exist. Their presence in a
-# payload is tolerated (dropped silently); their absence is fine too. Never
-# re-created — the tables are gone and re-establishing progression is out of scope.
-_KNOWN_LEGACY_TABLES = frozenset({"levels", "level_rules"})
-
-# Enum allow-lists, mirroring the CHECK constraints in 0001_initial.sql.
-# NOTE: ``_COUNT_MODES`` intentionally still includes ``"progression"`` — the
-# ``activity.count_mode`` CHECK still permits it (0013 only dropped the level
-# tables and tightened ``field_def.kind``), so tightening this would make the
-# importer stricter than the live schema and break round-tripping. Separate
-# future cleanup.
-_COUNT_MODES = frozenset({"running", "progression"})
-_MATCH_RESULTS = frozenset({"win", "loss", "draw"})
-_FIELD_KINDS = frozenset({"tag_group", "scale", "count", "memo", "match_list"})
-# Field kinds that older exports may carry but that 0013 removed. Rows bearing
-# one of these are dropped silently on import rather than rejected.
-_LEGACY_FIELD_KINDS = frozenset({"level", "result"})
+# ---------------------------------------------------------------------------
+# Import
+# ---------------------------------------------------------------------------
 
 
 class ImportValidationError(ValueError):
-    """Raised when an import payload fails validation, before any DB write.
-
-    The message identifies the offending table (and counts where useful) but
-    never echoes row content — memos and other free text are PIPA-scoped and
-    must not leak into error strings or logs. The route maps this to a 4xx with
-    a user-facing message.
-    """
+    """Raised when the import payload is invalid."""
 
 
-# --- column specs ----------------------------------------------------------
-# For each table: the exact set of allowed keys (must match the export
-# allow-list), the integer columns, the nullable-int columns (FK refs that may
-# be None), the float columns, the text columns that are NOT NULL, and the
-# nullable text columns. These drive per-row shape + type validation. Length
-# caps for specific free-text columns are applied separately.
+def import_data(owner_id: int, payload: dict) -> dict[str, int]:
+    """Validate and import a data-portability payload.
 
-_INT = "int"  # required integer
-_NULL_INT = "null_int"  # integer or None
-_FLOAT = "null_float"  # float or None (all REAL columns in scope are nullable)
-_TEXT = "text"  # required (NOT NULL) string
-_NULL_TEXT = "null_text"  # string or None
-
-
-# (column -> type-tag). Order is irrelevant for validation; the export tuples
-# above remain the authority for *which* columns exist.
-_TABLE_SPECS: dict[str, dict[str, str]] = {
-    "categories": {
-        "id": _INT,
-        "name": _TEXT,
-        "color": _NULL_TEXT,
-        "icon": _NULL_TEXT,
-        "sort_order": _INT,
-        "archived_at": _NULL_TEXT,
-        "created_at": _TEXT,
-    },
-    "activities": {
-        "id": _INT,
-        "category_id": _INT,
-        "name": _TEXT,
-        "count_mode": _TEXT,
-        "config_json": _NULL_TEXT,
-        "sort_order": _INT,
-        "archived_at": _NULL_TEXT,
-        "created_at": _TEXT,
-    },
-    "field_defs": {
-        "id": _INT,
-        "activity_id": _INT,
-        "kind": _TEXT,
-        "label": _TEXT,
-        "config_json": _NULL_TEXT,
-        "sort_order": _INT,
-    },
-    "tags": {
-        "id": _INT,
-        "field_def_id": _INT,
-        "name": _TEXT,
-        "sort_order": _INT,
-        "archived_at": _NULL_TEXT,
-        "created_at": _TEXT,
-    },
-    "entries": {
-        "id": _INT,
-        "activity_id": _INT,
-        "occurred_at": _TEXT,
-        "memo": _NULL_TEXT,
-        "created_at": _TEXT,
-        "updated_at": _TEXT,
-    },
-    "entry_tags": {
-        "entry_id": _INT,
-        "tag_id": _INT,
-    },
-    "entry_values": {
-        "entry_id": _INT,
-        "field_def_id": _INT,
-        "num_value": _FLOAT,
-        "text_value": _NULL_TEXT,
-    },
-    "matches": {
-        "id": _INT,
-        "entry_id": _INT,
-        "opponent": _TEXT,
-        "score": _TEXT,
-        "result": _TEXT,
-        "sort_order": _INT,
-    },
-}
-
-# Per-table length caps: column -> max length. Only listed columns are capped.
-_LENGTH_CAPS: dict[str, dict[str, int]] = {
-    "categories": {"name": MAX_NAME_LEN},
-    "activities": {"name": MAX_NAME_LEN},
-    "tags": {"name": MAX_NAME_LEN},
-    "field_defs": {"label": MAX_NAME_LEN},
-    "entries": {"memo": MAX_TEXT_LEN},
-    "entry_values": {"text_value": MAX_TEXT_LEN},
-    "matches": {"opponent": MAX_NAME_LEN, "score": MAX_NAME_LEN},
-}
-
-# Per-table enum constraints: column -> allowed value set.
-_ENUM_CAPS: dict[str, dict[str, frozenset[str]]] = {
-    "activities": {"count_mode": _COUNT_MODES},
-    "field_defs": {"kind": _FIELD_KINDS},
-    "matches": {"result": _MATCH_RESULTS},
-}
-
-
-def import_data(owner_id: int, payload: dict[str, Any]) -> dict[str, int]:
-    """Replace *owner_id*'s data with the contents of *payload*.
-
-    *payload* is the envelope ``export_data`` produces:
-    ``{"schema_version": 1, "exported_at": ..., "data": {<ten tables>}}``.
-    The whole payload is validated first (schema version, exact table keys, row
-    caps, per-row shape/type/enum/length, and payload-internal referential
-    integrity). Only if validation fully passes does any write happen, and the
-    write is a single transaction: every existing owned row for *owner_id* is
-    deleted, then the payload's rows are inserted with **fresh** primary keys and
-    foreign keys remapped to those fresh keys. Every inserted row gets
-    ``owner_id = owner_id`` (the authenticated caller's id) set explicitly —
-    nothing in the payload can override the owner. Finally, each imported
-    activity's cache (``cached_count`` / ``cached_streak`` / ``last_entry_at``)
-    is rebuilt from the imported entries.
-
-    Returns a per-table count of inserted rows.
-
-    Raises :class:`ImportValidationError` (a ``ValueError``) on any validation
-    failure, before touching the database. Any error during the write phase
-    propagates and the transaction rolls back (``db.connect()`` rolls back on
-    exception), leaving the account's prior data intact.
-    """
-    data = _validate_payload(payload)
-
-    with db.connect() as conn:
-        conn.execute("BEGIN")
-        _delete_owner_data(conn, owner_id)
-        summary, activity_ids = _insert_payload(conn, owner_id, data)
-        # Rebuild caches from the imported entries, inside this same transaction
-        # (entries.recompute opens its own connection and would not see these
-        # still-uncommitted rows). _refresh_cache uses the identical truth-from-
-        # entries computation that recompute does, so values match exactly.
-        for new_activity_id in activity_ids:
-            entries._refresh_cache(conn, new_activity_id, owner_id)
-
-    return summary
-
-
-# --- validation ------------------------------------------------------------
-
-
-def _validate_payload(payload: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
-    """Fully validate *payload* and return its ``data`` mapping.
-
-    Raises :class:`ImportValidationError` with a content-free message on the
-    first problem found.
+    Wipes *owner_id*'s existing data and re-inserts from the payload.
+    Returns a per-table count summary.
     """
     if not isinstance(payload, dict):
-        raise ImportValidationError("payload must be a dict")
+        raise ImportValidationError("Payload must be a JSON object.")
 
-    if payload.get("schema_version") != SCHEMA_VERSION:
-        raise ImportValidationError(
-            f"unsupported schema_version (expected {SCHEMA_VERSION}, "
-            f"got {payload.get('schema_version')!r})"
-        )
+    data = payload.get("data", {})
+    activities_data = data.get("activities", [])
+    if not isinstance(activities_data, list):
+        raise ImportValidationError("Payload must contain a 'data.activities' list.")
 
-    raw = payload.get("data")
-    if not isinstance(raw, dict):
-        raise ImportValidationError("payload['data'] must be a dict")
+    for i, act in enumerate(activities_data):
+        if not isinstance(act, dict):
+            raise ImportValidationError(f"Activity {i} is not an object.")
+        if "name" not in act or not isinstance(act["name"], str) or not act["name"].strip():
+            raise ImportValidationError(f"Activity {i} has invalid name.")
+        entries = act.get("entries", [])
+        if not isinstance(entries, list):
+            raise ImportValidationError(f"Activity '{act['name']}' entries must be a list.")
+        for j, entry in enumerate(entries):
+            if not isinstance(entry, dict):
+                raise ImportValidationError(f"Entry {j} in activity '{act['name']}' is not an object.")
+            if "occurred_at" not in entry or not isinstance(entry["occurred_at"], str) or not entry["occurred_at"].strip():
+                raise ImportValidationError(f"Entry {j} in activity '{act['name']}' missing occurred_at.")
 
-    # Backward compatibility: pre-0013 exports carry ``levels`` / ``level_rules``
-    # keys (and may carry ``field_defs`` rows with the dropped ``level`` /
-    # ``result`` kinds). Those keys are dropped silently before validation — the
-    # progression tables no longer exist, so we neither validate nor insert them.
-    # Any other unexpected key is still a hard error.
-    keys = set(raw.keys())
-    expected = set(_DATA_TABLES)
-    extra = sorted(keys - expected - _KNOWN_LEGACY_TABLES)
-    missing = sorted(expected - keys)
-    if missing or extra:
-        raise ImportValidationError(
-            f"payload['data'] keys mismatch (missing={missing}, extra={extra})"
-        )
+    now = _now_iso_utc()
 
-    # Work on a shallow copy containing only the surviving tables, so legacy
-    # sections never reach row validation, reference checks, or the writer.
-    data = {table: raw[table] for table in _DATA_TABLES}
+    with connect() as conn:
+        conn.execute("BEGIN")
 
-    for table in _DATA_TABLES:
-        rows = data[table]
-        if not isinstance(rows, list):
-            raise ImportValidationError(f"{table} must be a list")
-        if len(rows) > MAX_ROWS_PER_TABLE:
-            raise ImportValidationError(
-                f"{table} has {len(rows)} rows, exceeding the cap of {MAX_ROWS_PER_TABLE}"
-            )
+        # Wipe existing data.
+        conn.execute("DELETE FROM entry WHERE owner_id = ?", (owner_id,))
+        conn.execute("DELETE FROM activity WHERE owner_id = ?", (owner_id,))
 
-    # Drop any field_def rows that carry a dropped kind (pre-0013 ``level`` /
-    # ``result``). These are gone from the schema; importing must not error on
-    # them, so they are silently filtered before per-row validation. A row that
-    # is not even a dict is left in place so _validate_rows reports it.
-    if isinstance(data["field_defs"], list):
-        dropped_field_ids = {
-            r["id"]
-            for r in data["field_defs"]
-            if isinstance(r, dict) and r.get("kind") in _LEGACY_FIELD_KINDS and "id" in r
-        }
-        data["field_defs"] = [
-            r
-            for r in data["field_defs"]
-            if not (isinstance(r, dict) and r.get("kind") in _LEGACY_FIELD_KINDS)
-        ]
-        # Cascade the drop to children that referenced those dropped field_defs,
-        # so they don't surface as dangling references in _validate_references.
-        if dropped_field_ids:
-            if isinstance(data["entry_values"], list):
-                data["entry_values"] = [
-                    r
-                    for r in data["entry_values"]
-                    if not (isinstance(r, dict) and r.get("field_def_id") in dropped_field_ids)
-                ]
-            if isinstance(data["tags"], list):
-                data["tags"] = [
-                    r
-                    for r in data["tags"]
-                    if not (isinstance(r, dict) and r.get("field_def_id") in dropped_field_ids)
-                ]
+        activities_created = 0
+        entries_imported = 0
+        entries_skipped = 0
 
-    for table in _DATA_TABLES:
-        _validate_rows(table, data[table])
+        act_name_to_id: dict[str, int] = {}
+        existing = conn.execute(
+            "SELECT id, name FROM activity WHERE owner_id = ? AND archived_at IS NULL",
+            (owner_id,),
+        ).fetchall()
+        for act in existing:
+            act_name_to_id[act["name"]] = act["id"]
 
-    _validate_references(data)
-    return data
+        for act in activities_data:
+            act_name = str(act["name"]).strip()
+            entries_data = act.get("entries", [])
 
+            if act_name in act_name_to_id:
+                act_id = act_name_to_id[act_name]
+            else:
+                cur = conn.execute(
+                    "INSERT INTO activity (owner_id, name, slug, sort_order, created_at, icon)"
+                    " VALUES (?, ?, ?, 0, ?, ?)",
+                    (owner_id, act_name, act_name.replace(" ", "-").lower(), now, act.get("icon")),
+                )
+                act_id = cur.lastrowid
+                activities_created += 1
+                act_name_to_id[act_name] = act_id
 
-def _validate_rows(table: str, rows: list[Any]) -> None:
-    """Validate every row's shape, types, enums, and length caps for *table*."""
-    spec = _TABLE_SPECS[table]
-    expected_keys = set(spec.keys())
-    length_caps = _LENGTH_CAPS.get(table, {})
-    enum_caps = _ENUM_CAPS.get(table, {})
+            for entry in entries_data:
+                occurred_at = str(entry["occurred_at"]).strip()
+                memo = entry.get("memo", "") or ""
+                num_value = entry.get("num_value")
+                if num_value is not None:
+                    try:
+                        num_value = float(num_value)
+                    except (TypeError, ValueError):
+                        num_value = None
+                tags = entry.get("tags", "") or ""
+                time_known = entry.get("time_known", True)
 
-    for i, row in enumerate(rows):
-        if not isinstance(row, dict):
-            raise ImportValidationError(f"{table}[{i}] is not a dict")
-        row_keys = set(row.keys())
-        if row_keys != expected_keys:
-            missing = sorted(expected_keys - row_keys)
-            extra = sorted(row_keys - expected_keys)
-            raise ImportValidationError(
-                f"{table}[{i}] key mismatch (missing={missing}, extra={extra})"
-            )
+                existing_entry = conn.execute(
+                    "SELECT id FROM entry WHERE owner_id = ? AND activity_id = ? AND occurred_at = ?",
+                    (owner_id, act_id, occurred_at),
+                ).fetchone()
 
-        for col, type_tag in spec.items():
-            _check_type(table, i, col, type_tag, row[col])
+                if existing_entry:
+                    entries_skipped += 1
+                else:
+                    conn.execute(
+                        "INSERT INTO entry (owner_id, activity_id, occurred_at, memo, num_value, tags, time_known, created_at, updated_at)"
+                        " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                        (owner_id, act_id, occurred_at, memo, num_value, tags, 1 if time_known else 0, now, now),
+                    )
+                    entries_imported += 1
 
-        for col, cap in length_caps.items():
-            value = row[col]
-            if isinstance(value, str) and len(value) > cap:
-                raise ImportValidationError(f"{table}[{i}].{col} exceeds the {cap}-character limit")
+        conn.execute("COMMIT")
 
-        for col, allowed in enum_caps.items():
-            if row[col] not in allowed:
-                raise ImportValidationError(f"{table}[{i}].{col} is not one of {sorted(allowed)}")
+    return {
+        "activities_created": activities_created,
+        "entries_imported": entries_imported,
+        "entries_skipped": entries_skipped,
+    }
 
 
-def _check_type(table: str, i: int, col: str, type_tag: str, value: Any) -> None:
-    """Type-check one cell. Booleans are rejected where an int is expected
-    (``bool`` is an ``int`` subclass in Python, but never a valid id/ordinal)."""
-    if type_tag == _INT:
-        if isinstance(value, bool) or not isinstance(value, int):
-            raise ImportValidationError(f"{table}[{i}].{col} must be an integer")
-    elif type_tag == _NULL_INT:
-        if value is not None and (isinstance(value, bool) or not isinstance(value, int)):
-            raise ImportValidationError(f"{table}[{i}].{col} must be an integer or null")
-    elif type_tag == _FLOAT:
-        if value is not None and (isinstance(value, bool) or not isinstance(value, (int, float))):
-            raise ImportValidationError(f"{table}[{i}].{col} must be a number or null")
-    elif type_tag == _TEXT:
-        if not isinstance(value, str):
-            raise ImportValidationError(f"{table}[{i}].{col} must be a string")
-    elif type_tag == _NULL_TEXT:
-        if value is not None and not isinstance(value, str):
-            raise ImportValidationError(f"{table}[{i}].{col} must be a string or null")
-    else:  # pragma: no cover - guards against a spec typo
-        raise ImportValidationError(f"{table}[{i}].{col} has an unknown type spec")
+def _now_iso_utc() -> str:
+    return datetime.now(UTC).isoformat()
 
 
-def _validate_references(data: dict[str, list[dict[str, Any]]]) -> None:
-    """Check every payload-internal foreign-key reference resolves within the
-    payload's own tables (these are pre-remap export ids, not live-DB ids)."""
-    category_ids = {r["id"] for r in data["categories"]}
-    activity_ids = {r["id"] for r in data["activities"]}
-    field_def_ids = {r["id"] for r in data["field_defs"]}
-    tag_ids = {r["id"] for r in data["tags"]}
-    entry_ids = {r["id"] for r in data["entries"]}
-
-    def _require(table: str, i: int, col: str, value: Any, universe: set[int]) -> None:
-        if value not in universe:
-            raise ImportValidationError(
-                f"{table}[{i}].{col} references an id not present in the payload"
-            )
-
-    for i, r in enumerate(data["activities"]):
-        _require("activities", i, "category_id", r["category_id"], category_ids)
-    for i, r in enumerate(data["field_defs"]):
-        _require("field_defs", i, "activity_id", r["activity_id"], activity_ids)
-    for i, r in enumerate(data["tags"]):
-        _require("tags", i, "field_def_id", r["field_def_id"], field_def_ids)
-    for i, r in enumerate(data["entries"]):
-        _require("entries", i, "activity_id", r["activity_id"], activity_ids)
-    for i, r in enumerate(data["entry_tags"]):
-        _require("entry_tags", i, "entry_id", r["entry_id"], entry_ids)
-        _require("entry_tags", i, "tag_id", r["tag_id"], tag_ids)
-    for i, r in enumerate(data["entry_values"]):
-        _require("entry_values", i, "entry_id", r["entry_id"], entry_ids)
-        _require("entry_values", i, "field_def_id", r["field_def_id"], field_def_ids)
-    for i, r in enumerate(data["matches"]):
-        _require("matches", i, "entry_id", r["entry_id"], entry_ids)
+# ---------------------------------------------------------------------------
+# Simple entry import (flat: activities + entries only)
+# ---------------------------------------------------------------------------
 
 
-# --- write -----------------------------------------------------------------
+class EntryImportError(ValueError):
+    """Raised when an entry import payload is invalid."""
 
 
-def _delete_owner_data(conn: sqlite3.Connection, owner_id: int) -> None:
-    """Delete all of *owner_id*'s rows.
+def export_entries(owner_id: int) -> dict:
+    """Simple export: activities + entries (memo only)."""
+    with db.connect() as conn:
+        conn.execute("BEGIN")
+        activities = conn.execute(
+            "SELECT name FROM activity WHERE owner_id = ? AND archived_at IS NULL ORDER BY sort_order",
+            (owner_id,),
+        ).fetchall()
 
-    Deleting ``category`` cascades (ON DELETE CASCADE, with ``foreign_keys=ON``
-    set by ``db.py``) to ``activity`` → ``field_def`` / ``entry`` → ``entry_tag``
-    / ``entry_value`` / ``match``, and ``tag`` via ``field_def``. The remaining
-    explicit deletes are defensive: they cover any owner-scoped row that a
-    (hypothetical) future detachment from the category cascade would leave
-    behind, and they are no-ops when the cascade has already removed the rows.
-    """
-    conn.execute("DELETE FROM category WHERE owner_id = ?", (owner_id,))
-    # Defensive sweep of every directly owner-scoped table (no-op after cascade).
-    for table in ("match", "tag", "entry", "activity"):
-        conn.execute(f"DELETE FROM {table} WHERE owner_id = ?", (owner_id,))  # noqa: S608
+        activity_list: list[dict[str, Any]] = []
+        for act in activities:
+            entries = conn.execute(
+                "SELECT occurred_at, memo FROM entry"
+                " WHERE owner_id = ? AND activity_id = (SELECT id FROM activity WHERE owner_id = ? AND name = ?)"
+                " ORDER BY occurred_at DESC",
+                (owner_id, owner_id, act["name"]),
+            ).fetchall()
+
+            activity_list.append({
+                "name": act["name"],
+                "entries": [
+                    {"occurred_at": e["occurred_at"], "memo": e["memo"] or ""}
+                    for e in entries
+                ],
+            })
+
+    return {"activities": activity_list}
 
 
-def _insert_payload(
-    conn: sqlite3.Connection,
-    owner_id: int,
-    data: dict[str, list[dict[str, Any]]],
-) -> tuple[dict[str, int], list[int]]:
-    """Insert every payload row with fresh PKs and remapped FKs.
+def import_entries(owner_id: int, payload: dict[str, Any]) -> dict[str, int]:
+    """Import activities and entries, merging with existing data."""
+    if not isinstance(payload, dict):
+        raise EntryImportError("Payload must be a JSON object.")
 
-    Returns ``(summary, new_activity_ids)`` where *summary* is a per-table
-    inserted-row count and *new_activity_ids* are the freshly-assigned activity
-    ids (for the post-insert cache rebuild). Insert order respects dependencies:
-    categories → activities → field_defs → tags → entries →
-    (entry_tags, entry_values, matches).
-    """
-    cat_map: dict[int, int] = {}
-    activity_map: dict[int, int] = {}
-    field_map: dict[int, int] = {}
-    tag_map: dict[int, int] = {}
-    entry_map: dict[int, int] = {}
+    activities_data = payload.get("activities", [])
+    if not isinstance(activities_data, list):
+        raise EntryImportError("Payload must contain an 'activities' list.")
 
-    for r in data["categories"]:
-        cur = conn.execute(
-            "INSERT INTO category"
-            " (owner_id, name, color, icon, sort_order, archived_at, created_at)"
-            " VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (
-                owner_id,
-                r["name"],
-                r["color"],
-                r["icon"],
-                r["sort_order"],
-                r["archived_at"],
-                r["created_at"],
-            ),
-        )
-        cat_map[r["id"]] = cur.lastrowid
+    for i, act in enumerate(activities_data):
+        if not isinstance(act, dict):
+            raise EntryImportError(f"Activity {i} is not an object.")
+        if "name" not in act or not isinstance(act["name"], str) or not act["name"].strip():
+            raise EntryImportError(f"Activity {i} has invalid name.")
+        entries = act.get("entries", [])
+        if not isinstance(entries, list):
+            raise EntryImportError(f"Activity '{act['name']}' entries must be a list.")
+        for j, entry in enumerate(entries):
+            if not isinstance(entry, dict):
+                raise EntryImportError(f"Entry {j} in activity '{act['name']}' is not an object.")
+            if "occurred_at" not in entry or not isinstance(entry["occurred_at"], str) or not entry["occurred_at"].strip():
+                raise EntryImportError(f"Entry {j} in activity '{act['name']}' missing occurred_at.")
 
-    for r in data["activities"]:
-        cur = conn.execute(
-            "INSERT INTO activity"
-            " (owner_id, category_id, name, count_mode, config_json, sort_order,"
-            "  archived_at, created_at)"
-            " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            (
-                owner_id,
-                cat_map[r["category_id"]],
-                r["name"],
-                r["count_mode"],
-                r["config_json"],
-                r["sort_order"],
-                r["archived_at"],
-                r["created_at"],
-            ),
-        )
-        activity_map[r["id"]] = cur.lastrowid
+    now = _now_iso_utc()
 
-    for r in data["field_defs"]:
-        cur = conn.execute(
-            "INSERT INTO field_def (activity_id, kind, label, config_json, sort_order)"
-            " VALUES (?, ?, ?, ?, ?)",
-            (
-                activity_map[r["activity_id"]],
-                r["kind"],
-                r["label"],
-                r["config_json"],
-                r["sort_order"],
-            ),
-        )
-        field_map[r["id"]] = cur.lastrowid
+    with connect() as conn:
+        conn.execute("BEGIN")
 
-    for r in data["tags"]:
-        cur = conn.execute(
-            "INSERT INTO tag (owner_id, field_def_id, name, sort_order, archived_at, created_at)"
-            " VALUES (?, ?, ?, ?, ?, ?)",
-            (
-                owner_id,
-                field_map[r["field_def_id"]],
-                r["name"],
-                r["sort_order"],
-                r["archived_at"],
-                r["created_at"],
-            ),
-        )
-        tag_map[r["id"]] = cur.lastrowid
+        activities_created = 0
+        entries_imported = 0
+        entries_skipped = 0
 
-    for r in data["entries"]:
-        cur = conn.execute(
-            "INSERT INTO entry"
-            " (owner_id, activity_id, occurred_at, memo, created_at, updated_at)"
-            " VALUES (?, ?, ?, ?, ?, ?)",
-            (
-                owner_id,
-                activity_map[r["activity_id"]],
-                r["occurred_at"],
-                r["memo"],
-                r["created_at"],
-                r["updated_at"],
-            ),
-        )
-        entry_map[r["id"]] = cur.lastrowid
+        act_name_to_id: dict[str, int] = {}
+        existing = conn.execute(
+            "SELECT id, name FROM activity WHERE owner_id = ? AND archived_at IS NULL",
+            (owner_id,),
+        ).fetchall()
+        for act in existing:
+            act_name_to_id[act["name"]] = act["id"]
 
-    for r in data["entry_tags"]:
-        conn.execute(
-            "INSERT INTO entry_tag (entry_id, tag_id) VALUES (?, ?)",
-            (entry_map[r["entry_id"]], tag_map[r["tag_id"]]),
-        )
+        for act in activities_data:
+            act_name = str(act["name"]).strip()
+            entries_data = act.get("entries", [])
 
-    for r in data["entry_values"]:
-        conn.execute(
-            "INSERT INTO entry_value (entry_id, field_def_id, num_value, text_value)"
-            " VALUES (?, ?, ?, ?)",
-            (
-                entry_map[r["entry_id"]],
-                field_map[r["field_def_id"]],
-                r["num_value"],
-                r["text_value"],
-            ),
-        )
+            if act_name in act_name_to_id:
+                act_id = act_name_to_id[act_name]
+            else:
+                cur = conn.execute(
+                    "INSERT INTO activity (owner_id, name, slug, sort_order, created_at)"
+                    " VALUES (?, ?, ?, 0, ?)",
+                    (owner_id, act_name, act_name.replace(" ", "-").lower(), now),
+                )
+                act_id = cur.lastrowid
+                activities_created += 1
+                act_name_to_id[act_name] = act_id
 
-    for r in data["matches"]:
-        conn.execute(
-            "INSERT INTO match (entry_id, owner_id, opponent, score, result, sort_order)"
-            " VALUES (?, ?, ?, ?, ?, ?)",
-            (
-                entry_map[r["entry_id"]],
-                owner_id,
-                r["opponent"],
-                r["score"],
-                r["result"],
-                r["sort_order"],
-            ),
-        )
+            for entry in entries_data:
+                occurred_at = str(entry["occurred_at"]).strip()
+                memo = entry.get("memo", "") or ""
 
-    summary = {table: len(data[table]) for table in _DATA_TABLES}
-    return summary, list(activity_map.values())
+                existing_entry = conn.execute(
+                    "SELECT id FROM entry WHERE owner_id = ? AND activity_id = ? AND occurred_at = ?",
+                    (owner_id, act_id, occurred_at),
+                ).fetchone()
+
+                if existing_entry:
+                    entries_skipped += 1
+                else:
+                    conn.execute(
+                        "INSERT INTO entry (owner_id, activity_id, occurred_at, memo, created_at, updated_at)"
+                        " VALUES (?, ?, ?, ?, ?, ?)",
+                        (owner_id, act_id, occurred_at, memo, now, now),
+                    )
+                    entries_imported += 1
+
+        conn.execute("COMMIT")
+
+    return {
+        "activities_created": activities_created,
+        "entries_imported": entries_imported,
+        "entries_skipped": entries_skipped,
+    }

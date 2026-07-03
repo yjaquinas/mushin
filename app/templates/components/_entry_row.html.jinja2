@@ -36,7 +36,12 @@
 {% set collapsed_memo = memo_lines[0] if memo_lines else "" %}
 {% set show_full_memo = memo_text | length > 80 or memo_lines | length > 1 %}
 {% set entry_time = entry.occurred_at | format_entry_time %}
-<li id="entry-row-{{ entry.id }}" class="entry-row flex flex-col gap-1 py-2">
+<li
+    id="entry-row-{{ entry.id }}"
+    class="entry-row flex flex-col gap-1 py-2"
+    data-entry-row
+    data-entry-tags="{{ entry.memo | entry_tags_csv }}"
+>
     <div class="flex items-center gap-2">
         <button
             type="button"

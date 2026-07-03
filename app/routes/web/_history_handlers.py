@@ -16,6 +16,7 @@ from app.routes.web._history_context import (
     _build_card_top_tags,
     _build_field_stats_context,
     _build_history_context,
+    _build_history_tags,
     resolve_history_viewer,
 )
 from app.routes.web._shared import templates
@@ -30,7 +31,6 @@ def _owner_context(owner_id: int, activity_id: int) -> tuple | None:
             return None
         field_defs = _field_defs_for_activity(conn, activity_id)
     return tz, field_defs
-
 
 def activity_history_response(
     request: Request,
@@ -80,6 +80,7 @@ def activity_history_response(
         context={
             "activity_id": activity_id,
             "history": history_ctx,
+            "top_tags": _build_history_tags(history_ctx, tz=viewer["tz"]),
             "is_owner": viewer["is_owner"],
             "can_comment": viewer["can_comment"],
             "username": viewer["username"],
@@ -101,7 +102,7 @@ def stats_summary_fragment_response(request: Request, activity_id: int, owner_id
     return templates.TemplateResponse(
         request=request,
         name="components/stats_summary.html.jinja2",
-        context={"activity_id": activity_id, "counts": cs["counts"], "streaks": cs["streaks"], "heatmap": cs["heatmap"], "top_tags": _build_card_top_tags(activity_id, owner_id, field_defs, tz=tz), "is_owner": True},
+        context={"activity_id": activity_id, "counts": cs["counts"], "streaks": cs["streaks"], "heatmap": cs["heatmap"], "top_tags": _build_card_top_tags(activity_id, owner_id, field_defs, tz=tz), "is_owner": True, "show_top_tags": False},
     )
 
 

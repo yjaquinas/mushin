@@ -110,3 +110,103 @@ def _import_error_response(request: Request, message: str) -> HTMLResponse:
         name="components/import_data_dialog.html.jinja2",
         context={"import_error": message, "open_on_error": True},
     )
+
+
+# ===========================================================================
+# Entry-only export/import — lightweight, append-safe portability.
+# ===========================================================================
+
+MAX_ENTRY_IMPORT_BYTES = 2 * 1024 * 1024
+
+
+@router.get("/export-entries")
+async def export_entries(
+    session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
+) -> Response:
+    """Download the current user's categories and entries as a lightweight JSON file.
+
+    Exports only categories, activities, and entry timestamps — no memos,
+    comments, tags, or field values. Suitable for a quick data snapshot
+    or migration between accounts.
+    """
+    user = _resolve_user(session)
+    if user is None:
+        return RedirectResponse(url="/", status_code=303)
+
+    snapshot = portability.export_entries(int(user["id"]))
+    body = json.dumps(snapshot, ensure_ascii=False, indent=2)
+    return Response(
+        content=body,
+        media_type="application/json",
+        headers={"Content-Disposition": 'attachment; filename="mushin-entries.json"'},
+    )
+
+
+@router.post("/import-entries")
+async def import_entries(
+    request: Request,
+    file: Annotated[UploadFile, File()],
+    session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
+) -> Response:
+    """Import categories and entries, merging with existing data.
+
+    Accepts an entry-only export file (``.json``). Categories and activities
+    are created if they don't exist; entries are skipped if they already exist
+    (matched by activity + timestamp). Nothing is erased.
+
+    On success, re-renders the import dialog with a summary. On failure,
+    shows an inline error.
+    """
+    user = _resolve_user(session)
+    if user is None:
+        return RedirectResponse(url="/", status_code=303)
+    owner_id = int(user["id"])
+
+    filename = file.filename or ""
+    content_type = file.content_type or ""
+    if content_type != "application/json" or not filename.lower().endswith(".json"):
+        return _entry_import_error_response(
+            request, ui_strings.IMPORT_ENTRIES_ERROR_INVALID_FILE
+        )
+
+    body = await file.read(MAX_ENTRY_IMPORT_BYTES + 1)
+    if len(body) > MAX_ENTRY_IMPORT_BYTES:
+        return _entry_import_error_response(
+            request, ui_strings.IMPORT_ENTRIES_ERROR_TOO_LARGE
+        )
+
+    try:
+        payload = json.loads(body)
+    except json.JSONDecodeError:
+        return _entry_import_error_response(
+            request, ui_strings.IMPORT_ENTRIES_ERROR_INVALID_FILE
+        )
+
+    try:
+        summary = portability.import_entries(owner_id, payload)
+    except portability.EntryImportError as exc:
+        message = ui_strings.IMPORT_ENTRIES_ERROR_VALIDATION.format(reason=str(exc))
+        return _entry_import_error_response(request, message)
+
+    return _entry_import_success_response(request, summary)
+
+
+def _entry_import_error_response(request: Request, message: str) -> HTMLResponse:
+    """Re-render the entry import dialog fragment with *message* shown inline."""
+    return templates.TemplateResponse(
+        request=request,
+        name="components/entry_import_dialog.html.jinja2",
+        context={"import_error": message, "open_on_error": True},
+    )
+
+
+def _entry_import_success_response(request: Request, summary: dict[str, int]) -> HTMLResponse:
+    """Re-render the entry import dialog with an import-success summary."""
+    return templates.TemplateResponse(
+        request=request,
+        name="components/entry_import_dialog.html.jinja2",
+        context={
+            "import_success": summary,
+            "open_on_error": True,
+        },
+    )

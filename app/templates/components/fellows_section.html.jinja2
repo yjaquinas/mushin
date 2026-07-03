@@ -1,39 +1,12 @@
 {#
-  Fellows section — a restrained block ABOVE the activity cards (between the
-  H1 and #cards), on both the owner dashboard (home.html.jinja2) and the
-  read-only profile (public_profile.html.jinja2). Swappable as a whole
-  fragment after any connection action (see app.routes.web._render_fellows_section).
-
-  Owner view always renders as a collapsed disclosure so the profile always
-  shows the fellows block, even with zero fellows. Non-owner view still
-  renders nothing at all when there's nothing to show.
-
-  Names-vs-count rule: `fellows.show_fellow_names` is True only for the
-  profile owner or a viewer who is themselves a mutual fellow of this
-  profile (computed server-side in _build_fellows_context — never decided
-  here). Every other viewer sees only `fellows.fellow_count`, never a
-  clickable name (so a private fellow can't be outed by association).
-
-  Initials rule: each chip shows 1-2 initials derived from `display_name` if
-  present (first letter of up to the first two words), otherwise the first
-  1-2 letters of `username`.
-
-  Context: `fellows` (see app.routes.web._build_fellows_context) — keys
-  `fellow_count`, `fellows` (list, only populated when show_fellow_names),
-  `show_fellow_names`, `is_owner`, `incoming_requests`, `outgoing_requests`,
-  `pending_count`. Optional `error` (str|None) — a calm inline message from
-  a just-attempted action.
+  Fellows section.
+  Context: fellows (fellow_count, fellows list, show_fellow_names, is_owner,
+           incoming_requests, outgoing_requests, pending_count). Optional error.
 #}
-{# The #fellows-section id must always exist, even when there's nothing to
-   show — it's the hx-swap target for connection actions
-   (app.routes.web._render_fellows_section); if the id disappeared along
-   with the content, the next swap after the last fellow/request leaves
-   would have nothing to land in. #}
 <div id="fellows-section">
 {% set should_render = fellows.is_owner or fellows.fellow_count > 0 or fellows.pending_count > 0 or error %}
 {% if should_render %}
-{% set disclosure_open = not fellows.is_owner %}
-{% if fellows.is_owner %}
+{% set disclosure_open = false %}
 <details class="group pt-4" {% if disclosure_open %}open{% endif %}>
     <summary class="flex min-h-tap cursor-pointer list-none items-center justify-between gap-3 rounded-card px-1 py-2 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">
         <span class="text-title font-medium text-text-primary">{{ strings.FELLOWS_HEADING }}</span>
@@ -54,12 +27,6 @@
         </span>
     </summary>
     <section class="flex flex-col gap-3 pt-2">
-{% else %}
-<section class="flex flex-col gap-3 pt-4">
-    <header class="flex flex-wrap items-center gap-2">
-        <h2 class="text-title font-medium text-text-primary">{{ strings.FELLOWS_HEADING }}</h2>
-    </header>
-{% endif %}
 
     {% if error %}
     <p class="text-caption text-danger" role="alert">{{ error }}</p>
@@ -73,15 +40,8 @@
         {% else %}
         <ul class="flex gap-2 overflow-x-auto pb-1">
             {% for fellow in fellows.fellows %}
-            {% set fellow_label = fellow.display_name or fellow.username %}
-            {% set name_words = fellow.display_name.split() if fellow.display_name else [] %}
-            {% if name_words | length >= 2 %}
-                {% set initials = name_words[0][0] + name_words[1][0] %}
-            {% elif name_words %}
-                {% set initials = name_words[0][:2] %}
-            {% else %}
-                {% set initials = fellow.username[:2] %}
-            {% endif %}
+            {% set fellow_label = fellow.username %}
+            {% set initials = fellow.username[:2] %}
             <li class="shrink-0">
                 <a
                     href="/@{{ fellow.username }}"
@@ -91,7 +51,7 @@
                         class="flex h-10 w-10 min-h-tap min-w-tap items-center justify-center rounded-full border border-border-strong bg-surface-2 text-body font-semibold text-text-primary"
                         aria-hidden="true"
                     >{{ initials | upper }}</span>
-                    <span class="w-full truncate text-caption text-text-secondary">{{ fellow_label }}</span>
+                    <span class="w-full truncate text-[0.625rem] leading-tight text-text-secondary">{{ fellow_label }}</span>
                 </a>
             </li>
             {% endfor %}
@@ -108,9 +68,7 @@
     {% endif %}
 
 </section>
-{% if fellows.is_owner %}
 </details>
-{% endif %}
 {% endif %}
 {% if fellows.is_owner and fellows.pending_count > 0 %}
 {% include "components/requests_cluster.html.jinja2" with context %}

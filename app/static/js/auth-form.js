@@ -12,40 +12,7 @@
 // failure (4xx), the endpoint's `{"detail": "..."}` body is shown inline in
 // the form's #auth-error element and echoed through the shared error toast
 // without losing the entered username (the form itself is never swapped).
-//
-// Timezone: on submit we stamp the browser's IANA timezone into a hidden
-// `timezone` field so signup / guest-creation / login POSTs carry it. The
-// server persists it on the user row at creation only and tolerates a missing
-// or garbage value (falls back to 'UTC'), so this is best-effort — if the
-// detection throws or the field is absent, auth still works.
 window.MushinAuth = {
-  // Resolve the browser's IANA timezone name (e.g. "America/New_York").
-  // Returns "" if the platform doesn't expose it, letting the server fall
-  // back to 'UTC' rather than sending a bogus value.
-  detectTimezone() {
-    try {
-      return Intl.DateTimeFormat().resolvedOptions().timeZone || "";
-    } catch {
-      return "";
-    }
-  },
-
-  // hx-on:submit hook: stamp the detected timezone into the form's hidden
-  // `timezone` input (creating it if a template didn't include one) just
-  // before the request is configured.
-  stampTimezone(event) {
-    const form = event.target;
-    if (!form || typeof form.querySelector !== "function") return;
-    let field = form.querySelector('input[name="timezone"]');
-    if (!field) {
-      field = document.createElement("input");
-      field.type = "hidden";
-      field.name = "timezone";
-      form.appendChild(field);
-    }
-    field.value = this.detectTimezone();
-  },
-
   showErrorToast(message) {
     if (!message || typeof window.showToast !== "function") return;
     window.showToast(message, "error");
@@ -101,7 +68,6 @@ window.MushinAuth = {
 document.addEventListener("submit", function (event) {
   const form = event.target;
   if (!form || !form.hasAttribute("data-auth-form")) return;
-  window.MushinAuth.stampTimezone(event);
 });
 
 document.body.addEventListener("htmx:afterRequest", function (event) {

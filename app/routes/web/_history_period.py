@@ -12,7 +12,7 @@ from app.routes.web._calendar_context import _build_calendar_context, _entries_o
 from app.services import comments, entries, stats
 
 
-def _build_history_context(activity_id: int, owner_id: int, *, period: str, anchor: date, tz: ZoneInfo, selected: date | None = None, is_owner: bool = False, can_comment: bool = False, username: str | None = None, slug: str | None = None, expand_comment_entry_id: int | None = None, login_redirect_url: str | None = None) -> dict[str, Any]:
+def _build_history_context(activity_id: int, owner_id: int, *, period: str, anchor: date, tz: ZoneInfo, selected: date | None = None, is_owner: bool = False, can_comment: bool = False, username: str | None = None, slug: str | None = None, expand_comment_entry_id: int | None = None, login_redirect_url: str | None = None, tag: str | None = None) -> dict[str, Any]:
     expanded_entry_id = expand_comment_entry_id if selected is not None else None
     if period == "all":
         log = _group_log(entries.list_for_activity(owner_id, activity_id), tz)
@@ -33,6 +33,7 @@ def _group_log(rows: list[dict[str, Any]], tz: ZoneInfo) -> list[dict[str, Any]]
     for row in rows:
         by_day[entries._local_day(row["occurred_at"], tz)].append(row)
     return [{"day": day.isoformat(), "entries": day_entries} for day, day_entries in sorted(by_day.items(), reverse=True)]
+
 
 
 def _period_visual(period: str, activity_id: int, owner_id: int, start: date, end: date, tz: ZoneInfo, selected: date | None, today: date) -> tuple[dict[str, Any], str]:

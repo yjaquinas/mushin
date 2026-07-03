@@ -19,12 +19,6 @@
         href="/activities/{{ card.id }}"
         class="flex flex-col gap-2 rounded-card transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-strong"
     >
-        {% if card.show_breadcrumb %}
-        <header class="flex flex-col gap-0.5 px-1">
-            <span class="text-caption text-text-muted">{{ card.category_name }}</span>
-        </header>
-        {% endif %}
-
         {% with activity_id=card.id, counts=card.counts, streaks=card.streaks, heatmap=card.heatmap, top_tags=card.top_tags, is_owner=false, card_name=card.name %}
         {% include "components/stats_summary.html.jinja2" with context %}
         {% endwith %}

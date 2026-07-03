@@ -395,6 +395,119 @@
     });
   }
 
+  function syncTagSection(section) {
+    if (!section) return;
+    var list = section.querySelector("[data-tag-list]");
+    var expandButton = section.querySelector("[data-tags-expand]");
+    var clearButton = section.querySelector("[data-tag-clear]");
+    if (!list || !expandButton) return;
+
+    var items = Array.prototype.slice.call(list.children || []);
+    items.forEach(function (item) {
+      item.hidden = false;
+    });
+
+    if (section.dataset.tagsExpanded === "true") {
+      hide(expandButton);
+      return;
+    }
+
+    var rowTops = [];
+    var overflowTop = null;
+    items.forEach(function (item) {
+      var top = item.offsetTop;
+      if (rowTops.indexOf(top) === -1) rowTops.push(top);
+      if (rowTops.length > 2 && overflowTop === null) overflowTop = top;
+    });
+
+    if (overflowTop === null) {
+      hide(expandButton);
+    } else {
+      var selectedOverflow = items.some(function (item) {
+        return item.offsetTop >= overflowTop && item.querySelector(".chip--tag-active");
+      });
+      if (selectedOverflow) {
+        section.dataset.tagsExpanded = "true";
+        hide(expandButton);
+      } else {
+        items.forEach(function (item) {
+          item.hidden = item.offsetTop >= overflowTop;
+        });
+        show(expandButton);
+      }
+    }
+
+    if (clearButton) {
+      if (selectedTagValues().length > 0) show(clearButton);
+      else hide(clearButton);
+    }
+  }
+
+  function syncTagSections(scope) {
+    (scope || document).querySelectorAll("[data-tags-section]").forEach(function (section) {
+      syncTagSection(section);
+    });
+  }
+
+  function selectedTagValues() {
+    var raw = document.body.dataset.selectedTags || "";
+    return raw ? raw.split(",").filter(Boolean) : [];
+  }
+
+  function setSelectedTagValues(tags) {
+    var unique = Array.from(new Set((tags || []).filter(Boolean))).sort();
+    document.body.dataset.selectedTags = unique.join(",");
+    var section = document.querySelector("[data-tags-section]");
+    if (section) section.dataset.selectedTags = unique.join(",");
+  }
+
+  function applyTagChipState(section) {
+    if (!section) return;
+    section.dataset.selectedTags = document.body.dataset.selectedTags || "";
+    var selectedTags = selectedTagValues();
+    section.querySelectorAll("[data-tag-chip]").forEach(function (chip) {
+      var active = selectedTags.indexOf(chip.dataset.tagName || "") !== -1;
+      chip.setAttribute("aria-pressed", active ? "true" : "false");
+      chip.classList.toggle("chip--tag-active", !!active);
+    });
+  }
+
+  function syncFilteredEntryLists(scope) {
+    var selectedTags = selectedTagValues();
+    (scope || document).querySelectorAll("[data-history-entry-list]").forEach(function (list) {
+      var visibleCount = 0;
+      list.querySelectorAll("[data-entry-row]").forEach(function (row) {
+        var tags = row.dataset.entryTags ? row.dataset.entryTags.split(",").filter(Boolean) : [];
+        var matches = selectedTags.length === 0 || selectedTags.some(function (tag) {
+          return tags.indexOf(tag) !== -1;
+        });
+        row.hidden = !matches;
+        if (matches) visibleCount += 1;
+      });
+      var empty = list.parentElement ? list.parentElement.querySelector("[data-history-empty]") : null;
+      if (empty) {
+        if (visibleCount === 0) show(empty);
+        else hide(empty);
+      }
+    });
+  }
+
+  function prefilterHistoryMarkup(markup) {
+    if (selectedTagValues().length === 0 || !markup) return markup;
+
+    var wrapper = document.createElement("div");
+    wrapper.innerHTML = markup;
+    syncFilteredEntryLists(wrapper);
+    return wrapper.innerHTML;
+  }
+
+  function applyTagFilter(scope) {
+    var section = document.querySelector("[data-tags-section]");
+    if (section) applyTagChipState(section);
+    syncFilteredEntryLists(scope || document);
+    syncTagSections(document);
+  }
+
   document.addEventListener("click", function (event) {
     var addOpen = event.target.closest("[data-add-activity-open]");
     if (addOpen) {
@@ -452,6 +565,38 @@
       setEntryExpandedState(entryId, !expanded);
       if (!expanded) maybeLoadEntryComments(entryId);
       event.preventDefault();
+      return;
+    }
+
+    var tagsExpand = event.target.closest("[data-tags-expand]");
+    if (tagsExpand) {
+      var tagsSection = tagsExpand.closest("[data-tags-section]");
+      if (!tagsSection) return;
+      tagsSection.dataset.tagsExpanded = "true";
+      syncTagSection(tagsSection);
+      return;
+    }
+
+    var tagClear = event.target.closest("[data-tag-clear]");
+    if (tagClear) {
+      var clearSection = tagClear.closest("[data-tags-section]");
+      if (!clearSection) return;
+      setSelectedTagValues([]);
+      applyTagFilter(document);
+      return;
+    }
+
+    var tagChip = event.target.closest("[data-tag-chip]");
+    if (tagChip) {
+      var chipSection = tagChip.closest("[data-tags-section]");
+      if (!chipSection) return;
+      var nextTag = tagChip.dataset.tagName || "";
+      var nextSelected = selectedTagValues();
+      var existingIndex = nextSelected.indexOf(nextTag);
+      if (existingIndex === -1) nextSelected.push(nextTag);
+      else nextSelected.splice(existingIndex, 1);
+      setSelectedTagValues(nextSelected);
+      applyTagFilter(document);
       return;
     }
   }, true);
@@ -527,6 +672,7 @@
     syncBoundedTextareas(document);
     syncLocalTimestamps(document);
     syncEntryDateTimeForms(document);
+    applyTagFilter(document);
   });
 
   document.body.addEventListener("htmx:afterSwap", function (event) {
@@ -544,6 +690,22 @@
     syncBoundedTextareas(target);
     syncLocalTimestamps(target);
     syncEntryDateTimeForms(target);
+    if (isHistoryTarget(target)) {
+      applyTagFilter(target);
+    } else {
+      applyTagFilter(document);
+    }
+  });
+
+  document.body.addEventListener("htmx:afterSettle", function (event) {
+    var target = event.detail.target;
+    if (isHistoryTarget(target)) {
+      applyTagFilter(document);
+    }
+  });
+
+  window.addEventListener("resize", function () {
+    applyTagFilter(document);
   });
 
   document.body.addEventListener("dialog:open", function (event) {
@@ -569,6 +731,12 @@
     if (elt && elt.matches("[data-log-trigger]")) {
       return;
     }
+  });
+
+  document.body.addEventListener("htmx:beforeSwap", function (event) {
+    var target = event.detail.target;
+    if (!isHistoryTarget(target)) return;
+    event.detail.serverResponse = prefilterHistoryMarkup(event.detail.serverResponse);
   });
 
   document.body.addEventListener("htmx:beforeRequest", function (event) {

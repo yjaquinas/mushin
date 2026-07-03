@@ -14,32 +14,32 @@ from app.models import db
 from app.routes.web._calendar_context import _resolve_comment_deep_link
 from app.routes.web._contexts import _build_card_context, _field_defs_for_activity
 from app.routes.web._history_context import (
-    _build_card_top_tags,
     _build_field_stats_context,
     _build_history_context,
+    _build_history_tags,
 )
 from app.routes.web._shared import templates
 from app.services import categories, competition, profiles, stats
 
 
 def new_activity_response(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse(request=request, name="components/category_sheet.html.jinja2", context={})
+    return templates.TemplateResponse(request=request, name="components/activity_sheet.html.jinja2", context={})
 
 
 def create_activity_response(request: Request, user: dict, name: str) -> HTMLResponse | RedirectResponse:
     owner_id = int(user["id"])
     name = name.strip()
     if not name:
-        return _category_form_error(request, ui_strings.ACTIVITY_FORM_NAME_REQUIRED)
+        return _activity_form_error(request, ui_strings.ACTIVITY_FORM_NAME_REQUIRED)
 
     with db.connect() as conn:
         if conn.execute(
-            "SELECT 1 FROM category"
+            "SELECT 1 FROM activity"
             " WHERE owner_id = ? AND LOWER(name) = LOWER(?) AND archived_at IS NULL"
             " LIMIT 1",
             (owner_id, name),
         ).fetchone():
-            return _category_form_error(request, ui_strings.ACTIVITY_FORM_NAME_DUPLICATE)
+            return _activity_form_error(request, ui_strings.ACTIVITY_FORM_NAME_DUPLICATE)
 
     result = categories.create_activity(owner_id, name=name)
     with db.connect() as conn:
@@ -56,12 +56,12 @@ def create_activity_response(request: Request, user: dict, name: str) -> HTMLRes
     return response
 
 
-def _category_form_error(request: Request, message: str) -> HTMLResponse | RedirectResponse:
+def _activity_form_error(request: Request, message: str) -> HTMLResponse | RedirectResponse:
     if request.headers.get("HX-Request") != "true":
         return RedirectResponse(url="/home", status_code=303)
     return templates.TemplateResponse(
         request=request,
-        name="components/category_form.html.jinja2",
+        name="components/activity_form.html.jinja2",
         context={"hx_post": "/activities", "hx_target": "#cards", "hx_swap": "beforeend", "name_error": message},
         status_code=400,
     )
@@ -88,28 +88,21 @@ def activity_detail_response(
             )
 
         sub_row = conn.execute(
-            """SELECT st.id, st.name, st.slug, st.count_mode, st.cached_count, st.cached_streak,
-                      st.last_entry_at, st.category_id, c.name AS category_name, c.icon AS icon
+            """SELECT st.id, st.name, st.slug, st.count, st.streak,
+                      st.last_entry_at, st.icon
                  FROM activity st
-                 JOIN category c ON c.id = st.category_id
                 WHERE st.id = ? AND st.owner_id = ?""",
             (activity_id, owner_id),
         ).fetchone()
         if sub_row is None:
             return HTMLResponse(status_code=404)
         field_defs = _field_defs_for_activity(conn, activity_id)
-        has_match_list = any(fd["kind"] == "match_list" for fd in field_defs)
         card = _build_card_context(conn, owner_id, sub_row, tz=tz)
 
     context: dict[str, Any] = {"card": card}
-    if has_match_list:
-        context["record"] = competition.record(owner_id, activity_id)
-        context["timeline"] = competition.results_timeline(owner_id, activity_id)
-        context["head_to_head"] = competition.head_to_head(owner_id, activity_id)
-    else:
-        context["record"] = None
-        context["timeline"] = []
-        context["head_to_head"] = []
+    context["record"] = None
+    context["timeline"] = []
+    context["head_to_head"] = []
 
     username = user.get("username")
     today = datetime.now(UTC).date()
@@ -123,7 +116,6 @@ def activity_detail_response(
     context["counts"] = cs["counts"]
     context["streaks"] = cs["streaks"]
     context["heatmap"] = cs["heatmap"]
-    context["top_tags"] = _build_card_top_tags(activity_id, owner_id, field_defs, tz=tz)
     context["history"] = _build_history_context(
         activity_id,
         owner_id,
@@ -137,6 +129,7 @@ def activity_detail_response(
         slug=sub_row["slug"],
         expand_comment_entry_id=expand_comment_entry_id,
     )
+    context["top_tags"] = _build_history_tags(context["history"], tz=tz)
     context["field_stats"] = _build_field_stats_context(activity_id, owner_id, field_defs, tz=tz)
     context["public_notice"] = None
     context["is_owner"] = True

@@ -5,7 +5,7 @@
 {% block content %}
 <div class="flex flex-col gap-6">
     {# 1. Summary card #}
-    {% with card_name=card.name, title_editable=true %}
+    {% with card_name=card.name, title_editable=true, show_top_tags=false %}
     {% include "components/stats_summary.html.jinja2" with context %}
     {% endwith %}
 

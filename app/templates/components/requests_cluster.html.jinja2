@@ -1,14 +1,7 @@
 {#
-  Requests cluster — owner-only, rendered separately from the fellows
-  disclosure and only when there is pending state.
-
-  Incoming pending: Accept (direct) / Decline (direct).
-  Outgoing pending: "Requested" label + a quiet Cancel (direct).
-
-  Context: `fellows.incoming_requests` / `fellows.outgoing_requests`, each
-  ``[{connection_id, id, username, display_name}, ...]`` (see
-  app.services.connections.list_incoming_pending / list_outgoing_pending),
-  `fellows.pending_count`.
+  Requests cluster — owner-only.
+  Context: fellows.incoming_requests / fellows.outgoing_requests,
+  fellows.pending_count.
 #}
 <section class="flex flex-col gap-3 pt-4">
     <header class="flex flex-wrap items-center gap-2">
@@ -26,9 +19,6 @@
                 class="flex min-h-tap flex-wrap items-center gap-x-2 gap-y-0.5 rounded-card px-2 py-2 text-body text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
             >
                 <span class="font-medium">@{{ req.username }}</span>
-                {% if req.display_name %}
-                <span class="text-caption text-text-secondary">{{ req.display_name }}</span>
-                {% endif %}
             </a>
             <div class="flex flex-wrap items-center gap-2">
                 <button
@@ -60,9 +50,6 @@
                 class="flex min-h-tap flex-wrap items-center gap-x-2 gap-y-0.5 rounded-card px-2 py-2 text-body text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
             >
                 <span class="font-medium">@{{ req.username }}</span>
-                {% if req.display_name %}
-                <span class="text-caption text-text-secondary">{{ req.display_name }}</span>
-                {% endif %}
             </a>
             <div class="flex flex-wrap items-center gap-2">
                 <span class="text-caption text-text-muted">{{ strings.REQUESTS_OUTGOING_HEADING }}</span>

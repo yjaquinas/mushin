@@ -167,6 +167,10 @@
         {% include "components/week_strip.html.jinja2" with context %}
     {% endif %}
 
+    {% if top_tags is defined and top_tags is not none %}
+        {% include "components/activity_tags.html.jinja2" with context %}
+    {% endif %}
+
     {# Log area: mutually exclusive — the full-period log (no day selected,
        the default) or the day-detail panel + a clear-selection control (a
        day selected). #}

@@ -1,0 +1,44 @@
+{#
+  Shared hashtag block for activity summary/detail surfaces.
+
+  Context: top_tags ({"tags": [{"name", "total"}, ...]}), strings,
+  activity_path, and history.tag when used on activity detail pages.
+#}
+{% if show_top_tags | default(true) and top_tags is defined and top_tags is not none %}
+<div class="flex flex-col gap-2">
+    <div class="flex items-center justify-between gap-3">
+        <h3 class="text-body font-medium text-text-primary">{{ strings.TAGS_HEADING }}</h3>
+        {% if top_tags.tags %}
+            <button
+                type="button"
+                hidden
+                data-tag-clear
+                class="text-caption text-text-secondary underline-offset-2 hover:underline"
+            >{{ strings.TAG_FILTER_CLEAR }}</button>
+        {% endif %}
+    </div>
+    {% if not top_tags.tags %}
+        <p class="text-caption text-text-muted">{{ strings.TAG_FREQUENCY_EMPTY }}</p>
+    {% else %}
+        <ul class="flex flex-wrap gap-2" data-tag-list>
+            {% for tag in top_tags.tags %}
+                <li>
+                    <button
+                        type="button"
+                        data-tag-chip
+                        data-tag-name="{{ tag.name }}"
+                        aria-pressed="false"
+                        class="chip chip--tag"
+                    >#{{ tag.name }} ({{ tag.total }})</button>
+                </li>
+            {% endfor %}
+        </ul>
+        <button
+            type="button"
+            hidden
+            data-tags-expand
+            class="w-fit rounded-button border border-border px-2 py-1 text-caption text-text-secondary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-strong"
+        >{{ strings.TAGS_SHOW_ALL }}</button>
+    {% endif %}
+</div>
+{% endif %}

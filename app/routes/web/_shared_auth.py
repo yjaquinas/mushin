@@ -27,8 +27,5 @@ def _home_url_context(request: Request) -> dict[str, str]:
 
 
 def consent_gate_redirect(user: dict[str, Any]) -> RedirectResponse | None:
-    if user["auth_provider"] == "guest":
-        return None
-    if user["visibility"] == "private" and user["private_redefinition_seen_at"] is None:
-        return RedirectResponse(url="/visibility-update", status_code=303)
+    """No-op: consent gate removed (default visibility is public)."""
     return None

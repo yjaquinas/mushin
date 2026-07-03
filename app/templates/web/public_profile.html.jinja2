@@ -26,7 +26,12 @@
 {% endif %}
 
 {% if not cards %}
-<p class="text-body text-text-secondary">{{ strings.PROFILE_ACTIVITIES_EMPTY }}</p>
+<section class="flex flex-col gap-4 rounded-card border border-border bg-surface-1 p-4">
+    <div class="flex flex-col gap-1">
+        <h2 class="text-title font-semibold text-text-primary">{{ strings.PROFILE_ACTIVITIES_HEADING }}</h2>
+    </div>
+    <p class="text-body text-text-secondary">{{ strings.PROFILE_ACTIVITIES_EMPTY }}</p>
+</section>
 {% else %}
 <div class="flex flex-col gap-3">
     {% for card in cards %}
@@ -39,11 +44,6 @@
         {% else %}
         <div class="flex flex-col rounded-card">
         {% endif %}
-            {% if card.show_breadcrumb %}
-            <header class="flex flex-col gap-0.5 px-1 pb-2">
-                <span class="text-caption text-text-muted">{{ card.category_name }}</span>
-            </header>
-            {% endif %}
             {% with activity_id=card.id, counts=card.counts, streaks=card.streaks, heatmap=card.heatmap, top_tags=card.top_tags, card_name=card.name %}
             {% include "components/stats_summary.html.jinja2" with context %}
             {% endwith %}

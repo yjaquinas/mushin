@@ -1,6 +1,6 @@
 {#
-  Create-category form body — name only (no icon picker).
-  Used by the HTMX sheet fragment category_sheet.html.jinja2.
+  Create-activity form body — name only (no icon picker).
+  Used by the HTMX sheet fragment activity_sheet.html.jinja2.
 
   Submits to POST /activities. On success the route returns 201 with
   ``HX-Redirect`` to the new activity's detail page.
@@ -23,12 +23,12 @@
     class="flex flex-col gap-4"
 >
     <div class="flex flex-col gap-1">
-        <label for="category-name" class="text-caption font-medium text-text-secondary">
+        <label for="activity-name" class="text-caption font-medium text-text-secondary">
             {{ strings.ACTIVITY_FORM_NAME_LABEL }}
         </label>
         <input
             type="text"
-            id="category-name"
+            id="activity-name"
             name="name"
             required
             placeholder="{{ strings.ACTIVITY_FORM_NAME_PLACEHOLDER }}"

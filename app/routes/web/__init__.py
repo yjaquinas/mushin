@@ -46,6 +46,9 @@ from app.routes.web._history_context import (
 from app.routes.web._history_context import (
     _build_history_context as _build_history_context,
 )
+from app.routes.web._history_context import (
+    _build_history_tags as _build_history_tags,
+)
 from app.routes.web._shared import (
     _clear_flash as _clear_flash,
 )

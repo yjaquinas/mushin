@@ -1,4 +1,4 @@
-"""Rename and category-delete admin actions for an activity."""
+"""Rename and activity-delete admin actions for an activity."""
 
 from __future__ import annotations
 
@@ -9,8 +9,8 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.auth import sessions
 from app.routes.web._activity_admin_handlers import (
-    category_delete_confirm_response,
-    delete_category_response,
+    activity_delete_confirm_response,
+    delete_activity_response,
     rename_activity_response,
     rename_form_response,
 )
@@ -53,27 +53,27 @@ async def rename_activity(
 
 
 @router.get("/activities/{activity_id}/delete-confirm", response_class=HTMLResponse)
-async def category_delete_confirm(
+async def activity_delete_confirm(
     request: Request,
     activity_id: int,
     session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
 ) -> HTMLResponse:
-    """Return the delete-confirm dialog for the category that owns *activity_id*.
+    """Return the delete-confirm dialog for *activity_id*.
 
     Ownership check: the activity must exist and belong to the session user — 404 otherwise.
     """
     user = _current_user(session)
     if user is None:
         return HTMLResponse(status_code=401)
-    return category_delete_confirm_response(request, activity_id, int(user["id"]))
+    return activity_delete_confirm_response(request, activity_id, int(user["id"]))
 
 
 @router.post("/activities/{activity_id}/delete", response_class=HTMLResponse)
-async def delete_category(
+async def delete_activity(
     activity_id: int,
     session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
 ) -> HTMLResponse:
-    """Delete the category (and all activities/entries) that owns *activity_id*.
+    """Delete *activity_id* and all its entries.
 
     On success (or if already gone): ``HX-Redirect`` to the owner's home/profile
     URL with status 200. Non-owner or unknown activity: 404.
@@ -81,4 +81,4 @@ async def delete_category(
     user = _current_user(session)
     if user is None:
         return HTMLResponse(status_code=401)
-    return delete_category_response(activity_id, int(user["id"]), user)
+    return delete_activity_response(activity_id, int(user["id"]), user)

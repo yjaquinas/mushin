@@ -74,7 +74,7 @@
         hx-get="/fellows/{{ username }}/remove-confirm{{ qs }}"
         hx-target="#{{ remove_dialog_id }}"
         hx-swap="outerHTML"
-        class="min-h-tap self-start rounded-button border border-border px-4 text-body text-text-secondary transition hover:bg-surface-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+        class="min-h-tap self-start rounded-button border border-cinnabar px-4 text-body font-medium text-accent-text transition hover:bg-accent-subtle focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
     >{{ strings.CONNECT_REMOVE }}</button>
 
     {% elif state == "blocked" %}

@@ -76,6 +76,12 @@ async def set_suspension(user_id: int, *, suspended: bool) -> RedirectResponse:
     return user_detail_redirect(user_id)
 
 
+async def delete_user(user_id: int) -> RedirectResponse:
+    with db.connect() as conn:
+        admin_actions.delete_user(conn, user_id)
+    return RedirectResponse(url="/admin/users", status_code=303)
+
+
 async def edit_entry(user_id: int, entry_id: int, *, memo: str) -> RedirectResponse:
     with db.connect() as conn:
         admin_actions.update_entry_memo(conn, user_id, entry_id, memo)

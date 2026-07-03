@@ -1,30 +1,4 @@
-"""Public activity detail route (``/@{username}/{slug}``).
-
-The slug route is unified: when the viewer is the profile's owner, it
-renders the full owner-dashboard template (``activity_detail.html.jinja2``)
-with all write affordances. For every other viewer that can see detail
-(``connected``/``public``) it uses the read-only public template
-(``web/public_activity.html.jinja2``); a ``limited`` viewer is
-303-redirected back to the profile (no detail to leak), and a ``blocked``
-viewer gets the same 404 a non-existent user would.
-
-THE SINGLE VISIBILITY AUTHORITY
---------------------------------
-This route drives its visibility decision through
-``profiles.viewer_capability`` / ``profiles.can_view_activity_detail`` — the
-sole, fail-closed authority (see ``app/services/profiles.py``). No handler
-reads ``user["visibility"]`` directly.
-
-Business logic stays in ``app/services/``; the heavier render paths (owner
-dashboard continuation, read-only public view) live in the internal
-companion ``_activity_detail_handlers.py`` (route-structure rule, option 2 —
-this file stays the thin dispatch + route declaration).
-
-The entry-comment routes (``app/routes/public/comments.py``) are a separate
-route group with their own visibility gate (``_resolve_entry_for_comments``);
-the two modules share only the ``templates``/alias constants in
-``_contexts.py``, no functions.
-"""
+"""Public activity detail route (``/@{username}/{slug}``)."""
 
 from __future__ import annotations
 
@@ -52,21 +26,6 @@ async def public_activity(
     slug: str,
     session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
 ) -> HTMLResponse | RedirectResponse:
-    """Unified activity detail: owner view or read-only public view.
-
-    Branch order (security-critical — do not reorder), entirely driven by
-    ``profiles.viewer_capability`` / ``can_view_activity_detail``:
-
-      1. Owner → ``activity_detail.html.jinja2`` (full dashboard with write
-         affordances); a public-notice strip when the account is public.
-      2. ``"blocked"`` → 404 (no existence oracle).
-      3. ``can_view_activity_detail`` True (``connected``/``public``) →
-         read-only ``public_activity.html.jinja2`` — full entries + notes.
-      4. ``"limited"`` → 303 redirect to the canonical profile URL. A
-         non-connected visitor cannot open detail on a non-public account.
-
-    404s for unknown usernames, guests, or an unresolvable *slug*.
-    """
     current_uid = sessions.read_uid(session)
 
     with db.connect() as conn:
@@ -81,38 +40,27 @@ async def public_activity(
             return HTMLResponse(status_code=404)
 
         cap = profiles.viewer_capability(conn, current_user_id=current_uid, profile_user=user)
-
         tz = users.get_user_timezone(owner_id)
 
         # ------------------------------------------------------------------
-        # Branch 1 — owner viewing their own activity: render the full
-        # owner dashboard.
+        # Branch 1 — owner viewing their own activity
         # ------------------------------------------------------------------
         if cap == "owner":
             sub_row = conn.execute(
-                """SELECT st.id, st.name, st.slug, st.count_mode,
-                          st.cached_count, st.cached_streak,
-                          st.last_entry_at, st.category_id,
-                          c.name AS category_name, c.icon AS icon
+                """SELECT st.id, st.name, st.slug, st.count, st.streak,
+                          st.last_entry_at, st.icon
                      FROM activity st
-                     JOIN category c ON c.id = st.category_id
                     WHERE st.id = ? AND st.owner_id = ?""",
                 (activity_id, owner_id),
             ).fetchone()
             field_defs = _field_defs_for_activity(conn, activity_id)
-            has_match_list = any(fd["kind"] == "match_list" for fd in field_defs)
             card = _build_card_context(conn, owner_id, sub_row, tz=tz)
-
-            # Owner capability always grants comment permission via
-            # `can_comment_on_entry`; threaded into `_build_history_context`
-            # (inside the handler) so the merged calendar's per-entry comment
-            # toggles render for the owner.
             can_comment = profiles.can_comment_on_entry(
                 conn, current_user_id=current_uid, profile_user=user, activity_id=activity_id
             )
 
         # ------------------------------------------------------------------
-        # Branches 2-4 — non-owner viewer.
+        # Branches 2-4 — non-owner viewer
         # ------------------------------------------------------------------
         else:
             if cap == "blocked":
@@ -121,7 +69,6 @@ async def public_activity(
             if not profiles.can_view_activity_detail(
                 conn, current_user_id=current_uid, profile_user=user
             ):
-                # "limited" — non-connected visitor on a non-public account.
                 return RedirectResponse(
                     url=profiles.canonical_profile_url(username), status_code=303
                 )
@@ -138,12 +85,6 @@ async def public_activity(
                 profile_user=user,
             )
 
-    # ------------------------------------------------------------------
-    # Owner view continued (outside the `with` block so the connection is
-    # closed before building the heavier context from services) — delegated
-    # to the internal companion module to keep this file under the 300-line
-    # ceiling.
-    # ------------------------------------------------------------------
     return _render_owner_activity_detail(
         request,
         username=username,
@@ -153,7 +94,7 @@ async def public_activity(
         user=user,
         card=card,
         field_defs=field_defs,
-        has_match_list=has_match_list,
+        has_match_list=False,
         can_comment=can_comment,
         tz=tz,
     )

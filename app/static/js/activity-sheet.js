@@ -8,14 +8,14 @@
   "use strict";
 
   function initSheet() {
-    var sheet = document.getElementById("category-sheet-dialog");
+    var sheet = document.getElementById("activity-sheet-dialog");
     if (!sheet) return;
 
     // Prevent duplicate initialization.
-    if (sheet.getAttribute("data-category-sheet-init")) return;
-    sheet.setAttribute("data-category-sheet-init", "true");
+    if (sheet.getAttribute("data-activity-sheet-init")) return;
+    sheet.setAttribute("data-activity-sheet-init", "true");
 
-    var dlg = new DialogManager("category-sheet-dialog");
+    var dlg = new DialogManager("activity-sheet-dialog");
     dlg.init();
     dialogManagerRegistry.add(dlg);
     dlg.open();
@@ -41,9 +41,9 @@
   });
 
   document.addEventListener("click", function (event) {
-    var cancel = event.target.closest("#category-sheet-cancel");
+    var cancel = event.target.closest("#activity-sheet-cancel");
     if (!cancel) return;
-    var sheet = document.getElementById("category-sheet-dialog");
+    var sheet = document.getElementById("activity-sheet-dialog");
     if (sheet) sheet.setAttribute("hidden", "");
   });
 })();

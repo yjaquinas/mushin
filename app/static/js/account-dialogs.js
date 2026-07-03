@@ -13,7 +13,7 @@
     return dlg;
   }
 
-  var importDlg = initDialog("import-data-dialog");
+  var importDlg = initDialog("entry-import-data-dialog");
   var deleteDlg = initDialog("delete-account-dialog");
 
   async function copyShareLink(url) {
@@ -62,13 +62,13 @@
       return;
     }
 
-    var importOpen = event.target.closest("#import-open-button");
+    var importOpen = event.target.closest("#entry-import-open-button");
     if (importOpen && importDlg) {
       importDlg.open();
       return;
     }
 
-    var importCancel = event.target.closest("#import-cancel-button");
+    var importCancel = event.target.closest("#entry-import-cancel-button");
     if (importCancel && importDlg) {
       importDlg.close();
       return;
@@ -87,7 +87,7 @@
   });
 
   function autoOpenImportDialog() {
-    var el = document.getElementById("import-data-dialog");
+    var el = document.getElementById("entry-import-data-dialog");
     if (el && el.hasAttribute("data-auto-open") && importDlg) {
       importDlg.open();
     }
@@ -96,7 +96,7 @@
   autoOpenImportDialog();
 
   document.body.addEventListener("htmx:afterSwap", function () {
-    importDlg = initDialog("import-data-dialog") || importDlg;
+    importDlg = initDialog("entry-import-data-dialog") || importDlg;
     deleteDlg = initDialog("delete-account-dialog") || deleteDlg;
     autoOpenImportDialog();
   });
