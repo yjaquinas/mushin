@@ -1,7 +1,6 @@
 -- 0004_user_timezone_and_providers.sql
--- Drop 'kakao' from user.auth_provider (Mushin is repositioned English-only
--- and US-targeted, per meetings/MEETING-2026-06-15-drop-korean-targeting) and
--- add user.timezone (IANA name) to drive day/week-boundary calculations.
+-- Drop 'kakao' from user.auth_provider (removed a regional OAuth provider)
+-- and add user.timezone (IANA name) to drive day/week-boundary calculations.
 --
 -- SQLite can't ALTER a CHECK constraint in place, so this is the standard
 -- rebuild: create user_new with the updated CHECK + new column, copy rows,

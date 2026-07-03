@@ -1,11 +1,4 @@
-"""Handler body for ``POST /activities/{activity_id}/log`` (quick-add create).
-
-Internal companion module (route-structure rule, option 2) — split out from
-``_entries_handlers.py`` because the create-log body is the single heaviest
-handler in the entries group (form parsing, the entries service call, and an
-out-of-band competition-stats render). Not a route group of its own: no
-``APIRouter`` here.
-"""
+"""Handler body for ``POST /activities/{activity_id}/log`` (quick-add create)."""
 
 from __future__ import annotations
 
@@ -14,9 +7,7 @@ from fastapi.responses import HTMLResponse
 
 from app.auth import users
 from app.models import db
-from app.routes.web._contexts import _field_defs_for_activity
-from app.routes.web._shared import templates
-from app.services import competition, entries
+from app.services import entries
 from app.services.entries import PayloadError
 
 
@@ -25,15 +16,7 @@ async def create_log_body(
     activity_id: int,
     owner_id: int,
 ) -> HTMLResponse:
-    """Create an entry and report success with no visible swap content.
-
-    Tag selections, scale/count values and memo are read from the submitted
-    form. ``occurred_at`` is editable-defaulting (backfillable). The form
-    posts with ``hx-swap="none"`` (see log_sheet.html.jinja2) — the detail
-    screen's stats-summary and history sections refresh themselves off the
-    ``log-saved`` HX-Trigger below, so this response carries no primary
-    content, only the out-of-band competition update when applicable.
-    """
+    """Create an entry and report success with no visible swap content."""
     tz = users.get_user_timezone(owner_id)
 
     form = await request.form()
@@ -46,29 +29,37 @@ async def create_log_body(
         ).fetchone()
         if sub_row is None:
             return HTMLResponse(status_code=404)
-        field_defs = _field_defs_for_activity(conn, activity_id)
+
+    # Build payload from form.
+    memo = str(form.get("memo") or "").strip() or None
+    num_value_raw = str(form.get("num_value") or "").strip()
+    num_value = None
+    if num_value_raw:
+        try:
+            num_value = float(num_value_raw)
+        except ValueError:
+            pass
+
+    payload = {"memo": memo, "num_value": num_value, "tags": []}
+
+    occurred_at, time_known = entries.resolve_occurred_at(
+        str(form.get("date") or "").strip(),
+        str(form.get("time") or "").strip(),
+        tz=tz,
+        occurred_at_utc=str(form.get("occurred_at_utc") or "").strip() or None,
+    )
 
     try:
-        result = entries.create_log_from_form(owner_id, activity_id, form, field_defs, tz=tz)
+        entries.create(
+            owner_id, activity_id, payload,
+            occurred_at=occurred_at,
+            tz=tz,
+            time_known=time_known,
+        )
     except PayloadError:
         return HTMLResponse(status_code=422)
-    has_match_list = result["has_match_list"]
 
     html = ""
-
-    # A match-list log doesn't just update the counts -- the Record section
-    # (W/L/D, timeline, head-to-head) on the same detail page is otherwise
-    # stale until a full reload. Append it as an out-of-band swap.
-    if has_match_list:
-        record_html = templates.get_template("components/competition_stats.html.jinja2").render(
-            {
-                "record": competition.record(owner_id, activity_id),
-                "timeline": competition.results_timeline(owner_id, activity_id),
-                "head_to_head": competition.head_to_head(owner_id, activity_id),
-                "oob": True,
-            }
-        )
-        html += record_html
 
     response = HTMLResponse(content=html)
     response.headers["HX-Trigger"] = "log-saved"

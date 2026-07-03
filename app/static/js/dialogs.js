@@ -57,6 +57,7 @@ DialogManager.prototype = {
   open: function () {
     if (!this.el) return;
     this.el.removeAttribute("hidden");
+    this.el.dispatchEvent(new CustomEvent("dialog:open", { bubbles: true }));
     this.el.querySelector('[role="dialog"]')?.focus();
   },
 

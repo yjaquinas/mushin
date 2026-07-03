@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from fastapi import Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse
 
 from app.auth import users
 from app.models import db
@@ -36,6 +38,18 @@ def owned_entry(owner_id: int, activity_id: int, entry_id: int) -> dict | None:
     return entry
 
 
+def _entry_local_datetime_fields(entry: dict, owner_id: int) -> tuple[str, str]:
+    tz = users.get_user_timezone(owner_id)
+    try:
+        dt = datetime.fromisoformat(str(entry["occurred_at"]).replace("Z", "+00:00"))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=tz)
+        local = dt.astimezone(tz)
+    except (KeyError, TypeError, ValueError):
+        local = datetime.now(tz)
+    return local.strftime("%Y-%m-%d"), local.strftime("%H:%M")
+
+
 async def get_entry_edit_form_response(
     request: Request,
     activity_id: int,
@@ -60,6 +74,8 @@ async def get_entry_edit_form_response(
         )
         fields = _build_edit_fields_context(conn, owner_id, activity_id, entry)
 
+    date_value, time_value = _entry_local_datetime_fields(entry, owner_id)
+
     return templates.TemplateResponse(
         request=request,
         name="components/entry_edit_form.html.jinja2",
@@ -68,9 +84,9 @@ async def get_entry_edit_form_response(
             "entry": entry,
             "fields": fields,
             "activity_name": activity_row["name"] if activity_row is not None else "",
-            "today": entry["occurred_at"][:10],
+            "today": date_value,
             "time_known": entry["time_known"] == 1,
-            "time_value": entry["occurred_at"][11:16] if entry["time_known"] == 1 else "",
+            "time_value": time_value if entry["time_known"] == 1 else "",
         },
     )
 

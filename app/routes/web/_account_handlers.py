@@ -18,18 +18,8 @@ from app.routes.web._shared import (
     templates,
 )
 from app.routes.web._shared import ui_strings as strings
+
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
-
-
-def _normalize_email(email: str | None) -> str | None:
-    if email is None:
-        return None
-    cleaned = email.strip().lower()
-    if not cleaned:
-        return None
-    if not _EMAIL_RE.fullmatch(cleaned):
-        raise ValueError(strings.ACCOUNT_EMAIL_INVALID)
-    return cleaned
 
 
 def render_account_settings(
@@ -40,14 +30,14 @@ def render_account_settings(
     email_value: str | None = None,
 ) -> HTMLResponse:
     """Render the account settings page for the current user."""
+    email = email_value if email_value is not None else user.get("email")
     response = templates.TemplateResponse(
         request=request,
         name="web/account.html.jinja2",
         context={
             "flash_message": _read_flash(request),
-            "is_guest": user["auth_provider"] == "guest",
             "username": user["username"],
-            "email": email_value if email_value is not None else user["email"],
+            "email": email,
             "email_error": email_error,
             "visibility": user["visibility"],
             "current_page": "account",
@@ -61,8 +51,6 @@ def render_account_settings(
 
 def update_visibility_response(user: dict, visibility: str | None) -> RedirectResponse | HTMLResponse:
     """Persist a new visibility setting and redirect back to account."""
-    if user["auth_provider"] == "guest":
-        return HTMLResponse(status_code=400)
     if visibility not in users.VALID_VISIBILITIES:
         return HTMLResponse(status_code=400)
     users.set_visibility_consent(int(user["id"]), visibility)
@@ -74,31 +62,8 @@ def update_visibility_response(user: dict, visibility: str | None) -> RedirectRe
     return response
 
 
-def update_email_response(request: Request, user: dict, email: str | None) -> RedirectResponse | HTMLResponse:
-    """Persist a new recovery email and redirect back to account."""
-    if user["auth_provider"] == "guest":
-        return HTMLResponse(status_code=400)
-    try:
-        normalized_email = _normalize_email(email)
-        users.update_email(int(user["id"]), normalized_email)
-    except ValueError as exc:
-        return render_account_settings(request, user, email_error=str(exc), email_value=email)
-    except users.EmailTakenError:
-        return render_account_settings(
-            request,
-            user,
-            email_error=strings.ACCOUNT_EMAIL_TAKEN,
-            email_value=email,
-        )
-    response = RedirectResponse(url="/account", status_code=303)
-    _set_flash(response, "email_updated")
-    return response
-
-
 def delete_account_response(user: dict) -> RedirectResponse | HTMLResponse:
-    """Delete the current non-guest user and clear the session cookie."""
-    if user["auth_provider"] == "guest":
-        return HTMLResponse(status_code=400)
+    """Delete the current user and clear the session cookie."""
     users.delete_user(int(user["id"]))
     response = RedirectResponse(url="/", status_code=303)
     response.delete_cookie(key=sessions.COOKIE_NAME, path="/")
@@ -122,4 +87,21 @@ def toggle_theme_response(request: Request) -> HTMLResponse:
         samesite="lax",
         path="/",
     )
+    return response
+
+
+def update_email_response(
+    request: Request,
+    user: dict,
+    email: str | None,
+) -> RedirectResponse | HTMLResponse:
+    """Change the current account's recovery email and redirect back."""
+    if email is not None and not _EMAIL_RE.match(email):
+        return render_account_settings(request, user, email_error=strings.ACCOUNT_EMAIL_INVALID, email_value=email)
+    try:
+        users.set_email(int(user["id"]), email)
+    except Exception:
+        return render_account_settings(request, user, email_error=strings.EMAIL_UPDATE_FAILED, email_value=email)
+    response = RedirectResponse(url="/account", status_code=303)
+    _set_flash(response, "email_updated")
     return response

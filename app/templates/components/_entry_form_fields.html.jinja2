@@ -5,9 +5,16 @@
 
   Context: fields (field-priority order), today (YYYY-MM-DD), submit_label,
            cancel_label, cancel_button_id (optional), cancel_dialog_close
-           (optional), notes_value (str, default ""), has_tag_group (bool).
+           (optional), notes_value (str, default ""), time_known (bool),
+           time_value (str).
 #}
 <div class="flex flex-col gap-2" data-time-field-group>
+    <input
+        type="hidden"
+        name="occurred_at_utc"
+        data-occurred-at-utc
+        {% if entry is defined and entry %}data-existing-occurred-at="{{ entry.occurred_at }}"{% endif %}
+    >
     <div class="flex flex-col gap-1">
         <label for="date" class="text-caption font-medium text-text-secondary">
             {{ strings.LOG_OCCURRED_AT_LABEL }}
@@ -51,33 +58,14 @@
 </div>
 
 {% for field in fields %}
-    {% if field.kind == "tag_group" %}
-        {% include "components/tag_group.html.jinja2" with context %}
-    {% elif field.kind in ("count", "scale") %}
+    {% if field.kind == "memo" %}
         <div class="flex flex-col gap-1">
-            <label for="value_{{ field.id }}" class="text-caption font-medium text-text-secondary">
-                {{ field.label }}
-            </label>
-            <input
-                type="number"
-                inputmode="decimal"
-                step="any"
-                id="value_{{ field.id }}"
-                name="value_{{ field.id }}"
-                class="min-h-tap rounded-input border border-border bg-surface-1 px-3 py-2 text-body text-text-primary focus-visible:outline-2"
-            >
-        </div>
-    {% elif field.kind == "match_list" %}
-        {% set rows = field.rows %}
-        {% include "components/match_rows.html.jinja2" with context %}
-    {% elif field.kind == "memo" and not has_tag_group %}
-        <div class="flex flex-col gap-1">
-            <label for="value_{{ field.id }}" class="text-caption font-medium text-text-secondary">
+            <label for="memo" class="text-caption font-medium text-text-secondary">
                 {{ strings.LOG_MEMO_LABEL }}
             </label>
             <textarea
-                id="value_{{ field.id }}"
-                name="value_{{ field.id }}"
+                id="memo"
+                name="memo"
                 rows="3"
                 placeholder="{{ strings.LOG_MEMO_PLACEHOLDER }}"
                 data-bounded-textarea
@@ -88,6 +76,21 @@
                 class="resize-none overflow-hidden rounded-input border border-border bg-surface-1 px-3 py-2 text-body text-text-primary focus-visible:outline-2"
             >{{ notes_value | default("") }}</textarea>
             <span class="self-end text-caption text-text-muted" data-bounded-char-count>{{ notes_value | default("") | length }}/1,000</span>
+        </div>
+    {% elif field.kind == "count" %}
+        <div class="flex flex-col gap-1">
+            <label for="num_value" class="text-caption font-medium text-text-secondary">
+                {{ field.label }}
+            </label>
+            <input
+                type="number"
+                inputmode="decimal"
+                step="any"
+                id="num_value"
+                name="num_value"
+                value="{{ field.prefilled_value | default("") }}"
+                class="min-h-tap rounded-input border border-border bg-surface-1 px-3 py-2 text-body text-text-primary focus-visible:outline-2"
+            >
         </div>
     {% endif %}
 {% endfor %}

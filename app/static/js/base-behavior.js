@@ -186,10 +186,111 @@
         timeInput.disabled = false;
       }
     });
+    syncEntryDateTimeForm(form, form.matches("[data-default-local-now]"));
+  }
+
+  function padDatePart(value) {
+    return String(value).padStart(2, "0");
+  }
+
+  function localDateValue(date) {
+    return [
+      date.getFullYear(),
+      padDatePart(date.getMonth() + 1),
+      padDatePart(date.getDate())
+    ].join("-");
+  }
+
+  function localTimeValue(date) {
+    return [padDatePart(date.getHours()), padDatePart(date.getMinutes())].join(":");
+  }
+
+  function setEntryFormToLocalNow(form) {
+    var now = new Date();
+    var dateInput = form.querySelector('input[name="date"]');
+    var timeInput = form.querySelector('input[name="time"]');
+    var noTime = form.querySelector("[data-toggle-time]");
+    if (dateInput) dateInput.value = localDateValue(now);
+    if (timeInput) {
+      timeInput.value = localTimeValue(now);
+      show(timeInput);
+      timeInput.disabled = false;
+    }
+    if (noTime) noTime.checked = false;
+  }
+
+  function setEntryFormToLocalDate(form, date) {
+    var dateInput = form.querySelector('input[name="date"]');
+    var timeInput = form.querySelector('input[name="time"]');
+    if (dateInput) dateInput.value = localDateValue(date);
+    if (timeInput && !timeInput.disabled) timeInput.value = localTimeValue(date);
+  }
+
+  function localizeExistingEntryDateTime(form, hidden) {
+    if (!hidden || !hidden.dataset.existingOccurredAt || form.dataset.entryDateTimeLocalized) return;
+
+    var date = new Date(hidden.dataset.existingOccurredAt);
+    if (Number.isNaN(date.getTime())) return;
+
+    setEntryFormToLocalDate(form, date);
+    form.dataset.entryDateTimeLocalized = "true";
+  }
+
+  function entryDateFromForm(form) {
+    var dateInput = form.querySelector('input[name="date"]');
+    if (!dateInput || !dateInput.value) return null;
+
+    var parts = dateInput.value.split("-");
+    if (parts.length !== 3) return null;
+
+    var year = parseInt(parts[0], 10);
+    var month = parseInt(parts[1], 10);
+    var day = parseInt(parts[2], 10);
+    if (!year || !month || !day) return null;
+
+    var timeInput = form.querySelector('input[name="time"]');
+    var timeValue = timeInput && !timeInput.disabled ? timeInput.value : "";
+    var hour = 0;
+    var minute = 0;
+
+    if (timeValue) {
+      var timeParts = timeValue.split(":");
+      hour = parseInt(timeParts[0], 10);
+      minute = parseInt(timeParts[1], 10);
+      if (Number.isNaN(hour) || Number.isNaN(minute)) return null;
+    }
+
+    return new Date(year, month - 1, day, hour, minute, 0, 0);
+  }
+
+  function syncEntryDateTimeForm(form, defaultToLocalNow) {
+    if (!form) return;
+    var hidden = form.querySelector("[data-occurred-at-utc]");
+    if (!hidden) return;
+
+    if (defaultToLocalNow) {
+      setEntryFormToLocalNow(form);
+    } else {
+      localizeExistingEntryDateTime(form, hidden);
+    }
+
+    var localDate = entryDateFromForm(form);
+    hidden.value = localDate && !Number.isNaN(localDate.getTime()) ? localDate.toISOString() : "";
+  }
+
+  function syncEntryDateTimeForms(scope) {
+    (scope || document).querySelectorAll("form").forEach(function (form) {
+      if (!form.querySelector("[data-occurred-at-utc]")) return;
+      syncEntryDateTimeForm(form, form.matches("[data-default-local-now]"));
+    });
   }
 
   function autosizeTextarea(textarea) {
     if (!textarea) return;
+    if (textarea.getClientRects().length === 0) {
+      textarea.style.height = "";
+      return;
+    }
     textarea.style.height = "auto";
     textarea.style.height = textarea.scrollHeight + "px";
   }
@@ -299,7 +400,7 @@
     if (addOpen) {
       hide(addOpen);
       show(document.getElementById("add-activity-form"));
-      var nameInput = document.getElementById("category-name");
+      var nameInput = document.getElementById("activity-name");
       if (nameInput) nameInput.focus();
       return;
     }
@@ -372,6 +473,7 @@
       show(timeInput);
       timeInput.disabled = false;
     }
+    syncEntryDateTimeForm(event.target.closest("form"), false);
   });
 
   document.addEventListener("input", function (event) {
@@ -387,6 +489,11 @@
       return;
     }
 
+    if (event.target.matches('input[name="date"], input[name="time"]')) {
+      syncEntryDateTimeForm(event.target.closest("form"), false);
+      return;
+    }
+
     if (!event.target.matches("[data-bounded-textarea]")) return;
     enforceBoundedTextareaLimits(event.target);
     autosizeTextarea(event.target);
@@ -394,6 +501,8 @@
   });
 
   document.addEventListener("submit", function (event) {
+    syncEntryDateTimeForm(event.target.closest("form"), false);
+
     var form = event.target.closest("[data-comment-form]");
     if (!form) return;
     var textarea = form.querySelector('textarea[name="body"]');
@@ -417,6 +526,7 @@
     syncCommentFormState(document);
     syncBoundedTextareas(document);
     syncLocalTimestamps(document);
+    syncEntryDateTimeForms(document);
   });
 
   document.body.addEventListener("htmx:afterSwap", function (event) {
@@ -433,6 +543,20 @@
     syncCommentFormState(target);
     syncBoundedTextareas(target);
     syncLocalTimestamps(target);
+    syncEntryDateTimeForms(target);
+  });
+
+  document.body.addEventListener("dialog:open", function (event) {
+    syncBoundedTextareas(event.target);
+  });
+
+  document.body.addEventListener("htmx:configRequest", function (event) {
+    var form = event.detail.elt ? event.detail.elt.closest("form") : null;
+    syncEntryDateTimeForm(form, false);
+    var hidden = form ? form.querySelector("[data-occurred-at-utc]") : null;
+    if (hidden && event.detail.parameters) {
+      event.detail.parameters.occurred_at_utc = hidden.value;
+    }
   });
 
   document.body.addEventListener("htmx:afterRequest", function (event) {

@@ -44,7 +44,6 @@ ENTRY_DEMO_LINK = "See an example record →"
 
 ENTRY_CONSENT_NOTICE = "By creating an account or continuing, you agree to our"
 ENTRY_CONSENT_LINK_TEXT = "Privacy Policy"
-ENTRY_CONSENT_SUFFIX = " (required)."
 ENTRY_AUTH_ERROR_DEFAULT_TITLE = "Sign in"
 ENTRY_AUTH_ERROR_CLOSE = "Back"
 
@@ -61,12 +60,13 @@ HOME_EMPTY = "Nothing started yet."
 HOME_FLASH_VISIBILITY_PUBLIC = "Profile set to public."
 HOME_FLASH_VISIBILITY_PRIVATE = "Profile set to private."
 HOME_FLASH_EMAIL_UPDATED = "Email address updated."
+ACCOUNT_EMAIL_UPDATE_FAILED = "Could not update email address."
 
 # ---------------------------------------------------------------------------
-# Empty-state example categories + create-category
+# Empty-state example activities + create-activity
 # ---------------------------------------------------------------------------
 
-HOME_EXAMPLES_HINT = "or try one of these:"
+HOME_EXAMPLES_HINT = "or try"
 HOME_EXAMPLE_ADD = "Add"
 HOME_ADD_ACTIVITY = "Add an Activity"
 
@@ -96,7 +96,7 @@ LOG_OCCURRED_AT_LABEL = "Date"
 LOG_TIME_LABEL = "Time"
 LOG_TIME_NONE = "No time"
 LOG_MEMO_LABEL = "Memo"
-LOG_MEMO_PLACEHOLDER = "Optional description"
+LOG_MEMO_PLACEHOLDER = "Use #tags to add tags."
 LOG_NOTES_MAX_CHARS_REACHED = "Notes can be up to 1000 characters."
 LOG_NOTES_MAX_LINES_REACHED = "Notes can be up to 10 lines."
 
@@ -190,7 +190,7 @@ HEATMAP_EMPTY = "No entries yet"
 # week is a column, but only the week containing a quarter's 1st gets a text
 # label, keyed by month number so the template can index directly off a
 # bucket's `quarter_month`).
-HEATMAP_QUARTER_LABELS = {1: "Jan", 4: "Apr", 7: "Jul", 10: "Oct"}
+HEATMAP_QUARTER_LABELS = {1: "JAN", 4: "APR", 7: "JUL", 10: "OCT"}
 
 TAGS_TOP_HEADING = "Top tags"
 
@@ -249,6 +249,20 @@ IMPORT_DATA_CANCEL = "Go back"
 IMPORT_DATA_ERROR_TOO_LARGE = "That file is too large to import."
 IMPORT_DATA_ERROR_INVALID_FILE = "That doesn't look like a valid export file (.json)."
 IMPORT_DATA_ERROR_VALIDATION = "Import failed: {reason}"
+
+# Entry-only import (append-safe, no erase)
+IMPORT_ENTRIES_TITLE = "Import entries"
+IMPORT_ENTRIES_BODY = "Merge activities and entries from a previous export. Existing data is preserved — duplicates are skipped."
+IMPORT_ENTRIES_FILE_LABEL = "Entries file (.json)"
+IMPORT_ENTRIES_CONFIRM = "Import entries"
+IMPORT_ENTRIES_CANCEL = "Cancel"
+IMPORT_ENTRIES_SUCCESS = "Import complete"
+IMPORT_ENTRIES_ACTIVITIES_CREATED = "Activities created"
+IMPORT_ENTRIES_ENTRIES_IMPORTED = "Entries added"
+IMPORT_ENTRIES_ENTRIES_SKIPPED = "Entries skipped (already exist)"
+IMPORT_ENTRIES_ERROR_TOO_LARGE = "That file is too large to import."
+IMPORT_ENTRIES_ERROR_INVALID_FILE = "That does not look like a valid entries export file (.json)."
+IMPORT_ENTRIES_ERROR_VALIDATION = "Import failed: {reason}"
 
 # ---------------------------------------------------------------------------
 # Visibility consent (one-time screen, before first /home use)
@@ -433,8 +447,7 @@ REQUESTS_PENDING_BADGE = "{count}"
 # Relationship-state affordance on another user's profile.
 CONNECT_ACTION = "Connect"
 CONNECT_REQUESTED = "Requested"
-CONNECT_FELLOWS_LABEL = "You're fellows"
-CONNECT_REMOVE = "Remove connection"
+CONNECT_REMOVE = "Remove fellows connection"
 CONNECT_BLOCK = "Block"
 CONNECT_UNBLOCK = "Unblock"
 CONNECT_CANCEL_REQUEST = "Cancel request"
@@ -520,7 +533,7 @@ COMMENTS_PAGE_SHOW_OLDER = "Show older"
 # Bottom navigation bar
 # ---------------------------------------------------------------------------
 
-NAV_HOME = "Activities"
+NAV_LOGS = "Activities"
 NAV_SEARCH = "Search"
 NAV_ACCOUNT = "Account"
 
@@ -622,3 +635,14 @@ ADMIN_COLUMN_NOTES = "Notes"
 ADMIN_COLUMN_ENTRY_USER = "Entry user"
 ADMIN_COLUMN_COMMENT_USER = "Comment user"
 ADMIN_COLUMN_TEXT = "Text"
+
+# ── Admin: user email & delete ──────────────────────────────────────
+
+ADMIN_COLUMN_EMAIL = "Email"
+ADMIN_DELETE_USER_HEADING = "Delete user"
+ADMIN_DELETE_USER_BODY = (
+    "Permanently remove this user's account access and username. "
+    "Their entries and comments will remain but be unattributed."
+)
+ADMIN_DELETE_USER_CONFIRM = "Delete user"
+ADMIN_DELETE_USER_CANCEL = "Cancel"

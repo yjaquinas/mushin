@@ -63,6 +63,7 @@
                 hx-post="{{ form_action }}"
                 {% if form_target %}hx-target="{{ form_target }}"{% endif %}
                 hx-swap="{{ form_swap }}"
+                {% if default_to_local_now | default(false) %}data-default-local-now{% endif %}
                 class="flex flex-col gap-4"
             >
                 {% set has_tag_group = fields | selectattr("kind", "equalto", "tag_group") | list | length > 0 %}

@@ -31,7 +31,7 @@
   /*
    * Brand — the studio ink. Used for the app name, primary actions, and the
    * hero numeral. Obsidian-based rather than pure black — slightly warm so
-   * Korean glyphs render with weight on white.
+   * CJK glyphs render with weight on white.
    */
   --color-brand: #0f172a;
   --color-brand-subtle: #334155;
@@ -149,7 +149,7 @@
    * micro         : legal / footnote only
    *
    * Base is 16 px (1 rem). Scale chosen to stay legible at 1.5× system
-   * font scaling and to give Korean glyphs comfortable line cadence.
+   * font scaling and to give CJK glyphs comfortable line cadence.
    */
   --font-size-hero-numeral: 3rem; /* 48 px — the single dominant numeral */
   --font-size-title: 1.125rem; /* 18 px — activity name, section head  */
@@ -192,7 +192,7 @@
 
   --line-height-tight: 1.25; /* hero numeral, large headings          */
   --line-height-snug: 1.4; /* titles, chips                         */
-  --line-height-normal: 1.6; /* body copy (generous for Korean)       */
+  --line-height-normal: 1.6; /* body copy (generous for CJK scripts)       */
   --line-height-relaxed: 1.75; /* long-form prose                       */
 
   /* ── Icon sizing ──────────────────────────────────────────────────────── */

@@ -21,27 +21,25 @@
   _render_readonly_activity_detail) never constructs an edit/delete/log-entry
   URL or context key — is_owner=False alone is defense in depth, not the
   primary boundary.
+
+  Element order matches the owner dashboard (summary → competition → calendar):
+    1. Summary card (title, streak, count, heatmap, top tags)
+    2. Competition stats (if match_list activity)
+    3. Calendar/log view
+    4. Field stats — analytics tail, correctly last
 #}
 {% extends "web/base.html.jinja2" %}
 
 {% block title %}{% if card %}{{ card.name }} · {% endif %}{{ username }} · {{ strings.APP_NAME }}{% endblock %}
 
 {% block content %}
-    <h1 class="text-title font-semibold text-text-primary">{{ card.name }}</h1>
-
-    {% if card.show_breadcrumb %}
-    <p class="text-caption text-text-muted">{{ card.category_name }}</p>
-    {% endif %}
-
-    {% if record is not none %}
-        {% include "components/competition_stats.html.jinja2" with context %}
-    {% endif %}
-
     {% with card_name=card.name %}
     {% include "components/stats_summary.html.jinja2" with context %}
     {% endwith %}
 
-    {% include "components/field_stats.html.jinja2" with context %}
+    {% if record is not none %}
+        {% include "components/competition_stats.html.jinja2" with context %}
+    {% endif %}
 
     {# Merged calendar/log view — the same shared partial the owner dashboard
        renders (components/history.html.jinja2). `history.is_owner` is False
@@ -51,4 +49,7 @@
     <section class="flex flex-col gap-3 rounded-card border border-border bg-surface-1 p-4">
         {% include "components/history.html.jinja2" with context %}
     </section>
+
+    {# Field stats — analytics tail, correctly last #}
+    {% include "components/field_stats.html.jinja2" with context %}
 {% endblock %}

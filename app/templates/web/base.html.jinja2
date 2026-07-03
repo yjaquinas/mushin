@@ -52,14 +52,14 @@
     ></div>
 
     {# Bottom navigation bar — always visible. #}
-    <nav class="bottom-nav" aria-label="{{ strings.NAV_HOME }}">
+    <nav class="bottom-nav" aria-label="{{ strings.NAV_LOGS }}">
         <div class="bottom-nav__inner">
             <a
                 href="{{ home_url }}"
-                class="bottom-nav-tab{% if current_page == 'home' %} bottom-nav-tab--active{% endif %}"
+                class="bottom-nav-tab{% if current_page == 'logs' %} bottom-nav-tab--active{% endif %}"
             >
                 {{ icon("footprints", size=22) }}
-                <span>{{ strings.NAV_HOME }}</span>
+                <span>{{ strings.NAV_LOGS }}</span>
             </a>
             <a
                 href="/search"

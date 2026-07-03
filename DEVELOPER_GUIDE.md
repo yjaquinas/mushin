@@ -247,10 +247,10 @@ sudo systemctl start mushin
 
 ---
 
-## 8. Guest retention (PIPA)
+## 8. Guest retention
 
 Anonymous guest accounts (`user.auth_provider = 'guest'`, no signup) are
-personal data on the server, in scope for Korea's PIPA exactly like a
+personal data on the server, treated with the same care as a
 logged-in account. Two retention windows, enforced daily by
 `infra/mushin-guest-reaper.timer` → `infra/mushin-guest-reaper.service`
 (oneshot, `User=mushin`), which runs `uv run python -m app.services.guest_reaper`:
