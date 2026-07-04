@@ -63,7 +63,7 @@ async def visibility_update(
     return templates.TemplateResponse(
         request=request,
         name="web/visibility_update.html.jinja2",
-        context={"current_page": "home"},
+        context={"current_page": "profile"},
     )
 
 

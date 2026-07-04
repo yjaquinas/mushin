@@ -78,13 +78,13 @@ async def profile(
             tz = users.get_user_timezone(owner_id)
             context = _build_home_context(conn, owner_id, tz)
             context["flash_message"] = _read_flash(request)
-            context["current_page"] = "logs"
+            context["current_page"] = "profile"
             context["page_title"] = username
             context["profile_url"] = profiles.canonical_profile_url(username)
             context["show_back"] = False
             response = templates.TemplateResponse(
                 request=request,
-                name="web/home.html.jinja2",
+                name="web/profile.html.jinja2",
                 context=context,
             )
             _clear_flash(response)
@@ -97,7 +97,7 @@ async def profile(
         context = _read_only_profile_context(
             conn, username, owner_id, cap=cap, tz=tz, current_uid=current_uid
         )
-        context["current_page"] = "logs"
+        context["current_page"] = "profile"
         context["page_title"] = username
         context["profile_url"] = profiles.canonical_profile_url(username)
         context["show_back"] = False

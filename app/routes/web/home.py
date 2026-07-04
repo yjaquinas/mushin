@@ -1,4 +1,4 @@
-"""Entry screen, login, and the character-sheet home.
+"""Entry screen, login, and the character-sheet profile.
 
 Thin handlers only — business logic lives in app/services/. Full pages render
 on initial navigation; fragments swap on interaction (detect via the
@@ -120,7 +120,7 @@ async def home(
     request: Request,
     session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
 ) -> HTMLResponse:
-    """The character-sheet home. Redirects to the entry screen with no session.
+    """The character-sheet profile. Redirects to the entry screen with no session.
 
     Renders in place for everyone (guest or real user) once past the
     one-time visibility-consent gate for non-guest accounts.

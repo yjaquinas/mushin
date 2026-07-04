@@ -48,10 +48,10 @@ ENTRY_AUTH_ERROR_DEFAULT_TITLE = "Sign in"
 ENTRY_AUTH_ERROR_CLOSE = "Back"
 
 # ---------------------------------------------------------------------------
-# Home (character sheet)
+# Profile (character sheet)
 # ---------------------------------------------------------------------------
 
-HOME_TITLE = "Your activities"
+HOME_TITLE = "Your profile"
 HOME_EMPTY = "Nothing started yet."
 
 # One-shot flash confirmation shown after a successful /account/visibility
@@ -164,8 +164,8 @@ STATS_HEAD_TO_HEAD_EMPTY = "No opponent record yet."
 STATS_PERIOD_WEEK = "This week"
 STATS_PERIOD_MONTH = "This month"
 STATS_PERIOD_YEAR = "This year"
-STATS_PERIOD_LIFETIME = "total"
-STATS_AVERAGE_WEEKLY_LABEL = "Weekly Avg"
+STATS_PERIOD_LIFETIME = "TOTAL"
+STATS_AVERAGE_WEEKLY_LABEL = "WEEKLY AVG"
 
 STREAK_CURRENT_LABEL = "Current streak"
 STREAK_DAY_UNIT = " day"
@@ -307,7 +307,7 @@ VISIBILITY_CONSENT_SUBMIT = "Continue"
 
 # Same factual, no-alarm register as the consent screen. The toggle restates
 # the consequence briefly on each change (not the full first-run explainer).
-ACCOUNT_TITLE = "Account"
+ACCOUNT_TITLE = "Settings"
 ACCOUNT_PRIVACY_LINK = "Privacy Policy"
 ACCOUNT_TERMS_LINK = "Terms of Service"
 
@@ -545,9 +545,9 @@ COMMENTS_PAGE_SHOW_OLDER = "Show older"
 # Bottom navigation bar
 # ---------------------------------------------------------------------------
 
-NAV_LOGS = "Activities"
+NAV_PROFILE = "Profile"
 NAV_SEARCH = "Search"
-NAV_ACCOUNT = "Account"
+NAV_SETTINGS = "Settings"
 
 # ---------------------------------------------------------------------------
 # Admin (operator dashboard, HTTP Basic Auth gated)

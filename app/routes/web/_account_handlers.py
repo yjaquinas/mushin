@@ -40,7 +40,7 @@ def render_account_settings(
             "email": email,
             "email_error": email_error,
             "visibility": user["visibility"],
-            "current_page": "account",
+            "current_page": "settings",
             "page_title": strings.ACCOUNT_TITLE,
             "show_back": False,
         },

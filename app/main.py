@@ -49,7 +49,7 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 # app/routes/web.py, which the page-UI task owns. See app/auth/routes.py.
 app.include_router(auth_router)
 
-# Page-UI routes (entry screen, character-sheet home, quick-add log flow).
+# Page-UI routes (entry screen, character-sheet profile, quick-add log flow).
 app.include_router(web_router)
 
 # Public, unauthenticated profile routes (/@{username}, /@{username}/{slug}).

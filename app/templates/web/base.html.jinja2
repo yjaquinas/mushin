@@ -52,14 +52,14 @@
     ></div>
 
     {# Bottom navigation bar — always visible. #}
-    <nav class="bottom-nav" aria-label="{{ strings.NAV_LOGS }}">
+    <nav class="bottom-nav" aria-label="{{ strings.NAV_PROFILE }}">
         <div class="bottom-nav__inner">
             <a
                 href="{{ home_url }}"
-                class="bottom-nav-tab{% if current_page == 'logs' %} bottom-nav-tab--active{% endif %}"
+                class="bottom-nav-tab{% if current_page == 'profile' %} bottom-nav-tab--active{% endif %}"
             >
-                {{ icon("footprints", size=22) }}
-                <span>{{ strings.NAV_LOGS }}</span>
+                {{ icon("circle-user", size=22) }}
+                <span>{{ strings.NAV_PROFILE }}</span>
             </a>
             <a
                 href="/search"
@@ -70,10 +70,10 @@
             </a>
             <a
                 href="/account"
-                class="bottom-nav-tab{% if current_page == 'account' %} bottom-nav-tab--active{% endif %}"
+                class="bottom-nav-tab{% if current_page == 'settings' %} bottom-nav-tab--active{% endif %}"
             >
-                {{ icon("circle-user", size=22) }}
-                <span>{{ strings.NAV_ACCOUNT }}</span>
+                {{ icon("settings", size=22) }}
+                <span>{{ strings.NAV_SETTINGS }}</span>
             </a>
         </div>
     </nav>

@@ -1,4 +1,4 @@
-"""Handler helpers for entry, login, and home page routes."""
+"""Handler helpers for entry, login, and profile page routes."""
 
 from __future__ import annotations
 
@@ -21,20 +21,20 @@ from app.services import profiles
 
 
 async def render_home(request: Request, user: dict) -> HTMLResponse:
-    """Render the signed-in home page for the current user."""
+    """Render the signed-in profile page for the current user."""
     owner_id = int(user["id"])
     tz = users.get_user_timezone(owner_id)
     with db.connect() as conn:
         conn.execute("BEGIN")
         context = _build_home_context(conn, owner_id, tz)
     context["flash_message"] = _read_flash(request)
-    context["current_page"] = "home"
+    context["current_page"] = "profile"
     context["page_title"] = None
     context["show_back"] = False
 
     response = templates.TemplateResponse(
         request=request,
-        name="web/home.html.jinja2",
+        name="web/profile.html.jinja2",
         context=context,
     )
     _clear_flash(response)
