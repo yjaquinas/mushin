@@ -1,4 +1,4 @@
-// Account-page dialogs plus profile sharing.
+// Account-page dialogs plus header share actions.
 
 (function () {
   "use strict";
@@ -36,7 +36,7 @@
     }
   }
 
-  async function shareProfile(button) {
+  async function shareLink(button) {
     if (!button) return;
     var rawUrl = button.getAttribute("data-share-url");
     var label = button.getAttribute("data-share-label");
@@ -66,9 +66,9 @@
   }
 
   document.addEventListener("click", function (event) {
-    var shareButton = event.target.closest("[data-share-profile]");
+    var shareButton = event.target.closest("[data-share-link]");
     if (shareButton) {
-      shareProfile(shareButton);
+      shareLink(shareButton);
       return;
     }
 

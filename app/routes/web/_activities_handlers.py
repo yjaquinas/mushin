@@ -133,4 +133,5 @@ def activity_detail_response(
     context["field_stats"] = _build_field_stats_context(activity_id, owner_id, field_defs, tz=tz)
     context["public_notice"] = None
     context["is_owner"] = True
+    context["current_page"] = "profile"
     return templates.TemplateResponse(request=request, name="web/activity_detail.html.jinja2", context=context)

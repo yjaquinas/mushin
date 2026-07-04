@@ -32,7 +32,7 @@
         <span class="min-w-[44px]"></span>
         {% endif %}
         <h1 class="text-title font-semibold text-text-primary">{{ page_title }}</h1>
-        {% if profile_url %}
+        {% if share_url or profile_url %}
         {% include "components/_profile_share_button.html.jinja2" with context %}
         {% else %}
         <span class="min-w-[44px]"></span>
