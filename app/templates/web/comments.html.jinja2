@@ -32,7 +32,7 @@
                         class="h-2 w-2 rounded-full bg-brand"
                     ></span>
                     {% endif %}
-                    <span data-local-timestamp="{{ comment.created_at }}">{{ comment.created_at | format_comment_timestamp }}</span>
+                    <span data-local-timestamp="{{ comment.created_at }}" hidden>{{ comment.created_at | format_comment_timestamp }}</span>
                 </span>
             </div>
             <p class="line-clamp-1 text-body text-text-primary">

@@ -102,7 +102,7 @@ def stats_summary_fragment_response(request: Request, activity_id: int, owner_id
     return templates.TemplateResponse(
         request=request,
         name="components/stats_summary.html.jinja2",
-        context={"activity_id": activity_id, "counts": cs["counts"], "streaks": cs["streaks"], "heatmap": cs["heatmap"], "top_tags": _build_card_top_tags(activity_id, owner_id, field_defs, tz=tz), "is_owner": True, "show_top_tags": False},
+        context={"activity_id": activity_id, "counts": cs["counts"], "streaks": cs["streaks"], "average_weekly_count": cs["average_weekly_count"], "heatmap": cs["heatmap"], "top_tags": _build_card_top_tags(activity_id, owner_id, field_defs, tz=tz), "is_owner": True, "show_top_tags": False},
     )
 
 

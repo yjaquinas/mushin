@@ -24,6 +24,7 @@ from __future__ import annotations
 import sqlite3
 from collections import defaultdict
 from datetime import date, datetime, timedelta
+from math import ceil
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -160,6 +161,10 @@ def card_stats(
     with db.connect() as conn:
         conn.execute("BEGIN")
         days = _entry_days(conn, activity_id, owner_id, tz)
+        entry_count = conn.execute(
+            "SELECT COUNT(*) AS n FROM entry WHERE owner_id = ? AND activity_id = ?",
+            (owner_id, activity_id),
+        ).fetchone()["n"]
 
     # Distinct days for streak/heatmap.
     distinct_days = []
@@ -180,6 +185,12 @@ def card_stats(
                 streak += 1
             else:
                 break
+
+    average_weekly = 0.0
+    if distinct_days:
+        span_days = (distinct_days[0] - distinct_days[-1]).days + 1
+        span_weeks = max(1, ceil(span_days / 7))
+        average_weekly = entry_count / span_weeks
 
     # Heatmap: current calendar year, grouped into 7-day buckets for the template.
     today = _today_local(tz)
@@ -217,6 +228,7 @@ def card_stats(
             "current": streak,
             "best": _best_streak(distinct_days),
         },
+        "average_weekly_count": average_weekly,
         "heatmap": heatmap,
     }
 

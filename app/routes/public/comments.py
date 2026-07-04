@@ -157,6 +157,7 @@ async def post_entry_comment(
     slug: str,
     entry_id: int,
     body: Annotated[str, Form()],
+    comment_timezone: Annotated[str | None, Form()] = None,
     session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
 ) -> HTMLResponse:
     """Create a comment on *entry_id*, then return the refreshed thread fragment.
@@ -183,7 +184,13 @@ async def post_entry_comment(
             return HTMLResponse(status_code=403)
 
         try:
-            comments_service.create_comment(conn, entry_id, author_id=current_uid, body=body)
+            comments_service.create_comment(
+                conn,
+                entry_id,
+                author_id=current_uid,
+                body=body,
+                timezone=comment_timezone,
+            )
         except ValueError:
             return HTMLResponse(status_code=422)
 

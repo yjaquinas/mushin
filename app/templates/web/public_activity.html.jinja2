@@ -8,7 +8,7 @@
 {% block title %}{% if card %}{{ card.name }} · {% endif %}{{ username }} · {{ strings.APP_NAME }}{% endblock %}
 
 {% block content %}
-    {% with card_name=card.name, show_top_tags=false %}
+    {% with card_name=card.name, average_weekly_count=card.average_weekly_count, show_top_tags=false %}
     {% include "components/stats_summary.html.jinja2" with context %}
     {% endwith %}
 

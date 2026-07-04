@@ -42,12 +42,9 @@ def _entry_local_datetime_fields(entry: dict, owner_id: int) -> tuple[str, str]:
     tz = users.get_user_timezone(owner_id)
     try:
         dt = datetime.fromisoformat(str(entry["occurred_at"]).replace("Z", "+00:00"))
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=tz)
-        local = dt.astimezone(tz)
     except (KeyError, TypeError, ValueError):
-        local = datetime.now(tz)
-    return local.strftime("%Y-%m-%d"), local.strftime("%H:%M")
+        dt = datetime.now(tz)
+    return dt.strftime("%Y-%m-%d"), dt.strftime("%H:%M")
 
 
 async def get_entry_edit_form_response(

@@ -52,7 +52,7 @@
         >
             <span class="min-w-0 flex flex-1 items-baseline gap-2 text-body text-text-primary">
                 <span class="shrink-0 text-caption text-text-muted">{{ entry.occurred_at[:10] }}</span>
-                {% if entry_time %}
+                {% if entry.time_known and entry_time %}
                 <span
                     class="shrink-0 text-caption text-text-muted"
                     data-entry-time

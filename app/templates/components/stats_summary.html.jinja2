@@ -31,10 +31,14 @@
     {% endif %}
 
     <div class="flex flex-col gap-2">
-        <dl class="grid grid-cols-2 gap-3">
+        <dl class="grid grid-cols-3 gap-3">
             <div class="flex flex-col gap-1 rounded-card bg-surface-0 px-3 py-2 text-center">
                 <dt class="text-caption text-text-muted">{{ strings.STREAK_CURRENT_LABEL }}</dt>
                 <dd class="text-title font-medium text-text-primary">{{ streaks.current | streak_days }}</dd>
+            </div>
+            <div class="flex flex-col gap-1 rounded-card bg-surface-0 px-3 py-2 text-center">
+                <dt class="text-caption text-text-muted">{{ strings.STATS_AVERAGE_WEEKLY_LABEL }}</dt>
+                <dd class="text-title font-medium text-text-primary">{{ average_weekly_count | default(0) | format_average_weekly_count }}</dd>
             </div>
             <div class="flex flex-col gap-1 rounded-card bg-surface-0 px-3 py-2 text-center">
                 <dt class="text-caption text-text-muted">{{ strings.STATS_PERIOD_LIFETIME }}</dt>

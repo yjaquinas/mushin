@@ -19,7 +19,7 @@ from __future__ import annotations
 import sqlite3
 from datetime import UTC, datetime
 from typing import Any
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from app.models import db
 
@@ -32,6 +32,16 @@ def _now_iso() -> str:
 
 def _row_to_dict(row: sqlite3.Row | None) -> dict[str, Any] | None:
     return dict(row) if row is not None else None
+
+
+def resolve_timezone(timezone: str | None) -> ZoneInfo:
+    """Resolve an IANA timezone name, falling back to UTC."""
+    if timezone:
+        try:
+            return ZoneInfo(timezone)
+        except (ValueError, ZoneInfoNotFoundError):
+            pass
+    return ZoneInfo(DEFAULT_TIMEZONE)
 
 
 def _deleted_username(conn: sqlite3.Connection, user_id: int) -> str:
@@ -250,4 +260,4 @@ def get_user_timezone(user_id: int) -> ZoneInfo:
     The ``timezone`` column was removed in migration 0018; this stub
     always returns the project default so call sites don't break.
     """
-    return ZoneInfo(DEFAULT_TIMEZONE)
+    return resolve_timezone(DEFAULT_TIMEZONE)

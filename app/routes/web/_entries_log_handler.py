@@ -17,9 +17,8 @@ async def create_log_body(
     owner_id: int,
 ) -> HTMLResponse:
     """Create an entry and report success with no visible swap content."""
-    tz = users.get_user_timezone(owner_id)
-
     form = await request.form()
+    tz = users.resolve_timezone(str(form.get("entry_timezone") or "").strip() or None)
 
     with db.connect() as conn:
         conn.execute("BEGIN")
@@ -46,7 +45,6 @@ async def create_log_body(
         str(form.get("date") or "").strip(),
         str(form.get("time") or "").strip(),
         tz=tz,
-        occurred_at_utc=str(form.get("occurred_at_utc") or "").strip() or None,
     )
 
     try:

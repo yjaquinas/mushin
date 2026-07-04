@@ -11,6 +11,7 @@ from typing import Any
 
 import structlog
 
+from app.auth import users
 from app.services import profiles
 
 log = structlog.get_logger()
@@ -27,8 +28,13 @@ class CommentPermissionError(PermissionError):
     """Raised when the requester may neither author-delete nor owner-delete."""
 
 
-def _now_iso() -> str:
-    return datetime.now(UTC).isoformat()
+def current_timestamp_iso(timezone: str | None = None) -> str:
+    """Current instant as a timezone-aware ISO string.
+
+    Browser-originated writes pass an IANA timezone so the saved timestamp uses
+    the viewer's offset. Non-browser callers fall back to UTC.
+    """
+    return datetime.now(users.resolve_timezone(timezone)).isoformat()
 
 
 def _entry_profile_context(conn: sqlite3.Connection, entry_id: int) -> tuple[int, dict] | None:
@@ -78,7 +84,7 @@ def list_comments(
         " FROM comment c"
         " JOIN user u ON u.id = c.author_id"
         " WHERE c.entry_id = ? AND c.deleted_at IS NULL"
-        " ORDER BY c.created_at ASC",
+        " ORDER BY julianday(c.created_at) ASC, c.id ASC",
         (entry_id,),
     ).fetchall()
 
@@ -96,7 +102,12 @@ def list_comments(
 
 
 def create_comment(
-    conn: sqlite3.Connection, entry_id: int, author_id: int, body: str
+    conn: sqlite3.Connection,
+    entry_id: int,
+    author_id: int,
+    body: str,
+    *,
+    timezone: str | None = None,
 ) -> dict[str, Any]:
     """Create a comment on an entry."""
     trimmed = body.strip()
@@ -109,7 +120,7 @@ def create_comment(
     if ctx is None:
         raise CommentNotFoundError(f"entry {entry_id} not found")
 
-    now = _now_iso()
+    now = current_timestamp_iso(timezone)
     cur = conn.execute(
         "INSERT INTO comment (entry_id, author_id, body, created_at) VALUES (?, ?, ?, ?)",
         (entry_id, author_id, trimmed, now),
@@ -141,7 +152,7 @@ def soft_delete_comment(conn: sqlite3.Connection, comment_id: int, requester_id:
 
     conn.execute(
         "UPDATE comment SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL",
-        (_now_iso(), comment_id),
+        (current_timestamp_iso(), comment_id),
     )
     log.info("comment.soft_deleted", comment_id=comment_id, requester_id=requester_id)
 
@@ -156,7 +167,7 @@ def unseen_comment_count(conn: sqlite3.Connection, owner_id: int) -> int:
         " WHERE e.owner_id = ?"
         "   AND c.author_id != ?"
         "   AND c.deleted_at IS NULL"
-        "   AND (u.comments_seen_at IS NULL OR c.created_at > u.comments_seen_at)",
+        "   AND (u.comments_seen_at IS NULL OR julianday(c.created_at) > julianday(u.comments_seen_at))",
         (owner_id, owner_id, owner_id),
     ).fetchone()
     return int(row["n"])
@@ -193,7 +204,7 @@ def list_comments_for_owner(
     if before_id is not None:
         sql += " AND c.id < ?"
         params.append(before_id)
-    sql += " ORDER BY c.created_at DESC, c.id DESC LIMIT ?"
+    sql += " ORDER BY julianday(c.created_at) DESC, c.id DESC LIMIT ?"
     params.append(limit)
 
     rows = conn.execute(sql, params).fetchall()
@@ -201,6 +212,20 @@ def list_comments_for_owner(
     result: list[dict[str, Any]] = []
     for r in rows:
         row = dict(r)
-        row["is_new"] = watermark is None or row["created_at"] > watermark
+        row["is_new"] = watermark is None or _is_after(row["created_at"], watermark)
         result.append(row)
     return result
+
+
+def _is_after(value: str, watermark: str) -> bool:
+    try:
+        return _timestamp(value) > _timestamp(watermark)
+    except (TypeError, ValueError):
+        return value > watermark
+
+
+def _timestamp(value: str) -> float:
+    dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=UTC)
+    return dt.timestamp()

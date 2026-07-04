@@ -54,6 +54,7 @@ def _build_card_context(
         "streak": activity_row["streak"] or 0,
         "counts": counts,
         "streaks": card_stats["streaks"],
+        "average_weekly_count": card_stats["average_weekly_count"],
         "heatmap": card_stats["heatmap"],
         "top_tags": _build_card_top_tags(activity_id, owner_id, field_defs, tz=tz) if include_top_tags else None,
         "fields": [],

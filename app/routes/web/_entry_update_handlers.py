@@ -20,7 +20,6 @@ EntryNotFoundError = entries.EntryNotFoundError
 
 
 async def update_entry_body(request: Request, activity_id: int, entry_id: int, owner_id: int) -> HTMLResponse:
-    tz = users.get_user_timezone(owner_id)
     try:
         existing = entries.get(owner_id, entry_id)
     except EntryNotFoundError:
@@ -29,11 +28,11 @@ async def update_entry_body(request: Request, activity_id: int, entry_id: int, o
         return HTMLResponse(status_code=404)
 
     form = await request.form()
+    tz = users.resolve_timezone(str(form.get("entry_timezone") or "").strip() or None)
     occurred_at, time_known = entries.resolve_occurred_at(
         str(form.get("date") or "").strip(),
         str(form.get("time") or "").strip(),
         tz=tz,
-        occurred_at_utc=str(form.get("occurred_at_utc") or "").strip() or None,
     )
 
     # Extract memo from form. Numeric value is not editable here.

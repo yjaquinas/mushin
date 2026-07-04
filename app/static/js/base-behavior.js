@@ -219,68 +219,16 @@
     if (noTime) noTime.checked = false;
   }
 
-  function setEntryFormToLocalDate(form, date) {
-    var dateInput = form.querySelector('input[name="date"]');
-    var timeInput = form.querySelector('input[name="time"]');
-    if (dateInput) dateInput.value = localDateValue(date);
-    if (timeInput && !timeInput.disabled) timeInput.value = localTimeValue(date);
-  }
-
-  function localizeExistingEntryDateTime(form, hidden) {
-    if (!hidden || !hidden.dataset.existingOccurredAt || form.dataset.entryDateTimeLocalized) return;
-
-    var date = new Date(hidden.dataset.existingOccurredAt);
-    if (Number.isNaN(date.getTime())) return;
-
-    setEntryFormToLocalDate(form, date);
-    form.dataset.entryDateTimeLocalized = "true";
-  }
-
-  function entryDateFromForm(form) {
-    var dateInput = form.querySelector('input[name="date"]');
-    if (!dateInput || !dateInput.value) return null;
-
-    var parts = dateInput.value.split("-");
-    if (parts.length !== 3) return null;
-
-    var year = parseInt(parts[0], 10);
-    var month = parseInt(parts[1], 10);
-    var day = parseInt(parts[2], 10);
-    if (!year || !month || !day) return null;
-
-    var timeInput = form.querySelector('input[name="time"]');
-    var timeValue = timeInput && !timeInput.disabled ? timeInput.value : "";
-    var hour = 0;
-    var minute = 0;
-
-    if (timeValue) {
-      var timeParts = timeValue.split(":");
-      hour = parseInt(timeParts[0], 10);
-      minute = parseInt(timeParts[1], 10);
-      if (Number.isNaN(hour) || Number.isNaN(minute)) return null;
-    }
-
-    return new Date(year, month - 1, day, hour, minute, 0, 0);
-  }
-
   function syncEntryDateTimeForm(form, defaultToLocalNow) {
     if (!form) return;
-    var hidden = form.querySelector("[data-occurred-at-utc]");
-    if (!hidden) return;
-
     if (defaultToLocalNow) {
       setEntryFormToLocalNow(form);
-    } else {
-      localizeExistingEntryDateTime(form, hidden);
     }
-
-    var localDate = entryDateFromForm(form);
-    hidden.value = localDate && !Number.isNaN(localDate.getTime()) ? localDate.toISOString() : "";
   }
 
   function syncEntryDateTimeForms(scope) {
     (scope || document).querySelectorAll("form").forEach(function (form) {
-      if (!form.querySelector("[data-occurred-at-utc]")) return;
+      if (!form.matches("[data-default-local-now]")) return;
       syncEntryDateTimeForm(form, form.matches("[data-default-local-now]"));
     });
   }
@@ -324,6 +272,14 @@
     var hour12 = hour % 12 || 12;
     var ampm = hour < 12 ? "AM" : "PM";
     return values.year + "-" + values.month + "-" + values.day + " " + hour12 + ":" + values.minute + " " + ampm;
+  }
+
+  function browserTimeZone() {
+    try {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+    } catch (error) {
+      return "";
+    }
   }
 
   function enforceBoundedTextareaLimits(textarea) {
@@ -387,11 +343,20 @@
   }
 
   function syncLocalTimestamps(scope) {
-    (scope || document).querySelectorAll("[data-local-timestamp]").forEach(function (node) {
+    var root = scope || document;
+    var nodes = [];
+    if (root.matches && root.matches("[data-local-timestamp]")) {
+      nodes.push(root);
+    }
+    root.querySelectorAll("[data-local-timestamp]").forEach(function (node) {
+      nodes.push(node);
+    });
+    nodes.forEach(function (node) {
       var localTimestamp = formatLocalTimestamp(node.dataset.localTimestamp);
       if (localTimestamp) {
         node.textContent = localTimestamp;
       }
+      node.hidden = false;
     });
   }
 
@@ -699,9 +664,14 @@
 
   document.body.addEventListener("htmx:afterSettle", function (event) {
     var target = event.detail.target;
+    syncLocalTimestamps(target);
     if (isHistoryTarget(target)) {
       applyTagFilter(document);
     }
+  });
+
+  document.body.addEventListener("htmx:load", function (event) {
+    syncLocalTimestamps(event.detail.elt || document);
   });
 
   window.addEventListener("resize", function () {
@@ -715,9 +685,10 @@
   document.body.addEventListener("htmx:configRequest", function (event) {
     var form = event.detail.elt ? event.detail.elt.closest("form") : null;
     syncEntryDateTimeForm(form, false);
-    var hidden = form ? form.querySelector("[data-occurred-at-utc]") : null;
-    if (hidden && event.detail.parameters) {
-      event.detail.parameters.occurred_at_utc = hidden.value;
+    if (form && form.matches("[data-comment-form]") && event.detail.parameters) {
+      event.detail.parameters.comment_timezone = browserTimeZone();
+    } else if (form && form.querySelector('input[name="date"]') && event.detail.parameters) {
+      event.detail.parameters.entry_timezone = browserTimeZone();
     }
   });
 

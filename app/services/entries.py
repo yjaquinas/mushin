@@ -110,14 +110,19 @@ def _normalize_occurred_at(occurred_at: str | datetime | None) -> str:
 
 
 def _local_day(occurred_at: str, tz: ZoneInfo) -> date:
-    """Return the calendar day of an ISO8601 timestamp in *tz*."""
+    """Return the entry's stored wall-clock calendar day.
+
+    Entries are saved in the posting browser's timezone and rendered without
+    visitor-timezone conversion, so date buckets must use the date encoded on
+    the entry itself. ``tz`` is only a fallback for legacy naive/invalid values.
+    """
     if not occurred_at:
         return date.today(tz)
     try:
         dt = datetime.fromisoformat(occurred_at)
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=tz)
-        return dt.astimezone(tz).date()
+        return dt.date()
     except (ValueError, TypeError):
         return date.today(tz)
 
@@ -476,26 +481,18 @@ def resolve_occurred_at(
     time_str: str,
     *,
     tz: ZoneInfo,
-    occurred_at_utc: str | None = None,
 ) -> tuple[str, bool]:
-    """Resolve a date/time form submission to (iso_string, time_known).
+    """Resolve an entry date/time form submission to (local_iso_string, time_known).
 
     Returns ``(occurred_at_iso, time_known)`` where ``time_known`` is ``True``
     when the user supplied an explicit time, ``False`` when only a date was given.
+    Entry occurrence is stored as the browser's wall-clock time, not normalized
+    to UTC.
     """
     time_known = bool(time_str)
 
-    if occurred_at_utc:
-        try:
-            dt = datetime.fromisoformat(occurred_at_utc.replace("Z", "+00:00"))
-            if dt.tzinfo is None:
-                dt = dt.replace(tzinfo=UTC)
-            return dt.astimezone(UTC).isoformat(), time_known
-        except (ValueError, TypeError):
-            pass
-
     if not date_str:
-        return _now_iso(), True
+        return datetime.now(tz).replace(second=0, microsecond=0).isoformat(), True
 
     try:
         d = date.fromisoformat(date_str)
@@ -506,10 +503,10 @@ def resolve_occurred_at(
         try:
             h, m = time_str.split(":")
             dt = datetime(d.year, d.month, d.day, int(h), int(m), tzinfo=tz)
-            return dt.astimezone(UTC).isoformat(), True
+            return dt.isoformat(), True
         except (ValueError, IndexError):
             pass
 
     # Date-only: midnight in the user's timezone.
     dt = datetime(d.year, d.month, d.day, tzinfo=tz)
-    return dt.astimezone(UTC).isoformat(), False
+    return dt.isoformat(), False

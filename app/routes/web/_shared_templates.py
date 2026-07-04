@@ -87,6 +87,11 @@ def _format_count(n: int) -> str:
     return f"{whole}{suffix}" if tenths == 0 else f"{whole}.{tenths}{suffix}"
 
 
+def _format_average_weekly_count(n: float) -> str:
+    rounded = round(n, 1)
+    return str(int(rounded)) if rounded.is_integer() else f"{rounded:.1f}"
+
+
 def _format_streak_days(n: int) -> str:
     return f"{n}{ui_strings.STREAK_DAY_UNIT if n == 1 else ui_strings.STREAK_DAYS_UNIT}"
 
@@ -94,4 +99,5 @@ def _format_streak_days(n: int) -> str:
 templates.env.filters["format_entry_time"] = _format_entry_time
 templates.env.filters["format_comment_timestamp"] = _format_comment_timestamp
 templates.env.filters["format_count"] = _format_count
+templates.env.filters["format_average_weekly_count"] = _format_average_weekly_count
 templates.env.filters["streak_days"] = _format_streak_days

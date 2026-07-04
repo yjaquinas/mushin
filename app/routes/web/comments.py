@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Cookie, Query, Request
@@ -51,7 +50,7 @@ async def comments_page(
 
         conn.execute(
             "UPDATE user SET comments_seen_at = ? WHERE id = ?",
-            (datetime.now(UTC).isoformat(), owner_id),
+            (comments.current_timestamp_iso(), owner_id),
         )
 
     has_more = len(rows) == 50

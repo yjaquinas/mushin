@@ -165,6 +165,7 @@ STATS_PERIOD_WEEK = "This week"
 STATS_PERIOD_MONTH = "This month"
 STATS_PERIOD_YEAR = "This year"
 STATS_PERIOD_LIFETIME = "All time"
+STATS_AVERAGE_WEEKLY_LABEL = "Average weekly"
 
 STREAK_CURRENT_LABEL = "Current streak"
 STREAK_DAY_UNIT = " day"
