@@ -80,7 +80,7 @@ def _add_year(day: date, n: int) -> date:
 
 def _shift_period(anchor: date, kind: str, n: int) -> date:
     if kind == "week":
-        return _add_week(_week_start(anchor), n)
+        return _add_week(_sunday_week_start(anchor), n)
     if kind == "month":
         return _add_month(_month_start(anchor), n)
     if kind == "year":
