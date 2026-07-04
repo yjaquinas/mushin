@@ -164,8 +164,8 @@ STATS_HEAD_TO_HEAD_EMPTY = "No opponent record yet."
 STATS_PERIOD_WEEK = "This week"
 STATS_PERIOD_MONTH = "This month"
 STATS_PERIOD_YEAR = "This year"
-STATS_PERIOD_LIFETIME = "All time"
-STATS_AVERAGE_WEEKLY_LABEL = "Average weekly"
+STATS_PERIOD_LIFETIME = "total"
+STATS_AVERAGE_WEEKLY_LABEL = "Weekly Avg"
 
 STREAK_CURRENT_LABEL = "Current streak"
 STREAK_DAY_UNIT = " day"
@@ -174,7 +174,7 @@ STREAK_DAYS_UNIT = " days"
 CALENDAR_TITLE = "Calendar"
 CALENDAR_PREV_MONTH = "Previous month"
 CALENDAR_NEXT_MONTH = "Next month"
-CALENDAR_WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+CALENDAR_WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 CALENDAR_DAY_ENTRIES_TITLE = "Entries on this day"
 CALENDAR_DAY_ENTRIES_EMPTY = "No entries on this day."
 
@@ -196,6 +196,7 @@ HEATMAP_QUARTER_LABELS = {1: "JAN", 4: "APR", 7: "JUL", 10: "OCT"}
 TAGS_HEADING = "Tags"
 TAG_FILTER_CLEAR = "All entries"
 TAGS_SHOW_ALL = "Show all"
+TAGS_SHOW_LESS = "Show less"
 
 # ---------------------------------------------------------------------------
 # History: period switcher + actual log

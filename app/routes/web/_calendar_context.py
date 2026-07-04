@@ -35,12 +35,10 @@ def _build_calendar_context(
 ) -> dict[str, Any]:
     """Month-grid context: weeks of ``.cal-day`` cells, marked + today flags.
 
-    Weeks are Monday-first (matching ``stats._week_start``), padded with
-    ``None`` cells for days outside *year*-*month* so the grid stays a regular
-    table. Marked days are derived from the activity's entry days for that
-    month (one query via ``entries.list_for_activity`` would over-fetch, so we
-    use ``stats.heatmap`` only when the month is within the trailing 365 days;
-    otherwise we read entries directly).
+    Weeks are Sunday-first, padded with adjacent-month day cells so the grid
+    stays a regular table. Marked days are derived from the activity's entry
+    days across the calendar's full visible range, including adjacent-month
+    padding cells.
 
     *selected*, when given, flags the matching cell's ``selected`` key so the
     template can render ``.cal-day--selected`` on it. Defaults to ``None``
@@ -48,20 +46,34 @@ def _build_calendar_context(
     """
     first, last = _month_bounds(year, month)
     today = datetime.now(UTC).date()
+    leading_pad = (first.weekday() + 1) % 7
+    trailing_pad = (7 - ((leading_pad + last.day) % 7)) % 7
+    visible_start = first - timedelta(days=leading_pad)
+    visible_end = last + timedelta(days=trailing_pad)
     # Reuse stats._entry_days via the public heatmap when possible would be
     # awkward for arbitrary months, so read entry days directly (owner-scoped).
     rows = entries.list_for_activity(owner_id, activity_id)
     marked_days: set[date] = set()
     for e in rows:
         d = entries._local_day(e["occurred_at"], tz)
-        if first <= d <= last:
+        if visible_start <= d <= visible_end:
             marked_days.add(d)
 
-    weeks: list[list[dict[str, Any] | None]] = []
-    week: list[dict[str, Any] | None] = []
-    # Monday-first padding before the first day of the month.
-    for _ in range(first.weekday()):
-        week.append(None)
+    weeks: list[list[dict[str, Any]]] = []
+    week: list[dict[str, Any]] = []
+    # Sunday-first padding before the first day of the month.
+    for offset in range(leading_pad, 0, -1):
+        cursor = first - timedelta(days=offset)
+        week.append(
+            {
+                "date": cursor.isoformat(),
+                "day": cursor.day,
+                "marked": cursor in marked_days,
+                "today": cursor == today,
+                "selected": cursor == selected,
+                "current_month": False,
+            }
+        )
     cursor = first
     while cursor <= last:
         week.append(
@@ -71,6 +83,7 @@ def _build_calendar_context(
                 "marked": cursor in marked_days,
                 "today": cursor == today,
                 "selected": cursor == selected,
+                "current_month": True,
             }
         )
         if len(week) == 7:
@@ -78,9 +91,27 @@ def _build_calendar_context(
             week = []
         cursor = cursor + timedelta(days=1)
     if week:
+        trailing_cursor = last + timedelta(days=1)
         while len(week) < 7:
-            week.append(None)
+            week.append(
+                {
+                    "date": trailing_cursor.isoformat(),
+                    "day": trailing_cursor.day,
+                    "marked": trailing_cursor in marked_days,
+                    "today": trailing_cursor == today,
+                    "selected": trailing_cursor == selected,
+                    "current_month": False,
+                }
+            )
+            trailing_cursor = trailing_cursor + timedelta(days=1)
         weeks.append(week)
+
+    for week in weeks:
+        for idx, cell in enumerate(week):
+            prev_current = week[idx - 1]["current_month"] if idx > 0 else True
+            next_current = week[idx + 1]["current_month"] if idx < len(week) - 1 else True
+            cell["adjacent_group_start"] = not cell["current_month"] and prev_current
+            cell["adjacent_group_end"] = not cell["current_month"] and next_current
 
     if month == 1:
         prev_year, prev_month = year - 1, 12

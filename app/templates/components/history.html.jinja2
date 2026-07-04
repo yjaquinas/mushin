@@ -65,7 +65,7 @@
                 hx-swap="outerHTML"
                 class="min-h-tap min-w-tap flex-1 rounded-button px-3 text-body transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-strong
                     {% if is_selected %}
-                        border border-accent bg-accent-subtle font-semibold text-accent-text
+                        border-2 border-border-strong bg-surface-2 font-semibold text-text-primary
                     {% else %}
                         border border-border text-text-secondary hover:bg-surface-2
                     {% endif %}"
@@ -135,27 +135,25 @@
                     <tr>
                         {% for day in week %}
                             <td class="text-center">
-                                {% if day is not none %}
-                                    {% if day.marked %}
-                                    <button
-                                        type="button"
-                                        aria-pressed="{{ 'true' if day.selected else 'false' }}"
-                                        class="cal-day cal-day--marked{% if day.today %} cal-day--today{% endif %}{% if day.selected %} cal-day--selected{% endif %}"
-                                        {% if day.selected %}
-                                        hx-get="/activities/{{ activity_id }}/history?period=month&anchor={{ history.anchor }}"
-                                        {% else %}
-                                        hx-get="/activities/{{ activity_id }}/history?period=month&anchor={{ history.anchor }}&day={{ day.date }}"
-                                        {% endif %}
-                                        hx-target="#history-{{ activity_id }}"
-                                        hx-swap="outerHTML"
-                                    >
-                                        {{ day.day }}
-                                    </button>
+                                {% if day.marked %}
+                                <button
+                                    type="button"
+                                    aria-pressed="{{ 'true' if day.selected else 'false' }}"
+                                    class="cal-day cal-day--marked{% if day.today %} cal-day--today{% endif %}{% if day.selected %} cal-day--selected{% endif %}{% if not day.current_month %} cal-day--adjacent{% endif %}{% if day.adjacent_group_start %} cal-day--adjacent-start{% endif %}{% if day.adjacent_group_end %} cal-day--adjacent-end{% endif %}"
+                                    {% if day.selected %}
+                                    hx-get="/activities/{{ activity_id }}/history?period=month&anchor={{ history.anchor }}"
                                     {% else %}
-                                    <span class="cal-day cal-day--empty{% if day.today %} cal-day--today{% endif %}">
-                                        {{ day.day }}
-                                    </span>
+                                    hx-get="/activities/{{ activity_id }}/history?period=month&anchor={{ history.anchor }}&day={{ day.date }}"
                                     {% endif %}
+                                    hx-target="#history-{{ activity_id }}"
+                                    hx-swap="outerHTML"
+                                >
+                                    {{ day.day }}
+                                </button>
+                                {% else %}
+                                <span class="cal-day cal-day--empty{% if day.today %} cal-day--today{% endif %}{% if not day.current_month %} cal-day--adjacent{% endif %}{% if day.adjacent_group_start %} cal-day--adjacent-start{% endif %}{% if day.adjacent_group_end %} cal-day--adjacent-end{% endif %}">
+                                    {{ day.day }}
+                                </span>
                                 {% endif %}
                             </td>
                         {% endfor %}

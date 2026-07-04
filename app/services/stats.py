@@ -49,6 +49,10 @@ def _week_start(day: date) -> date:
     return day - timedelta(days=day.weekday())
 
 
+def _sunday_week_start(day: date) -> date:
+    return day - timedelta(days=(day.weekday() + 1) % 7)
+
+
 def _month_start(day: date) -> date:
     return day.replace(day=1)
 
@@ -192,7 +196,7 @@ def card_stats(
         span_weeks = max(1, ceil(span_days / 7))
         average_weekly = entry_count / span_weeks
 
-    # Heatmap: current calendar year, grouped into 7-day buckets for the template.
+    # Heatmap: current calendar year, grouped into Sunday-starting week buckets.
     today = _today_local(tz)
     heatmap_start = _year_start(today)
     heatmap_end = date(today.year, 12, 31)
@@ -237,8 +241,8 @@ def _build_heatmap_weeks(
     start: date, end: date, day_counts: dict[date, int]
 ) -> list[dict[str, Any]]:
     heatmap_weeks: list[dict[str, Any]] = []
+    cursor = _sunday_week_start(start)
     week_days: list[date] = []
-    cursor = start
     while cursor <= end:
         week_days.append(cursor)
         if len(week_days) == 7 or cursor == end:
@@ -250,6 +254,16 @@ def _build_heatmap_weeks(
             )
             week_days = []
         cursor += timedelta(days=1)
+    if week_days:
+        while len(week_days) < 7:
+            week_days.append(cursor)
+            cursor += timedelta(days=1)
+        heatmap_weeks.append(
+            {
+                "intensity": sum(day_counts.get(d, 0) for d in week_days),
+                "quarter_month": _quarter_month_for_bucket(week_days),
+            }
+        )
     return heatmap_weeks
 
 

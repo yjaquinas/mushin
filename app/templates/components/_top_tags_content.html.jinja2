@@ -33,12 +33,16 @@
                 </li>
             {% endfor %}
         </ul>
-        <button
-            type="button"
-            hidden
-            data-tags-expand
-            class="w-fit rounded-button border border-border px-2 py-1 text-caption text-text-secondary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-strong"
-        >{{ strings.TAGS_SHOW_ALL }}</button>
+        <div class="flex justify-center">
+            <button
+                type="button"
+                hidden
+                data-tags-expand
+                data-expand-label="{{ strings.TAGS_SHOW_ALL }}"
+                data-collapse-label="{{ strings.TAGS_SHOW_LESS }}"
+                class="w-fit rounded-button border border-border px-2 py-1 text-caption text-text-secondary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-strong"
+            >{{ strings.TAGS_SHOW_ALL }}</button>
+        </div>
     {% endif %}
 </div>
 {% endif %}

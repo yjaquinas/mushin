@@ -490,6 +490,28 @@
     cursor: default;
   }
 
+  .cal-day--adjacent {
+    opacity: 0.65;
+    width: 100%;
+    margin-inline: 0;
+    background: color-mix(in srgb, var(--color-surface-2) 70%, transparent);
+    border-radius: 0;
+  }
+
+  .cal-day--adjacent:hover {
+    background: color-mix(in srgb, var(--color-surface-2) 70%, transparent);
+  }
+
+  .cal-day--adjacent-start {
+    border-top-left-radius: var(--radius-button);
+    border-bottom-left-radius: var(--radius-button);
+  }
+
+  .cal-day--adjacent-end {
+    border-top-right-radius: var(--radius-button);
+    border-bottom-right-radius: var(--radius-button);
+  }
+
   .cal-day--empty:hover {
     background: transparent;
   }

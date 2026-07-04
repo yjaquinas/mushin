@@ -372,11 +372,6 @@
       item.hidden = false;
     });
 
-    if (section.dataset.tagsExpanded === "true") {
-      hide(expandButton);
-      return;
-    }
-
     var rowTops = [];
     var overflowTop = null;
     items.forEach(function (item) {
@@ -385,21 +380,29 @@
       if (rowTops.length > 2 && overflowTop === null) overflowTop = top;
     });
 
-    if (overflowTop === null) {
+    var hasOverflow = overflowTop !== null;
+    var selectedOverflow = hasOverflow && items.some(function (item) {
+      return item.offsetTop >= overflowTop && item.querySelector(".chip--tag-active");
+    });
+
+    if (selectedOverflow) {
+      section.dataset.tagsExpanded = "true";
+    }
+
+    var expanded = section.dataset.tagsExpanded === "true";
+    expandButton.textContent = expanded
+      ? (expandButton.dataset.collapseLabel || "Show less")
+      : (expandButton.dataset.expandLabel || "Show all");
+
+    if (!hasOverflow) {
       hide(expandButton);
+    } else if (expanded) {
+      show(expandButton);
     } else {
-      var selectedOverflow = items.some(function (item) {
-        return item.offsetTop >= overflowTop && item.querySelector(".chip--tag-active");
+      items.forEach(function (item) {
+        item.hidden = item.offsetTop >= overflowTop;
       });
-      if (selectedOverflow) {
-        section.dataset.tagsExpanded = "true";
-        hide(expandButton);
-      } else {
-        items.forEach(function (item) {
-          item.hidden = item.offsetTop >= overflowTop;
-        });
-        show(expandButton);
-      }
+      show(expandButton);
     }
 
     if (clearButton) {
@@ -537,7 +540,7 @@
     if (tagsExpand) {
       var tagsSection = tagsExpand.closest("[data-tags-section]");
       if (!tagsSection) return;
-      tagsSection.dataset.tagsExpanded = "true";
+      tagsSection.dataset.tagsExpanded = tagsSection.dataset.tagsExpanded === "true" ? "false" : "true";
       syncTagSection(tagsSection);
       return;
     }
