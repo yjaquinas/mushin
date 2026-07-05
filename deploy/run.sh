@@ -18,6 +18,8 @@ CSS_OUTPUT="app/static/style.css"
 cd "$APP_DIR"
 echo "=== Deploying $SERVICE ==="
 
+SELF="$APP_DIR/deploy/run.sh"
+
 run_sudo() {
     if ! sudo -n "$@"; then
         echo "FATAL: deploy user needs passwordless sudo for: $*"
@@ -36,6 +38,12 @@ run_sudo() {
 # diverged for any reason, reset wins; source of truth is origin/main.
 echo "[1/6] Syncing to origin/main..."
 sg "$SERVICE" -c "git fetch origin main && git reset --hard origin/main"
+
+# Re-exec once so the running script picks up any changes pulled in the sync.
+if [ "${DEPLOY_REEXEC:-}" != "1" ]; then
+    export DEPLOY_REEXEC=1
+    exec bash "$SELF" "$@"
+fi
 
 # 2. Install/update dependencies
 echo "[2/6] Syncing dependencies..."
