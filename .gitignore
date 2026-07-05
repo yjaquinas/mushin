@@ -63,9 +63,6 @@ logs/
 # OS
 Thumbs.db
 
-# Tailwind build output (generated from app/static/src/input.css by run.sh / deploy/run.sh)
-app/static/style.css
-
 # Playwright MCP debug artifacts (console logs, page snapshots)
 .playwright-mcp/
 

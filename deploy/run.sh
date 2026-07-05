@@ -12,8 +12,7 @@ PORT=8013
 HEALTH_PATH="/health"
 HEALTH_TIMEOUT=10
 HEALTH_RETRIES=5
-TAILWIND_INPUT="app/static/src/input.css"
-TAILWIND_OUTPUT="app/static/style.css"
+CSS_OUTPUT="app/static/style.css"
 # ──────────────────────────────────────────────────────────────────────
 
 cd "$APP_DIR"
@@ -35,31 +34,12 @@ sg "$SERVICE" -c "git fetch origin main && git reset --hard origin/main"
 echo "[2/6] Syncing dependencies..."
 uv sync --frozen --no-dev
 
-# 3. Build Tailwind CSS (skip if no input.css — not all projects use Tailwind)
-echo "[3/6] Building assets..."
-if [[ -f "$TAILWIND_INPUT" ]]; then
-    if ! command -v tailwindcss &> /dev/null; then
-        echo "  tailwindcss not found — installing standalone CLI..."
-        ARCH=$(uname -m)
-        case "$ARCH" in
-            aarch64|arm64) TW_ARCH="linux-arm64" ;;
-            x86_64)        TW_ARCH="linux-x64" ;;
-            *)             echo "FATAL: Unsupported architecture $ARCH"; exit 1 ;;
-        esac
-        TW_VERSION="v4.2.2"
-        mkdir -p "$HOME/.local/bin"
-        curl -fsSL "https://github.com/tailwindlabs/tailwindcss/releases/download/${TW_VERSION}/tailwindcss-${TW_ARCH}" \
-            -o "$HOME/.local/bin/tailwindcss"
-        chmod +x "$HOME/.local/bin/tailwindcss"
-        echo "  Installed tailwindcss $(tailwindcss --version 2>&1 | head -1)"
-    fi
-    tailwindcss -i "$TAILWIND_INPUT" -o "$TAILWIND_OUTPUT" --minify
-    if [[ ! -f "$TAILWIND_OUTPUT" ]]; then
-        echo "FATAL: Tailwind build produced no output"
-        exit 1
-    fi
-else
-    echo "  No Tailwind input at $TAILWIND_INPUT — skipping asset build"
+# 3. Verify committed CSS is present.
+echo "[3/6] Checking committed CSS..."
+if [[ ! -s "$CSS_OUTPUT" ]]; then
+    echo "FATAL: Missing $CSS_OUTPUT"
+    echo "Build it locally with tailwindcss and commit it before deploying."
+    exit 1
 fi
 
 # 4. Sync Caddy config (if changed)

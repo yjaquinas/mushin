@@ -85,8 +85,9 @@ Build pipeline:
 app/static/src/input.css -> tailwindcss CLI -> app/static/style.css
 ```
 
-Development runs the watcher through `./run.sh`. Production builds minified
-assets during `deploy/run.sh`.
+Development runs the watcher through `./run.sh`. Commit the generated
+`app/static/style.css`; production deploy verifies that tracked file is present
+and does not build CSS on the server or in GitHub Actions.
 
 ## Database
 
