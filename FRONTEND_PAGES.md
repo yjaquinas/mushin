@@ -46,6 +46,8 @@ This inventory is based on the frontend-facing FastAPI routes and their Jinja te
     - `GET /@{username}` when the viewer is the owner
   - Page templates
     - `web/profile.html.jinja2` <- `/home`, `/@{username}` owner mode
+  - Header actions
+    - Share button uses the canonical profile URL when `profile_url` is present.
   - Routed fragments
     - `components/activity_sheet.html.jinja2` <- `GET /activities/new`
     - `components/activity_form.html.jinja2` <- `POST /activities` on validation error
@@ -122,6 +124,8 @@ This inventory is based on the frontend-facing FastAPI routes and their Jinja te
     - `GET /@{username}` when the viewer is not the owner
   - Page templates
     - `web/public_profile.html.jinja2` <- `/@{username}` public/connected modes
+  - Header actions
+    - Share button uses the canonical profile URL when `profile_url` is present.
   - Routed fragments
     - `components/relationship_affordance.html.jinja2` <- fellows relationship actions in profile mode:
       - `POST /fellows/{username}/connect`
@@ -148,6 +152,10 @@ This inventory is based on the frontend-facing FastAPI routes and their Jinja te
   - Page templates
     - `web/activity_detail.html.jinja2` <- `/activities/{activity_id}` archived/no-slug mode, `/@{username}/{slug}` owner mode
     - `web/public_activity.html.jinja2` <- `/@{username}/{slug}` read-only mode
+  - Header actions
+    - Slugged activity detail pages use the shared profile header with a back link to `/@{username}`.
+    - Share button uses the canonical activity URL when `share_url` is present.
+    - Archived or no-slug `/activities/{activity_id}` pages do not expose a share action.
   - Routed fragments
     - `components/history.html.jinja2` <- `GET /activities/{activity_id}/history`
     - `components/stats_summary.html.jinja2` <- `GET /activities/{activity_id}/stats-summary`

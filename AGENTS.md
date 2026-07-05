@@ -13,6 +13,27 @@ Model: `activity -> entry`.
 Architecture: one backend with web and native hypermedia surfaces on a shared
 service layer.
 
+## Working context
+
+Use `README.md` for human developer setup, deployment, backup, and operations
+details. Do not recreate a separate developer guide unless explicitly asked.
+
+Common commands:
+
+- `uv sync`
+- `./run.sh`
+- `uv run uvicorn app.main:app --reload --port 8000`
+- `uv run pytest`
+- `uv add <package>`
+
+Operational files:
+
+- `deploy/run.sh` is the production deploy entry point.
+- `infra/mushin.caddy` is synced to `/etc/caddy/conf.d/mushin.caddy`.
+- `infra/mushin.service` is synced to `/etc/systemd/system/mushin.service`.
+- `infra/backup.sh` must use SQLite's online backup API; do not replace it
+  with a raw `cp` of a live WAL database.
+
 ## Auth, visibility, isolation
 
 Authentication is required before using the product. Usernames are
@@ -67,6 +88,9 @@ palette.
 
 Prefer HTMX for requests and DOM updates. Use vanilla JavaScript only when HTMX
 cannot express the interaction. Never inline JavaScript in templates.
+
+Entry create/edit/delete flows must refresh every visible derived surface that
+depends on entries, including stats, history logs, and calendar markings.
 
 ## Code hygiene
 
