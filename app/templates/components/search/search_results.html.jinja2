@@ -1,9 +1,12 @@
 {#
   Prefix-routed search results.
-  Context: query, kind, people, tags, activities.
+  Context: query, kind, people, tags, activities, feed_entries.
 #}
 {% if not query %}
-<p class="py-6 text-center text-caption text-text-secondary">{{ strings.SEARCH_PROMPT }}</p>
+<section class="flex flex-col gap-4">
+    <h2 class="text-title font-semibold text-text-primary">{{ strings.ENTRY_FEED_HEADING }}</h2>
+    {% include "components/entries/_recent_entries.html.jinja2" %}
+</section>
 {% else %}
 <div class="flex flex-col gap-6">
     {% if kind == "people" %}

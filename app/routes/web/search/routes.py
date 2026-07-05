@@ -4,7 +4,7 @@ Session-authenticated. The page route always renders the full page (with
 an initial empty/prompt results region); the results route is HTMX-only,
 debounced by the search box itself (see web/search/search.html.jinja2), and
 always returns the components/search/search_results.html.jinja2 fragment — a
-blank query renders a calm prompt, never an error.
+blank query renders recent public entries instead.
 """
 
 from __future__ import annotations
@@ -18,6 +18,7 @@ from app.auth import sessions
 from app.routes.web.common import _current_user, templates
 from app.routes.web.common import ui_strings as strings
 from app.services.search import search
+from app.services.search.discovery import recent_public_entries
 
 router = APIRouter()
 
@@ -41,6 +42,7 @@ async def search_page(
             "people": [],
             "tags": [],
             "activities": [],
+            "feed_entries": recent_public_entries(limit=10),
             "current_page": "search",
             "page_title": strings.SEARCH_TITLE,
             "show_back": False,
@@ -56,8 +58,7 @@ async def search_results(
 ) -> HTMLResponse:
     """Return the grouped search results fragment for the search box.
 
-    A blank *q* renders the calm prompt state (handled inside the template)
-    rather than running a query.
+    A blank *q* renders recent public entries instead of running a query.
     """
     user = _current_user(session)
     if user is None:
@@ -66,6 +67,9 @@ async def search_results(
 
     query = q.strip()
     results = search.grouped_results(owner_id, query, limit=20)
+
+    if not query:
+        results["feed_entries"] = recent_public_entries(limit=10)
 
     return templates.TemplateResponse(
         request=request,
