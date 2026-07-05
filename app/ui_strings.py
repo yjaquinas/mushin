@@ -47,8 +47,9 @@ ENTRY_CONSENT_LINK_TEXT = "Privacy Policy"
 ENTRY_AUTH_ERROR_DEFAULT_TITLE = "Sign in"
 ENTRY_AUTH_ERROR_CLOSE = "Back"
 
-ENTRY_FEED_HEADING = "Recent entries"
+ENTRY_FEED_HEADING = "Recent updates"
 ENTRY_FEED_EMPTY = "No public entries yet."
+ENTRY_UPDATED_AT_LABEL = "updated at"
 
 # ---------------------------------------------------------------------------
 # Profile (character sheet)

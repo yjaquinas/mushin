@@ -61,6 +61,16 @@ templates.env.globals["static_asset"] = _static_asset
 templates.env.filters["entry_tags_csv"] = _entry_tags_csv
 
 
+def _format_occurred_at(occurred_at: str, time_known: bool = True) -> str:
+    try:
+        dt = datetime.fromisoformat(occurred_at)
+        if not time_known:
+            return dt.strftime("%Y-%m-%d")
+        return f"{dt.strftime('%Y-%m-%d')} {dt.hour % 12 or 12}:{dt.minute:02d} {'AM' if dt.hour < 12 else 'PM'}"
+    except (ValueError, AttributeError):
+        return occurred_at
+
+
 def _format_entry_time(occurred_at: str) -> str:
     try:
         dt = datetime.fromisoformat(occurred_at)
@@ -96,6 +106,7 @@ def _format_streak_days(n: int) -> str:
     return f"{n}{ui_strings.STREAK_DAY_UNIT if n == 1 else ui_strings.STREAK_DAYS_UNIT}"
 
 
+templates.env.filters["format_occurred_at"] = _format_occurred_at
 templates.env.filters["format_entry_time"] = _format_entry_time
 templates.env.filters["format_comment_timestamp"] = _format_comment_timestamp
 templates.env.filters["format_count"] = _format_count

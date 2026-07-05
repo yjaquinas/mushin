@@ -5,18 +5,19 @@
     {% for item in feed_entries %}
     <a
         href="{{ item.activity_url }}?entry_id={{ item.entry_id }}"
-        class="group block rounded-card border border-border bg-surface-2 p-4 transition hover:border-strong focus-visible:outline-offset-2"
+        class="group flex flex-row rounded-card border border-border bg-surface-2 p-4 transition hover:border-strong focus-visible:outline-offset-2"
     >
-        <span class="text-caption font-medium text-text-secondary group-hover:text-text-primary">@{{ item.username }}</span>
-        <h3 class="mt-0.5 text-body font-semibold text-text-primary">{{ item.name }}</h3>
-        <span
-            class="mt-1 block text-micro text-text-muted"
-            data-local-timestamp="{{ item.created_at }}"
-        >{{ item.created_at }}</span>
-        {% if item.memo %}
-        {% set lines = item.memo.split('\n') %}
-        <p class="mt-1 text-caption text-text-secondary line-clamp-2">{{ lines[:2] | join('\n') }}{% if lines | length > 2 %}&hellip;{% endif %}</p>
-        {% endif %}
+        <div class="flex min-w-0 flex-1 flex-col">
+            <span class="truncate text-caption font-medium text-text-secondary group-hover:text-text-primary">@{{ item.username }}</span>
+            <h3 class="mt-0.5 truncate text-body font-semibold text-text-primary">{{ item.name }}</h3>
+            <span class="mt-0.5 text-caption text-text-muted">{{ item.occurred_at | format_occurred_at(item.time_known) }}</span>
+            {% if item.memo %}
+            {% set lines = item.memo.split('\n') %}
+            <p class="mt-1 text-caption text-text-secondary line-clamp-2">{{ lines[:2] | join('\n') }}{% if lines | length > 2 %}&hellip;{% endif %}</p>
+            {% endif %}
+            <span class="mt-1 self-end text-[0.8rem] text-text-muted whitespace-nowrap">{{ strings.ENTRY_UPDATED_AT_LABEL }} <span data-local-timestamp="{{ item.updated_at }}">{{ item.updated_at }}</span></span>
+        </div>
+        <span class="ml-2 flex shrink-0 items-center self-center text-text-muted opacity-50 transition group-hover:opacity-100">{{ icon("arrow-right", size=20) }}</span>
     </a>
     {% else %}
     <p class="text-caption text-text-muted">{{ strings.ENTRY_FEED_EMPTY }}</p>
