@@ -132,7 +132,7 @@ def delete_entry_response(activity_id: int, entry_id: int, owner_id: int) -> HTM
         return HTMLResponse(status_code=404)
     tz = users.get_user_timezone(owner_id)
     entries.delete(owner_id, entry_id, tz=tz)
-    return HTMLResponse(content="", status_code=200)
+    return HTMLResponse(content="", status_code=200, headers={"HX-Trigger": "log-saved"})
 
 
 async def log_sheet_response(request: Request, activity_id: int, owner_id: int) -> HTMLResponse:

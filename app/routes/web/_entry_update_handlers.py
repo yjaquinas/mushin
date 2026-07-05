@@ -51,7 +51,7 @@ async def update_entry_body(request: Request, activity_id: int, entry_id: int, o
         return HTMLResponse(status_code=422)
 
     row_html = _render_updated_entry_row(activity_id, owner_id, updated)
-    return HTMLResponse(content=f"{row_html}<div id=\"entry-edit-dialog-{updated['id']}\"></div>", status_code=200)
+    return HTMLResponse(content=row_html, status_code=200, headers={"HX-Trigger": "log-saved"})
 
 
 async def log_sheet_body(request: Request, activity_id: int, owner_id: int) -> HTMLResponse:
@@ -91,4 +91,4 @@ def _render_updated_entry_row(activity_id: int, owner_id: int, updated: dict[str
     updated = dict(updated)
     updated["comment_count"] = counts.get(updated["id"], 0)
     row_html = _render_template_html("components/entry_row.html.jinja2", {"activity_id": activity_id, "entry": updated, "username": username, "slug": slug, "expand_comment_entry_id": updated["id"]})
-    return row_html.replace(f'<li id="entry-row-{updated["id"]}"', f'<li id="entry-row-{updated["id"]}" hx-swap-oob="outerHTML"', 1)
+    return row_html
