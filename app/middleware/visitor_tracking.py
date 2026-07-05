@@ -7,7 +7,7 @@ from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.responses import Response
 
-from app.services import visitors
+from app.services.visitors import visitors
 
 log = structlog.get_logger()
 

@@ -1,0 +1,80 @@
+{% extends "web/base.html.jinja2" %}
+
+{% block title %}{{ strings.HOME_TITLE }} · {{ strings.APP_NAME }}{% endblock %}
+
+{% block content %}
+{% if flash_message %}
+<div hidden data-toast-message="{{ flash_message }}"></div>
+{% endif %}
+
+{% if unseen_comments %}
+<header class="flex items-center gap-2 py-2">
+    <h1 class="sr-only">{{ strings.HOME_TITLE }}</h1>
+    <a
+        href="/comments"
+        aria-label="{{ strings.COMMENTS_UNSEEN_ARIA }}"
+        class="flex min-h-tap min-w-tap items-center justify-center rounded-full bg-brand-subtle px-2 text-caption font-medium text-text-secondary transition hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+    >{{ icon('message-circle', size=14) }}<span class="ms-1">{{ strings.COMMENTS_UNSEEN_BADGE.format(count=unseen_comments) }}</span></a>
+</header>
+{% endif %}
+
+{% include "components/fellows/fellows_section.html.jinja2" with context %}
+
+{% if not cards %}
+<div id="home-empty-state" class="flex flex-col items-center gap-3 py-12 text-center">
+    <span class="text-[length:var(--spacing-icon-lg)] leading-none text-text-muted" aria-hidden="true">{{ strings.APP_NAME_HANJA }}</span>
+    <p class="text-title font-medium text-text-primary">{{ strings.HOME_EMPTY }}</p>
+    <p class="text-body text-text-secondary">{{ strings.APP_GLOSS }}</p>
+</div>
+{% endif %}
+
+<div id="cards" class="flex flex-col gap-3">
+    {% if not cards %}
+    <div id="add-activity-inline">
+        <button
+            type="button"
+            data-add-activity-open
+            class="min-h-tap w-full rounded-button bg-brand px-4 py-3 text-title font-semibold text-on-brand transition focus-visible:outline-offset-2"
+        >
+            {{ strings.HOME_ADD_ACTIVITY }}
+        </button>
+
+        {% include "components/activities/_add_activity_form.html.jinja2" with context %}
+    </div>
+
+    <p class="text-center text-caption text-text-secondary">{{ strings.HOME_EXAMPLES_HINT }}</p>
+    {% for example in examples %}
+        <form hx-post="/activities" hx-target="#cards" hx-swap="afterbegin">
+            <input type="hidden" name="name" value="{{ example.name }}">
+            <button
+                type="submit"
+                class="flex min-h-tap w-full items-center justify-between gap-2 rounded-card border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline-offset-2"
+            >
+                <span>{{ example.name }}</span>
+                <span class="text-caption text-text-muted">{{ strings.HOME_EXAMPLE_ADD }}</span>
+            </button>
+        </form>
+    {% endfor %}
+    {% else %}
+    {% for card in cards %}
+        {% include "components/activities/activity_card.html.jinja2" with context %}
+    {% endfor %}
+    <div id="add-activity-inline">
+        <button
+            type="button"
+            data-add-activity-open
+            class="flex min-h-tap w-full items-center gap-2 rounded-card border border-dashed border-border bg-transparent px-4 py-3 text-body font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline-offset-2"
+        >
+            <span aria-hidden="true">{{ icon("plus", size=20) }}</span>
+            {{ strings.HOME_ADD_ACTIVITY }}
+        </button>
+
+        {% include "components/activities/_add_activity_form.html.jinja2" with context %}
+    </div>
+    {% endif %}
+</div>
+
+{# Quick-add sheet target: empty until a card's "Log" button swaps in the
+   form fragment (see GET /activities/{id}/log). #}
+<div id="sheet"></div>
+{% endblock %}

@@ -14,7 +14,7 @@ from fastapi import APIRouter, Cookie, Query, Request
 from fastapi.responses import HTMLResponse
 
 from app.auth import sessions
-from app.routes.web._shared import _current_user
+from app.routes.web.common import _current_user
 from app.routes.web.fellows._block_handlers import (
     block_cancel_response,
     block_confirm_response,

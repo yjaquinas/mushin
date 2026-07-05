@@ -10,10 +10,10 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from app.routes.public._contexts import templates as templates
-from app.routes.public.activity_detail import router as _activity_detail_router
-from app.routes.public.comments import router as _comments_router
-from app.routes.public.profile import router as _profile_router
+from app.routes.public.common.contexts import templates as templates
+from app.routes.public.activity.routes import router as _activity_detail_router
+from app.routes.public.comments.routes import router as _comments_router
+from app.routes.public.profile.routes import router as _profile_router
 
 # ``templates`` is re-exported above so existing call sites (e.g. a test
 # monkeypatching ``app.routes.public.templates.TemplateResponse``) keep

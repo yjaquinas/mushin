@@ -6,22 +6,22 @@
     <title>{{ strings.ADMIN_DASHBOARD_TITLE }} · {{ strings.APP_NAME }}</title>
     <link rel="stylesheet" href="{{ static_asset('/static/style.css') }}">
     <link rel="icon" type="image/svg+xml" href="{{ static_asset('/static/favicon.svg') }}">
-    <script defer src="{{ static_asset('/static/js/dialogs.js') }}"></script>
-    <script defer src="{{ static_asset('/static/js/admin-dialogs.js') }}"></script>
+    <script defer src="{{ static_asset('/static/js/common/dialogs.js') }}"></script>
+    <script defer src="{{ static_asset('/static/js/admin/admin-dialogs.js') }}"></script>
 </head>
 <body class="flex flex-col bg-surface-0 min-h-screen text-text-primary text-body">
     <main class="mx-auto flex w-full max-w-screen-lg grow flex-col gap-6 px-4 py-4">
         <header class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h1 class="text-title font-semibold text-text-primary">{{ strings.ADMIN_DASHBOARD_TITLE }}</h1>
-            {% include "components/_admin_nav.html.jinja2" with context %}
+            {% include "components/admin/_admin_nav.html.jinja2" with context %}
         </header>
 
         {% if admin_view == "user_detail" %}
-            {% include "components/_admin_user_detail.html.jinja2" with context %}
+            {% include "components/admin/_admin_user_detail.html.jinja2" with context %}
         {% elif admin_section == "users" %}
-            {% include "components/_admin_users.html.jinja2" with context %}
+            {% include "components/admin/_admin_users.html.jinja2" with context %}
         {% else %}
-            {% include "components/_admin_monitor.html.jinja2" with context %}
+            {% include "components/admin/_admin_monitor.html.jinja2" with context %}
         {% endif %}
     </main>
 </body>

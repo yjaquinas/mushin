@@ -1,0 +1,31 @@
+{% extends "web/base.html.jinja2" %}
+
+{% block title %}{{ strings.ENTRY_TITLE }} {{ strings.APP_NAME_HANJA }}{% endblock %}
+
+{% block content %}
+<section class="flex min-h-[80vh] flex-col justify-center gap-8 py-8">
+    <header class="flex flex-col items-center gap-2 text-center">
+        <h1 class="text-hero-numeral font-semibold leading-tight text-text-primary">
+            {{ strings.ENTRY_TITLE }} <span class="text-text-muted">{{ strings.APP_NAME_HANJA }}</span>
+        </h1>
+        <p class="text-body text-text-secondary">{{ strings.APP_GLOSS }}</p>
+        <p class="text-caption text-text-muted">{{ strings.ENTRY_TAGLINE }}</p>
+    </header>
+
+    {% include "components/auth/auth_login_form.html.jinja2" with context %}
+
+    {% if demo_username %}
+    <p class="text-center text-caption text-text-muted">
+        <a
+            href="/@{{ demo_username }}"
+            class="underline underline-offset-2 focus-visible:outline-offset-2"
+        >{{ strings.ENTRY_DEMO_LINK }}</a>
+    </p>
+    {% endif %}
+
+    <p class="text-center text-micro text-text-muted">
+        {{ strings.ENTRY_CONSENT_NOTICE }}
+        <a href="/privacy" class="underline underline-offset-2 focus-visible:outline-offset-2">{{ strings.ENTRY_CONSENT_LINK_TEXT }}</a>.
+    </p>
+</section>
+{% endblock %}

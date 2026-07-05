@@ -1,0 +1,77 @@
+{#
+  Shared modal shell for new-entry and edit-entry forms.
+
+  Context:
+    dialog_id              str
+    title                  str
+    form_action            str
+    form_target            str | None
+    form_swap              str
+    fields                 list[dict]
+    today                  str
+    submit_label           str
+    cancel_label           str
+    cancel_button_id       str | None
+    cancel_dialog_close    str | None
+    show_delete_button     bool
+    delete_url            str | None
+    delete_target         str | None
+    auto_open             bool
+    disable_backdrop_close bool
+    disable_escape_close   bool
+    entry                  dict | None
+    notes_value            str | None
+#}
+<div
+    id="{{ dialog_id }}"
+    hidden
+    {% if auto_open %}data-auto-open{% endif %}
+    {% if disable_backdrop_close %}data-disable-backdrop-close{% endif %}
+    {% if disable_escape_close %}data-disable-escape-close{% endif %}
+>
+    <div
+        class="fixed inset-0 z-50 flex items-end justify-center bg-text-primary/50 sm:items-center"
+        role="presentation"
+    >
+        <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="{{ dialog_id }}-title"
+            tabindex="-1"
+            class="flex max-h-[90vh] w-full max-w-screen-sm flex-col gap-4 overflow-y-auto rounded-t-card bg-surface-1 p-4 sm:rounded-card"
+        >
+            <header class="flex items-center justify-between gap-2">
+                <h2 id="{{ dialog_id }}-title" class="text-title font-semibold text-text-primary">
+                    {{ title }}
+                </h2>
+                {% if show_delete_button and delete_url %}
+                <button
+                    type="button"
+                    aria-label="{{ strings.ENTRY_DELETE }}"
+                    hx-get="{{ delete_url }}"
+                    {% if delete_target %}hx-target="{{ delete_target }}"{% endif %}
+                    hx-swap="outerHTML"
+                    class="min-h-tap min-w-tap flex items-center justify-center rounded text-text-muted transition hover:text-danger focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                >
+                    {{ icon('trash', size=20) }}
+                    <span class="sr-only">{{ strings.ENTRY_DELETE }}</span>
+                </button>
+                {% endif %}
+            </header>
+
+            <form
+                hx-post="{{ form_action }}"
+                {% if form_target %}hx-target="{{ form_target }}"{% endif %}
+                hx-swap="{{ form_swap }}"
+                {% if default_to_local_now | default(false) %}data-default-local-now{% endif %}
+                class="flex flex-col gap-4"
+            >
+                {% set has_tag_group = fields | selectattr("kind", "equalto", "tag_group") | list | length > 0 %}
+                {% include "components/entries/_entry_form_fields.html.jinja2" with context %}
+            </form>
+            {% if entry %}
+            <div id="entry-delete-dialog-{{ entry.id }}"></div>
+            {% endif %}
+        </div>
+    </div>
+</div>

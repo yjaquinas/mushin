@@ -1,0 +1,67 @@
+{% if selector.kind == "month-grid" %}
+{% include "components/admin/_admin_month_grid.html.jinja2" with context %}
+{% elif selector.kind == "month-picker" %}
+<div class="mt-4">
+    <div class="mb-3 flex items-center justify-between gap-3">
+        <a
+            href="/admin/monitor?period=monthly&month={{ selected_value }}&calendar_year={{ selector.prev_value }}&page=1"
+            class="flex min-h-tap min-w-tap items-center justify-center rounded-button px-2 text-body text-text-secondary transition hover:bg-surface-2"
+            aria-label="{{ strings.ADMIN_PREVIOUS_YEAR }}"
+        >
+            &lt;
+        </a>
+        <h3 class="text-body font-medium text-text-primary">{{ selector.title }}</h3>
+        <a
+            href="/admin/monitor?period=monthly&month={{ selected_value }}&calendar_year={{ selector.next_value }}&page=1"
+            class="flex min-h-tap min-w-tap items-center justify-center rounded-button px-2 text-body text-text-secondary transition hover:bg-surface-2"
+            aria-label="{{ strings.ADMIN_NEXT_YEAR }}"
+        >
+            &gt;
+        </a>
+    </div>
+    <div class="grid grid-cols-4 gap-2">
+        {% for row in selector.rows %}
+            {% for month in row %}
+            <a
+                href="/admin/monitor?{% if month.selected %}period=weekly&week={{ month.drill_week_value }}&calendar_month={{ month.value }}{% else %}period=monthly&month={{ month.value }}&calendar_year={{ selector.title }}{% endif %}&page=1"
+                class="admin-grid-card{% if month.selected %} admin-grid-card--selected{% endif %}{% if month.today %} admin-grid-card--today{% endif %}"
+            >
+                {{ month.label }}
+            </a>
+            {% endfor %}
+        {% endfor %}
+    </div>
+</div>
+{% elif selector.kind == "year-picker" %}
+<div class="mt-4">
+    <div class="mb-3 flex items-center justify-between gap-3">
+        <a
+            href="/admin/monitor?period=yearly&year={{ selector.prev_period_value }}&calendar_year={{ selector.prev_value }}&page=1"
+            class="flex min-h-tap min-w-tap items-center justify-center rounded-button px-2 text-body text-text-secondary transition hover:bg-surface-2"
+            aria-label="{{ strings.ADMIN_PREVIOUS_YEAR }}"
+        >
+            &lt;
+        </a>
+        <h3 class="text-body font-medium text-text-primary">{{ selector.title }}</h3>
+        <a
+            href="/admin/monitor?period=yearly&year={{ selector.next_period_value }}&calendar_year={{ selector.next_value }}&page=1"
+            class="flex min-h-tap min-w-tap items-center justify-center rounded-button px-2 text-body text-text-secondary transition hover:bg-surface-2"
+            aria-label="{{ strings.ADMIN_NEXT_YEAR }}"
+        >
+            &gt;
+        </a>
+    </div>
+    <div class="grid grid-cols-4 gap-2">
+        {% for row in selector.rows %}
+            {% for year in row %}
+            <a
+                href="/admin/monitor?{% if year.selected %}period=monthly&month={{ year.drill_month_value }}&calendar_year={{ year.value }}{% else %}period=yearly&year={{ year.value }}&calendar_year={{ selector.title }}{% endif %}&page=1"
+                class="admin-grid-card{% if year.selected %} admin-grid-card--selected{% endif %}{% if year.today %} admin-grid-card--today{% endif %}"
+            >
+                {{ year.label }}
+            </a>
+            {% endfor %}
+        {% endfor %}
+    </div>
+</div>
+{% endif %}

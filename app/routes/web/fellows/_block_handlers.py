@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import Request
 from fastapi.responses import HTMLResponse
 
-from app.routes.web._shared import templates
+from app.routes.web.common import templates
 from app.routes.web.fellows._shared import (
     _connect_error_message,
     _remove_dialog_dom_id,
@@ -13,7 +13,7 @@ from app.routes.web.fellows._shared import (
     _render_relationship_affordance,
     _resolve_other_user,
 )
-from app.services import connections
+from app.services.social import connections
 
 
 def _other_or_404(username: str) -> dict | HTMLResponse:
@@ -27,7 +27,7 @@ def remove_fellow_confirm_response(request: Request, username: str, from_search:
         return other
     return templates.TemplateResponse(
         request=request,
-        name="components/connect_remove_confirm.html.jinja2",
+        name="components/fellows/connect_remove_confirm.html.jinja2",
         context={
             "username": username,
             "dom_id": _relationship_dom_id(username, from_search=from_search),
@@ -51,7 +51,7 @@ def block_confirm_response(request: Request, username: str, from_search: bool) -
         return other
     return templates.TemplateResponse(
         request=request,
-        name="components/connect_block_confirm.html.jinja2",
+        name="components/fellows/connect_block_confirm.html.jinja2",
         context={"username": username, "dom_id": _relationship_dom_id(username, from_search=from_search)},
     )
 

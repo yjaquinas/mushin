@@ -1,0 +1,61 @@
+{% extends "web/base.html.jinja2" %}
+
+{% block title %}{{ card.name }} · {{ strings.APP_NAME }}{% endblock %}
+
+{% block content %}
+<div class="flex flex-col gap-6">
+    {# 1. Summary card #}
+    {% with card_name=card.name, average_weekly_count=card.average_weekly_count, title_editable=true, show_top_tags=false %}
+    {% include "components/history/stats_summary.html.jinja2" with context %}
+    {% endwith %}
+
+    {# 2. Log button #}
+    <div>
+        <button
+            type="button"
+            id="log-trigger-{{ card.id }}"
+            aria-expanded="false"
+            aria-controls="log-sheet-slot"
+            data-log-trigger
+            hx-get="/activities/{{ card.id }}/log"
+            hx-target="#log-sheet-slot"
+            hx-swap="innerHTML"
+            class="flex w-full min-h-tap items-center justify-center gap-2 rounded-button bg-brand px-4 text-body font-semibold text-on-brand transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+        >
+            <span class="transition-transform"
+                id="log-trigger-icon-{{ card.id }}">{{ icon('plus', size=20) }}</span>
+            {{ strings.SUBTALLY_LOG_BUTTON }}
+        </button>
+    </div>
+
+    {# 3. Competition #}
+    {% if record is not none %}
+        {% include "components/history/competition_stats.html.jinja2" with context %}
+    {% endif %}
+
+    {# 5. History #}
+    <section class="flex flex-col gap-3 rounded-card border border-border bg-surface-1 p-4">
+        {% include "components/history/history.html.jinja2" with context %}
+    </section>
+
+    {# 6. Field stats — analytics tail, correctly last #}
+    {% include "components/history/field_stats.html.jinja2" with context %}
+
+    <section class="flex flex-col gap-3 pt-2">
+        <button
+            type="button"
+            hx-get="/activities/{{ activity_id }}/delete-confirm"
+            hx-target="#activity-delete-dialog"
+            hx-swap="outerHTML"
+            class="min-h-tap w-full rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-danger transition hover:bg-surface-2 focus-visible:outline-offset-2"
+        >
+            {{ strings.ACTIVITY_DELETE }}
+        </button>
+    </section>
+
+</div>
+
+<div id="rename-activity-dialog"></div>
+<div id="activity-delete-dialog"></div>
+<div id="log-sheet-slot"></div>
+{% endblock %}

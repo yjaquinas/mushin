@@ -1,0 +1,21 @@
+{#
+  Shared edit-entry dialog. Uses the same modal shell and field layout as the
+  new-entry dialog so the only mode-specific change is the delete button in the
+  header.
+#}
+{% set dialog_id = "entry-edit-dialog-" ~ entry.id %}
+{% set form_action = "/activities/" ~ activity_id ~ "/entries/" ~ entry.id %}
+{% set form_target = "closest .entry-row" %}
+{% set form_swap = "outerHTML" %}
+{% set title = activity_name %}
+{% set submit_label = strings.ENTRY_SAVE %}
+{% set cancel_label = strings.ENTRY_CANCEL %}
+{% set cancel_dialog_close = "entry-edit" %}
+{% set show_delete_button = true %}
+{% set delete_url = "/activities/" ~ activity_id ~ "/entries/" ~ entry.id ~ "/delete-confirm" %}
+{% set delete_target = "#entry-delete-dialog-" ~ entry.id %}
+{% set auto_open = true %}
+{% set disable_backdrop_close = false %}
+{% set disable_escape_close = false %}
+{% set notes_value = entry.memo or "" %}
+{% include "components/entries/entry_form_dialog.html.jinja2" with context %}

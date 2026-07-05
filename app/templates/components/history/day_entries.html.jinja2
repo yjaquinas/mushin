@@ -1,0 +1,91 @@
+{#
+  A day's entries — included when a .cal-day cell is tapped, in both the
+  month and week history views (see app.routes.web._build_history_context
+  and components/history/history.html.jinja2's month/week branches).
+
+  Each entry row has a stable .entry-row wrapper so the edit-in-place flow
+  can swap it via hx-target="closest .entry-row" / hx-swap="outerHTML" — the
+  same convention as components/history/period_log.html.jinja2.
+
+  Context: day ("YYYY-MM-DD"), entries (hydrated entry dicts: id, occurred_at,
+  time_known, memo, values, tags, comment_count). The day is already
+  selected/shown in the heading, so only the time (when known) is shown per
+  entry, not the date.
+
+  Included `with context`, so it also relies on:
+    activity_id        int          — owning activity (edit-route URLs)
+    history.is_owner    bool         — pencil edit shown only when truthy
+    history.can_comment bool         — comment toggle shown when this or
+                                        entry.comment_count is truthy
+    history.username    str | None   — comment toggle suppressed entirely
+    history.slug         str | None   when either is None (e.g. a guest-owned
+                                        activity with no public profile URL)
+    history.expand_comment_entry_id  int | None — a `?c={entry_id}` deep-link
+                                        target (notification click-through).
+                                        The matching entry's comment toggle
+                                        gets an extra `load` trigger so its
+                                        thread auto-expands on render; every
+                                        other entry's toggle stays click-only.
+    history.login_redirect_url  str | None — an already-validated
+                                        `/?next=...` URL (see
+                                        app/routes/public.py and
+                                        app/routes/web.py::activity_history),
+                                        set only for a real anonymous (no
+                                        session) visitor on an otherwise-
+                                        readable activity. When set, an entry
+                                        with zero comments shows a "log in to
+                                        comment" link instead of nothing
+                                        (history.can_comment is False for that
+                                        same anonymous viewer, so neither the
+                                        toggle nor the composer would
+                                        otherwise render). An entry that
+                                        already has comments still shows the
+                                        normal read-only toggle.
+
+  An entry selected for a given day can also appear in the period's full
+  chronological log (components/history/period_log.html.jinja2) on the same page,
+  but the two are mutually exclusive in the log area below the calendar
+  visual (only one of day-detail / full-period-log renders at a time) -- so
+  both use the shared components/entries/_entry_row.html.jinja2 macro, which emits
+  the plain canonical `comment-slot-{{ entry.id }}` id in both places.
+
+  This partial's wrapping div is `#calendar-day-detail` -- the day-detail
+  panel referenced by the .cal-day--selected comment in
+  app/static/src/input.css. It carries `data-history-focus` (and
+  `tabindex="-1"` to be programmatically focusable, since it's not natively
+  interactive) so that, when a day is selected, history.html.jinja2's
+  after-swap focus script lands here instead of on the period tab -- see
+  components/history/history.html.jinja2's header comment for the marker-uniqueness
+  rule (exactly one element per swapped state carries the marker).
+#}
+{% from "components/entries/_entry_row.html.jinja2" import entry_row %}
+
+<div
+    id="calendar-day-detail"
+    class="flex flex-col gap-2 rounded-card border border-border bg-surface-2 p-3"
+    tabindex="-1"
+    data-history-focus
+>
+    <h4 class="text-body font-medium text-text-primary">
+        {{ strings.CALENDAR_DAY_ENTRIES_TITLE }} — {{ day }}
+    </h4>
+    {% if not entries %}
+        <p class="text-caption text-text-muted">{{ strings.CALENDAR_DAY_ENTRIES_EMPTY }}</p>
+    {% else %}
+        <p class="text-caption text-text-muted" data-history-empty hidden>{{ strings.HISTORY_LOG_EMPTY_TAG }}</p>
+        <ul class="divide-y divide-border" data-history-entry-list>
+            {% for entry in entries %}
+                {{ entry_row(
+                    entry,
+                    activity_id,
+                    is_owner=history.is_owner,
+                    can_comment=history.can_comment,
+                    username=history.username,
+                    slug=history.slug,
+                    expand_comment_entry_id=history.expand_comment_entry_id,
+                    login_redirect_url=history.login_redirect_url,
+                ) }}
+            {% endfor %}
+        </ul>
+    {% endif %}
+</div>

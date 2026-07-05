@@ -1,0 +1,37 @@
+{#
+  Quick-add / log sheet — a free-text notes field with inline #hashtags for
+  tag_group fields, plus scale, count, memo, and an editable-defaulting
+  occurred_at.
+
+  On submit, POSTs to /activities/{id}/log with hx-swap="none" -- the
+  detail screen's stats-summary/history/field-stats sections refresh
+  themselves off the "log-saved" HX-Trigger the response fires, so there's
+  no primary swap target.
+
+  Dialog behavior (init focus, Escape key, overlay click, cancel button)
+  is handled by log-sheet.js. The time checkbox toggle uses delegated JS
+  via data-toggle-time (shared with entry_edit_form).
+
+  Context: activity_id, name, fields (field-priority order), today (default
+  occurred_at value, KST date YYYY-MM-DD).
+#}
+{% set tag_group_fields = fields | selectattr("kind", "equalto", "tag_group") | list %}
+{% set has_tag_group = tag_group_fields | length > 0 %}
+
+{% set dialog_id = "log-sheet-dialog" %}
+{% set form_action = "/activities/" ~ activity_id ~ "/log" %}
+{% set form_swap = "none" %}
+{% set title = name %}
+{% set submit_label = strings.LOG_SUBMIT %}
+{% set cancel_label = strings.LOG_CANCEL %}
+{% set cancel_button_id = "log-sheet-cancel" %}
+{% set auto_open = true %}
+{% set disable_backdrop_close = true %}
+{% set disable_escape_close = true %}
+{% set show_delete_button = false %}
+{% set delete_url = None %}
+{% set delete_target = None %}
+{% set form_target = None %}
+{% set notes_value = "" %}
+{% set default_to_local_now = true %}
+{% include "components/entries/entry_form_dialog.html.jinja2" with context %}

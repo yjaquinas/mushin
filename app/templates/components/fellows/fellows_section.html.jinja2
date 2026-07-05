@@ -1,0 +1,76 @@
+{#
+  Fellows section.
+  Context: fellows (fellow_count, fellows list, show_fellow_names, is_owner,
+           incoming_requests, outgoing_requests, pending_count). Optional error.
+#}
+<div id="fellows-section">
+{% set should_render = fellows.is_owner or fellows.fellow_count > 0 or fellows.pending_count > 0 or error %}
+{% if should_render %}
+{% set disclosure_open = false %}
+<details class="group pt-4" {% if disclosure_open %}open{% endif %}>
+    <summary class="flex min-h-tap cursor-pointer list-none items-center justify-between gap-3 rounded-card px-1 py-2 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">
+        <span class="text-title font-medium text-text-primary">{{ strings.FELLOWS_HEADING }}</span>
+        <span class="inline-flex items-center gap-2 text-caption text-text-secondary">
+            {% if fellows.fellow_count > 0 %}
+            <span>
+                {% if fellows.fellow_count == 1 %}
+                    {{ strings.FELLOWS_COUNT_LABEL_ONE }}
+                {% else %}
+                    {{ strings.FELLOWS_COUNT_LABEL.format(count=fellows.fellow_count) }}
+                {% endif %}
+            </span>
+            {% endif %}
+            {% if fellows.pending_count > 0 %}
+            <span>{{ strings.REQUESTS_PENDING_BADGE.format(count=fellows.pending_count) }}</span>
+            {% endif %}
+            <span aria-hidden="true" class="rotate-180 transition group-open:rotate-0">{{ icon("chevron-up", size=18) }}</span>
+        </span>
+    </summary>
+    <section class="flex flex-col gap-3 pt-2">
+
+    {% if error %}
+    <p class="text-caption text-danger" role="alert">{{ error }}</p>
+    {% endif %}
+
+    {% if fellows.fellow_count == 0 and fellows.pending_count == 0 %}
+    <p class="text-caption text-text-secondary">{{ strings.FELLOWS_EMPTY }}</p>
+    {% elif fellows.show_fellow_names %}
+        {% if not fellows.fellows %}
+        <p class="text-caption text-text-secondary">{{ strings.FELLOWS_EMPTY }}</p>
+        {% else %}
+        <ul class="flex gap-2 overflow-x-auto pb-1">
+            {% for fellow in fellows.fellows %}
+            {% set fellow_label = fellow.username %}
+            {% set initials = fellow.username[:2] %}
+            <li class="shrink-0">
+                <a
+                    href="/@{{ fellow.username }}"
+                    class="flex min-h-tap w-16 flex-col items-center gap-1 rounded-card px-1 py-2 text-center transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                >
+                    <span
+                        class="flex h-10 w-10 min-h-tap min-w-tap items-center justify-center rounded-full border border-border-strong bg-surface-2 text-body font-semibold text-text-primary"
+                        aria-hidden="true"
+                    >{{ initials | upper }}</span>
+                    <span class="w-full truncate text-[0.625rem] leading-tight text-text-secondary">{{ fellow_label }}</span>
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    {% else %}
+        <p class="text-body text-text-secondary">
+            {% if fellows.fellow_count == 1 %}
+                {{ strings.FELLOWS_COUNT_LABEL_ONE }}
+            {% else %}
+                {{ strings.FELLOWS_COUNT_LABEL.format(count=fellows.fellow_count) }}
+            {% endif %}
+        </p>
+    {% endif %}
+
+</section>
+</details>
+{% endif %}
+{% if fellows.is_owner and fellows.pending_count > 0 %}
+{% include "components/fellows/requests_cluster.html.jinja2" with context %}
+{% endif %}
+</div>

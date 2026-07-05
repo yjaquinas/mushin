@@ -1,0 +1,26 @@
+{#
+  Read-only entry row fragment. Returned by cancel-edit and update routes
+  to swap back into the .entry-row container via hx-swap="outerHTML".
+
+  Thin wrapper around the shared components/entries/_entry_row.html.jinja2 macro --
+  the same row shape used by components/history/period_log.html.jinja2 and
+  components/history/day_entries.html.jinja2, so the comment toggle + live comment
+  count survive an edit/cancel instead of falling back to a stale bare
+  memo+pencil shape.
+
+  is_owner and can_comment are always True for these routes (only the owner
+  can reach the edit flow), so the pencil button and comment toggle are
+  always eligible to render here -- the comment toggle's actual visibility
+  still depends on username/slug being set and on entry.comment_count.
+
+  Context:
+    activity_id   int            — owning activity
+    entry         dict           — hydrated entry (id, occurred_at, memo,
+                                    comment_count, ...)
+    username      str | None     — the owner's username (for the comment
+                                    toggle's `/@{username}/{slug}/...` URL)
+    slug          str | None     — the activity's slug
+#}
+{% from "components/entries/_entry_row.html.jinja2" import entry_row %}
+
+{{ entry_row(entry, activity_id, is_owner=True, can_comment=True, username=username, slug=slug, expand_comment_entry_id=expand_comment_entry_id | default(None)) }}

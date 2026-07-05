@@ -7,14 +7,14 @@
     <link rel="stylesheet" href="{{ static_asset('/static/style.css') }}">
     <link rel="icon" type="image/svg+xml" href="{{ static_asset('/static/favicon.svg') }}">
     <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.10/dist/htmx.min.js" integrity="sha384-H5SrcfygHmAuTDZphMHqBJLc3FhssKjG7w/CeCpFReSfwBWDTKpkzPP8c+cLsK+V" crossorigin="anonymous"></script>
-    <script defer src="{{ static_asset('/static/js/dialogs.js') }}"></script>
-    <script defer src="{{ static_asset('/static/js/account-dialogs.js') }}"></script>
-    <script defer src="{{ static_asset('/static/js/activity-dialogs.js') }}"></script>
-    <script defer src="{{ static_asset('/static/js/auth-form.js') }}"></script>
-    <script defer src="{{ static_asset('/static/js/base-behavior.js') }}"></script>
-    <script defer src="{{ static_asset('/static/js/activity-sheet.js') }}"></script>
-    <script defer src="{{ static_asset('/static/js/field-stats.js') }}"></script>
-    <script defer src="{{ static_asset('/static/js/log-sheet.js') }}"></script>
+    <script defer src="{{ static_asset('/static/js/common/dialogs.js') }}"></script>
+    <script defer src="{{ static_asset('/static/js/account/account-dialogs.js') }}"></script>
+    <script defer src="{{ static_asset('/static/js/activities/activity-dialogs.js') }}"></script>
+    <script defer src="{{ static_asset('/static/js/auth/auth-form.js') }}"></script>
+    <script defer src="{{ static_asset('/static/js/common/base-behavior.js') }}"></script>
+    <script defer src="{{ static_asset('/static/js/activities/activity-sheet.js') }}"></script>
+    <script defer src="{{ static_asset('/static/js/history/field-stats.js') }}"></script>
+    <script defer src="{{ static_asset('/static/js/entries/log-sheet.js') }}"></script>
 </head>
 <body class="flex flex-col bg-surface-0 min-h-screen text-text-primary text-body">
     {# Masthead — top bar with back button + centered title. Hidden on entry, home, and one-time-gate pages. #}
@@ -33,7 +33,7 @@
         {% endif %}
         <h1 class="text-title font-semibold text-text-primary">{{ page_title }}</h1>
         {% if share_url or profile_url %}
-        {% include "components/_profile_share_button.html.jinja2" with context %}
+        {% include "components/common/_profile_share_button.html.jinja2" with context %}
         {% else %}
         <span class="min-w-[44px]"></span>
         {% endif %}

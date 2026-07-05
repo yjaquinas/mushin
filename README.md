@@ -203,7 +203,7 @@ Rules:
 Dry run:
 
 ```sh
-uv run python -m app.services.guest_reaper --dry-run
+uv run python -m app.services.maintenance.guest_reaper --dry-run
 ```
 
 One-time install on production:

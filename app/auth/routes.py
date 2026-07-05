@@ -15,7 +15,7 @@ from fastapi import APIRouter, Cookie, Form, HTTPException, Request, Response
 from fastapi.responses import JSONResponse, RedirectResponse
 
 from app.auth import oauth, passwords, sessions, users
-from app.services import profiles
+from app.services.social import profiles
 
 log = structlog.get_logger()
 

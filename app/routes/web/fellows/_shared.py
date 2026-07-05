@@ -9,9 +9,9 @@ from fastapi.responses import HTMLResponse
 
 from app import ui_strings
 from app.auth import users
-from app.routes.web._contexts import _build_fellows_context
-from app.routes.web._shared import templates
-from app.services import connections
+from app.routes.web.home.contexts import _build_fellows_context
+from app.routes.web.common import templates
+from app.services.social import connections
 
 
 def _connect_error_message(exc: connections.ConnectionError) -> str:
@@ -41,7 +41,7 @@ def _render_fellows_section(
     )
     return templates.TemplateResponse(
         request=request,
-        name="components/fellows_section.html.jinja2",
+        name="components/fellows/fellows_section.html.jinja2",
         context={"fellows": fellows_context, "error": error},
     )
 
@@ -81,7 +81,7 @@ def _render_relationship_affordance(
     dom_id = _relationship_dom_id(profile_username, from_search=from_search)
     return templates.TemplateResponse(
         request=request,
-        name="components/relationship_affordance.html.jinja2",
+        name="components/fellows/relationship_affordance.html.jinja2",
         context={
             "username": profile_username,
             "state": state,

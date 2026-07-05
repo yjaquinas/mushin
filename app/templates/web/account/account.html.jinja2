@@ -1,0 +1,171 @@
+{% extends "web/base.html.jinja2" %}
+
+{% block title %}{{ strings.ACCOUNT_TITLE }} · {{ strings.APP_NAME }}{% endblock %}
+
+{% block content %}
+<div class="flex flex-grow flex-col">
+{% if flash_message %}
+<div hidden data-toast-message="{{ flash_message }}"></div>
+{% endif %}
+
+{# Visibility/share-link section is non-guest only — guests have no username
+   and thus no public profile. #}
+{% if not is_guest %}
+<section class="flex flex-col gap-4 pb-4">
+    <div class="flex flex-col gap-1">
+        <h2 class="text-body font-semibold text-text-primary">{{ strings.ACCOUNT_VISIBILITY_HEADING }}</h2>
+    </div>
+    <form method="post" action="/account" class="flex flex-col gap-4" id="visibility-form" data-current-visibility="{{ visibility }}">
+        <fieldset class="flex flex-col gap-3">
+            <legend class="sr-only">{{ strings.ACCOUNT_VISIBILITY_HEADING }}</legend>
+
+            <label class="flex cursor-pointer items-start gap-3 rounded-card border border-border bg-surface-1 px-4 py-3 transition hover:bg-surface-2 has-[:checked]:border-brand">
+                <input
+                    type="radio"
+                    name="visibility"
+                    value="private"
+                    {% if visibility != "public" %}checked{% endif %}
+                    class="mt-1 focus-visible:outline-offset-2"
+                >
+                <span class="flex flex-col gap-1">
+                    <span class="text-body font-medium text-text-primary">{{ strings.ACCOUNT_VISIBILITY_PRIVATE_LABEL }}</span>
+                    <span class="text-caption text-text-secondary">{{ strings.ACCOUNT_VISIBILITY_PRIVATE_DESC }}</span>
+                </span>
+            </label>
+
+            <label class="flex cursor-pointer items-start gap-3 rounded-card border border-border bg-surface-1 px-4 py-3 transition hover:bg-surface-2 has-[:checked]:border-brand">
+                <input
+                    type="radio"
+                    name="visibility"
+                    value="public"
+                    {% if visibility == "public" %}checked{% endif %}
+                    class="mt-1 focus-visible:outline-offset-2"
+                >
+                <span class="flex flex-col gap-1">
+                    <span class="text-body font-medium text-text-primary">{{ strings.ACCOUNT_VISIBILITY_PUBLIC_LABEL }}</span>
+                    <span class="text-caption text-text-secondary">{{ strings.ACCOUNT_VISIBILITY_PUBLIC_DESC }}</span>
+                </span>
+            </label>
+        </fieldset>
+
+        <button
+            type="submit"
+            class="flex min-h-tap w-full items-center justify-center rounded-button bg-brand px-4 py-3 text-title font-semibold text-on-brand transition focus-visible:outline-offset-2 disabled:opacity-60"
+        >
+            {{ strings.ACCOUNT_VISIBILITY_SAVE }}
+        </button>
+    </form>
+
+</section>
+{% endif %}
+
+{% if not is_guest %}
+<section class="flex flex-col gap-4 border-t border-border py-4">
+    <form
+        method="post"
+        action="/account/email"
+        class="flex flex-col gap-3"
+        id="account-email-form"
+        data-current-email="{{ email or '' }}"
+    >
+        <label class="flex flex-col gap-2" for="account-email">
+            <span class="text-caption font-medium text-text-primary">{{ strings.ACCOUNT_EMAIL_LABEL }}</span>
+            <input
+                id="account-email"
+                name="email"
+                type="email"
+                value="{{ email or '' }}"
+                autocomplete="email"
+                inputmode="email"
+                spellcheck="false"
+                class="min-h-tap rounded-button border border-border bg-surface-1 px-4 py-3 text-body text-text-primary placeholder:text-text-muted focus-visible:outline-offset-2"
+            >
+        </label>
+        {% if email_error %}
+        <p class="text-caption text-danger">{{ email_error }}</p>
+        {% endif %}
+        <button
+            type="submit"
+            disabled
+            class="flex min-h-tap w-full items-center justify-center rounded-button bg-brand px-4 py-3 text-title font-semibold text-on-brand transition focus-visible:outline-offset-2 disabled:opacity-60"
+        >
+            {{ strings.ACCOUNT_EMAIL_UPDATE }}
+        </button>
+    </form>
+</section>
+{% endif %}
+
+{# Theme toggle — available to every account. #}
+<section class="flex flex-col gap-4 border-t border-border py-4">
+    <h2 class="text-body font-semibold text-text-primary">Theme</h2>
+    {% include "components/common/theme_toggle_account.html.jinja2" with context %}
+</section>
+
+{# Data actions: export / import — available to every account, including guests. #}
+<section class="flex flex-col gap-4 border-t border-border py-4">
+    <h2 class="text-body font-semibold text-text-primary">Data</h2>
+    <div class="flex gap-3">
+      {% include "components/account/entry_import_dialog.html.jinja2" with context %}
+      <template id="entry-import-data-dialog-template">
+        {% include "components/account/entry_import_dialog.html.jinja2" with context %}
+      </template>
+      <button
+          type="button"
+          id="entry-import-open-button"
+          class="flex min-h-tap flex-1 items-center justify-center gap-2 rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline-offset-2"
+      >
+          {{ icon("arrow-down-tray", size=18) }}
+          {{ strings.FOOTER_IMPORT_ENTRIES }}
+      </button>
+        <a
+            href="/export-entries"
+            class="flex min-h-tap flex-1 items-center justify-center gap-2 rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline-offset-2"
+        >
+            {{ icon("arrow-up-tray", size=18) }}
+            {{ strings.FOOTER_EXPORT_ENTRIES }}
+        </a>
+    </div>
+</section>
+
+{# Session actions: logout #}
+<section class="flex flex-col gap-4 border-t border-border py-4">
+    <h2 class="text-body font-semibold text-text-primary">Session</h2>
+    <button
+        type="button"
+        id="logout-button"
+        hx-post="/auth/logout"
+        hx-swap="none"
+        class="flex min-h-tap w-full items-center justify-center gap-2 rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline-offset-2"
+    >
+        {{ icon("circle-user", size=18) }}
+        {{ strings.FOOTER_LOGOUT }}
+    </button>
+</section>
+
+{# Danger zone: delete account — only for non-guest accounts. #}
+{% if not is_guest %}
+<section class="flex flex-col gap-4 border-t border-border py-4">
+    <h2 class="text-body font-semibold text-text-primary">Danger zone</h2>
+    <button
+        type="button"
+        id="delete-open-button"
+        class="flex min-h-tap w-full items-center justify-center gap-2 rounded-button border border-danger bg-danger-subtle px-4 py-3 text-body font-semibold text-danger transition hover:opacity-90 focus-visible:outline-offset-2"
+    >
+        {{ icon("trash", size=18) }}
+        {{ strings.FOOTER_DELETE_DATA }}
+    </button>
+
+    {% include "components/account/delete_account_confirm.html.jinja2" %}
+</section>
+{% endif %}
+
+<section class="flex flex-col flex-grow items-center justify-end gap-3 py-4">
+    <a href="/privacy" target="_blank" rel="noopener noreferrer" class="text-caption text-text-secondary focus-visible:outline-offset-2">
+        {{ strings.ACCOUNT_PRIVACY_LINK }}
+    </a>
+    <a href="/terms" target="_blank" rel="noopener noreferrer" class="text-caption text-text-secondary focus-visible:outline-offset-2">
+        {{ strings.ACCOUNT_TERMS_LINK }}
+    </a>
+</section>
+</div>
+{% endblock %}
