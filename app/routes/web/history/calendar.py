@@ -143,21 +143,18 @@ def _entries_on_day(
 
 
 def _resolve_comment_deep_link(
-    raw_c: str | None, *, activity_id: int, owner_id: int, tz: ZoneInfo
-) -> tuple[int, date] | None:
-    """Resolve a ``?c={entry_id}`` query param to ``(entry_id, local_day)``.
+    raw_entry_id: str | None, *, activity_id: int, owner_id: int
+) -> int | None:
+    """Resolve a ``?entry_id={id}`` query param to an entry ID.
 
-    Used by a notification click-through to land the viewer on the right
-    calendar day with that entry's comment thread pre-expanded. Returns
-    ``None`` — silently, no error — when *raw_c* is missing, non-numeric, or
-    resolves to an entry that doesn't exist or belongs to a different
-    activity/owner; the caller falls back to no day selected and no expand,
-    matching the old flat-list ``?c=`` behavior this replaces.
+    Returns ``None`` — silently, no error — when *raw_entry_id* is missing,
+    non-numeric, or resolves to an entry that doesn't exist or belongs to a
+    different activity/owner.
     """
-    if raw_c is None:
+    if raw_entry_id is None:
         return None
     try:
-        entry_id = int(raw_c)
+        entry_id = int(raw_entry_id)
     except ValueError:
         return None
     try:
@@ -166,4 +163,4 @@ def _resolve_comment_deep_link(
         return None
     if entry["activity_id"] != activity_id:
         return None
-    return entry_id, entries._local_day(entry["occurred_at"], tz)
+    return entry_id

@@ -20,7 +20,7 @@
     history.username    str | None   — comment toggle suppressed entirely
     history.slug         str | None   when either is None (e.g. a guest-owned
                                         activity with no public profile URL)
-    history.expand_comment_entry_id  int | None — a `?c={entry_id}` deep-link
+    history.expand_comment_entry_id  int | None — a `?entry_id={id}` deep-link
                                         target (notification click-through).
                                         The matching entry's comment toggle
                                         gets an extra `load` trigger so its

@@ -13,7 +13,7 @@ from app.services.entries import comments, entries, stats
 
 
 def _build_history_context(activity_id: int, owner_id: int, *, period: str, anchor: date, tz: ZoneInfo, selected: date | None = None, is_owner: bool = False, can_comment: bool = False, username: str | None = None, slug: str | None = None, expand_comment_entry_id: int | None = None, login_redirect_url: str | None = None, tag: str | None = None) -> dict[str, Any]:
-    expanded_entry_id = expand_comment_entry_id if selected is not None else None
+    expanded_entry_id = expand_comment_entry_id
     if period == "all":
         log = _group_log(entries.list_for_activity(owner_id, activity_id), tz)
         _decorate_comment_counts(log, None)
@@ -38,14 +38,14 @@ def _group_log(rows: list[dict[str, Any]], tz: ZoneInfo) -> list[dict[str, Any]]
 
 def _period_visual(period: str, activity_id: int, owner_id: int, start: date, end: date, tz: ZoneInfo, selected: date | None, today: date) -> tuple[dict[str, Any], str]:
     if period == "month":
-        return _build_calendar_context(activity_id, owner_id, year=start.year, month=start.month, tz=tz, selected=selected), f"{start.year}.{start.month:02d}"
+        return _build_calendar_context(activity_id, owner_id, year=start.year, month=start.month, tz=tz, selected=selected), f"{start.year}-{start.month:02d}"
     if period == "week":
         marked_days = {date.fromisoformat(d["date"]) for d in stats.heatmap_range(activity_id, owner_id, start, end, tz=tz) if d["count"] > 0}
         days, cursor = [], start
         while cursor <= end:
             days.append({"date": cursor.isoformat(), "day": cursor.day, "marked": cursor in marked_days, "today": cursor == today, "selected": cursor == selected})
             cursor += timedelta(days=1)
-        return {"days": days}, f"{start.isoformat()} – {end.isoformat()}"
+        return {"days": days}, start.isoformat()
     raise ValueError(f"unknown period {period!r}; expected week/month/all")
 
 

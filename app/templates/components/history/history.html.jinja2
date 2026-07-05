@@ -60,7 +60,7 @@
                 id="history-tab-{{ activity_id }}-{{ period_key }}"
                 aria-selected="{{ "true" if is_selected else "false" }}"
                 {% if is_selected and history.selected_day is none %}data-history-focus{% endif %}
-                hx-get="/activities/{{ activity_id }}/history?period={{ period_key }}&anchor={{ history.anchor }}"
+                hx-get="/activities/{{ activity_id }}/history?period={{ period_key }}&anchor={{ history.today_anchor }}"
                 hx-target="#history-{{ activity_id }}"
                 hx-swap="outerHTML"
                 class="min-h-tap min-w-tap flex-1 rounded-button px-3 text-body transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-strong
@@ -92,17 +92,6 @@
             <h3 class="text-body font-medium text-text-primary" aria-live="polite">
                 {{ history.label }}
             </h3>
-            {% if history.today_anchor < history.start or history.today_anchor > history.end %}
-            <button
-                type="button"
-                hx-get="/activities/{{ activity_id }}/history?period={{ history.period }}&anchor={{ history.today_anchor }}"
-                hx-target="#history-{{ activity_id }}"
-                hx-swap="outerHTML"
-                class="rounded-button border border-border px-2 py-0.5 text-caption text-text-secondary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-strong"
-            >
-                {{ strings.HISTORY_TODAY }}
-            </button>
-            {% endif %}
         </div>
         <button
             type="button"

@@ -47,7 +47,7 @@
                         <td class="py-2 pr-3">@{{ entry.username or entry.user_id }}</td>
                         <td class="py-2 pr-3">
                             {% if entry.username and entry.slug %}
-                            <a class="underline-offset-2 hover:underline" href="/@{{ entry.username }}/{{ entry.slug }}?c={{ entry.id }}#comment-slot-{{ entry.id }}">{{ entry.activity_name }}</a>
+                            <a class="underline-offset-2 hover:underline" href="/@{{ entry.username }}/{{ entry.slug }}?entry_id={{ entry.id }}#comment-slot-{{ entry.id }}">{{ entry.activity_name }}</a>
                             {% else %}
                             {{ entry.activity_name }}
                             {% endif %}
@@ -91,7 +91,7 @@
                         <td class="py-2 pr-3">@{{ comment.entry_username or comment.entry_user_id }}</td>
                         <td class="py-2 pr-3">
                             {% if comment.entry_username and comment.slug %}
-                            <a class="underline-offset-2 hover:underline" href="/@{{ comment.entry_username }}/{{ comment.slug }}?c={{ comment.entry_id }}#comment-slot-{{ comment.entry_id }}">{{ comment.activity_name }}</a>
+                            <a class="underline-offset-2 hover:underline" href="/@{{ comment.entry_username }}/{{ comment.slug }}?entry_id={{ comment.entry_id }}#comment-slot-{{ comment.entry_id }}">{{ comment.activity_name }}</a>
                             {% else %}
                             {{ comment.activity_name }}
                             {% endif %}

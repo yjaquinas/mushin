@@ -109,8 +109,18 @@
     event.preventDefault();
   }, true);
 
+  function scrollToExpandedEntry() {
+    var toggle = document.querySelector("[data-entry-toggle][aria-expanded='true']");
+    if (toggle) {
+      var entryId = toggle.getAttribute("data-entry-id");
+      var row = document.getElementById("entry-row-" + entryId);
+      if (row) row.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     syncExpandedEntries(document);
+    scrollToExpandedEntry();
   });
 
   document.body.addEventListener("htmx:afterSwap", function (event) {

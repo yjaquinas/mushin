@@ -3,30 +3,21 @@
     class="flex flex-col gap-3"
 >
     {% for item in feed_entries %}
-    <article class="rounded-card border border-border bg-surface-1 p-4">
-        <div class="flex items-baseline justify-between gap-2">
-            <a
-                href="{{ item.profile_url }}"
-                class="text-caption font-medium text-text-secondary hover:text-text-primary focus-visible:outline-offset-2"
-            >@{{ item.username }}</a>
-            <span
-                class="text-micro text-text-muted"
-                data-local-timestamp="{{ item.created_at }}"
-                hidden
-            >{{ item.created_at }}</span>
-        </div>
-        <a
-            href="{{ item.activity_url }}"
-            class="mt-1 block focus-visible:outline-offset-2"
-        >
-            <h3 class="text-body font-semibold text-text-primary">{{ item.name }}</h3>
-        </a>
-        <p class="mt-1 text-micro text-text-muted">{{ item.entry_count }} total</p>
+    <a
+        href="{{ item.activity_url }}?entry_id={{ item.entry_id }}"
+        class="group block rounded-card border border-border bg-surface-2 p-4 transition hover:border-strong focus-visible:outline-offset-2"
+    >
+        <span class="text-caption font-medium text-text-secondary group-hover:text-text-primary">@{{ item.username }}</span>
+        <h3 class="mt-0.5 text-body font-semibold text-text-primary">{{ item.name }}</h3>
+        <span
+            class="mt-1 block text-micro text-text-muted"
+            data-local-timestamp="{{ item.created_at }}"
+        >{{ item.created_at }}</span>
         {% if item.memo %}
         {% set lines = item.memo.split('\n') %}
-        <p class="mt-2 text-caption text-text-secondary">{{ lines[:2] | join('\n') }}{% if lines | length > 2 %}&hellip;{% endif %}</p>
+        <p class="mt-1 text-caption text-text-secondary line-clamp-2">{{ lines[:2] | join('\n') }}{% if lines | length > 2 %}&hellip;{% endif %}</p>
         {% endif %}
-    </article>
+    </a>
     {% else %}
     <p class="text-caption text-text-muted">{{ strings.ENTRY_FEED_EMPTY }}</p>
     {% endfor %}

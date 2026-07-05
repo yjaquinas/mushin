@@ -18,7 +18,7 @@
     {% for comment in comments %}
     <li>
         <a
-            href="/@{{ username }}/{{ comment.activity_slug }}?c={{ comment.entry_id }}#comment-slot-{{ comment.entry_id }}"
+            href="/@{{ username }}/{{ comment.activity_slug }}?entry_id={{ comment.entry_id }}#comment-slot-{{ comment.entry_id }}"
             class="flex min-h-tap flex-col gap-1 rounded-card border border-border bg-surface-1 p-3 transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
         >
             <div class="flex items-baseline justify-between gap-2">

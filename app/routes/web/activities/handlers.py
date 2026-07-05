@@ -108,10 +108,9 @@ def activity_detail_response(
 
     username = user.get("username")
     today = datetime.now(UTC).date()
-    deep_link = _resolve_comment_deep_link(
-        request.query_params.get("c"), activity_id=activity_id, owner_id=owner_id, tz=tz
+    expand_comment_entry_id = _resolve_comment_deep_link(
+        request.query_params.get("entry_id"), activity_id=activity_id, owner_id=owner_id
     )
-    expand_comment_entry_id, selected_day = deep_link if deep_link is not None else (None, None)
 
     cs = stats.card_stats(activity_id, owner_id, tz=tz)
     context["activity_id"] = activity_id
@@ -122,9 +121,8 @@ def activity_detail_response(
         activity_id,
         owner_id,
         period="month",
-        anchor=selected_day or today,
+        anchor=today,
         tz=tz,
-        selected=selected_day,
         is_owner=True,
         can_comment=True,
         username=username,

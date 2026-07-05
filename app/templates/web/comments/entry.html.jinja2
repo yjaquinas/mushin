@@ -3,23 +3,6 @@
 {% block title %}{{ strings.ENTRY_TITLE }} {{ strings.APP_NAME_HANJA }}{% endblock %}
 
 {% block content %}
-<div class="flex justify-center pb-4">
-    <a
-        href="https://www.producthunt.com/products/mushin-4?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-mushin-4"
-        target="_blank"
-        rel="noopener noreferrer"
-        class="opacity-50 transition hover:opacity-100 focus-visible:outline-offset-2"
-        aria-label="Mushin on Product Hunt"
-    >
-        <img
-            alt="Mushin 無心 - A social network for people who'd log records. | Product Hunt"
-            width="250"
-            height="54"
-            src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1188238&amp;theme=neutral&amp;t=1783232369687"
-        >
-    </a>
-</div>
-
 <section class="flex flex-col justify-center gap-8 py-8">
     <header class="flex flex-col items-center gap-2 text-center">
         <h1 class="text-hero-numeral font-semibold leading-tight text-text-primary">
@@ -46,8 +29,25 @@
     </p>
 </section>
 
+<div class="flex justify-center pb-8">
+    <a
+        href="https://www.producthunt.com/products/mushin-4?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-mushin-4"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="opacity-50 transition hover:opacity-100 focus-visible:outline-offset-2"
+        aria-label="Mushin on Product Hunt"
+    >
+        <img
+            alt="Mushin 無心 - A social network for people who'd log records. | Product Hunt"
+            width="250"
+            height="54"
+            src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1188238&amp;theme=neutral&amp;t=1783232369687"
+        >
+    </a>
+</div>
+
 {% if feed_entries %}
-<section class="flex flex-col gap-4 pb-8">
+<section class="flex flex-col gap-4 border-t border-border pt-8 pb-8">
     <h2 class="text-title font-semibold text-text-primary">{{ strings.ENTRY_FEED_HEADING }}</h2>
     {% include "components/entries/_recent_entries.html.jinja2" %}
 </section>

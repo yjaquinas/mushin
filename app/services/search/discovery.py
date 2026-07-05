@@ -72,7 +72,7 @@ def recent_public_entries(*, limit: int = 10) -> list[dict]:
         rows = conn.execute(
             """SELECT a.id, a.name, a.slug,
                       u.username,
-                      latest.memo, latest.created_at,
+                      latest.id AS entry_id, latest.memo, latest.created_at,
                       (SELECT COUNT(*) FROM entry e2
                         WHERE e2.activity_id = a.id
                           AND e2.owner_id = a.owner_id
@@ -103,8 +103,8 @@ def recent_public_entries(*, limit: int = 10) -> list[dict]:
             "slug": row["slug"],
             "username": row["username"],
             "memo": row["memo"],
+            "entry_id": row["entry_id"],
             "created_at": row["created_at"],
-            "entry_count": row["entry_count"],
             "profile_url": profiles.canonical_profile_url(row["username"]),
             "activity_url": profiles.canonical_activity_url(row["username"], row["slug"] or ""),
         }

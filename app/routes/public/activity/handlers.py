@@ -41,10 +41,9 @@ def _render_owner_activity_detail(
     """Build + render the full owner-dashboard ``activity_detail.html.jinja2``."""
     today = datetime.now(UTC).date()
 
-    deep_link = _resolve_comment_deep_link(
-        request.query_params.get("c"), activity_id=activity_id, owner_id=owner_id, tz=tz
+    expand_comment_entry_id = _resolve_comment_deep_link(
+        request.query_params.get("entry_id"), activity_id=activity_id, owner_id=owner_id
     )
-    expand_comment_entry_id, selected_day = deep_link if deep_link is not None else (None, None)
 
     owner_context: dict[str, Any] = {
         "card": card,
@@ -63,9 +62,8 @@ def _render_owner_activity_detail(
         activity_id,
         owner_id,
         period="month",
-        anchor=selected_day or today,
+        anchor=today,
         tz=tz,
-        selected=selected_day,
         is_owner=True,
         can_comment=can_comment,
         username=username,
@@ -164,6 +162,11 @@ def _render_readonly_activity_detail(
     context["back_url"] = f"/@{username}"
 
     today = datetime.now(UTC).date()
+
+    expand_comment_entry_id = _resolve_comment_deep_link(
+        request.query_params.get("entry_id"), activity_id=activity_id, owner_id=owner_id
+    )
+
     context["activity_id"] = activity_id
     context["history"] = _build_history_context(
         activity_id,
@@ -176,6 +179,7 @@ def _render_readonly_activity_detail(
         username=username,
         slug=slug,
         login_redirect_url=login_redirect_url,
+        expand_comment_entry_id=expand_comment_entry_id,
     )
     context["top_tags"] = _build_history_tags(context["history"], tz=tz)
 
