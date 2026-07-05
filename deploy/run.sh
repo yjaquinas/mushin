@@ -51,7 +51,7 @@ fi
 
 # 4. Sync Caddy config (if changed)
 echo "[4/6] Checking Caddy config..."
-CADDY_SRC="infra/${SERVICE}.caddy"
+CADDY_SRC="${APP_DIR}/infra/${SERVICE}.caddy"
 CADDY_DST="/etc/caddy/conf.d/${SERVICE}.caddy"
 if [[ -f "$CADDY_SRC" ]] && ! diff -q "$CADDY_SRC" "$CADDY_DST" &>/dev/null; then
     echo "  Caddy config changed — copying and reloading..."
