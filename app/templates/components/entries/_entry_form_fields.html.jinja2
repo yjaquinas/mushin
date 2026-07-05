@@ -8,7 +8,7 @@
            (optional), notes_value (str, default ""), time_known (bool),
            time_value (str).
 #}
-<div class="flex flex-col gap-2" data-time-field-group>
+<div class="flex flex-col gap-2">
     <div class="flex flex-col gap-1">
         <label for="date" class="text-caption font-medium text-text-secondary">
             {{ strings.LOG_OCCURRED_AT_LABEL }}
@@ -33,7 +33,6 @@
                 type="checkbox"
                 name="no_time"
                 class="rounded border-border"
-                data-toggle-time
                 {% if not time_known | default(false) %}checked{% endif %}
             >
             {{ strings.LOG_TIME_NONE }}
@@ -44,9 +43,7 @@
             id="time"
             name="time"
             value="{{ time_value | default("") }}"
-            {% if not time_known | default(false) %}disabled{% endif %}
             class="min-h-tap rounded-input border border-border bg-surface-1 px-3 py-2 text-body text-text-primary focus-visible:outline-2"
-            {% if not time_known | default(false) %}hidden{% endif %}
         >
     </div>
 </div>

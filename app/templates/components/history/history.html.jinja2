@@ -22,7 +22,7 @@
   focus lands on a stable, predictable target regardless of which control
   (tab, prev/next, day-cell, or clear-selection) triggered the swap, without
   requiring per-control id-matching. The actual after-swap listener lives
-  in app/static/js/common/base-behavior.js, registered on `<body>` — see that file
+  in app/static/js/history/history-focus.js, registered on `<body>` — see that file
   for why it can't live on this self-replacing `outerHTML` target.
 
   Period sync: after every swap, the `data-period` attribute on the

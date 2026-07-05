@@ -30,9 +30,10 @@ async def update_entry_body(request: Request, activity_id: int, entry_id: int, o
 
     form = await request.form()
     tz = users.resolve_timezone(str(form.get("entry_timezone") or "").strip() or None)
+    time_value = "" if form.get("no_time") else str(form.get("time") or "").strip()
     occurred_at, time_known = entries.resolve_occurred_at(
         str(form.get("date") or "").strip(),
-        str(form.get("time") or "").strip(),
+        time_value,
         tz=tz,
     )
 

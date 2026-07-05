@@ -30,17 +30,15 @@
 
 <div id="cards" class="flex flex-col gap-3">
     {% if not cards %}
-    <div id="add-activity-inline">
-        <button
-            type="button"
-            data-add-activity-open
-            class="min-h-tap w-full rounded-button bg-brand px-4 py-3 text-title font-semibold text-on-brand transition focus-visible:outline-offset-2"
+    <details id="add-activity-inline" class="group flex flex-col gap-4">
+        <summary
+            class="flex min-h-tap w-full cursor-pointer list-none items-center justify-center rounded-button bg-brand px-4 py-3 text-title font-semibold text-on-brand transition focus-visible:outline-offset-2 [&::-webkit-details-marker]:hidden"
         >
             {{ strings.HOME_ADD_ACTIVITY }}
-        </button>
+        </summary>
 
         {% include "components/activities/_add_activity_form.html.jinja2" with context %}
-    </div>
+    </details>
 
     <p class="text-center text-caption text-text-secondary">{{ strings.HOME_EXAMPLES_HINT }}</p>
     {% for example in examples %}
@@ -59,18 +57,16 @@
     {% for card in cards %}
         {% include "components/activities/activity_card.html.jinja2" with context %}
     {% endfor %}
-    <div id="add-activity-inline">
-        <button
-            type="button"
-            data-add-activity-open
-            class="flex min-h-tap w-full items-center gap-2 rounded-card border border-dashed border-border bg-transparent px-4 py-3 text-body font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline-offset-2"
+    <details id="add-activity-inline" class="group flex flex-col gap-4">
+        <summary
+            class="flex min-h-tap w-full cursor-pointer list-none items-center gap-2 rounded-card border border-dashed border-border bg-transparent px-4 py-3 text-body font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline-offset-2 [&::-webkit-details-marker]:hidden"
         >
             <span aria-hidden="true">{{ icon("plus", size=20) }}</span>
             {{ strings.HOME_ADD_ACTIVITY }}
-        </button>
+        </summary>
 
         {% include "components/activities/_add_activity_form.html.jinja2" with context %}
-    </div>
+    </details>
     {% endif %}
 </div>
 

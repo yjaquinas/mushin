@@ -41,9 +41,10 @@ async def create_log_body(
 
     payload = {"memo": memo, "num_value": num_value, "tags": []}
 
+    time_value = "" if form.get("no_time") else str(form.get("time") or "").strip()
     occurred_at, time_known = entries.resolve_occurred_at(
         str(form.get("date") or "").strip(),
-        str(form.get("time") or "").strip(),
+        time_value,
         tz=tz,
     )
 

@@ -24,18 +24,6 @@
     var form = sheet.querySelector("form");
     if (form) {
       form.reset();
-      form.querySelectorAll("[data-toggle-time]").forEach(function (checkbox) {
-        var fieldGroup = checkbox.closest("[data-time-field-group]");
-        var timeInput = fieldGroup ? fieldGroup.querySelector('input[type="time"]') : null;
-        if (!timeInput) return;
-        if (checkbox.checked) {
-          timeInput.setAttribute("hidden", "");
-          timeInput.disabled = true;
-        } else {
-          timeInput.removeAttribute("hidden");
-          timeInput.disabled = false;
-        }
-      });
     }
     dlg.close();
   }

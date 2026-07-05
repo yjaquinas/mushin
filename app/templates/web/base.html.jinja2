@@ -7,11 +7,19 @@
     <link rel="stylesheet" href="{{ static_asset('/static/style.css') }}">
     <link rel="icon" type="image/svg+xml" href="{{ static_asset('/static/favicon.svg') }}">
     <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.10/dist/htmx.min.js" integrity="sha384-H5SrcfygHmAuTDZphMHqBJLc3FhssKjG7w/CeCpFReSfwBWDTKpkzPP8c+cLsK+V" crossorigin="anonymous"></script>
+    <script defer src="{{ static_asset('/static/js/common/toast.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/common/dialogs.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/account/account-dialogs.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/activities/activity-dialogs.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/auth/auth-form.js') }}"></script>
-    <script defer src="{{ static_asset('/static/js/common/base-behavior.js') }}"></script>
+    <script defer src="{{ static_asset('/static/js/auth/logout.js') }}"></script>
+    <script defer src="{{ static_asset('/static/js/common/textareas.js') }}"></script>
+    <script defer src="{{ static_asset('/static/js/common/local-time.js') }}"></script>
+    <script defer src="{{ static_asset('/static/js/entries/entry-form-defaults.js') }}"></script>
+    <script defer src="{{ static_asset('/static/js/entries/entry-expansion.js') }}"></script>
+    <script defer src="{{ static_asset('/static/js/history/history-focus.js') }}"></script>
+    <script defer src="{{ static_asset('/static/js/history/tag-filter.js') }}"></script>
+    <script defer src="{{ static_asset('/static/js/history/tag-filter-events.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/activities/activity-sheet.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/history/field-stats.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/entries/log-sheet.js') }}"></script>
@@ -51,29 +59,29 @@
         class="pointer-events-none fixed left-1/2 top-6 z-50 w-[calc(100%-2rem)] max-w-screen-sm -translate-x-1/2 rounded-card border px-4 py-3 text-body shadow-soft"
     ></div>
 
-    {# Bottom navigation bar — always visible. #}
+    {# Bottom navigation bar — always visible, icon-only with accessible labels. #}
     <nav class="bottom-nav" aria-label="{{ strings.NAV_PROFILE }}">
         <div class="bottom-nav__inner">
             <a
                 href="{{ home_url }}"
                 class="bottom-nav-tab{% if current_page == 'profile' %} bottom-nav-tab--active{% endif %}"
+                aria-label="{{ strings.NAV_PROFILE }}"
             >
                 {{ icon("circle-user", size=22) }}
-                <span>{{ strings.NAV_PROFILE }}</span>
             </a>
             <a
                 href="/search"
                 class="bottom-nav-tab{% if current_page == 'search' %} bottom-nav-tab--active{% endif %}"
+                aria-label="{{ strings.NAV_SEARCH }}"
             >
                 {{ icon("search", size=22) }}
-                <span>{{ strings.NAV_SEARCH }}</span>
             </a>
             <a
                 href="/account"
                 class="bottom-nav-tab{% if current_page == 'settings' %} bottom-nav-tab--active{% endif %}"
+                aria-label="{{ strings.NAV_SETTINGS }}"
             >
                 {{ icon("settings", size=22) }}
-                <span>{{ strings.NAV_SETTINGS }}</span>
             </a>
         </div>
     </nav>

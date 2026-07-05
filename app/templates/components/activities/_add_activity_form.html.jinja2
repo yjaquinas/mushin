@@ -1,11 +1,10 @@
 {#
   Shared add-activity form — used by both the empty-state and has-cards
-  variants on the home page. The surrounding #add-activity-inline wrapper
-  and the trigger button differ between states; only this form is shared.
+  variants on the home page. The surrounding #add-activity-inline disclosure
+  differs between states; only this form is shared.
 #}
 <form
     id="add-activity-form"
-    hidden
     hx-post="/activities"
     hx-target="#cards"
     hx-swap="afterbegin"
@@ -25,20 +24,11 @@
         >
     </div>
 
-    <div class="flex gap-2">
-        <button
-            type="button"
-            data-add-activity-cancel
-            class="min-h-tap flex-1 rounded-button border border-border px-4 py-3 text-body font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline-offset-2"
-        >
-            {{ strings.ACTIVITY_FORM_CANCEL }}
-        </button>
-        <button
-            type="submit"
-            hx-disabled-elt="this"
-            class="min-h-tap flex-1 rounded-button bg-brand px-4 py-3 text-body font-semibold text-on-brand transition focus-visible:outline-offset-2 disabled:opacity-60"
-        >
-            {{ strings.ACTIVITY_FORM_SUBMIT }}
-        </button>
-    </div>
+    <button
+        type="submit"
+        hx-disabled-elt="this"
+        class="min-h-tap w-full rounded-button bg-brand px-4 py-3 text-body font-semibold text-on-brand transition focus-visible:outline-offset-2 disabled:opacity-60"
+    >
+        {{ strings.ACTIVITY_FORM_SUBMIT }}
+    </button>
 </form>

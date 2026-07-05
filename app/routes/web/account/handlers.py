@@ -96,6 +96,7 @@ def update_email_response(
     email: str | None,
 ) -> RedirectResponse | HTMLResponse:
     """Change the current account's recovery email and redirect back."""
+    email = email.strip() if email else None
     if email is not None and not _EMAIL_RE.match(email):
         return render_account_settings(request, user, email_error=strings.ACCOUNT_EMAIL_INVALID, email_value=email)
     try:

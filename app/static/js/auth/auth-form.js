@@ -65,11 +65,6 @@ window.MushinAuth = {
   },
 };
 
-document.addEventListener("submit", function (event) {
-  const form = event.target;
-  if (!form || !form.hasAttribute("data-auth-form")) return;
-});
-
 document.body.addEventListener("htmx:afterRequest", function (event) {
   const elt = event.detail && event.detail.elt;
   if (!elt || !elt.hasAttribute("data-auth-form")) return;
