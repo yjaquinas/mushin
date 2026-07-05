@@ -113,7 +113,7 @@ cd /opt/mushin/mushin && bash deploy/run.sh
 
 1. Git sync to `origin/main`.
 2. `uv sync --frozen --no-dev`.
-3. Tailwind production build when the source CSS exists.
+3. Verify committed CSS exists at `app/static/style.css`.
 4. Conditional Caddy config sync from `infra/mushin.caddy`.
 5. `systemctl restart mushin`.
 6. Health check against `http://127.0.0.1:8013/health`.
@@ -138,6 +138,20 @@ Server users:
 - `deploy`: used by GitHub Actions, has limited sudo for service reload/restart
   and Caddy config sync, and must not have `.env` access.
 - `ubuntu`: manual break-glass admin.
+
+The `deploy` user needs non-interactive sudo for the commands used by
+`deploy/run.sh`. Install this with `visudo -f /etc/sudoers.d/mushin-deploy`:
+
+```sudoers
+deploy ALL=(root) NOPASSWD: /usr/bin/cp /opt/mushin/mushin/infra/mushin.caddy /etc/caddy/conf.d/mushin.caddy
+deploy ALL=(root) NOPASSWD: /usr/bin/systemctl reload caddy, /usr/bin/systemctl restart mushin
+```
+
+Then set the sudoers file mode:
+
+```sh
+sudo chmod 440 /etc/sudoers.d/mushin-deploy
+```
 
 Important server paths:
 

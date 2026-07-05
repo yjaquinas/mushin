@@ -18,6 +18,13 @@ CSS_OUTPUT="app/static/style.css"
 cd "$APP_DIR"
 echo "=== Deploying $SERVICE ==="
 
+run_sudo() {
+    if ! sudo -n "$@"; then
+        echo "FATAL: deploy user needs passwordless sudo for: $*"
+        exit 1
+    fi
+}
+
 # 1. Sync to remote main
 #
 # Uses `sg` to activate the mushin group for the wrapped command.
@@ -48,8 +55,8 @@ CADDY_SRC="infra/${SERVICE}.caddy"
 CADDY_DST="/etc/caddy/conf.d/${SERVICE}.caddy"
 if [[ -f "$CADDY_SRC" ]] && ! diff -q "$CADDY_SRC" "$CADDY_DST" &>/dev/null; then
     echo "  Caddy config changed — copying and reloading..."
-    sudo cp "$CADDY_SRC" "$CADDY_DST"
-    sudo systemctl reload caddy
+    run_sudo cp "$CADDY_SRC" "$CADDY_DST"
+    run_sudo systemctl reload caddy
     echo "  Caddy reloaded."
 else
     echo "  Caddy config unchanged or missing — skipping."
@@ -57,7 +64,7 @@ fi
 
 # 5. Restart the application service
 echo "[5/6] Restarting $SERVICE service..."
-sudo systemctl restart "$SERVICE"
+run_sudo systemctl restart "$SERVICE"
 
 # 6. Health check
 echo "[6/6] Running health check..."
