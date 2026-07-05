@@ -3,7 +3,9 @@
   Context: query, kind, people, tags, activities, feed_entries.
 #}
 {% if not query %}
-<section class="flex flex-col gap-4">
+<p class="py-6 text-center text-caption text-text-secondary">{{ strings.SEARCH_PROMPT }}</p>
+<hr class="border-border">
+<section class="flex flex-col gap-4 pt-2">
     <h2 class="text-title font-semibold text-text-primary">{{ strings.ENTRY_FEED_HEADING }}</h2>
     {% include "components/entries/_recent_entries.html.jinja2" %}
 </section>
