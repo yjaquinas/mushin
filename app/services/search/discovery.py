@@ -64,6 +64,54 @@ def search_activities(searcher_id: int, query: str, *, limit: int = 20) -> list[
     return results
 
 
+def recent_public_entries(*, limit: int = 10) -> list[dict]:
+    """Return public activities with latest entry, one per activity, newest first."""
+    capped = clamp_limit(limit)
+    with db.connect() as conn:
+        conn.execute("BEGIN")
+        rows = conn.execute(
+            """SELECT a.id, a.name, a.slug,
+                      u.username,
+                      latest.memo, latest.created_at,
+                      (SELECT COUNT(*) FROM entry e2
+                        WHERE e2.activity_id = a.id
+                          AND e2.owner_id = a.owner_id
+                          AND e2.hidden_at IS NULL) AS entry_count
+                 FROM activity a
+                 JOIN user u ON u.id = a.owner_id
+                 LEFT JOIN entry latest ON latest.id = (
+                   SELECT e3.id FROM entry e3
+                   WHERE e3.activity_id = a.id
+                     AND e3.owner_id = a.owner_id
+                     AND e3.hidden_at IS NULL
+                   ORDER BY e3.created_at DESC
+                   LIMIT 1
+                 )
+                WHERE a.archived_at IS NULL
+                  AND u.deleted_at IS NULL
+                  AND u.visibility = 'public'
+                  AND latest.id IS NOT NULL
+                ORDER BY latest.created_at DESC
+                LIMIT ?""",
+            (capped,),
+        ).fetchall()
+
+    return [
+        {
+            "id": row["id"],
+            "name": row["name"],
+            "slug": row["slug"],
+            "username": row["username"],
+            "memo": row["memo"],
+            "created_at": row["created_at"],
+            "entry_count": row["entry_count"],
+            "profile_url": profiles.canonical_profile_url(row["username"]),
+            "activity_url": profiles.canonical_activity_url(row["username"], row["slug"] or ""),
+        }
+        for row in rows
+    ]
+
+
 def search_tags(searcher_id: int, query: str, *, limit: int = 20) -> list[dict]:
     """Search hashtag names from public, own, and fellow-visible entries."""
     q = query.strip().lower()

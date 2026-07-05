@@ -167,7 +167,7 @@ def card_stats(
         conn.execute("BEGIN")
         days = _entry_days(conn, activity_id, owner_id, tz)
         entry_count = conn.execute(
-            "SELECT COUNT(*) AS n FROM entry WHERE owner_id = ? AND activity_id = ?",
+            "SELECT COUNT(*) AS n FROM entry WHERE owner_id = ? AND activity_id = ? AND hidden_at IS NULL",
             (owner_id, activity_id),
         ).fetchone()["n"]
 
@@ -221,7 +221,7 @@ def card_stats(
 
     return {
         "counts": {
-            "lifetime": len(distinct_days),
+            "lifetime": entry_count,
             "this_month": this_month,
             "last_month": last_month,
             "month_delta": this_month - last_month,

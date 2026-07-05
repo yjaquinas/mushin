@@ -17,6 +17,7 @@ from app.routes.web.common import (
     consent_gate_redirect,
     templates,
 )
+from app.services.search.discovery import recent_public_entries
 from app.services.social import profiles
 
 
@@ -43,6 +44,7 @@ async def render_home(request: Request, user: dict) -> HTMLResponse:
 
 def render_entry_page(request: Request, *, next_path: str | None = None) -> HTMLResponse:
     """Render the logged-out entry page with the login tab selected."""
+    entries = recent_public_entries(limit=10)
     return templates.TemplateResponse(
         request=request,
         name="web/comments/entry.html.jinja2",
@@ -51,6 +53,7 @@ def render_entry_page(request: Request, *, next_path: str | None = None) -> HTML
             "demo_username": os.getenv("DEMO_PROFILE_USERNAME", ""),
             "next": next_path,
             "current_page": None,
+            "feed_entries": entries,
         },
     )
 
