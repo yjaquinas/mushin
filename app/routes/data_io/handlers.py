@@ -78,7 +78,7 @@ async def import_data_body(
 def _import_error_response(request: Request, message: str) -> HTMLResponse:
     return templates.TemplateResponse(
         request=request,
-        name="components/account/import_data_dialog.html.jinja2",
+        name="components/settings/import_data_dialog.html.jinja2",
         context={"import_error": message, "open_on_error": True},
     )
 
@@ -139,7 +139,7 @@ async def import_entries_body(
 def _entry_import_error_response(request: Request, message: str) -> HTMLResponse:
     return templates.TemplateResponse(
         request=request,
-        name="components/account/entry_import_dialog.html.jinja2",
+        name="components/settings/entry_import_dialog.html.jinja2",
         context={"import_error": message, "open_on_error": True},
     )
 
@@ -147,7 +147,7 @@ def _entry_import_error_response(request: Request, message: str) -> HTMLResponse
 def _entry_import_success_response(request: Request, summary: dict[str, int]) -> HTMLResponse:
     return templates.TemplateResponse(
         request=request,
-        name="components/account/entry_import_dialog.html.jinja2",
+        name="components/settings/entry_import_dialog.html.jinja2",
         context={
             "import_success": summary,
             "open_on_error": True,

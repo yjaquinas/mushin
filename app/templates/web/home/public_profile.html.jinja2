@@ -14,7 +14,7 @@
 
 {% block title %}{{ username }} · {{ strings.APP_NAME }}{% endblock %}
 
-{% block content %}
+{% block tab_social %}
 {% include "components/fellows/fellows_section.html.jinja2" with context %}
 
 {% if viewer_logged_in %}
@@ -38,7 +38,7 @@
     <article>
         {% if card.linked %}
         <a
-            href="/@{{ username }}/{{ card.slug }}"
+            href="/social/@{{ username }}/{{ card.slug }}"
             class="flex flex-col rounded-card transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-strong"
         >
         {% else %}

@@ -50,6 +50,8 @@
     });
   }
 
+  syncLocalTimestamps(document);
+
   document.addEventListener("DOMContentLoaded", function () {
     syncLocalTimestamps(document);
   });

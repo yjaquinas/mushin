@@ -7,7 +7,7 @@
 {% set should_render = fellows.is_owner or fellows.fellow_count > 0 or fellows.pending_count > 0 or error %}
 {% if should_render %}
 {% set disclosure_open = false %}
-<details class="group pt-4" {% if disclosure_open %}open{% endif %}>
+<details class="group" {% if disclosure_open %}open{% endif %}>
     <summary class="flex min-h-tap cursor-pointer list-none items-center justify-between gap-3 rounded-card px-1 py-2 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">
         <span class="text-title font-medium text-text-primary">{{ strings.FELLOWS_HEADING }}</span>
         <span class="inline-flex items-center gap-2 text-caption text-text-secondary">

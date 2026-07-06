@@ -1,6 +1,5 @@
 {#
-  Create-activity sheet — same dialog shell as components/entries/log_sheet.html.jinja2,
-  wrapping components/activities/activity_form.html.jinja2.
+  Create-activity dialog — modal shell wrapping activity_form.html.jinja2.
 
   Dialog behavior (init focus, Escape key, overlay click, auto-close on
   successful form submit) is handled by activity-sheet.js (DialogManager).
@@ -8,21 +7,35 @@
 <div
     id="activity-sheet-dialog"
     hidden
-    class="flex max-h-[90vh] w-full max-w-screen-sm flex-col gap-4 overflow-y-auto rounded-t-card bg-surface-1 p-4 sm:rounded-card"
 >
-    <header class="flex items-center justify-between">
-        <h2 class="text-title font-semibold text-text-primary">{{ strings.ACTIVITY_NEW_TITLE }}</h2>
-        <button
-            type="button"
-            id="activity-sheet-cancel"
-            class="min-h-tap min-w-tap rounded-button px-3 text-body text-text-secondary transition hover:bg-surface-2"
+    <div
+        class="fixed inset-0 z-50 flex items-end justify-center bg-text-primary/50 sm:items-center"
+        role="presentation"
+    >
+        <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="activity-sheet-title"
+            tabindex="-1"
+            class="flex max-h-[90vh] w-full max-w-screen-sm flex-col gap-4 overflow-y-auto rounded-t-card bg-surface-1 p-4 sm:rounded-card"
         >
-            {{ strings.ACTIVITY_FORM_CANCEL }}
-        </button>
-    </header>
+            <header class="flex items-center justify-between">
+                <h2 id="activity-sheet-title" class="text-title font-semibold text-text-primary">
+                    {{ strings.ACTIVITY_NEW_TITLE }}
+                </h2>
+                <button
+                    type="button"
+                    id="activity-sheet-cancel"
+                    class="min-h-tap min-w-tap rounded-button px-3 text-body text-text-secondary transition hover:bg-surface-2"
+                >
+                    {{ strings.ACTIVITY_FORM_CANCEL }}
+                </button>
+            </header>
 
-    {% set hx_post = "/activities" %}
-    {% set hx_target = "#cards" %}
-    {% set hx_swap = "afterbegin" %}
-    {% include "components/activities/activity_form.html.jinja2" with context %}
+            {% set hx_post = "/activities" %}
+            {% set hx_target = "#cards" %}
+            {% set hx_swap = "afterbegin" %}
+            {% include "components/activities/activity_form.html.jinja2" with context %}
+        </div>
+    </div>
 </div>

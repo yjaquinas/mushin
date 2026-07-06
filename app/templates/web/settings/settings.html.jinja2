@@ -1,6 +1,6 @@
 {% extends "web/base.html.jinja2" %}
 
-{% block title %}{{ strings.ACCOUNT_TITLE }} · {{ strings.APP_NAME }}{% endblock %}
+{% block title %}{{ strings.SETTINGS_TITLE }} · {{ strings.APP_NAME }}{% endblock %}
 
 {% block tab_settings %}
 <div class="flex flex-grow flex-col">
@@ -15,7 +15,7 @@
     <div class="flex flex-col gap-1">
         <h2 class="text-body font-semibold text-text-primary">{{ strings.ACCOUNT_VISIBILITY_HEADING }}</h2>
     </div>
-    <form method="post" action="/account" class="flex flex-col gap-4">
+    <form method="post" action="/settings" class="flex flex-col gap-4">
         <fieldset class="flex flex-col gap-3">
             <legend class="sr-only">{{ strings.ACCOUNT_VISIBILITY_HEADING }}</legend>
 
@@ -63,7 +63,7 @@
 <section class="flex flex-col gap-4 border-t border-border py-4">
     <form
         method="post"
-        action="/account/email"
+        action="/settings/email"
         class="flex flex-col gap-3"
     >
         <label class="flex flex-col gap-2" for="account-email">
@@ -95,16 +95,16 @@
 {# Theme toggle — available to every account. #}
 <section class="flex flex-col gap-4 border-t border-border py-4">
     <h2 class="text-body font-semibold text-text-primary">Theme</h2>
-    {% include "components/common/theme_toggle_account.html.jinja2" with context %}
+    {% include "components/common/theme_toggle_settings.html.jinja2" with context %}
 </section>
 
 {# Data actions: export / import — available to every account, including guests. #}
 <section class="flex flex-col gap-4 border-t border-border py-4">
     <h2 class="text-body font-semibold text-text-primary">Data</h2>
     <div class="flex gap-3">
-      {% include "components/account/entry_import_dialog.html.jinja2" with context %}
+      {% include "components/settings/entry_import_dialog.html.jinja2" with context %}
       <template id="entry-import-data-dialog-template">
-        {% include "components/account/entry_import_dialog.html.jinja2" with context %}
+        {% include "components/settings/entry_import_dialog.html.jinja2" with context %}
       </template>
       <button
           type="button"
@@ -152,7 +152,7 @@
         {{ strings.FOOTER_DELETE_DATA }}
     </button>
 
-    {% include "components/account/delete_account_confirm.html.jinja2" %}
+    {% include "components/settings/delete_account_confirm.html.jinja2" %}
 </section>
 {% endif %}
 

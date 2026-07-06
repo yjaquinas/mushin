@@ -1052,11 +1052,6 @@
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
   }
-  .\[\&\:\:-webkit-details-marker\]\:hidden {
-    &::-webkit-details-marker {
-      display: none;
-    }
-  }
 }
 [data-theme="dark"] {
   --color-brand: #5a6b85;

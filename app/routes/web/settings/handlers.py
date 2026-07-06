@@ -1,4 +1,4 @@
-"""Handler helpers for account settings and theme preferences."""
+"""Handler helpers for settings and theme preferences."""
 
 from __future__ import annotations
 
@@ -29,11 +29,11 @@ def render_account_settings(
     email_error: str | None = None,
     email_value: str | None = None,
 ) -> HTMLResponse:
-    """Render the account settings page for the current user."""
+    """Render the settings page for the current user."""
     email = email_value if email_value is not None else user.get("email")
     response = templates.TemplateResponse(
         request=request,
-        name="web/account/account.html.jinja2",
+        name="web/settings/settings.html.jinja2",
         context={
             "flash_message": _read_flash(request),
             "username": user["username"],
@@ -41,8 +41,7 @@ def render_account_settings(
             "email_error": email_error,
             "visibility": user["visibility"],
             "current_page": "settings",
-            "page_title": strings.ACCOUNT_TITLE,
-            "show_back": False,
+            "page_title": strings.SETTINGS_TITLE,
         },
     )
     _clear_flash(response)
@@ -54,7 +53,7 @@ def update_visibility_response(user: dict, visibility: str | None) -> RedirectRe
     if visibility not in users.VALID_VISIBILITIES:
         return HTMLResponse(status_code=400)
     users.set_visibility_consent(int(user["id"]), visibility)
-    response = RedirectResponse(url="/account", status_code=303)
+    response = RedirectResponse(url="/settings", status_code=303)
     _set_flash(
         response,
         "visibility_public" if visibility == "public" else "visibility_private",
@@ -74,7 +73,7 @@ def toggle_theme_response(request: Request) -> HTMLResponse:
     """Toggle the theme cookie and return the refreshed toggle fragment."""
     current = _theme_from_cookie(request.cookies.get(THEME_COOKIE))
     next_theme = THEME_CYCLE[current]
-    fragment = templates.get_template("components/common/theme_toggle_account.html.jinja2").render(
+    fragment = templates.get_template("components/common/theme_toggle_settings.html.jinja2").render(
         request=request, theme=next_theme
     )
     response = HTMLResponse(content=fragment)
@@ -103,6 +102,6 @@ def update_email_response(
         users.set_email(int(user["id"]), email)
     except Exception:
         return render_account_settings(request, user, email_error=strings.EMAIL_UPDATE_FAILED, email_value=email)
-    response = RedirectResponse(url="/account", status_code=303)
+    response = RedirectResponse(url="/settings", status_code=303)
     _set_flash(response, "email_updated")
     return response

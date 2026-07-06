@@ -1,8 +1,8 @@
-"""Account settings, delete, and the theme toggle.
+"""Settings, delete, and the theme toggle.
 
-Covers the ``/account`` settings page, ``/delete``, and
+Covers the ``/settings`` page, ``/delete``, and
 the no-auth ``/preferences/theme`` toggle. The one-time consent interstitials
-(``/welcome-sharing``, ``/visibility-update``) live in ``account_consent.py``.
+(``/welcome-sharing``, ``/visibility-update``) live in ``consent_routes.py``.
 """
 
 from __future__ import annotations
@@ -13,7 +13,7 @@ from fastapi import APIRouter, Cookie, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.auth import sessions
-from app.routes.web.account.handlers import (
+from app.routes.web.settings.handlers import (
     delete_account_response,
     render_account_settings,
     toggle_theme_response,
@@ -21,16 +21,17 @@ from app.routes.web.account.handlers import (
     update_visibility_response,
 )
 from app.routes.web.common import _current_user
+from app.routes.web.common.flash import _set_flash
 
 router = APIRouter()
 
 
-@router.get("/account", response_class=HTMLResponse, response_model=None)
-async def account_settings(
+@router.get("/settings", response_class=HTMLResponse, response_model=None)
+async def settings_page(
     request: Request,
     session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
 ) -> HTMLResponse | RedirectResponse:
-    """Account settings page.
+    """Settings page.
 
     Shows the visibility toggle and the ``/@{username}`` share-link line for
     non-guest accounts; guests (no ``username``, no public profile) see neither
@@ -38,11 +39,13 @@ async def account_settings(
     """
     user = _current_user(session)
     if user is None:
-        return RedirectResponse(url="/", status_code=303)
+        response = RedirectResponse(url="/", status_code=303)
+        _set_flash(response, "login_required")
+        return response
     return render_account_settings(request, user)
 
 
-@router.post("/account", response_model=None)
+@router.post("/settings", response_model=None)
 async def update_visibility(
     request: Request,
     visibility: Annotated[str | None, Form()],
@@ -51,12 +54,12 @@ async def update_visibility(
     """Change the current account's ``visibility`` from the settings page.
 
     Validates *visibility* against ``users.VALID_VISIBILITIES`` (400 otherwise),
-    persists via ``users.set_visibility_consent``, and re-renders the account
+    persists via ``users.set_visibility_consent``, and re-renders the settings
     page with a flash confirmation — matching the user's expectation of staying
     on the settings page after saving. Guests have no public profile and cannot
     toggle.
 
-    The form action is ``/account`` (not ``/account/visibility``) so the URL
+    The form action is ``/settings`` (not ``/settings/visibility``) so the URL
     never changes after saving.
     """
     user = _current_user(session)
@@ -65,7 +68,7 @@ async def update_visibility(
     return update_visibility_response(user, visibility)
 
 
-@router.post("/account/email", response_model=None)
+@router.post("/settings/email", response_model=None)
 async def update_email(
     request: Request,
     email: Annotated[str | None, Form()] = None,

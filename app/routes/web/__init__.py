@@ -82,8 +82,8 @@ from app.routes.web.common import (
 from app.routes.web.common import (
     templates as templates,
 )
-from app.routes.web.account.routes import router as _account_router
-from app.routes.web.account.consent_routes import router as _account_consent_router
+from app.routes.web.settings.routes import router as _settings_router
+from app.routes.web.settings.consent_routes import router as _settings_consent_router
 from app.routes.web.activities.routes import router as _activities_router
 from app.routes.web.activities.admin_routes import router as _activity_admin_router
 from app.routes.web.comments.routes import router as _comments_router
@@ -91,18 +91,18 @@ from app.routes.web.entries.routes import router as _entries_router
 from app.routes.web.fellows import router as _fellows_router
 from app.routes.web.history.routes import router as _history_router
 from app.routes.web.home.routes import router as _home_router
-from app.routes.web.search.routes import router as _search_router
+from app.routes.web.social.routes import router as _social_router
 from app.routes.web.legal.routes import router as _legal_router
 
 router = APIRouter()
 router.include_router(_home_router)
 router.include_router(_comments_router)
-router.include_router(_account_router)
-router.include_router(_account_consent_router)
+router.include_router(_settings_router)
+router.include_router(_settings_consent_router)
 router.include_router(_activities_router)
 router.include_router(_activity_admin_router)
 router.include_router(_history_router)
 router.include_router(_entries_router)
-router.include_router(_search_router)
+router.include_router(_social_router)
 router.include_router(_fellows_router)
 router.include_router(_legal_router)

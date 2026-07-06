@@ -3,6 +3,9 @@
 {% block title %}{{ strings.ENTRY_TITLE }} {{ strings.APP_NAME_HANJA }}{% endblock %}
 
 {% block content %}
+{% if flash_message %}
+<div hidden data-toast-message="{{ flash_message }}"></div>
+{% endif %}
 <section class="flex flex-col justify-center gap-8 py-8">
     <header class="flex flex-col items-center gap-2 text-center">
         <h1 class="text-hero-numeral font-semibold leading-tight text-text-primary">

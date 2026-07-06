@@ -30,15 +30,15 @@
 
 <div id="cards" class="flex flex-col gap-3">
     {% if not cards %}
-    <details id="add-activity-inline" class="group flex flex-col gap-4">
-        <summary
-            class="flex min-h-tap w-full cursor-pointer list-none items-center justify-center rounded-button bg-brand px-4 py-3 text-title font-semibold text-on-brand transition focus-visible:outline-offset-2 [&::-webkit-details-marker]:hidden"
-        >
-            {{ strings.HOME_ADD_ACTIVITY }}
-        </summary>
-
-        {% include "components/activities/_add_activity_form.html.jinja2" with context %}
-    </details>
+    <button
+        type="button"
+        hx-get="/activities/new"
+        hx-target="#sheet"
+        hx-swap="innerHTML"
+        class="flex min-h-tap w-full items-center justify-center rounded-button bg-brand px-4 py-3 text-title font-semibold text-on-brand transition focus-visible:outline-offset-2"
+    >
+        {{ strings.HOME_ADD_ACTIVITY }}
+    </button>
 
     <p class="text-center text-caption text-text-secondary">{{ strings.HOME_EXAMPLES_HINT }}</p>
     {% for example in examples %}
@@ -57,16 +57,16 @@
     {% for card in cards %}
         {% include "components/activities/activity_card.html.jinja2" with context %}
     {% endfor %}
-    <details id="add-activity-inline" class="group flex flex-col gap-4">
-        <summary
-            class="flex min-h-tap w-full cursor-pointer list-none items-center gap-2 rounded-card border border-dashed border-border bg-transparent px-4 py-3 text-body font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline-offset-2 [&::-webkit-details-marker]:hidden"
-        >
-            <span aria-hidden="true">{{ icon("plus", size=20) }}</span>
-            {{ strings.HOME_ADD_ACTIVITY }}
-        </summary>
-
-        {% include "components/activities/_add_activity_form.html.jinja2" with context %}
-    </details>
+    <button
+        type="button"
+        hx-get="/activities/new"
+        hx-target="#sheet"
+        hx-swap="innerHTML"
+        class="flex min-h-tap w-full items-center gap-2 rounded-card border border-dashed border-border bg-transparent px-4 py-3 text-body font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline-offset-2"
+    >
+        <span aria-hidden="true">{{ icon("plus", size=20) }}</span>
+        {{ strings.HOME_ADD_ACTIVITY }}
+    </button>
     {% endif %}
 </div>
 

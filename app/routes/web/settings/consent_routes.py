@@ -3,7 +3,7 @@
 Covers the retired first-run screen (``/welcome-sharing``) and the
 private-redefinition re-consent screen (``/visibility-update``). New accounts
 now default to public at creation, so only legacy links may hit
-``/welcome-sharing``; ``/account`` is the ongoing settings home.
+``/welcome-sharing``; ``/settings`` is the ongoing settings home.
 """
 
 from __future__ import annotations
@@ -62,7 +62,7 @@ async def visibility_update(
         return RedirectResponse(url=_home_url_for(user), status_code=303)
     return templates.TemplateResponse(
         request=request,
-        name="web/account/visibility_update.html.jinja2",
+        name="web/settings/visibility_update.html.jinja2",
         context={"current_page": "profile"},
     )
 

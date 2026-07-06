@@ -115,7 +115,7 @@ def recent_public_entries(*, limit: int = 10) -> list[dict]:
 
 
 def search_tags(searcher_id: int, query: str, *, limit: int = 20) -> list[dict]:
-    """Search hashtag names from public, own, and fellow-visible entries."""
+    """Search entries matching a hashtag prefix from public, own, and fellow-visible entries."""
     q = query.strip().lower()
     if not q:
         return []
@@ -126,49 +126,66 @@ def search_tags(searcher_id: int, query: str, *, limit: int = 20) -> list[dict]:
     with db.connect() as conn:
         conn.execute("BEGIN")
         rows = conn.execute(
-            "SELECT e.id, e.memo"
-            " FROM entry e"
-            " JOIN user u ON u.id = e.owner_id"
-            " WHERE e.hidden_at IS NULL"
-            " AND e.memo IS NOT NULL"
-            " AND e.memo LIKE ? ESCAPE ?"
-            " AND u.deleted_at IS NULL"
-            " AND NOT EXISTS ("
-            "   SELECT 1 FROM block b"
-            "   WHERE (b.blocker_id = ? AND b.blocked_id = u.id)"
-            "      OR (b.blocker_id = u.id AND b.blocked_id = ?)"
-            " )"
-            " AND ("
-            "   u.id = ?"
-            "   OR u.visibility = 'public'"
-            "   OR EXISTS ("
-            "     SELECT 1 FROM connection c"
-            "     WHERE c.user_lo = min(?, u.id)"
-            "     AND c.user_hi = max(?, u.id)"
-            "     AND c.status = 'accepted'"
-            "     AND c.sharing_consent_at IS NOT NULL"
-            "   )"
-            " )"
-            " ORDER BY e.id DESC"
-            " LIMIT 500",
-            (
-                pattern,
-                LIKE_ESCAPE,
-                searcher_id,
-                searcher_id,
-                searcher_id,
-                searcher_id,
-                searcher_id,
-            ),
+            """SELECT e.id, e.memo, e.activity_id, e.occurred_at, e.time_known, e.created_at,
+                      a.name AS activity_name, a.slug AS activity_slug,
+                      u.username, u.visibility, u.id AS owner_id
+               FROM entry e
+               JOIN activity a ON a.id = e.activity_id
+               JOIN user u ON u.id = e.owner_id
+               WHERE e.hidden_at IS NULL
+               AND e.memo IS NOT NULL
+               AND e.memo LIKE ? ESCAPE ?
+               AND u.deleted_at IS NULL
+               AND NOT EXISTS (
+                 SELECT 1 FROM block b
+                 WHERE (b.blocker_id = ? AND b.blocked_id = u.id)
+                    OR (b.blocker_id = u.id AND b.blocked_id = ?)
+               )
+               AND (
+                 u.id = ?
+                 OR u.visibility = 'public'
+                 OR EXISTS (
+                   SELECT 1 FROM connection c
+                   WHERE c.user_lo = min(?, u.id)
+                   AND c.user_hi = max(?, u.id)
+                   AND c.status = 'accepted'
+                   AND c.sharing_consent_at IS NOT NULL
+                 )
+               )
+               ORDER BY e.created_at DESC
+               LIMIT ?""",
+            (pattern, LIKE_ESCAPE, searcher_id, searcher_id, searcher_id, searcher_id, searcher_id, capped * 2),
         ).fetchall()
 
-    counts: dict[str, int] = {}
-    for row in rows:
-        for tag in set(entries.parse_hashtags(row["memo"] or "")):
-            if tag.startswith(q):
-                counts[tag] = counts.get(tag, 0) + 1
+        results = []
+        for row in rows:
+            tags = set(entries.parse_hashtags(row["memo"] or ""))
+            if not any(t.startswith(q) for t in tags):
+                continue
 
-    return [
-        {"name": name, "total": total}
-        for name, total in sorted(counts.items(), key=lambda item: (-item[1], item[0]))[:capped]
-    ]
+            profile_user = {"id": row["owner_id"], "visibility": row["visibility"]}
+            capability = profiles.viewer_capability(
+                conn,
+                current_user_id=searcher_id,
+                profile_user=profile_user,
+            )
+            can_open_detail = capability in {"owner", "connected", "public"} and bool(row["activity_slug"])
+            profile_url = profiles.canonical_profile_url(row["username"])
+            activity_url = profiles.canonical_activity_url(row["username"], row["activity_slug"] or "")
+
+            results.append({
+                "entry_id": row["id"],
+                "username": row["username"],
+                "activity_name": row["activity_name"],
+                "memo": row["memo"],
+                "occurred_at": row["occurred_at"],
+                "time_known": bool(row["time_known"]),
+                "created_at": row["created_at"],
+                "activity_url": activity_url if can_open_detail else profile_url,
+                "detail_visible": can_open_detail,
+            })
+
+            if len(results) >= capped:
+                break
+
+    return results

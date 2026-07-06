@@ -48,15 +48,16 @@ This inventory is based on the frontend-facing FastAPI routes and their Jinja te
     - `web/home/profile.html.jinja2` <- `/home`, `/@{username}` owner mode
   - Header actions
     - Share button uses the canonical profile URL when `profile_url` is present.
+  - Page-level actions
+    - Add Activity button triggers `GET /activities/new` dialog into `#sheet`.
   - Routed fragments
-    - `components/activities/activity_sheet.html.jinja2` <- `GET /activities/new`
+    - `components/activities/activity_sheet.html.jinja2` <- `GET /activities/new` (dialog)
     - `components/activities/activity_form.html.jinja2` <- `POST /activities` on validation error
     - `components/fellows/fellows_section.html.jinja2` <- fellows accept/decline flows on profile:
       - `POST /fellows/requests/{username}/accept`
       - `POST /fellows/requests/{username}/decline`
       - `POST /fellows/requests/{username}/cancel` when used from the fellows section
   - Include-only templates
-    - `components/_add_activity_form.html.jinja2`
     - `components/activities/activity_card.html.jinja2`
     - `components/history/stats_summary.html.jinja2`
     - `components/activities/_top_tags_content.html.jinja2`
@@ -65,37 +66,37 @@ This inventory is based on the frontend-facing FastAPI routes and their Jinja te
 
 - Settings
   - Page endpoints
-    - `GET /account`
+    - `GET /settings`
   - Page templates
-    - `web/account/account.html.jinja2` <- `/account`
+    - `web/settings/settings.html.jinja2` <- `/settings`
   - Routed fragments
-    - `components/common/theme_toggle_account.html.jinja2` <- `POST /preferences/theme`
-    - `components/account/entry_import_dialog.html.jinja2` <- `POST /import-entries`
+    - `components/common/theme_toggle_settings.html.jinja2` <- `POST /preferences/theme`
+    - `components/settings/entry_import_dialog.html.jinja2` <- `POST /import-entries`
   - Related frontend actions without page templates
     - `GET /export-entries`
-    - `POST /account`
-    - `POST /account/email`
+    - `POST /settings`
+    - `POST /settings/email`
     - `POST /delete`
   - Include-only templates
-    - `components/account/delete_account_confirm.html.jinja2`
-    - `components/common/theme_toggle_account.html.jinja2`
-    - `components/account/entry_import_dialog.html.jinja2`
+    - `components/settings/delete_account_confirm.html.jinja2`
+    - `components/common/theme_toggle_settings.html.jinja2`
+    - `components/settings/entry_import_dialog.html.jinja2`
 
 - Visibility Update
   - Page endpoints
     - `GET /visibility-update`
   - Page templates
-    - `web/account/visibility_update.html.jinja2` <- `/visibility-update`
+    - `web/settings/visibility_update.html.jinja2` <- `/visibility-update`
   - Related frontend actions without page templates
     - `POST /visibility-update`
 
-- Search
+- Social
   - Page endpoints
-    - `GET /search`
+    - `GET /social`
   - Page templates
-    - `web/search/search.html.jinja2` <- `/search`
+    - `web/social/social.html.jinja2` <- `/social`
   - Routed fragments
-    - `components/search/search_results.html.jinja2` <- `GET /search/results`
+    - `components/social/explore_results.html.jinja2` <- `GET /social/results`
     - `components/fellows/relationship_affordance.html.jinja2` <- fellows actions when used from search results:
       - `POST /fellows/{username}/connect?source=search`
       - `GET /fellows/requests/{username}/cancel-confirm?source=search`
@@ -109,7 +110,7 @@ This inventory is based on the frontend-facing FastAPI routes and their Jinja te
       - `POST /fellows/{username}/block?source=search`
       - `POST /fellows/{username}/unblock?source=search`
   - Include-only templates
-    - `components/search/search_results.html.jinja2`
+    - `components/social/explore_results.html.jinja2`
     - `components/fellows/relationship_affordance.html.jinja2`
     - `components/_block_link.html.jinja2`
 
@@ -153,6 +154,7 @@ This inventory is based on the frontend-facing FastAPI routes and their Jinja te
     - `web/activity/detail.html.jinja2` <- `/activities/{activity_id}` archived/no-slug mode, `/@{username}/{slug}` owner mode
     - `web/activity/public_detail.html.jinja2` <- `/@{username}/{slug}` read-only mode
   - Header actions
+    - Page title is the username (activity name shown in the summary card).
     - Slugged activity detail pages use the shared profile header with a back link to `/@{username}`.
     - Share button uses the canonical activity URL when `share_url` is present.
     - Archived or no-slug `/activities/{activity_id}` pages do not expose a share action.

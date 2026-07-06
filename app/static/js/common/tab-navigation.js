@@ -6,12 +6,15 @@
   // Per-tab virtual history stacks: [{ url, idx }]
   var tabHistory = {
     profile: [],
-    search: [],
+    social: [],
     settings: [],
   };
 
   // Panel innerHTML cache per history index: { tab: { idx: html } }
-  var tabCache = { profile: {}, search: {}, settings: {} };
+  var tabCache = { profile: {}, social: {}, settings: {} };
+
+  // Input field values per cache entry: { tab: { idx: { [index]: value } } }
+  var inputCache = { profile: {}, social: {}, settings: {} };
 
   // Masthead innerHTML saved when switching away from a tab
   var tabMasthead = {};
@@ -24,6 +27,29 @@
 
   function mastheadEl() {
     return document.getElementById("masthead-area");
+  }
+
+  function savePanelInputs(tab, idx) {
+    var panel = panelFor(tab);
+    if (!panel) return;
+    var inputs = panel.querySelectorAll("input, textarea, select");
+    var values = {};
+    inputs.forEach(function (el, i) {
+      values[i] = el.value;
+    });
+    if (!inputCache[tab]) inputCache[tab] = {};
+    inputCache[tab][idx] = values;
+  }
+
+  function restorePanelInputs(tab, idx) {
+    var values = inputCache[tab] && inputCache[tab][idx];
+    if (!values) return;
+    var panel = panelFor(tab);
+    if (!panel) return;
+    var inputs = panel.querySelectorAll("input, textarea, select");
+    Object.keys(values).forEach(function (i) {
+      if (inputs[i]) inputs[i].value = values[i];
+    });
   }
 
   // ── Masthead ──────────────────────────────────────────────────────────
@@ -95,21 +121,38 @@
   // ── Central navigator ─────────────────────────────────────────────────
 
   function navigate(url) {
-    fetch(url)
+    fetch(url, { headers: { "X-In-Tab-Nav": "1" } })
       .then(function (r) {
         return r.text();
       })
       .then(function (html) {
         var doc = new DOMParser().parseFromString(html, "text/html");
-        var tab =
-          doc.body.getAttribute("data-current-tab") || activeTab || "profile";
+        var newTab = doc.body.getAttribute("data-current-tab");
+
+        // Non-tabbed page (e.g. entry/legal for non-logged-in users) —
+        // do a full navigation instead of swapping into a tab panel.
+        if (!newTab) {
+          window.location.href = url;
+          return;
+        }
+
+        var tab = newTab;
+
+        // Save current tab's masthead before any DOM changes
+        if (activeTab) saveMasthead(activeTab);
 
         updateMasthead(doc);
+
+        // If switching tabs, save the freshly-updated masthead for the
+        // target tab before switchTab restores the old cached version
+        if (tab !== activeTab) saveMasthead(tab);
 
         var panel = panelFor(tab);
         var remotePanel = doc.getElementById("tab-panel-" + tab);
         var newHTML = "";
         if (panel && remotePanel) {
+          // Save current panel's inputs before replacing
+          if (tab === activeTab) savePanelInputs(tab, tabHistory[tab].length - 1);
           newHTML = remotePanel.innerHTML;
           panel.innerHTML = newHTML;
           if (window.htmx) window.htmx.process(panel);
@@ -163,7 +206,7 @@
 
   document.addEventListener("click", function (e) {
     var link = e.target.closest(
-      "a[href^='/']:not([data-tab]):not([target])",
+      "a[href^='/']:not([data-tab]):not([data-tab-back]):not([target])",
     );
     if (!link) return;
     // Only intercept while a tab is active (no interception on login/legal pages)
@@ -189,17 +232,8 @@
     var backBtn = e.target.closest("[data-tab-back]");
     if (!backBtn) return;
     e.preventDefault();
-
-    var stack = tabHistory[activeTab];
-    if (stack && stack.length > 1) {
-      // Pop current entry and navigate to the previous one
-      stack.pop();
-      var prev = stack[stack.length - 1];
-      if (prev) navigate(prev.url);
-    } else {
-      // At root of tab — fall through to browser back
-      window.history.back();
-    }
+    // Let the popstate handler restore cached panel + masthead — no fetch.
+    window.history.back();
   });
 
   // ── Browser back / forward ────────────────────────────────────────────
@@ -209,8 +243,10 @@
     if (!state.tab || !activeTab) return;
 
     if (state.tab !== activeTab) {
-      // Cross-tab navigation
       switchTab(state.tab);
+    } else {
+      // Same-tab — restore the masthead saved when this state was entered
+      restoreMasthead(state.tab);
     }
 
     // Restore cached panel content for this history index
@@ -219,6 +255,7 @@
     if (panel && cache !== undefined) {
       panel.innerHTML = cache;
       if (window.htmx) window.htmx.process(panel);
+      restorePanelInputs(state.tab, state.idx);
     }
 
     // Sync tabHistory to the current index
@@ -237,7 +274,11 @@
     // Save current panel content to cache before HTMX replaces it?
     // No — htmx:afterSettle fires AFTER the swap, so the content is already
     // in the DOM. We tag the history entry and cache the new content.
-    var idx = tabHistory[activeTab].length;
+    // Use the current history state's idx so HTMX replaces don't collide
+    // with navigate() pushes (which compute idx from tabHistory length).
+    var state = window.history.state || {};
+    var idx = state.idx !== undefined ? state.idx : tabHistory[activeTab].length;
+    savePanelInputs(activeTab, idx);
     tabCache[activeTab][idx] = panel.innerHTML;
     window.history.replaceState(
       { tab: activeTab, idx: idx },
@@ -257,6 +298,7 @@
       var panel = panelFor(initialTab);
       if (panel) {
         tabCache[initialTab][0] = panel.innerHTML;
+        savePanelInputs(initialTab, 0);
       }
       window.history.replaceState(
         { tab: initialTab, idx: 0 },

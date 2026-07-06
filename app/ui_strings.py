@@ -64,6 +64,7 @@ HOME_EMPTY = "Nothing started yet."
 HOME_FLASH_VISIBILITY_PUBLIC = "Profile set to public."
 HOME_FLASH_VISIBILITY_PRIVATE = "Profile set to private."
 HOME_FLASH_EMAIL_UPDATED = "Email address updated."
+HOME_FLASH_LOGIN_REQUIRED = "Log in to continue."
 ACCOUNT_EMAIL_UPDATE_FAILED = "Could not update email address."
 
 # ---------------------------------------------------------------------------
@@ -307,12 +308,12 @@ VISIBILITY_CONSENT_PRIVACY_SUFFIX = "for the details."
 VISIBILITY_CONSENT_SUBMIT = "Continue"
 
 # ---------------------------------------------------------------------------
-# Account settings page (/account) — visibility toggle
+# Settings page (/settings) — visibility toggle
 # ---------------------------------------------------------------------------
 
 # Same factual, no-alarm register as the consent screen. The toggle restates
 # the consequence briefly on each change (not the full first-run explainer).
-ACCOUNT_TITLE = "Settings"
+SETTINGS_TITLE = "Settings"
 ACCOUNT_PRIVACY_LINK = "Privacy Policy"
 ACCOUNT_TERMS_LINK = "Terms of Service"
 ACCOUNT_LICENSES_LINK = "Licenses"
@@ -427,6 +428,8 @@ PROFILE_LIMITED_NOTICE = "{username} is a private user. Connect to see more."
 # Owner-view notice on a public activity page — factual, no alarm framing.
 ACTIVITY_PUBLIC_NOTICE = "This page is public — anyone with the link sees it, notes included."
 
+PROFILE_VISIT = "Visit {username}'s profile"
+
 # ---------------------------------------------------------------------------
 # Entry edit-in-place
 # ---------------------------------------------------------------------------
@@ -496,7 +499,7 @@ CONNECT_ERROR_GENERIC = "That didn't go through."
 # People, tag, and activity search
 # ---------------------------------------------------------------------------
 
-SEARCH_TITLE = "Search"
+SOCIAL_TITLE = "Social"
 SEARCH_INPUT_LABEL = "Search @people, #tags, or activities"
 SEARCH_INPUT_PLACEHOLDER = "@username, #tag, or activity"
 SEARCH_PROMPT = "Use @username for people, #tag for tags, or type an activity name."
@@ -555,7 +558,7 @@ COMMENTS_PAGE_SHOW_OLDER = "Show older"
 # ---------------------------------------------------------------------------
 
 NAV_PROFILE = "Profile"
-NAV_SEARCH = "Search"
+NAV_SOCIAL = "Social"
 NAV_SETTINGS = "Settings"
 
 # ---------------------------------------------------------------------------

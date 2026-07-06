@@ -10,7 +10,7 @@
     <script defer src="{{ static_asset('/static/js/common/tab-navigation.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/common/toast.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/common/dialogs.js') }}"></script>
-    <script defer src="{{ static_asset('/static/js/account/account-dialogs.js') }}"></script>
+    <script defer src="{{ static_asset('/static/js/settings/settings-dialogs.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/activities/activity-dialogs.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/auth/auth-form.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/auth/logout.js') }}"></script>
@@ -26,38 +26,29 @@
     <script defer src="{{ static_asset('/static/js/history/field-stats.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/entries/log-sheet.js') }}"></script>
 </head>
-{% set current_tab = current_page if (current_page is defined and current_page in ('profile', 'search', 'settings')) else none %}
+{% set current_tab = current_page if (current_page is defined and current_page in ('profile', 'social', 'settings')) else none %}
 <body
     class="flex flex-col bg-surface-0 min-h-screen text-text-primary text-body"
     hx-history="false"
     data-current-tab="{{ current_tab or '' }}"
 >
-    {# Masthead — top bar with back button + centered title. Always rendered
-       (hidden when no title) so JS can update it on tab switch. #}
+     {# Masthead — top bar with centered title. Always rendered
+        (hidden when no title) so JS can update it on tab switch. #}
     <header
         id="masthead-area"
-        class="mx-auto flex w-full max-w-screen-md items-center justify-between gap-2 px-4 py-3"
+        class="flex w-full items-center justify-center border-b border-border py-3"
         {% if not page_title %}hidden{% endif %}
     >
         {% if page_title %}
-        {% if show_back and back_url %}
-        <a
-            href="{{ back_url }}"
-            data-tab-back
-            class="flex min-h-tap min-w-tap items-center justify-center rounded-button text-text-secondary transition hover:bg-surface-2 focus-visible:outline-offset-2"
-            aria-label="Back"
-        >
-                {{ icon('chevron-left', size=22) }}
-        </a>
-        {% else %}
-        <span class="min-w-[44px]"></span>
-        {% endif %}
-        <h1 class="text-title font-semibold text-text-primary">{{ page_title }}</h1>
-        {% if share_url or profile_url %}
-        {% include "components/common/_profile_share_button.html.jinja2" with context %}
-        {% else %}
-        <span class="min-w-[44px]"></span>
-        {% endif %}
+        <div class="flex w-full max-w-screen-md items-center justify-between gap-2 px-4">
+            <span class="min-w-[44px]"></span>
+            <h1 class="text-title font-semibold text-text-primary">{{ page_title }}</h1>
+            {% if share_url or profile_url %}
+            {% include "components/common/_profile_share_button.html.jinja2" with context %}
+            {% else %}
+            <span class="min-w-[44px]"></span>
+            {% endif %}
+        </div>
         {% endif %}
     </header>
     <main
@@ -72,11 +63,11 @@
             {% block tab_profile %}{% block content %}{% endblock %}{% endblock %}
         </div>
         <div
-            id="tab-panel-search"
-            class="tab-panel{% if current_tab == 'search' %} tab-panel--active{% endif %}"
-            data-tab="search"
+            id="tab-panel-social"
+            class="tab-panel{% if current_tab == 'social' %} tab-panel--active{% endif %}"
+            data-tab="social"
         >
-            {% block tab_search %}{% endblock %}
+            {% block tab_social %}{% endblock %}
         </div>
         <div
             id="tab-panel-settings"
@@ -124,7 +115,8 @@
         class="pointer-events-none fixed left-1/2 top-6 z-50 w-[calc(100%-2rem)] max-w-screen-sm -translate-x-1/2 rounded-card border px-4 py-3 text-body shadow-soft"
     ></div>
 
-    {# Bottom navigation bar — always visible, icon-only with accessible labels. #}
+    {# Bottom navigation bar — visible only on tabbed pages (profile/social/settings). #}
+    {% if current_tab is not none %}
     <nav class="bottom-nav" aria-label="{{ strings.NAV_PROFILE }}">
         <div class="bottom-nav__inner">
             <a
@@ -136,15 +128,15 @@
                 {{ icon("circle-user", size=22) }}
             </a>
             <a
-                href="/search"
-                class="bottom-nav-tab{% if current_tab == 'search' %} bottom-nav-tab--active{% endif %}"
-                aria-label="{{ strings.NAV_SEARCH }}"
-                data-tab="search"
+                href="/social"
+                class="bottom-nav-tab{% if current_tab == 'social' %} bottom-nav-tab--active{% endif %}"
+                aria-label="{{ strings.NAV_SOCIAL }}"
+                data-tab="social"
             >
-                {{ icon("search", size=22) }}
+                {{ icon("users", size=22) }}
             </a>
             <a
-                href="/account"
+                href="/settings"
                 class="bottom-nav-tab{% if current_tab == 'settings' %} bottom-nav-tab--active{% endif %}"
                 aria-label="{{ strings.NAV_SETTINGS }}"
                 data-tab="settings"
@@ -153,5 +145,6 @@
             </a>
         </div>
     </nav>
+    {% endif %}
 </body>
 </html>
