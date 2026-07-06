@@ -11,7 +11,7 @@ from fastapi.responses import HTMLResponse
 
 from app.auth import users
 from app.models import db
-from app.routes.web.home.contexts import _field_defs_for_activity
+from app.routes.web.common import templates
 from app.routes.web.history.context import (
     _build_card_top_tags,
     _build_field_stats_context,
@@ -19,7 +19,7 @@ from app.routes.web.history.context import (
     _build_history_tags,
     resolve_history_viewer,
 )
-from app.routes.web.common import templates
+from app.routes.web.home.contexts import _field_defs_for_activity
 from app.services.common import db as _db
 from app.services.entries import stats
 from app.services.social import profiles
@@ -100,11 +100,28 @@ def stats_summary_fragment_response(request: Request, activity_id: int, owner_id
     if owner_ctx is None:
         return HTMLResponse(status_code=404)
     tz, field_defs = owner_ctx
+    with db.connect() as conn:
+        row = conn.execute(
+            "SELECT name FROM activity WHERE id = ? AND owner_id = ?",
+            (activity_id, owner_id),
+        ).fetchone()
+        card_name = row["name"] if row else None
     cs = stats.card_stats(activity_id, owner_id, tz=tz)
     return templates.TemplateResponse(
         request=request,
         name="components/history/stats_summary.html.jinja2",
-        context={"activity_id": activity_id, "counts": cs["counts"], "streaks": cs["streaks"], "average_weekly_count": cs["average_weekly_count"], "heatmap": cs["heatmap"], "top_tags": _build_card_top_tags(activity_id, owner_id, field_defs, tz=tz), "is_owner": True, "show_top_tags": False},
+        context={
+            "activity_id": activity_id,
+            "card_name": card_name,
+            "counts": cs["counts"],
+            "streaks": cs["streaks"],
+            "average_weekly_count": cs["average_weekly_count"],
+            "heatmap": cs["heatmap"],
+            "top_tags": _build_card_top_tags(activity_id, owner_id, field_defs, tz=tz),
+            "is_owner": True,
+            "title_editable": True,
+            "show_top_tags": False,
+        },
     )
 
 
