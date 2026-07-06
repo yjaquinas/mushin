@@ -2,11 +2,8 @@
 
 {% block title %}{{ strings.SEARCH_TITLE }} · {{ strings.APP_NAME }}{% endblock %}
 
-{% block content %}
-<div class="flex flex-col gap-1">
-    <label for="search-input" class="text-caption font-medium text-text-secondary">
-        {{ strings.SEARCH_INPUT_LABEL }}
-    </label>
+{% block tab_search %}
+<div class="flex flex-col">
     <input
         type="search"
         id="search-input"

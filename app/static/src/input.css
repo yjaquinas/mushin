@@ -658,6 +658,20 @@
     transform: translateX(-50%);
   }
 
+  /* ── Masthead ──────────────────────────────────────────────────────── */
+  #masthead-area[hidden] {
+    display: none;
+  }
+
+  /* ── Tab panels ────────────────────────────────────────────────────── */
+  .tab-panel {
+    display: none;
+  }
+
+  .tab-panel--active {
+    display: block;
+  }
+
   /* ── Bottom navigation bar ─────────────────────────────────────────── */
   /*
    * Full-width fixed bar at the bottom of the viewport. Three evenly-spaced

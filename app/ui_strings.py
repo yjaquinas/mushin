@@ -315,6 +315,7 @@ VISIBILITY_CONSENT_SUBMIT = "Continue"
 ACCOUNT_TITLE = "Settings"
 ACCOUNT_PRIVACY_LINK = "Privacy Policy"
 ACCOUNT_TERMS_LINK = "Terms of Service"
+ACCOUNT_LICENSES_LINK = "Licenses"
 
 ACCOUNT_VISIBILITY_HEADING = "Account privacy"
 ACCOUNT_SHARE = "Share"
@@ -404,11 +405,14 @@ REDEFINITION_PRIVACY_SUFFIX = "for the details."
 REDEFINITION_ACKNOWLEDGE = "Got it"
 
 # ---------------------------------------------------------------------------
-# Privacy policy page
+# Legal pages (privacy, terms, licenses) + shared dialog string
 # ---------------------------------------------------------------------------
-
 PRIVACY_PAGE_TITLE = "Privacy Policy"
+
 TERMS_PAGE_TITLE = "Terms of Service"
+
+LICENSES_PAGE_TITLE = "Open Source Licenses"
+LEGAL_DIALOG_CLOSE = "Close dialog"
 
 # ---------------------------------------------------------------------------
 # Public profiles (/@{username}, /@{username}/{slug})

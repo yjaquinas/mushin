@@ -7,6 +7,7 @@
     'Noto Color Emoji';
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
     monospace;
+    --color-black: #000;
     --color-white: #fff;
     --spacing: 0.25rem;
     --breakpoint-sm: 40rem;
@@ -465,9 +466,6 @@
   .grid-cols-7 {
     grid-template-columns: repeat(7, minmax(0, 1fr));
   }
-  .grid-cols-\[1fr_auto_1fr\] {
-    grid-template-columns: 1fr auto 1fr;
-  }
   .flex-col {
     flex-direction: column;
   }
@@ -624,6 +622,12 @@
   }
   .bg-accent-subtle {
     background-color: var(--color-accent-subtle);
+  }
+  .bg-black\/50 {
+    background-color: color-mix(in srgb, #000 50%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      background-color: color-mix(in oklab, var(--color-black) 50%, transparent);
+    }
   }
   .bg-brand {
     background-color: var(--color-brand);
@@ -1301,6 +1305,15 @@
     bottom: 0.55rem;
     left: 50%;
     transform: translateX(-50%);
+  }
+  #masthead-area[hidden] {
+    display: none;
+  }
+  .tab-panel {
+    display: none;
+  }
+  .tab-panel--active {
+    display: block;
   }
   .bottom-nav {
     position: fixed;

@@ -2,7 +2,7 @@
 
 {% block title %}{{ strings.ACCOUNT_TITLE }} · {{ strings.APP_NAME }}{% endblock %}
 
-{% block content %}
+{% block tab_settings %}
 <div class="flex flex-grow flex-col">
 {% if flash_message %}
 <div hidden data-toast-message="{{ flash_message }}"></div>
@@ -157,12 +157,30 @@
 {% endif %}
 
 <section class="flex flex-col flex-grow items-center justify-end gap-3 py-4">
-    <a href="/privacy" target="_blank" rel="noopener noreferrer" class="text-caption text-text-secondary focus-visible:outline-offset-2">
-        {{ strings.ACCOUNT_PRIVACY_LINK }}
+    <a
+        href="/licenses"
+        data-legal="licenses"
+        data-dialog-title="{{ strings.LICENSES_PAGE_TITLE }}"
+        class="text-caption text-text-secondary focus-visible:outline-offset-2"
+    >
+        {{ strings.ACCOUNT_LICENSES_LINK }}
     </a>
-    <a href="/terms" target="_blank" rel="noopener noreferrer" class="text-caption text-text-secondary focus-visible:outline-offset-2">
+    <a
+        href="/terms"
+        data-legal="terms"
+        data-dialog-title="{{ strings.TERMS_PAGE_TITLE }}"
+        class="text-caption text-text-secondary focus-visible:outline-offset-2"
+    >
         {{ strings.ACCOUNT_TERMS_LINK }}
+    </a>
+    <a
+        href="/privacy"
+        data-legal="privacy"
+        data-dialog-title="{{ strings.PRIVACY_PAGE_TITLE }}"
+        class="text-caption text-text-secondary focus-visible:outline-offset-2"
+    >
+        {{ strings.ACCOUNT_PRIVACY_LINK }}
     </a>
 </section>
 </div>
-{% endblock %}
+{% endblock tab_settings %}
