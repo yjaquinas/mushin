@@ -81,6 +81,9 @@ async def profile(
             context["current_page"] = "profile"
             context["page_title"] = username
             context["profile_url"] = profiles.canonical_profile_url(username)
+            context["share_label"] = f"@{username}"
+            context["share_copied_text"] = f"Link to @{username} copied"
+            context["share_failed_text"] = "Couldn't share the link."
             context["show_back"] = False
             response = templates.TemplateResponse(
                 request=request,
@@ -100,6 +103,9 @@ async def profile(
         context["current_page"] = "profile"
         context["page_title"] = username
         context["profile_url"] = profiles.canonical_profile_url(username)
+        context["share_label"] = f"@{username}"
+        context["share_copied_text"] = f"Link to @{username} copied"
+        context["share_failed_text"] = "Couldn't share the link."
         context["show_back"] = False
         context["back_url"] = "/"
 

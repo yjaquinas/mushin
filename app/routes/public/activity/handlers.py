@@ -90,6 +90,9 @@ def _render_owner_activity_detail(
     owner_context["current_page"] = "profile"
     owner_context["page_title"] = f"{username} | {card['name']}"
     owner_context["share_url"] = profiles.canonical_activity_url(username, slug)
+    owner_context["share_label"] = f"@{username} / {card['name']}"
+    owner_context["share_copied_text"] = f"Link to @{username}/{slug} copied"
+    owner_context["share_failed_text"] = "Couldn't share the link."
     owner_context["show_back"] = True
     owner_context["back_url"] = profiles.canonical_profile_url(username)
 
