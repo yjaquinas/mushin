@@ -118,6 +118,8 @@ def import_data(owner_id: int, payload: dict) -> dict[str, int]:
     activities_data = data.get("activities", [])
     if not isinstance(activities_data, list):
         raise ImportValidationError("Payload must contain a 'data.activities' list.")
+    if not activities_data:
+        raise ImportValidationError("Payload must contain at least one activity.")
 
     for i, act in enumerate(activities_data):
         if not isinstance(act, dict):
@@ -132,6 +134,11 @@ def import_data(owner_id: int, payload: dict) -> dict[str, int]:
                 raise ImportValidationError(f"Entry {j} in activity '{act['name']}' is not an object.")
             if "occurred_at" not in entry or not isinstance(entry["occurred_at"], str) or not entry["occurred_at"].strip():
                 raise ImportValidationError(f"Entry {j} in activity '{act['name']}' missing occurred_at.")
+            _validate_iso_timestamp(
+                entry["occurred_at"],
+                f"Entry {j} in activity '{act['name']}' has invalid occurred_at.",
+                ImportValidationError,
+            )
 
     now = _now_iso_utc()
 
@@ -208,6 +215,13 @@ def import_data(owner_id: int, payload: dict) -> dict[str, int]:
 
 def _now_iso_utc() -> str:
     return datetime.now(UTC).isoformat()
+
+
+def _validate_iso_timestamp(value: str, message: str, error_type: type[Exception]) -> None:
+    try:
+        datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise error_type(message) from exc
 
 
 # ---------------------------------------------------------------------------
@@ -347,6 +361,8 @@ def _validated_entry_export_activities(payload: dict[str, Any]) -> list[dict[str
     activities_data = payload.get("activities")
     if not isinstance(activities_data, list):
         raise EntryImportError("Payload must contain an 'activities' list.")
+    if not activities_data:
+        raise EntryImportError("Payload must contain at least one activity.")
 
     for i, act in enumerate(activities_data):
         if not isinstance(act, dict):
@@ -361,6 +377,11 @@ def _validated_entry_export_activities(payload: dict[str, Any]) -> list[dict[str
                 raise EntryImportError(f"Entry {j} in activity '{act['name']}' is not an object.")
             if "occurred_at" not in entry or not isinstance(entry["occurred_at"], str) or not entry["occurred_at"].strip():
                 raise EntryImportError(f"Entry {j} in activity '{act['name']}' missing occurred_at.")
+            _validate_iso_timestamp(
+                entry["occurred_at"],
+                f"Entry {j} in activity '{act['name']}' has invalid occurred_at.",
+                EntryImportError,
+            )
             memo = entry.get("memo", "")
             if memo is None:
                 memo = ""

@@ -9,6 +9,7 @@ from pathlib import Path
 
 from fastapi import Request
 from fastapi.templating import Jinja2Templates
+from jinja2 import Environment, FileSystemLoader
 from markupsafe import Markup
 
 from app import ui_strings
@@ -54,7 +55,8 @@ def _theme_context(request: Request) -> dict[str, str]:
     return {"theme": _theme_from_cookie(request.cookies.get(THEME_COOKIE))}
 
 
-templates = Jinja2Templates(directory="app/templates", context_processors=[_theme_context])
+_env = Environment(loader=FileSystemLoader("app/templates"), autoescape=True)
+templates = Jinja2Templates(env=_env, context_processors=[_theme_context])
 templates.env.globals["strings"] = ui_strings
 templates.env.globals["icon"] = _icon
 templates.env.globals["static_asset"] = _static_asset

@@ -18,6 +18,7 @@ from app.routes.web.settings.handlers import (
     render_account_settings,
     toggle_theme_response,
     update_email_response,
+    update_password_response,
     update_visibility_response,
 )
 from app.routes.web.common import _current_user
@@ -79,6 +80,20 @@ async def update_email(
     if user is None:
         return HTMLResponse(status_code=401)
     return update_email_response(request, user, email)
+
+
+@router.post("/settings/password", response_model=None)
+async def update_password(
+    request: Request,
+    current_password: Annotated[str | None, Form()] = None,
+    new_password: Annotated[str | None, Form()] = None,
+    session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
+) -> RedirectResponse | HTMLResponse:
+    """Change the current account password from the settings page."""
+    user = _current_user(session)
+    if user is None:
+        return HTMLResponse(status_code=401)
+    return update_password_response(request, user, current_password, new_password)
 
 
 @router.post("/delete", response_model=None)

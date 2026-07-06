@@ -62,7 +62,7 @@ def render_entry_page(request: Request, *, next_path: str | None = None) -> HTML
 
 def redirect_logged_in_home(user: dict) -> RedirectResponse:
     """Redirect a signed-in user to their canonical home URL."""
-    return RedirectResponse(url=_home_url_for(user), status_code=308)
+    return RedirectResponse(url=_home_url_for(user), status_code=303)
 
 
 def login_page_response(

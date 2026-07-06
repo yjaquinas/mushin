@@ -29,11 +29,18 @@ CONSENT_REQUIRED_MESSAGE = (
 )
 
 
-_USERNAME_RE = re.compile(r"^[a-z0-9_]{3,20}$")
+_USERNAME_RE = re.compile(r"^[a-z0-9_]{5,20}$")
 _USERNAME_ERROR = (
-    "Username must be 3-20 characters: lowercase letters, numbers, "
+    "Username must be 5-20 characters: lowercase letters, numbers, "
     "and underscores only."
 )
+
+
+def _validate_password(password: str) -> None:
+    if len(password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters.")
+    if any(ch.isspace() for ch in password):
+        raise HTTPException(status_code=400, detail="Password must not contain whitespace.")
 
 
 def _current_uid(cookie_value: str | None) -> int | None:
@@ -74,8 +81,7 @@ async def signup(
 
     normalized = _normalize_username(username)
 
-    if len(password) < 8:
-        raise HTTPException(status_code=400, detail="Password must be at least 8 characters.")
+    _validate_password(password)
 
     try:
         pw_hash = passwords.hash_password(password)
@@ -107,7 +113,7 @@ async def login(
     password: Annotated[str, Form()],
 ) -> JSONResponse:
     """Authenticate with username + password."""
-    normalized = _normalize_username(username)
+    normalized = unicodedata.normalize("NFKC", username.strip()).casefold()
     user = users.authenticate(normalized, password)
 
     if user is None:

@@ -1,0 +1,11 @@
+{% extends "web/base.html.jinja2" %}
+{% block title %}404 · {{ strings.APP_NAME }}{% endblock %}
+{% block content %}
+<main class="mx-auto flex max-w-md flex-col items-center gap-4 px-4 py-16">
+    <h1 class="text-display font-bold text-text-primary">404</h1>
+    <p class="text-body text-text-secondary">{{ strings.ERROR_PAGE_NOT_FOUND }}</p>
+    <a href="/" class="rounded-button bg-brand px-4 py-3 text-title font-semibold text-on-brand">
+        {{ strings.ERROR_PAGE_HOME }}
+    </a>
+</main>
+{% endblock %}

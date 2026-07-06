@@ -18,7 +18,6 @@ from app.routes.web.home.handlers import (
     login_page_response,
     redirect_logged_in_home,
     render_entry_page,
-    render_home,
 )
 from app.routes.web.common import _current_user, templates
 from app.services.social import profiles
@@ -115,18 +114,16 @@ async def create_form(request: Request) -> HTMLResponse:
     )
 
 
-@router.get("/home", response_class=HTMLResponse)
+@router.get("/home", response_model=None)
 async def home(
     request: Request,
     session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
-) -> HTMLResponse:
-    """The character-sheet profile. Redirects to the entry screen with no session.
-
-    Renders in place for everyone (guest or real user) once past the
-    one-time visibility-consent gate for non-guest accounts.
+) -> HTMLResponse | RedirectResponse:
+    """The character-sheet profile. Redirects to the entry screen with no
+    session, or to the user's canonical profile URL when already logged in.
     """
     user = _current_user(session)
     gate = home_gate_response(user)
     if gate is not None:
         return gate
-    return await render_home(request, user)
+    return redirect_logged_in_home(user)

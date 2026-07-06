@@ -100,6 +100,8 @@ def rename_activity(
     name = new_name.strip()
     if not name:
         raise ValueError("activity name must not be empty")
+    if len(name) < 5:
+        raise ValueError("activity name must be at least 5 characters")
     if len(name) > RENAME_ACTIVITY_MAX_NAME:
         raise ValueError(f"activity name must be at most {RENAME_ACTIVITY_MAX_NAME} characters")
 

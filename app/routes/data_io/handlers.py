@@ -80,6 +80,7 @@ def _import_error_response(request: Request, message: str) -> HTMLResponse:
         request=request,
         name="components/settings/import_data_dialog.html.jinja2",
         context={"import_error": message, "open_on_error": True},
+        status_code=422,
     )
 
 
@@ -133,6 +134,12 @@ async def import_entries_body(
         message = ui_strings.IMPORT_ENTRIES_ERROR_VALIDATION.format(reason=str(exc))
         return _entry_import_error_response(request, message)
 
+    if sum(summary.values()) == 0:
+        message = ui_strings.IMPORT_ENTRIES_ERROR_VALIDATION.format(
+            reason="Import produced no changes."
+        )
+        return _entry_import_error_response(request, message)
+
     return _entry_import_success_response(request, summary)
 
 
@@ -141,6 +148,7 @@ def _entry_import_error_response(request: Request, message: str) -> HTMLResponse
         request=request,
         name="components/settings/entry_import_dialog.html.jinja2",
         context={"import_error": message, "open_on_error": True},
+        status_code=422,
     )
 
 

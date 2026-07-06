@@ -18,6 +18,10 @@ from __future__ import annotations
 
 APP_NAME = "Mushin"
 APP_NAME_HANJA = "無心"
+
+# Error pages
+ERROR_PAGE_NOT_FOUND = "The page you're looking for doesn't exist."
+ERROR_PAGE_HOME = "Go home"
 APP_GLOSS = "No-mind. Just show up, and watch it add up."
 
 # ---------------------------------------------------------------------------
@@ -64,6 +68,7 @@ HOME_EMPTY = "Nothing started yet."
 HOME_FLASH_VISIBILITY_PUBLIC = "Profile set to public."
 HOME_FLASH_VISIBILITY_PRIVATE = "Profile set to private."
 HOME_FLASH_EMAIL_UPDATED = "Email address updated."
+HOME_FLASH_PASSWORD_UPDATED = "Password updated."
 HOME_FLASH_LOGIN_REQUIRED = "Log in to continue."
 ACCOUNT_EMAIL_UPDATE_FAILED = "Could not update email address."
 
@@ -77,7 +82,8 @@ HOME_ADD_ACTIVITY = "Add an Activity"
 
 ACTIVITY_NEW_TITLE = "New activity"
 ACTIVITY_FORM_NAME_LABEL = "Name"
-ACTIVITY_FORM_NAME_PLACEHOLDER = "e.g. Workout"
+ACTIVITY_FORM_NAME_PLACEHOLDER = "e.g. Workout (min 5 characters)"
+ACTIVITY_FORM_NAME_TOO_SHORT = "Activity name must be at least 5 characters."
 ACTIVITY_FORM_SUBMIT = "Create"
 ACTIVITY_FORM_CANCEL = "Cancel"
 ACTIVITY_FORM_NAME_REQUIRED = "Activity name is required"
@@ -275,6 +281,16 @@ IMPORT_ENTRIES_ENTRIES_SKIPPED = "Entries skipped (already exist)"
 IMPORT_ENTRIES_ERROR_TOO_LARGE = "That file is too large to import."
 IMPORT_ENTRIES_ERROR_INVALID_FILE = "That does not look like a valid entries export file (.json)."
 IMPORT_ENTRIES_ERROR_VALIDATION = "Import failed: {reason}"
+
+ACCOUNT_PASSWORD_HEADING = "Password"
+ACCOUNT_PASSWORD_CURRENT_LABEL = "Current password"
+ACCOUNT_PASSWORD_NEW_LABEL = "New password"
+ACCOUNT_PASSWORD_UPDATE = "Update password"
+ACCOUNT_PASSWORD_INVALID = "Current password is incorrect."
+ACCOUNT_PASSWORD_TOO_SHORT = "Password must be at least 8 characters."
+ACCOUNT_PASSWORD_WHITESPACE = "Password must not contain whitespace."
+ACCOUNT_PASSWORD_SAME = "New password must be different from the current password."
+ACCOUNT_PASSWORD_UPDATED = "Password updated."
 
 # ---------------------------------------------------------------------------
 # Visibility consent (one-time screen, before first /home use)

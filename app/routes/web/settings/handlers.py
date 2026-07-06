@@ -7,7 +7,7 @@ import re
 from fastapi import Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
-from app.auth import sessions, users
+from app.auth import passwords, sessions, users
 from app.routes.web.common import (
     THEME_COOKIE,
     THEME_CYCLE,
@@ -28,6 +28,7 @@ def render_account_settings(
     *,
     email_error: str | None = None,
     email_value: str | None = None,
+    password_error: str | None = None,
 ) -> HTMLResponse:
     """Render the settings page for the current user."""
     email = email_value if email_value is not None else user.get("email")
@@ -39,6 +40,7 @@ def render_account_settings(
             "username": user["username"],
             "email": email,
             "email_error": email_error,
+            "password_error": password_error,
             "visibility": user["visibility"],
             "current_page": "settings",
             "page_title": strings.SETTINGS_TITLE,
@@ -104,4 +106,28 @@ def update_email_response(
         return render_account_settings(request, user, email_error=strings.EMAIL_UPDATE_FAILED, email_value=email)
     response = RedirectResponse(url="/settings", status_code=303)
     _set_flash(response, "email_updated")
+    return response
+
+
+def update_password_response(
+    request: Request,
+    user: dict,
+    current_password: str | None,
+    new_password: str | None,
+) -> RedirectResponse | HTMLResponse:
+    current_password = current_password or ""
+    new_password = new_password or ""
+
+    if users.authenticate(str(user["username"]), current_password) is None:
+        return render_account_settings(request, user, password_error=strings.ACCOUNT_PASSWORD_INVALID)
+    if len(new_password) < 8:
+        return render_account_settings(request, user, password_error=strings.ACCOUNT_PASSWORD_TOO_SHORT)
+    if any(ch.isspace() for ch in new_password):
+        return render_account_settings(request, user, password_error=strings.ACCOUNT_PASSWORD_WHITESPACE)
+    if new_password == current_password:
+        return render_account_settings(request, user, password_error=strings.ACCOUNT_PASSWORD_SAME)
+
+    users.update_password(int(user["id"]), passwords.hash_password(new_password))
+    response = RedirectResponse(url="/settings", status_code=303)
+    _set_flash(response, "password_updated")
     return response

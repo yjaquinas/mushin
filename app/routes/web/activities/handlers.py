@@ -33,6 +33,8 @@ def create_activity_response(request: Request, user: dict, name: str) -> HTMLRes
     name = name.strip()
     if not name:
         return _activity_form_error(request, ui_strings.ACTIVITY_FORM_NAME_REQUIRED)
+    if len(name) < 5:
+        return _activity_form_error(request, ui_strings.ACTIVITY_FORM_NAME_TOO_SHORT)
 
     with db.connect() as conn:
         if conn.execute(
