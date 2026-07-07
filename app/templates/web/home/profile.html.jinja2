@@ -20,6 +20,8 @@
 
 {% include "components/fellows/fellows_section.html.jinja2" with context %}
 
+<h2 class="mt-6 text-title font-semibold text-text-primary">{{ strings.PROFILE_ACTIVITIES_HEADING }}</h2>
+
 {% if not cards %}
 <div id="home-empty-state" class="flex flex-col items-center gap-3 py-12 text-center">
     <span class="text-[length:var(--spacing-icon-lg)] leading-none text-text-muted" aria-hidden="true">{{ strings.APP_NAME_HANJA }}</span>

@@ -23,6 +23,7 @@
             <div class="flex flex-col gap-3">
                 <button
                     type="button"
+                    data-dialog-close="connect-cancel"
                     hx-post="/fellows/requests/{{ username }}/cancel{{ qs }}"
                     hx-target="#{{ dom_id }}"
                     hx-swap="outerHTML"

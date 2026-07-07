@@ -83,6 +83,15 @@ async def admin_delete_user(user_id: int) -> RedirectResponse:
     return await _admin_handlers.delete_user(user_id)
 
 
+@router.post("/admin/users/{user_id}/visibility", dependencies=[Depends(_require_admin)])
+async def admin_set_visibility(
+    user_id: int,
+    visibility: Annotated[str, Form()],
+) -> RedirectResponse:
+    """Set a user's visibility to public or private."""
+    return await _admin_handlers.set_visibility(user_id, visibility=visibility)
+
+
 @router.post("/admin/users/{user_id}/suspension", dependencies=[Depends(_require_admin)])
 async def admin_set_suspension(
     user_id: int,

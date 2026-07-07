@@ -10,6 +10,7 @@ from app.routes.web.fellows._shared import (
     _connect_error_message,
     _remove_dialog_dom_id,
     _relationship_dom_id,
+    _render_fellows_section,
     _render_relationship_affordance,
     _resolve_other_user,
 )
@@ -25,12 +26,13 @@ def remove_fellow_confirm_response(request: Request, username: str, from_search:
     other = _other_or_404(username)
     if isinstance(other, HTMLResponse):
         return other
+    dom_id = _relationship_dom_id(username, from_search=from_search) if from_search else f"fellows-section-{username}"
     return templates.TemplateResponse(
         request=request,
         name="components/fellows/connect_remove_confirm.html.jinja2",
         context={
             "username": username,
-            "dom_id": _relationship_dom_id(username, from_search=from_search),
+            "dom_id": dom_id,
             "dialog_id": _remove_dialog_dom_id(username, from_search=from_search),
             "from_search": from_search,
         },
@@ -42,7 +44,9 @@ def remove_fellow_response(request: Request, username: str, viewer_id: int, from
     if isinstance(other, HTMLResponse):
         return other
     connections.disconnect(viewer_id, int(other["id"]))
-    return _render_relationship_affordance(request, username, int(other["id"]), viewer_id, from_search=from_search)
+    if from_search:
+        return _render_relationship_affordance(request, username, int(other["id"]), viewer_id, from_search=True)
+    return _render_fellows_section(request, int(other["id"]), username=username, viewer_id=viewer_id, is_owner=False)
 
 
 def block_confirm_response(request: Request, username: str, from_search: bool) -> HTMLResponse:
@@ -82,4 +86,6 @@ def unblock_user_response(request: Request, username: str, viewer_id: int, from_
     if isinstance(other, HTMLResponse):
         return other
     connections.unblock(viewer_id, int(other["id"]))
-    return _render_relationship_affordance(request, username, int(other["id"]), viewer_id, from_search=from_search)
+    if from_search:
+        return _render_relationship_affordance(request, username, int(other["id"]), viewer_id, from_search=True)
+    return _render_fellows_section(request, int(other["id"]), username=username, viewer_id=viewer_id, is_owner=False)

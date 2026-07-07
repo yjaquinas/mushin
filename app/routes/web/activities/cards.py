@@ -65,15 +65,27 @@ def _build_card_context(
     }
 
 
-def _build_fellows_context(profile_user_id: int, *, viewer_id: int | None, is_owner: bool) -> dict[str, Any]:
+def _build_fellows_context(
+    profile_user_id: int,
+    *,
+    viewer_id: int | None,
+    is_owner: bool,
+    visibility: str = "public",
+    limit: int | None = 5,
+) -> dict[str, Any]:
     fellows = connections.list_fellows(profile_user_id)
+    fellow_count = len(fellows)
     show_names = is_owner or (
-        viewer_id is not None and connections.relationship_state(viewer_id, profile_user_id) == "fellow"
+        viewer_id is not None
+        and connections.relationship_state(viewer_id, profile_user_id) == "fellow"
+        and visibility == "public"
     )
+    sliced = fellows if limit is None else fellows[:limit]
     context: dict[str, Any] = {
-        "fellow_count": len(fellows),
-        "fellows": fellows if show_names else [],
+        "fellow_count": fellow_count,
+        "fellows": sliced if show_names else [],
         "show_fellow_names": show_names,
+        "has_more": limit is not None and fellow_count > limit,
         "is_owner": is_owner,
         "profile_user_id": profile_user_id,
         "incoming_requests": [],

@@ -10,6 +10,7 @@ from app.routes.web.fellows._shared import (
     _cancel_request_dialog_dom_id,
     _connect_error_message,
     _relationship_dom_id,
+    _render_fellows_page_content,
     _render_fellows_section,
     _render_relationship_affordance,
     _resolve_other_user,
@@ -22,7 +23,9 @@ def _other_or_404(username: str) -> dict | HTMLResponse:
     return other if other is not None else HTMLResponse(status_code=404)
 
 
-def send_connect_request_response(request: Request, username: str, viewer_id: int, from_search: bool) -> HTMLResponse:
+def send_connect_request_response(
+    request: Request, username: str, viewer_id: int, from_search: bool, from_fellows_page: bool = False,
+) -> HTMLResponse:
     other = _other_or_404(username)
     if isinstance(other, HTMLResponse):
         return other
@@ -33,26 +36,33 @@ def send_connect_request_response(request: Request, username: str, viewer_id: in
         return HTMLResponse(status_code=400)
     except connections.ConnectionError as exc:
         error = _connect_error_message(exc)
-    return _render_relationship_affordance(request, username, int(other["id"]), viewer_id, error=error, from_search=from_search)
+    if from_search:
+        return _render_relationship_affordance(request, username, int(other["id"]), viewer_id, error=error, from_search=True)
+    if from_fellows_page:
+        return _render_fellows_page_content(request, int(other["id"]), username=username, viewer_id=viewer_id, is_owner=False, error=error)
+    return _render_fellows_section(request, int(other["id"]), username=username, viewer_id=viewer_id, is_owner=False, error=error)
 
 
 def cancel_connect_request_confirm_response(request: Request, username: str, from_search: bool) -> HTMLResponse:
     other = _other_or_404(username)
     if isinstance(other, HTMLResponse):
         return other
+    dom_id = _relationship_dom_id(username, from_search=from_search) if from_search else f"fellows-section-{username}"
     return templates.TemplateResponse(
         request=request,
         name="components/fellows/connect_cancel_request_confirm.html.jinja2",
         context={
             "username": username,
-            "dom_id": _relationship_dom_id(username, from_search=from_search),
+            "dom_id": dom_id,
             "dialog_id": _cancel_request_dialog_dom_id(username, from_search=from_search),
             "from_search": from_search,
         },
     )
 
 
-def accept_connect_request_response(request: Request, username: str, owner_id: int, from_search: bool) -> HTMLResponse:
+def accept_connect_request_response(
+    request: Request, username: str, owner_id: int, from_search: bool, from_profile: bool = False,
+) -> HTMLResponse:
     other = _other_or_404(username)
     if isinstance(other, HTMLResponse):
         return other
@@ -63,10 +73,14 @@ def accept_connect_request_response(request: Request, username: str, owner_id: i
         error = _connect_error_message(exc)
     if from_search:
         return _render_relationship_affordance(request, username, int(other["id"]), owner_id, error=error, from_search=True)
-    return _render_fellows_section(request, owner_id, viewer_id=owner_id, is_owner=True, error=error)
+    if from_profile:
+        return _render_fellows_section(request, int(other["id"]), username=username, viewer_id=owner_id, is_owner=False, error=error)
+    return _render_fellows_page_content(request, owner_id, username=username, viewer_id=owner_id, is_owner=True, error=error)
 
 
-def decline_connect_request_response(request: Request, username: str, owner_id: int, from_search: bool) -> HTMLResponse:
+def decline_connect_request_response(
+    request: Request, username: str, owner_id: int, from_search: bool, from_profile: bool = False,
+) -> HTMLResponse:
     other = _other_or_404(username)
     if isinstance(other, HTMLResponse):
         return other
@@ -77,7 +91,9 @@ def decline_connect_request_response(request: Request, username: str, owner_id: 
         error = _connect_error_message(exc)
     if from_search:
         return _render_relationship_affordance(request, username, int(other["id"]), owner_id, error=error, from_search=True)
-    return _render_fellows_section(request, owner_id, viewer_id=owner_id, is_owner=True, error=error)
+    if from_profile:
+        return _render_fellows_section(request, int(other["id"]), username=username, viewer_id=owner_id, is_owner=False, error=error)
+    return _render_fellows_page_content(request, owner_id, username=username, viewer_id=owner_id, is_owner=True, error=error)
 
 
 def cancel_connect_request_response(
@@ -90,5 +106,5 @@ def cancel_connect_request_response(
     if from_search:
         return _render_relationship_affordance(request, username, int(other["id"]), owner_id, from_search=True)
     if from_relationship:
-        return _render_relationship_affordance(request, username, int(other["id"]), owner_id, from_search=False)
-    return _render_fellows_section(request, owner_id, viewer_id=owner_id, is_owner=True)
+        return _render_fellows_section(request, int(other["id"]), username=username, viewer_id=owner_id, is_owner=False)
+    return _render_fellows_page_content(request, owner_id, username=username, viewer_id=owner_id, is_owner=True)

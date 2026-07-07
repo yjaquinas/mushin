@@ -19,8 +19,8 @@
   the page-singleton fellows section / use the per-row dom_id downstream.
 #}
 {% set dom_id = dom_id | default("relationship-affordance") %}
-{% set remove_dialog_id = remove_dialog_id | default("connect-remove-dialog") %}
-{% set cancel_request_dialog_id = cancel_request_dialog_id | default("connect-cancel-dialog") %}
+{% set remove_dialog_id = remove_dialog_id | default("connect-remove-dialog-" + username) %}
+{% set cancel_request_dialog_id = cancel_request_dialog_id | default("connect-cancel-dialog-" + username) %}
 {% set pending_incoming_target_id = pending_incoming_target_id | default("fellows-section") %}
 {% set from_search = from_search | default(false) %}
 {% set qs = "?source=search" if from_search else "" %}

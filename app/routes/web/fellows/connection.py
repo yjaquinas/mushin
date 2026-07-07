@@ -31,7 +31,9 @@ async def send_connect_request(
     user = _current_user(session)
     if user is None:
         return HTMLResponse(status_code=401)
-    return send_connect_request_response(request, username, int(user["id"]), source == "search")
+    return send_connect_request_response(
+        request, username, int(user["id"]), source == "search", source == "fellows-page",
+    )
 
 
 @router.get("/fellows/requests/{username}/cancel-confirm", response_class=HTMLResponse)
@@ -57,7 +59,9 @@ async def accept_connect_request(
     user = _current_user(session)
     if user is None:
         return HTMLResponse(status_code=401)
-    return accept_connect_request_response(request, username, int(user["id"]), source == "search")
+    return accept_connect_request_response(
+        request, username, int(user["id"]), source == "search", source == "profile",
+    )
 
 
 @router.post("/fellows/requests/{username}/decline", response_class=HTMLResponse)
@@ -70,7 +74,9 @@ async def decline_connect_request(
     user = _current_user(session)
     if user is None:
         return HTMLResponse(status_code=401)
-    return decline_connect_request_response(request, username, int(user["id"]), source == "search")
+    return decline_connect_request_response(
+        request, username, int(user["id"]), source == "search", source == "profile",
+    )
 
 
 @router.post("/fellows/requests/{username}/cancel", response_class=HTMLResponse)

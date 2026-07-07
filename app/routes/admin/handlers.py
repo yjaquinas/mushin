@@ -71,6 +71,15 @@ async def edit_user(
     return user_detail_redirect(user_id)
 
 
+async def set_visibility(user_id: int, *, visibility: str) -> RedirectResponse:
+    with db.connect() as conn:
+        try:
+            admin_actions.set_user_visibility(conn, user_id, visibility=visibility)
+        except admin_actions.AdminValidationError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return user_detail_redirect(user_id)
+
+
 async def set_suspension(user_id: int, *, suspended: bool) -> RedirectResponse:
     with db.connect() as conn:
         admin_actions.set_user_suspended(conn, user_id, suspended=suspended)

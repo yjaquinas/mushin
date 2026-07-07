@@ -17,19 +17,14 @@
 {% block tab_social %}
 {% include "components/fellows/fellows_section.html.jinja2" with context %}
 
-{% if viewer_logged_in %}
-{% include "components/fellows/relationship_affordance.html.jinja2" with context %}
-{% endif %}
-
 {% if view_mode == "limited" %}
 <p class="text-caption text-text-muted">{{ strings.PROFILE_LIMITED_NOTICE.format(username=username) }}</p>
 {% endif %}
 
+<h2 class="mt-6 text-title font-semibold text-text-primary">{{ strings.PROFILE_ACTIVITIES_HEADING }}</h2>
+
 {% if not cards %}
 <section class="flex flex-col gap-4 rounded-card border border-border bg-surface-1 p-4">
-    <div class="flex flex-col gap-1">
-        <h2 class="text-title font-semibold text-text-primary">{{ strings.PROFILE_ACTIVITIES_HEADING }}</h2>
-    </div>
     <p class="text-body text-text-secondary">{{ strings.PROFILE_ACTIVITIES_EMPTY }}</p>
 </section>
 {% else %}

@@ -54,18 +54,27 @@
             <button class="w-full rounded-button border border-border px-4 py-2 text-sm text-text-secondary">{{ strings.ADMIN_UNSUSPEND_USER }}</button>
             {% else %}
             <input type="hidden" name="suspended" value="true">
-            <button class="w-full rounded-button bg-danger px-4 py-2 text-sm font-medium text-on-brand">{{ strings.ADMIN_SUSPEND_USER }}</button>
+            <button class="w-full rounded-button border border-accent px-4 py-2 text-sm font-medium text-accent-text">{{ strings.ADMIN_SUSPEND_USER }}</button>
             {% endif %}
         </form>
         {% if not detail_user.deleted_at %}
         <button
             id="delete-user-dialog-trigger"
             type="button"
-            class="mt-3 w-full rounded-button bg-danger px-4 py-2 text-sm font-medium text-on-brand"
+            class="mt-4 w-full rounded-button bg-danger px-4 py-2 text-sm font-medium text-on-brand"
         >
             {{ strings.ADMIN_DELETE_USER_HEADING }}
         </button>
         {% endif %}
+        <form method="post" action="/admin/users/{{ detail_user.id }}/visibility" class="mt-4 border-t border-border pt-4">
+            <h4 class="text-sm font-semibold text-text-primary">{{ strings.ADMIN_VISIBILITY_HEADING }}</h4>
+            <p class="mt-1 text-xs text-text-secondary">{{ strings.ADMIN_VISIBILITY_CURRENT.format(visibility=detail_user.visibility) }}</p>
+            <select name="visibility" class="mt-2 w-full rounded border border-border bg-surface-0 px-3 py-2 text-sm text-text-primary">
+                <option value="public" {{ "selected" if detail_user.visibility == "public" else "" }}>{{ strings.ADMIN_VISIBILITY_PUBLIC }}</option>
+                <option value="private" {{ "selected" if detail_user.visibility == "private" else "" }}>{{ strings.ADMIN_VISIBILITY_PRIVATE }}</option>
+            </select>
+            <button class="mt-2 w-full rounded-button bg-brand px-4 py-2 text-sm font-medium text-on-brand">{{ strings.ADMIN_SET_VISIBILITY }}</button>
+        </form>
     </div>
 </section>
 

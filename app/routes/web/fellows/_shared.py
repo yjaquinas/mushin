@@ -31,6 +31,7 @@ def _render_fellows_section(
     request: Request,
     profile_user_id: int,
     *,
+    username: str,
     viewer_id: int,
     is_owner: bool,
     error: str | None = None,
@@ -39,10 +40,13 @@ def _render_fellows_section(
     fellows_context = _build_fellows_context(
         profile_user_id, viewer_id=viewer_id, is_owner=is_owner
     )
+    ctx: dict[str, object] = {"fellows": fellows_context, "error": error, "username": username}
+    if not is_owner:
+        ctx["state"] = connections.relationship_state(viewer_id, profile_user_id)
     return templates.TemplateResponse(
         request=request,
         name="components/fellows/fellows_section.html.jinja2",
-        context={"fellows": fellows_context, "error": error},
+        context=ctx,
     )
 
 
@@ -55,16 +59,37 @@ def _relationship_dom_id(username: str, *, from_search: bool) -> str:
 
 def _remove_dialog_dom_id(username: str, *, from_search: bool) -> str:
     """The id used for the remove-connection confirm dialog host."""
-    if from_search:
-        return f"connect-remove-dialog-{username}"
-    return "connect-remove-dialog"
+    return f"connect-remove-dialog-{username}"
 
 
 def _cancel_request_dialog_dom_id(username: str, *, from_search: bool) -> str:
     """The id used for the cancel-request confirm dialog host."""
-    if from_search:
-        return f"connect-cancel-dialog-{username}"
-    return "connect-cancel-dialog"
+    return f"connect-cancel-dialog-{username}"
+
+
+def _render_fellows_page_content(
+    request: Request,
+    profile_user_id: int,
+    *,
+    username: str,
+    viewer_id: int,
+    is_owner: bool,
+    error: str | None = None,
+) -> HTMLResponse:
+    """Re-render the full ``_fellows_content`` fragment for *profile_user_id*'s fellows page."""
+    fellows_context = _build_fellows_context(
+        profile_user_id, viewer_id=viewer_id, is_owner=is_owner, limit=None,
+    )
+    return templates.TemplateResponse(
+        request=request,
+        name="web/fellows/_fellows_content.html.jinja2",
+        context={
+            "fellows": fellows_context,
+            "username": username,
+            "is_owner": is_owner,
+            "error": error,
+        },
+    )
 
 
 def _render_relationship_affordance(

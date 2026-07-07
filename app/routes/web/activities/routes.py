@@ -1,4 +1,4 @@
-"""Thin route declarations for activity creation and owner detail pages."""
+"""Thin route declarations for activity creation."""
 
 from __future__ import annotations
 
@@ -9,7 +9,6 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.auth import sessions
 from app.routes.web.activities.handlers import (
-    activity_detail_response,
     create_activity_response,
     new_activity_response,
 )
@@ -52,23 +51,4 @@ async def create_activity(
     return create_activity_response(request, user, name)
 
 
-@router.get("/activities/{activity_id}", response_class=HTMLResponse, response_model=None)
-async def activity_detail(
-    request: Request,
-    activity_id: int,
-    session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
-) -> HTMLResponse | RedirectResponse:
-    """Activity detail screen: card + (for tournament activities) competition stats.
 
-    Active activities with a slug redirect 301 to ``/@{username}/{slug}``
-    (the canonical public/private unified URL).  Archived activities, or those
-    somehow without a slug, render the dashboard in place — this preserves access
-    to archived activities that are no longer addressable via the public route.
-
-    Competition stats only render for activities whose recipe includes a
-    ``match_list`` field (e.g. 검도 / 시합).
-    """
-    user = _current_user(session)
-    if user is None:
-        return RedirectResponse(url="/", status_code=303)
-    return activity_detail_response(request, activity_id, user)

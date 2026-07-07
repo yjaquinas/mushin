@@ -444,7 +444,8 @@ PROFILE_LIMITED_NOTICE = "{username} is a private user. Connect to see more."
 # Owner-view notice on a public activity page — factual, no alarm framing.
 ACTIVITY_PUBLIC_NOTICE = "This page is public — anyone with the link sees it, notes included."
 
-PROFILE_VISIT = "Visit {username}'s profile"
+PROFILE_VISIT = "{username}'s profile"
+ACTIVITY_BACK_TO_PROFILE = "Back to profile"
 
 # ---------------------------------------------------------------------------
 # Entry edit-in-place
@@ -469,6 +470,7 @@ FELLOWS_HEADING = "Fellows"
 FELLOWS_COUNT_LABEL = "{count} fellows"
 FELLOWS_COUNT_LABEL_ONE = "1 fellow"
 FELLOWS_EMPTY = "No fellows yet."
+FELLOWS_MANAGE = "See all"
 
 REQUESTS_HEADING = "Requests"
 REQUESTS_INCOMING_EMPTY = "No pending requests."
@@ -482,7 +484,7 @@ REQUESTS_PENDING_BADGE = "{count}"
 # Relationship-state affordance on another user's profile.
 CONNECT_ACTION = "Connect"
 CONNECT_REQUESTED = "Requested"
-CONNECT_REMOVE = "Remove connection"
+CONNECT_REMOVE = "Remove"
 CONNECT_BLOCK = "Block"
 CONNECT_UNBLOCK = "Unblock"
 CONNECT_CANCEL_REQUEST = "Cancel request"
@@ -677,6 +679,12 @@ ADMIN_COLUMN_COMMENT_USER = "Comment user"
 ADMIN_COLUMN_TEXT = "Text"
 
 # ── Admin: user email & delete ──────────────────────────────────────
+
+ADMIN_VISIBILITY_HEADING = "Visibility"
+ADMIN_VISIBILITY_PUBLIC = "Public"
+ADMIN_VISIBILITY_PRIVATE = "Private"
+ADMIN_VISIBILITY_CURRENT = "Current: {visibility}"
+ADMIN_SET_VISIBILITY = "Set visibility"
 
 ADMIN_COLUMN_EMAIL = "Email"
 ADMIN_DELETE_USER_HEADING = "Delete user"

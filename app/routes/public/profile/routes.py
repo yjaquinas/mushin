@@ -33,12 +33,13 @@ def _read_only_profile_context(
     cap: str,
     tz: Any,
     current_uid: int | None,
+    visibility: str = "public",
 ) -> dict[str, Any]:
     """Assemble the read-only ``public_profile.html.jinja2`` context for *cap*."""
     linked = cap in ("connected", "public")
     activities = _list_activities(conn, owner_id)
     cards = [_build_card_context(conn, owner_id, row, tz=tz, linked=linked) for row in activities]
-    fellows_context = _build_fellows_context(owner_id, viewer_id=current_uid, is_owner=False)
+    fellows_context = _build_fellows_context(owner_id, viewer_id=current_uid, is_owner=False, visibility=visibility)
     state = (
         connections.relationship_state(current_uid, owner_id) if current_uid is not None else "none"
     )
@@ -80,6 +81,7 @@ async def profile(
             context["flash_message"] = _read_flash(request)
             context["current_page"] = "profile"
             context["page_title"] = username
+            context["username"] = username
             context["profile_url"] = profiles.canonical_profile_url(username)
             context["share_label"] = f"@{username}"
             context["share_copied_text"] = f"Link to @{username} copied"
@@ -97,7 +99,8 @@ async def profile(
 
         tz = users.get_user_timezone(owner_id)
         context = _read_only_profile_context(
-            conn, username, owner_id, cap=cap, tz=tz, current_uid=current_uid
+            conn, username, owner_id, cap=cap, tz=tz, current_uid=current_uid,
+            visibility=user["visibility"],
         )
         context["current_page"] = "social"
         context["page_title"] = username

@@ -31,6 +31,7 @@ async def render_home(request: Request, user: dict) -> HTMLResponse:
     context["flash_message"] = _read_flash(request)
     context["current_page"] = "profile"
     context["page_title"] = None
+    context["username"] = user.get("username")
     response = templates.TemplateResponse(
         request=request,
         name="web/home/profile.html.jinja2",

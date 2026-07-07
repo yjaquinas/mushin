@@ -115,7 +115,8 @@ async def social_profile(
 
         tz = auth_users.get_user_timezone(owner_id)
         context = _read_only_social_profile_context(
-            conn, username, owner_id, cap=cap, tz=tz, current_uid=current_uid
+            conn, username, owner_id, cap=cap, tz=tz, current_uid=current_uid,
+            visibility=profile_user["visibility"],
         )
         context["current_page"] = "social"
         context["page_title"] = username
@@ -210,12 +211,13 @@ def _read_only_social_profile_context(
     cap: str,
     tz,
     current_uid: int | None,
+    visibility: str = "public",
 ) -> dict:
     """Assemble the read-only profile context for the social tab."""
     linked = cap in ("connected", "public")
     activities = _list_activities(conn, owner_id)
     cards = [_build_card_context(conn, owner_id, row, tz=tz, linked=linked) for row in activities]
-    fellows_context = _build_fellows_context(owner_id, viewer_id=current_uid, is_owner=False)
+    fellows_context = _build_fellows_context(owner_id, viewer_id=current_uid, is_owner=False, visibility=visibility)
     state = (
         connections.relationship_state(current_uid, owner_id) if current_uid is not None else "none"
     )

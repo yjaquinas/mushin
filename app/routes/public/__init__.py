@@ -13,6 +13,7 @@ from fastapi import APIRouter
 from app.routes.public.common.contexts import templates as templates
 from app.routes.public.activity.routes import router as _activity_detail_router
 from app.routes.public.comments.routes import router as _comments_router
+from app.routes.public.fellows.routes import router as _fellows_router
 from app.routes.public.profile.routes import router as _profile_router
 
 # ``templates`` is re-exported above so existing call sites (e.g. a test
@@ -22,6 +23,7 @@ from app.routes.public.profile.routes import router as _profile_router
 # through (see ``_contexts.py``).
 
 router = APIRouter()
+router.include_router(_fellows_router)
 router.include_router(_profile_router)
 router.include_router(_activity_detail_router)
 router.include_router(_comments_router)

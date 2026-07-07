@@ -1,0 +1,17 @@
+{% extends "web/base.html.jinja2" %}
+
+{% block title %}{{ strings.FELLOWS_HEADING }} · {{ username }} · {{ strings.APP_NAME }}{% endblock %}
+
+{% block tab_profile %}
+{% if is_owner %}
+{% block content %}
+{% include "web/fellows/_fellows_content.html.jinja2" with context %}
+{% endblock %}
+{% endif %}
+{% endblock %}
+
+{% block tab_social %}
+{% if not is_owner %}
+{% include "web/fellows/_fellows_content.html.jinja2" with context %}
+{% endif %}
+{% endblock %}

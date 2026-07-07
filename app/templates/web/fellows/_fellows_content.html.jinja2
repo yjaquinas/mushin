@@ -1,0 +1,51 @@
+<div id="fellows-section" class="flex flex-col gap-6">
+    <a href="{% if is_owner %}{{ home_url }}{% else %}/social/@{{ username }}{% endif %}" class="flex items-center gap-1 text-caption text-text-secondary hover:text-text-primary transition">
+        {{ icon('chevron-left', size=16) }} {{ strings.ACTIVITY_BACK_TO_PROFILE }}
+    </a>
+
+    <h1 class="text-title font-semibold text-text-primary">{{ strings.FELLOWS_HEADING }}</h1>
+
+    {% if not is_owner and state is defined %}
+    {% if state == "none" %}
+    <button
+        type="button"
+        hx-post="/fellows/{{ username }}/connect?source=fellows-page"
+        hx-target="#fellows-section"
+        hx-swap="outerHTML"
+        class="rounded-button bg-brand px-2 py-0.5 text-xs font-semibold text-on-brand transition hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+    >{{ strings.CONNECT_ACTION }}</button>
+    {% elif state == "pending_outgoing" %}
+    <span class="text-xs text-text-muted">{{ strings.CONNECT_REQUESTED }}</span>
+    {% endif %}
+    {% endif %}
+
+    {% if fellows.pending_count > 0 and is_owner %}
+    {% include "components/fellows/requests_cluster.html.jinja2" with context %}
+    {% endif %}
+
+    {% if fellows.fellow_count == 0 %}
+    <p class="text-body text-text-secondary">{{ strings.FELLOWS_EMPTY }}</p>
+    {% elif fellows.show_fellow_names %}
+    <ul class="flex flex-col gap-2">
+        {% set all_fellows = fellows.fellows %}
+        {% for fellow in all_fellows %}
+        <li class="flex items-center justify-between rounded-card border border-border bg-surface-1 px-4 py-3">
+            <a href="/@{{ fellow.username }}" class="text-body font-medium text-text-primary hover:underline">{{ fellow.username }}</a>
+            {% if is_owner %}
+            <button
+                type="button"
+                hx-get="/fellows/{{ fellow.username }}/remove-confirm"
+                hx-target="#fellow-remove-dialog"
+                hx-swap="outerHTML"
+                class="rounded-button border border-border px-3 py-1.5 text-caption text-text-secondary transition hover:bg-surface-2"
+            >{{ strings.CONNECT_REMOVE }}</button>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-body text-text-secondary">{{ strings.FELLOWS_COUNT_LABEL.format(count=fellows.fellow_count) }}</p>
+    {% endif %}
+</div>
+
+<div id="fellow-remove-dialog"></div>

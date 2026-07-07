@@ -51,6 +51,18 @@ def set_user_suspended(conn: sqlite3.Connection, user_id: int, *, suspended: boo
     )
 
 
+def set_user_visibility(
+    conn: sqlite3.Connection, user_id: int, *, visibility: str
+) -> None:
+    if visibility not in {"public", "private"}:
+        raise AdminValidationError(f"{visibility!r} is not a valid visibility value")
+    conn.execute(
+        "UPDATE user SET visibility = ?, consent_seen_at = ?,"
+        " private_redefinition_seen_at = ? WHERE id = ?",
+        (visibility, _now_iso(), _now_iso(), user_id),
+    )
+
+
 def delete_user(conn: sqlite3.Connection, user_id: int) -> None:
     """Soft-delete a user: rename username, remove password, mark deleted."""
     conn.execute(
