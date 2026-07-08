@@ -46,7 +46,7 @@
             {% if share_url or profile_url %}
             {% include "components/common/_profile_share_button.html.jinja2" with context %}
             {% else %}
-            <span class="min-w-[44px]"></span>
+            {% block header_right %}<span class="min-w-[44px]"></span>{% endblock %}
             {% endif %}
         </div>
         {% endif %}

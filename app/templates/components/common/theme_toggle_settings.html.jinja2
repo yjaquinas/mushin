@@ -1,27 +1,24 @@
 {#
-  Theme toggle — styled as a Data-section button.
-  Icon and label reflect the *destination* state; tapping posts to
-  /preferences/theme which sets the mushin_theme cookie and returns this
-  same fragment re-rendered for the new state.
+  Theme toggle — icon-only pill showing both sun and moon.
+  The active icon is highlighted with brand fill; the inactive one is muted.
+  Tapping posts to /preferences/theme which sets the mushin_theme cookie
+  and triggers a full page refresh.
 
   Context: theme ("light" | "dark").
 #}
-{% if theme == "light" %}
-  {% set theme_icon = "sun" %}
-  {% set theme_short = "LIGHT" %}
-{% else %}
-  {% set theme_icon = "moon" %}
-  {% set theme_short = "DARK" %}
-{% endif %}
 <button
     type="button"
     id="theme-toggle"
     hx-post="/preferences/theme"
     hx-swap="outerHTML"
-    aria-label="{{ 'Theme: light. Switch to dark.' if theme == 'light' else 'Theme: dark. Switch to light.' }}"
+    aria-label="{{ 'Switch to dark theme' if theme == 'light' else 'Switch to light theme' }}"
     data-theme="{{ theme }}"
-    class="flex min-h-tap w-full items-center justify-center gap-2 rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline-offset-2"
+    class="flex items-center rounded-full border border-border bg-surface-1 p-0.5 transition hover:bg-surface-2 focus-visible:outline-offset-2"
 >
-    {{ icon(theme_icon, size=18) }}
-    {{ theme_short }}
+    <span class="flex items-center justify-center rounded-full p-1.5 transition-colors {% if theme == 'light' %}bg-brand text-on-brand{% else %}text-text-muted{% endif %}">
+        {{ icon("sun", size=16) }}
+    </span>
+    <span class="flex items-center justify-center rounded-full p-1.5 transition-colors {% if theme == 'dark' %}bg-brand text-on-brand{% else %}text-text-muted{% endif %}">
+        {{ icon("moon", size=16) }}
+    </span>
 </button>

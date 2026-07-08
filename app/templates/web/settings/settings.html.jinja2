@@ -2,6 +2,10 @@
 
 {% block title %}{{ strings.SETTINGS_TITLE }} · {{ strings.APP_NAME }}{% endblock %}
 
+{% block header_right %}
+{% include "components/common/theme_toggle_settings.html.jinja2" with context %}
+{% endblock %}
+
 {% block tab_settings %}
 <div class="flex flex-grow flex-col">
 {% if flash_message %}
@@ -133,12 +137,6 @@
     </form>
 </section>
 {% endif %}
-
-{# Theme toggle — available to every account. #}
-<section class="flex flex-col gap-4 border-t border-border py-4">
-    <h2 class="text-body font-semibold text-text-primary">Theme</h2>
-    {% include "components/common/theme_toggle_settings.html.jinja2" with context %}
-</section>
 
 {# Data actions: export / import — available to every account, including guests. #}
 <section class="flex flex-col gap-4 border-t border-border py-4">
