@@ -102,14 +102,17 @@ async def profile(
             conn, username, owner_id, cap=cap, tz=tz, current_uid=current_uid,
             visibility=user["visibility"],
         )
+        context["flash_message"] = _read_flash(request)
         context["current_page"] = "social"
         context["page_title"] = username
         context["profile_url"] = profiles.canonical_profile_url(username)
         context["share_label"] = f"@{username}"
         context["share_copied_text"] = f"Link to @{username} copied"
         context["share_failed_text"] = "Couldn't share the link."
-    return templates.TemplateResponse(
-        request=request,
-        name="web/home/public_profile.html.jinja2",
-        context=context,
-    )
+        response = templates.TemplateResponse(
+            request=request,
+            name="web/home/public_profile.html.jinja2",
+            context=context,
+        )
+        _clear_flash(response)
+        return response

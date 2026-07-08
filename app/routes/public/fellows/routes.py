@@ -11,6 +11,7 @@ from app.auth import sessions, users as auth_users
 from app.models import db
 from app.routes.public.common.contexts import templates
 from app.routes.web import _build_fellows_context
+from app.routes.web.common.flash import _set_flash
 from app.services.social import connections, profiles
 
 router = APIRouter()
@@ -37,6 +38,11 @@ async def public_fellows(
 
         if cap == "blocked":
             return HTMLResponse(status_code=404)
+
+        if cap == "limited":
+            response = RedirectResponse(url=profiles.canonical_profile_url(username), status_code=303)
+            _set_flash(response, "fellows_private")
+            return response
 
         if cap == "owner":
             full_user = auth_users.get_user(owner_id)

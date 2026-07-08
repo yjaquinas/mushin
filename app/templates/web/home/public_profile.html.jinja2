@@ -15,6 +15,10 @@
 {% block title %}{{ username }} · {{ strings.APP_NAME }}{% endblock %}
 
 {% block tab_social %}
+{% if flash_message %}
+<div hidden data-toast-message="{{ flash_message }}"></div>
+{% endif %}
+
 {% include "components/fellows/fellows_section.html.jinja2" with context %}
 
 {% if view_mode == "limited" %}

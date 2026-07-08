@@ -7,14 +7,14 @@
     <div class="flex items-center justify-between gap-3">
         <span class="text-title font-semibold text-text-primary">{{ strings.FELLOWS_HEADING }}</span>
         <div class="flex items-center gap-2">
-            {% if not fellows.is_owner and state is defined %}
+            {% if not fellows.is_owner and state is defined and viewer_logged_in %}
             {% if state == "none" %}
             <button
                 type="button"
                 hx-post="/fellows/{{ username }}/connect"
                 hx-target="#fellows-section-{{ username }}"
                 hx-swap="outerHTML"
-                class="rounded-button bg-brand px-2 py-0.5 text-xs font-semibold text-on-brand transition hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                class="rounded-button bg-brand px-2 py-0.5 text-sm font-semibold text-on-brand transition hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
             >{{ strings.CONNECT_ACTION }}</button>
             {% elif state == "pending_outgoing" %}
             <button
@@ -22,7 +22,7 @@
                 hx-get="/fellows/requests/{{ username }}/cancel-confirm?source=profile"
                 hx-target="#connect-cancel-dialog-{{ username }}"
                 hx-swap="outerHTML"
-                class="rounded-button border border-border px-2 py-0.5 text-xs font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                class="rounded-button border border-border px-2 py-0.5 text-sm font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
             >{{ strings.CONNECT_REQUESTED }}</button>
             {% elif state == "pending_incoming" %}
             <button
@@ -30,14 +30,14 @@
                 hx-post="/fellows/requests/{{ username }}/accept?source=profile"
                 hx-target="#fellows-section-{{ username }}"
                 hx-swap="outerHTML"
-                class="rounded-button bg-brand px-2 py-0.5 text-xs font-semibold text-on-brand transition hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                class="rounded-button bg-brand px-2 py-0.5 text-sm font-semibold text-on-brand transition hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
             >{{ strings.REQUESTS_ACCEPT }}</button>
             <button
                 type="button"
                 hx-post="/fellows/requests/{{ username }}/decline?source=profile"
                 hx-target="#fellows-section-{{ username }}"
                 hx-swap="outerHTML"
-                class="rounded-button border border-border px-2 py-0.5 text-xs font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                class="rounded-button border border-border px-2 py-0.5 text-sm font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
             >{{ strings.REQUESTS_DECLINE }}</button>
             {% elif state == "fellow" %}
             <button
@@ -45,7 +45,7 @@
                 hx-get="/fellows/{{ username }}/remove-confirm"
                 hx-target="#connect-remove-dialog-{{ username }}"
                 hx-swap="outerHTML"
-                class="rounded-button border border-accent px-2 py-0.5 text-xs font-medium text-accent-text transition hover:bg-accent-subtle focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                class="rounded-button border border-accent px-2 py-0.5 text-sm font-medium text-accent-text transition hover:bg-accent-subtle focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
             >{{ strings.CONNECT_REMOVE_CONFIRM }}</button>
             {% elif state == "blocked" %}
             <button
@@ -53,14 +53,14 @@
                 hx-post="/fellows/{{ username }}/unblock"
                 hx-target="#fellows-section-{{ username }}"
                 hx-swap="outerHTML"
-                class="rounded-button border border-border px-2 py-0.5 text-xs font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                class="rounded-button border border-border px-2 py-0.5 text-sm font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
             >{{ strings.CONNECT_UNBLOCK }}</button>
             {% endif %}
             {% endif %}
-            {% if username is defined and username %}
+            {% if (username is defined and username) and (fellows.is_owner or view_mode is not defined or view_mode != "limited") %}
             <a
                 href="/@{{ username }}/fellows"
-                class="inline-flex items-center gap-1 rounded-button border border-border px-2 py-0.5 text-xs font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                class="inline-flex items-center gap-1 rounded-button border border-border px-2 py-0.5 text-sm font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
             >
                 <span class="text-sm">{{ strings.FELLOWS_MANAGE }}</span>
                 {% if fellows.pending_count > 0 %}
@@ -75,6 +75,8 @@
     <p class="text-caption text-danger" role="alert">{{ error }}</p>
     {% endif %}
 
+    {% set _show_contents = (view_mode is defined and view_mode != "limited") or (view_mode is not defined and (fellows.is_owner or fellows.show_fellow_names)) %}
+    {% if _show_contents %}
     {% if fellows.fellow_count == 0 %}
     <p class="text-caption text-text-secondary">{{ strings.FELLOWS_EMPTY }}</p>
     {% elif fellows.show_fellow_names %}
@@ -104,6 +106,7 @@
             {{ strings.FELLOWS_COUNT_LABEL.format(count=fellows.fellow_count) }}
         {% endif %}
     </p>
+    {% endif %}
     {% endif %}
 
 </div>

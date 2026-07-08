@@ -40,7 +40,7 @@ def _render_fellows_section(
     fellows_context = _build_fellows_context(
         profile_user_id, viewer_id=viewer_id, is_owner=is_owner
     )
-    ctx: dict[str, object] = {"fellows": fellows_context, "error": error, "username": username}
+    ctx: dict[str, object] = {"fellows": fellows_context, "error": error, "username": username, "viewer_logged_in": True}
     if not is_owner:
         ctx["state"] = connections.relationship_state(viewer_id, profile_user_id)
     return templates.TemplateResponse(
@@ -88,6 +88,7 @@ def _render_fellows_page_content(
             "username": username,
             "is_owner": is_owner,
             "error": error,
+            "viewer_logged_in": True,
         },
     )
 
@@ -116,6 +117,7 @@ def _render_relationship_affordance(
             "cancel_request_dialog_id": _cancel_request_dialog_dom_id(profile_username, from_search=from_search),
             "pending_incoming_target_id": dom_id,
             "from_search": from_search,
+            "viewer_logged_in": True,
         },
     )
 

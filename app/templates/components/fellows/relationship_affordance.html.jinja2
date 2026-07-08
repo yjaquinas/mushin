@@ -30,7 +30,7 @@
     <p class="text-caption text-danger" role="alert">{{ error }}</p>
     {% endif %}
 
-    {% if state == "none" %}
+    {% if viewer_logged_in and state == "none" %}
     <div class="flex flex-wrap items-center gap-2">
         <button
             type="button"

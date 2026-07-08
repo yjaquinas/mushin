@@ -465,6 +465,7 @@ ENTRY_HIDDEN_BY_MODERATOR = "Hidden by moderator"
 # ---------------------------------------------------------------------------
 
 FELLOWS_HEADING = "Fellows"
+HOME_FLASH_FELLOWS_PRIVATE = "This profile is private."
 # {count} interpolated by the template. Used for non-owner/non-fellow
 # viewers, who see only the number, never the clickable names.
 FELLOWS_COUNT_LABEL = "{count} fellows"
