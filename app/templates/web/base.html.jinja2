@@ -26,6 +26,7 @@
     <script defer src="{{ static_asset('/static/js/activities/activity-sheet.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/history/field-stats.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/entries/log-sheet.js') }}"></script>
+    <script defer src="{{ static_asset('/static/js/social/social-search.js') }}"></script>
 </head>
 {% set current_tab = current_page if (current_page is defined and current_page in ('profile', 'social', 'settings')) else none %}
 <body
@@ -72,7 +73,7 @@
         </div>
         <div
             id="tab-panel-settings"
-            class="flex flex-grow tab-panel{% if current_tab == 'settings' %} tab-panel--active{% endif %}"
+            class="tab-panel{% if current_tab == 'settings' %} tab-panel--active{% endif %}"
             data-tab="settings"
         >
             {% block tab_settings %}{% endblock %}
@@ -136,7 +137,7 @@
                 aria-label="{{ strings.NAV_PROFILE }}"
                 data-tab="profile"
             >
-                {{ icon("circle-user", size=22) }}
+                {{ icon("user", size=22) }}
             </a>
             <a
                 href="/social"
@@ -144,7 +145,7 @@
                 aria-label="{{ strings.NAV_SOCIAL }}"
                 data-tab="social"
             >
-                {{ icon("users", size=22) }}
+                {{ icon("compass", size=22) }}
             </a>
             <a
                 href="/settings"
@@ -152,7 +153,7 @@
                 aria-label="{{ strings.NAV_SETTINGS }}"
                 data-tab="settings"
             >
-                {{ icon("settings", size=22) }}
+                {{ icon("cog", size=22) }}
             </a>
         </div>
     </nav>

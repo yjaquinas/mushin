@@ -1,10 +1,10 @@
 """Social (people, tags, and activities).
 
 Session-authenticated. The page route always renders the full page (with
-an initial empty/prompt results region); the results route is HTMX-only,
-debounced by the search box itself (see web/social/social.html.jinja2), and
-always returns the components/social/explore_results.html.jinja2 fragment — a
-blank query renders recent public entries instead.
+recent public entries and a hidden search section); the results route is
+HTMX-only, debounced by the search box itself (see web/social/social.html
+.jinja2), and always returns the components/social/explore_results.html
+.jinja2 fragment.
 """
 
 from __future__ import annotations
@@ -65,10 +65,7 @@ async def social_results(
     q: Annotated[str, Query()] = "",
     session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
 ) -> HTMLResponse:
-    """Return the grouped search results fragment for the search box.
-
-    A blank *q* renders recent public entries instead of running a query.
-    """
+    """Return the grouped search results fragment for the search box."""
     user = _current_user(session)
     if user is None:
         return HTMLResponse(status_code=401)
@@ -76,9 +73,6 @@ async def social_results(
 
     query = q.strip()
     results = search.grouped_results(owner_id, query, limit=20)
-
-    if not query:
-        results["feed_entries"] = recent_public_entries(limit=10)
 
     return templates.TemplateResponse(
         request=request,

@@ -39,7 +39,7 @@
                 required
                 value="{{ username | default('') }}"
                 placeholder="5-20 chars, lowercase/number/_ only"
-                class="min-h-tap rounded-input border border-border bg-surface-1 px-3 py-2 text-body text-text-primary focus-visible:outline-2"
+                class="min-h-tap rounded-input border border-border bg-surface-1 px-3 py-1 text-body text-text-primary focus-visible:outline-2"
             />
         </div>
         <input hidden autocomplete="username" />
@@ -54,7 +54,7 @@
                 name="password"
                 required
                 placeholder="Min 8 chars, no spaces"
-                class="min-h-tap rounded-input border border-border bg-surface-1 px-3 py-2 text-body text-text-primary focus-visible:outline-2"
+                class="min-h-tap rounded-input border border-border bg-surface-1 px-3 py-1 text-body text-text-primary focus-visible:outline-2"
             />
         </div>
 
@@ -68,7 +68,7 @@
                 name="email"
                 autocomplete="email"
                 value="{{ email | default('') }}"
-                class="min-h-tap rounded-input border border-border bg-surface-1 px-3 py-2 text-body text-text-primary focus-visible:outline-2"
+                class="min-h-tap rounded-input border border-border bg-surface-1 px-3 py-1 text-body text-text-primary focus-visible:outline-2"
             >
             <p class="text-micro text-text-muted">{{ strings.ENTRY_FIELD_EMAIL_HELP }}</p>
         </div>

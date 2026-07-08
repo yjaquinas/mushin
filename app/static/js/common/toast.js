@@ -55,6 +55,10 @@
 
   window.showToast = showToast;
 
+  document.body.addEventListener("show-toast", function (e) {
+    showToast(e.detail.message, e.detail.variant || "informative");
+  });
+
   document.addEventListener("DOMContentLoaded", function () {
     document.querySelectorAll("[data-toast-message]").forEach(function (messageNode) {
       showToast(messageNode.dataset.toastMessage, messageNode.dataset.toastVariant || "informative");

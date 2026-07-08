@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 from fastapi import Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
@@ -21,8 +23,11 @@ def create_activity_response(request: Request, user: dict, name: str) -> HTMLRes
     name = name.strip()
     if not name:
         return _activity_form_error(request, ui_strings.ACTIVITY_FORM_NAME_REQUIRED)
-    if len(name) < 5:
-        return _activity_form_error(request, ui_strings.ACTIVITY_FORM_NAME_TOO_SHORT)
+    if len(name) < 2:
+        response = HTMLResponse(content="", status_code=400)
+        response.headers["HX-Trigger"] = json.dumps({"show-toast": {"message": ui_strings.ACTIVITY_FORM_NAME_TOO_SHORT, "variant": "error"}})
+        response.headers["HX-Reswap"] = "none"
+        return response
 
     with db.connect() as conn:
         if conn.execute(

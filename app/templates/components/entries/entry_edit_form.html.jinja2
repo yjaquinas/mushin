@@ -15,7 +15,7 @@
 {% set delete_url = "/activities/" ~ activity_id ~ "/entries/" ~ entry.id ~ "/delete-confirm" %}
 {% set delete_target = "#entry-delete-dialog-" ~ entry.id %}
 {% set auto_open = true %}
-{% set disable_backdrop_close = false %}
+{% set disable_backdrop_close = true %}
 {% set disable_escape_close = false %}
 {% set notes_value = entry.memo or "" %}
 {% include "components/entries/entry_form_dialog.html.jinja2" with context %}

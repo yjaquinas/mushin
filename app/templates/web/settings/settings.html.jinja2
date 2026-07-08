@@ -2,10 +2,6 @@
 
 {% block title %}{{ strings.SETTINGS_TITLE }} · {{ strings.APP_NAME }}{% endblock %}
 
-{% block header_right %}
-{% include "components/common/theme_toggle_settings.html.jinja2" with context %}
-{% endblock %}
-
 {% block tab_settings %}
 <div class="flex flex-grow flex-col">
 {% if flash_message %}
@@ -135,6 +131,14 @@
     </form>
 </section>
 {% endif %}
+
+{# Theme #}
+<section class="border-t border-border py-4">
+    <div class="flex items-center justify-between">
+        <span class="text-body font-semibold text-text-primary">{{ strings.SETTINGS_THEME_HEADING }}</span>
+        {% include "components/common/theme_toggle_settings.html.jinja2" with context %}
+    </div>
+</section>
 
 {# Data, logout, delete #}
 <section class="flex flex-col gap-4 border-t border-border py-4">

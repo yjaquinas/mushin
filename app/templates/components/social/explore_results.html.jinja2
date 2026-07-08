@@ -1,97 +1,103 @@
 {#
   Prefix-routed search results.
-  Context: query, kind, people, tags, activities, feed_entries.
+  Context: query, kind, people, tags, activities.
 #}
 {% if not query %}
 <p class="py-2 text-center text-caption text-text-secondary">{{ strings.SEARCH_PROMPT }}</p>
-<hr class="border-border">
-<section class="flex flex-col gap-4 pt-2">
-    <h2 class="text-title font-semibold text-text-primary">{{ strings.ENTRY_FEED_HEADING }}</h2>
-    {% include "components/entries/_recent_entries.html.jinja2" %}
-</section>
 {% else %}
 <div class="flex flex-col gap-6">
-    {% if kind == "people" %}
+    {% if kind in ("people", "all") and people %}
     <section class="flex flex-col gap-2">
         <h2 class="text-body font-medium text-text-secondary">{{ strings.SEARCH_PEOPLE_HEADING }}</h2>
-        {% if not people %}
-        <p class="text-caption text-text-secondary">{{ strings.SEARCH_PEOPLE_EMPTY }}</p>
-        {% else %}
         <ul class="flex flex-col gap-2">
             {% for person in people %}
-            <li class="flex flex-wrap items-center justify-between gap-2 rounded-card px-1 py-1">
-                <a
-                    href="/social/@{{ person.username }}"
-                    class="flex min-h-tap flex-wrap items-center gap-x-2 gap-y-0.5 rounded-card px-2 py-2 text-body text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-                >
-                    <span class="font-medium">@{{ person.username }}</span>
-                </a>
-                {% with
-                    username=person.username,
-                    state=person.relationship_state,
-                    error=None,
-                    dom_id="relationship-affordance-" ~ person.username,
-                    pending_incoming_target_id="relationship-affordance-" ~ person.username,
-                    from_search=true
-                %}
-                {% include "components/fellows/relationship_affordance.html.jinja2" %}
-                {% endwith %}
+            <li hx-get="/social/@{{ person.username }}"
+                hx-push-url="true"
+                hx-target="#tab-panel-social"
+                hx-select="#tab-panel-social"
+                hx-swap="outerHTML"
+                hx-select-oob="#masthead-area"
+                class="flex min-h-tap items-center justify-between gap-3 rounded-card px-3 py-2 transition hover:bg-surface-2 cursor-pointer"
+                tabindex="0" role="link">
+                <span class="min-w-0 truncate font-medium text-text-primary">@{{ person.username }}</span>
+                <span class="shrink-0" onclick="event.stopPropagation()">
+                    {% with
+                        username=person.username,
+                        state=person.relationship_state,
+                        error=None,
+                        dom_id="relationship-affordance-" ~ person.username,
+                        pending_incoming_target_id="relationship-affordance-" ~ person.username,
+                        from_search=true
+                    %}
+                    {% include "components/fellows/relationship_affordance.html.jinja2" %}
+                    {% endwith %}
+                </span>
             </li>
             {% endfor %}
         </ul>
-        {% endif %}
     </section>
-    {% elif kind == "tags" %}
+    {% endif %}
+
+    {% if kind in ("tags", "all") and tags %}
     <section class="flex flex-col gap-2">
         <h2 class="text-body font-medium text-text-secondary">{{ strings.SEARCH_TAGS_HEADING }}</h2>
-        {% if not tags %}
-        <p class="text-caption text-text-secondary">{{ strings.SEARCH_TAGS_EMPTY }}</p>
-        {% else %}
-        <div class="flex flex-col gap-3">
-            {% for entry in tags %}
-            <a
-                href="/social{{ entry.activity_url }}{% if entry.detail_visible %}?entry_id={{ entry.entry_id }}{% endif %}"
-                class="group flex flex-row rounded-card border border-border bg-surface-2 p-4 transition hover:border-strong focus-visible:outline-offset-2"
-            >
-                <div class="flex min-w-0 flex-1 flex-col">
-                    <span class="truncate text-caption font-medium text-text-secondary group-hover:text-text-primary">@{{ entry.username }}</span>
-                    <h3 class="mt-0.5 truncate text-body font-semibold text-text-primary">{{ entry.activity_name }}</h3>
-                    {% if entry.memo %}
-                    {% set lines = entry.memo.split('\n') %}
-                    <p class="mt-1 text-caption text-text-secondary line-clamp-2">{{ lines[:2] | join('\n') }}{% if lines | length > 2 %}&hellip;{% endif %}</p>
-                    {% endif %}
-                    <span class="mt-1 self-end text-[0.8rem] text-text-muted whitespace-nowrap">{{ strings.ENTRY_CREATED_AT_LABEL }} <span data-local-timestamp="{{ entry.created_at }}">{{ entry.created_at }}</span></span>
-                </div>
-                <span class="ml-2 flex shrink-0 items-center self-center text-text-muted opacity-50 transition group-hover:opacity-100">{{ icon("arrow-right", size=20) }}</span>
-            </a>
-            {% endfor %}
-        </div>
-        {% endif %}
-    </section>
-    {% elif kind == "activities" %}
-    <section class="flex flex-col gap-2">
-        <h2 class="text-body font-medium text-text-secondary">{{ strings.SEARCH_ACTIVITIES_HEADING }}</h2>
-        {% if not activities %}
-        <p class="text-caption text-text-secondary">{{ strings.SEARCH_ACTIVITIES_EMPTY }}</p>
-        {% else %}
         <ul class="flex flex-col gap-2">
-            {% for activity in activities %}
-            <li>
-                <a
-                    href="/social{{ activity.url }}"
-                    class="flex min-h-tap items-center justify-between gap-3 rounded-card px-3 py-2 text-body text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-                >
-                    <span class="flex min-w-0 flex-col">
-                        <span class="truncate font-medium">{{ activity.name }}</span>
-                        <span class="text-caption text-text-secondary">@{{ activity.username }}</span>
-                    </span>
-                    <span class="shrink-0 text-caption text-text-secondary">{{ strings.SEARCH_ACTIVITY_COUNT.format(count=activity.count) }}</span>
-                </a>
+            {% for entry in tags %}
+            <li hx-get="/social{{ entry.activity_url }}{% if entry.detail_visible %}?entry_id={{ entry.entry_id }}{% endif %}"
+                hx-push-url="true"
+                hx-target="#tab-panel-social"
+                hx-select="#tab-panel-social"
+                hx-swap="outerHTML"
+                hx-select-oob="#masthead-area"
+                class="flex min-h-tap items-center gap-3 rounded-card px-3 py-2 transition hover:bg-surface-2 cursor-pointer"
+                tabindex="0" role="link">
+                <span class="line-clamp-2 text-body text-text-primary">{{ entry.memo }}</span>
             </li>
             {% endfor %}
         </ul>
-        {% endif %}
     </section>
+    {% endif %}
+
+    {% if kind in ("activities", "all") and activities %}
+    <section class="flex flex-col gap-2">
+        <h2 class="text-body font-medium text-text-secondary">{{ strings.SEARCH_ACTIVITIES_HEADING }}</h2>
+        <ul class="flex flex-col gap-2">
+            {% for activity in activities %}
+            <li hx-get="/social{{ activity.url }}"
+                hx-push-url="true"
+                hx-target="#tab-panel-social"
+                hx-select="#tab-panel-social"
+                hx-swap="outerHTML"
+                hx-select-oob="#masthead-area"
+                class="flex min-h-tap items-center gap-3 rounded-card px-3 py-2 transition hover:bg-surface-2 cursor-pointer"
+                tabindex="0" role="link">
+                <span class="flex min-w-0 flex-col">
+                    <span class="truncate font-medium text-text-primary">{{ activity.name }}</span>
+                    <span class="text-caption text-text-secondary">@{{ activity.username }}</span>
+                </span>
+            </li>
+            {% endfor %}
+        </ul>
+    </section>
+    {% endif %}
+
+    {% if kind == "people" and not people %}
+    <section class="flex flex-col gap-2">
+        <h2 class="text-body font-medium text-text-secondary">{{ strings.SEARCH_PEOPLE_HEADING }}</h2>
+        <p class="text-caption text-text-secondary">{{ strings.SEARCH_PEOPLE_EMPTY }}</p>
+    </section>
+    {% elif kind == "tags" and not tags %}
+    <section class="flex flex-col gap-2">
+        <h2 class="text-body font-medium text-text-secondary">{{ strings.SEARCH_TAGS_HEADING }}</h2>
+        <p class="text-caption text-text-secondary">{{ strings.SEARCH_TAGS_EMPTY }}</p>
+    </section>
+    {% elif kind == "activities" and not activities %}
+    <section class="flex flex-col gap-2">
+        <h2 class="text-body font-medium text-text-secondary">{{ strings.SEARCH_ACTIVITIES_HEADING }}</h2>
+        <p class="text-caption text-text-secondary">{{ strings.SEARCH_ACTIVITIES_EMPTY }}</p>
+    </section>
+    {% elif kind == "all" and not people and not tags and not activities %}
+    <p class="text-caption text-text-secondary">{{ strings.SEARCH_ALL_EMPTY }}</p>
     {% endif %}
 </div>
 {% endif %}

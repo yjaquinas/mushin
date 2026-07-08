@@ -54,6 +54,7 @@ def search_people(searcher_id: int, query: str, *, limit: int = 20) -> list[dict
             " WHERE deleted_at IS NULL"
             " AND username IS NOT NULL"
             " AND username LIKE ? || '%' ESCAPE ?"
+            " AND id != ?"
             " AND NOT EXISTS ("
             "   SELECT 1 FROM block b"
             "   WHERE (b.blocker_id = ? AND b.blocked_id = user.id)"
@@ -64,6 +65,7 @@ def search_people(searcher_id: int, query: str, *, limit: int = 20) -> list[dict
             (
                 pattern,
                 LIKE_ESCAPE,
+                searcher_id,
                 searcher_id,
                 searcher_id,
                 capped,
@@ -95,6 +97,8 @@ def grouped_results(searcher_id: int, query: str, *, limit: int = 20) -> dict:
         result["kind"] = "tags"
         result["tags"] = search_tags(searcher_id, raw[1:].strip(), limit=limit)
         return result
-    result["kind"] = "activities"
+    result["kind"] = "all"
+    result["people"] = search_people(searcher_id, raw, limit=limit)
+    result["tags"] = search_tags(searcher_id, raw, limit=limit)
     result["activities"] = search_activities(searcher_id, raw, limit=limit)
     return result

@@ -69,13 +69,7 @@
     </div>
 
     {% elif state == "fellow" %}
-    <button
-        type="button"
-        hx-get="/fellows/{{ username }}/remove-confirm{{ qs }}"
-        hx-target="#{{ remove_dialog_id }}"
-        hx-swap="outerHTML"
-        class="min-h-tap self-start rounded-button border border-cinnabar px-4 text-body font-medium text-accent-text transition hover:bg-accent-subtle focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-    >{{ strings.CONNECT_REMOVE }}</button>
+    <span class="inline-flex items-center gap-1 rounded-full bg-level-subtle px-2 py-0.5 text-caption font-medium text-level">{{ icon("users", size=14) }}{{ strings.FELLOWS_FELLOW_LABEL }}</span>
 
     {% elif state == "blocked" %}
     <button
@@ -86,6 +80,6 @@
         class="min-h-tap rounded-button border border-border px-4 text-body text-text-secondary transition hover:bg-surface-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
     >{{ strings.CONNECT_UNBLOCK }}</button>
     {% endif %}
-    <div id="{{ cancel_request_dialog_id }}"></div>
-    <div id="{{ remove_dialog_id }}"></div>
+    <div id="{{ cancel_request_dialog_id }}" hidden></div>
+    <div id="{{ remove_dialog_id }}" hidden></div>
 </div>

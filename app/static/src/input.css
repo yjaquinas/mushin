@@ -672,6 +672,12 @@
     display: block;
   }
 
+  .tab-panel[data-tab="settings"].tab-panel--active {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+  }
+
   /* ── Bottom navigation bar ─────────────────────────────────────────── */
   /*
    * Full-width fixed bar at the bottom of the viewport. Three evenly-spaced

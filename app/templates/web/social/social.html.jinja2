@@ -2,23 +2,43 @@
 
 {% block title %}{{ strings.SOCIAL_TITLE }} · {{ strings.APP_NAME }}{% endblock %}
 
+{% block header_right %}
+<button
+    id="search-toggle"
+    type="button"
+    aria-label="{{ strings.SEARCH_OPEN_ARIA }}"
+    class="flex min-h-tap min-w-tap items-center justify-center rounded-full border border-border bg-surface-1 text-text-secondary transition hover:bg-surface-2 focus-visible:outline-offset-2"
+>
+    <span id="search-icon-open">{{ icon("search", size=18) }}</span>
+    <span id="search-icon-close" hidden>{{ icon("x", size=18) }}</span>
+</button>
+{% endblock %}
+
 {% block tab_social %}
-<div class="py-2 flex flex-col">
-    <input
-        type="search"
-        id="search-input"
-        name="q"
-        placeholder="{{ strings.SEARCH_INPUT_PLACEHOLDER }}"
-        autocomplete="off"
-        hx-get="/social/results"
-        hx-trigger="input changed delay:300ms, search"
-        hx-target="#search-results"
-        hx-swap="innerHTML"
-        class="min-h-tap rounded-input border border-border bg-surface-1 px-3 py-2 text-body text-text-primary focus-visible:outline-2"
-    >
+<div id="recent-entries-section">
+    <section class="flex flex-col gap-4 pt-2">
+        <h2 class="text-title font-semibold text-text-primary">{{ strings.SOCIAL_FEED_HEADING }}</h2>
+        {% include "components/entries/_recent_entries.html.jinja2" %}
+    </section>
 </div>
 
-<div id="search-results">
-    {% include "components/social/explore_results.html.jinja2" with context %}
+<div id="search-section" class="flex flex-col" hidden>
+    <div class="py-2">
+        <input
+            type="search"
+            id="search-input"
+            name="q"
+            placeholder="{{ strings.SEARCH_INPUT_PLACEHOLDER }}"
+            autocomplete="off"
+            hx-get="/social/results"
+            hx-trigger="input changed delay:300ms, search"
+            hx-target="#search-results"
+            hx-swap="innerHTML"
+            class="min-h-tap w-full rounded-input border border-border bg-surface-1 px-3 py-1 text-body text-text-primary focus-visible:outline-2"
+        >
+    </div>
+    <div id="search-results">
+        <p class="py-2 text-center text-caption text-text-secondary">{{ strings.SEARCH_PROMPT }}</p>
+    </div>
 </div>
 {% endblock %}

@@ -82,8 +82,8 @@ HOME_ADD_ACTIVITY = "Add an Activity"
 
 ACTIVITY_NEW_TITLE = "New activity"
 ACTIVITY_FORM_NAME_LABEL = "Name"
-ACTIVITY_FORM_NAME_PLACEHOLDER = "e.g. Workout (min 5 characters)"
-ACTIVITY_FORM_NAME_TOO_SHORT = "Activity name must be at least 5 characters."
+ACTIVITY_FORM_NAME_PLACEHOLDER = "e.g. Workout (min 2 characters)"
+ACTIVITY_FORM_NAME_TOO_SHORT = "Activity name must be at least 2 characters."
 ACTIVITY_FORM_SUBMIT = "Create"
 ACTIVITY_FORM_CANCEL = "Cancel"
 ACTIVITY_FORM_NAME_REQUIRED = "Activity name is required"
@@ -361,6 +361,8 @@ ACCOUNT_EMAIL_UPDATE = "Update email"
 ACCOUNT_EMAIL_INVALID = "Enter a valid email address."
 ACCOUNT_EMAIL_TAKEN = "That email address is already in use."
 
+SETTINGS_THEME_HEADING = "Theme"
+
 # ---------------------------------------------------------------------------
 # Sharing consent (connection-accept consequence screen)
 # ---------------------------------------------------------------------------
@@ -475,6 +477,7 @@ FELLOWS_COUNT_LABEL = "{count} fellows"
 FELLOWS_COUNT_LABEL_ONE = "1 fellow"
 FELLOWS_EMPTY = "No fellows yet."
 FELLOWS_MANAGE = "See all"
+FELLOWS_FELLOW_LABEL = "Fellow"
 
 REQUESTS_HEADING = "Requests"
 REQUESTS_INCOMING_EMPTY = "No pending requests."
@@ -522,9 +525,13 @@ CONNECT_ERROR_GENERIC = "That didn't go through."
 # ---------------------------------------------------------------------------
 
 SOCIAL_TITLE = "Social"
-SEARCH_INPUT_LABEL = "Search @people, #tags, or activities"
-SEARCH_INPUT_PLACEHOLDER = "@username, #tag, or activity"
-SEARCH_PROMPT = "Use @username for people, #tag for tags, or type an activity name."
+SOCIAL_FEED_HEADING = "Recently updated activities"
+SEARCH_OPEN_ARIA = "Open search"
+SEARCH_CLOSE_ARIA = "Close search"
+SEARCH_INPUT_LABEL = "Search people, tags, or activities"
+SEARCH_INPUT_PLACEHOLDER = "Search people, tags, or activities"
+SEARCH_PROMPT = "Type to search across people, tags, and activities. Use @ for people or # for tags to narrow results."
+SEARCH_ALL_EMPTY = "No results found."
 
 SEARCH_PEOPLE_HEADING = "People"
 SEARCH_PEOPLE_EMPTY = "No one by that name."

@@ -57,6 +57,7 @@ DialogManager.prototype = {
   open: function () {
     if (!this.el) return;
     this.el.removeAttribute("hidden");
+    document.body.style.overflow = "hidden";
     this.el.dispatchEvent(new CustomEvent("dialog:open", { bubbles: true }));
     this.el.querySelector('[role="dialog"]')?.focus();
   },
@@ -64,8 +65,11 @@ DialogManager.prototype = {
   close: function () {
     if (!this.el) return;
     this.el.setAttribute("hidden", "");
-    this.el.dispatchEvent(new CustomEvent("dialog:close", { bubbles: true }));
     dialogManagerRegistry.remove(this);
+    if (dialogManagerRegistry.count() === 0) {
+      document.body.style.overflow = "";
+    }
+    this.el.dispatchEvent(new CustomEvent("dialog:close", { bubbles: true }));
   },
 };
 
@@ -81,5 +85,8 @@ var dialogManagerRegistry = {
   remove: function (dlg) {
     var idx = this._list.indexOf(dlg);
     if (idx !== -1) this._list.splice(idx, 1);
+  },
+  count: function () {
+    return this._list.length;
   },
 };
