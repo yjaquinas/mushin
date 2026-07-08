@@ -40,7 +40,7 @@ async def public_fellows(
             return HTMLResponse(status_code=404)
 
         if cap == "limited":
-            response = RedirectResponse(url=profiles.canonical_profile_url(username), status_code=303)
+            response = RedirectResponse(url=f"/social/@{username}", status_code=303)
             _set_flash(response, "fellows_private")
             return response
 

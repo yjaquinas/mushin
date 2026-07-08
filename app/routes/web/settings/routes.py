@@ -19,7 +19,7 @@ from app.routes.web.settings.handlers import (
     toggle_theme_response,
     update_email_response,
     update_password_response,
-    update_visibility_response,
+    update_settings_response,
 )
 from app.routes.web.common import _current_user
 from app.routes.web.common.flash import _set_flash
@@ -47,26 +47,23 @@ async def settings_page(
 
 
 @router.post("/settings", response_model=None)
-async def update_visibility(
+async def update_settings(
     request: Request,
-    visibility: Annotated[str | None, Form()],
+    visibility: Annotated[str | None, Form()] = None,
+    email: Annotated[str | None, Form()] = None,
     session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
 ) -> RedirectResponse | HTMLResponse:
-    """Change the current account's ``visibility`` from the settings page.
+    """Change the current account's visibility and/or email from settings.
 
     Validates *visibility* against ``users.VALID_VISIBILITIES`` (400 otherwise),
-    persists via ``users.set_visibility_consent``, and re-renders the settings
-    page with a flash confirmation — matching the user's expectation of staying
-    on the settings page after saving. Guests have no public profile and cannot
-    toggle.
-
-    The form action is ``/settings`` (not ``/settings/visibility``) so the URL
-    never changes after saving.
+    validates *email* format if provided, persists changes that differ from the
+    stored value, and re-renders the settings page with a flash confirmation or
+    inline error on failure.
     """
     user = _current_user(session)
     if user is None:
         return HTMLResponse(status_code=401)
-    return update_visibility_response(user, visibility)
+    return update_settings_response(request, user, visibility=visibility, email=email)
 
 
 @router.post("/settings/email", response_model=None)

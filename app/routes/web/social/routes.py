@@ -23,7 +23,7 @@ from app.routes.web import (
 )
 from app.routes.web.common import _current_user, templates
 from app.routes.web.common import ui_strings as strings
-from app.routes.web.common.flash import _set_flash
+from app.routes.web.common.flash import _clear_flash, _read_flash, _set_flash
 from app.services.search import search
 from app.services.search.discovery import recent_public_entries
 from app.services.social import connections, profiles
@@ -118,6 +118,7 @@ async def social_profile(
             conn, username, owner_id, cap=cap, tz=tz, current_uid=current_uid,
             visibility=profile_user["visibility"],
         )
+        context["flash_message"] = _read_flash(request)
         context["current_page"] = "social"
         context["page_title"] = username
         context["profile_url"] = profiles.canonical_profile_url(username)
@@ -125,11 +126,13 @@ async def social_profile(
         context["share_copied_text"] = f"Link to @{username} copied"
         context["share_failed_text"] = "Couldn't share the link."
 
-    return templates.TemplateResponse(
+    response = templates.TemplateResponse(
         request=request,
         name="web/home/public_profile.html.jinja2",
         context=context,
     )
+    _clear_flash(response)
+    return response
 
 
 @router.get("/social/@{username}/{slug}", response_class=HTMLResponse, response_model=None)

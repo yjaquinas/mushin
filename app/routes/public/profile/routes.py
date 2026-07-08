@@ -97,22 +97,4 @@ async def profile(
         if cap == "blocked":
             return HTMLResponse(status_code=404)
 
-        tz = users.get_user_timezone(owner_id)
-        context = _read_only_profile_context(
-            conn, username, owner_id, cap=cap, tz=tz, current_uid=current_uid,
-            visibility=user["visibility"],
-        )
-        context["flash_message"] = _read_flash(request)
-        context["current_page"] = "social"
-        context["page_title"] = username
-        context["profile_url"] = profiles.canonical_profile_url(username)
-        context["share_label"] = f"@{username}"
-        context["share_copied_text"] = f"Link to @{username} copied"
-        context["share_failed_text"] = "Couldn't share the link."
-        response = templates.TemplateResponse(
-            request=request,
-            name="web/home/public_profile.html.jinja2",
-            context=context,
-        )
-        _clear_flash(response)
-        return response
+        return RedirectResponse(url=f"/social/@{username}", status_code=303)

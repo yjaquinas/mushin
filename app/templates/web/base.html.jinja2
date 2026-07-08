@@ -11,6 +11,7 @@
     <script defer src="{{ static_asset('/static/js/common/toast.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/common/dialogs.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/settings/settings-dialogs.js') }}"></script>
+    <script defer src="{{ static_asset('/static/js/settings/settings-forms.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/activities/activity-dialogs.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/auth/auth-form.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/auth/logout.js') }}"></script>
@@ -71,7 +72,7 @@
         </div>
         <div
             id="tab-panel-settings"
-            class="tab-panel{% if current_tab == 'settings' %} tab-panel--active{% endif %}"
+            class="flex flex-grow tab-panel{% if current_tab == 'settings' %} tab-panel--active{% endif %}"
             data-tab="settings"
         >
             {% block tab_settings %}{% endblock %}
@@ -112,8 +113,18 @@
         role="status"
         aria-live="polite"
         data-toast-variant="informative"
-        class="pointer-events-none fixed left-1/2 top-6 z-50 w-[calc(100%-2rem)] max-w-screen-sm -translate-x-1/2 rounded-card border px-4 py-3 text-body shadow-soft"
-    ></div>
+        class="fixed left-1/2 top-6 z-50 flex w-[calc(100%-2rem)] max-w-screen-sm -translate-x-1/2 items-center gap-2 rounded-card border px-4 py-2 text-body shadow-soft"
+    >
+        <span id="toast-text" class="flex-1"></span>
+        <button
+            id="toast-close"
+            type="button"
+            class="flex min-h-tap min-w-tap shrink-0 items-center justify-center rounded-button text-text-secondary transition hover:bg-surface-2 focus-visible:outline-offset-2"
+            aria-label="{{ strings.TOAST_DISMISS }}"
+        >
+            {{ icon("x", size=20) }}
+        </button>
+    </div>
 
     {# Bottom navigation bar — visible only on tabbed pages (profile/social/settings). #}
     {% if current_tab is not none %}

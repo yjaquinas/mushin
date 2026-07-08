@@ -12,64 +12,56 @@
 <div hidden data-toast-message="{{ flash_message }}"></div>
 {% endif %}
 
-{# Visibility/share-link section is non-guest only — guests have no username
-   and thus no public profile. #}
 {% if not is_guest %}
-<section class="flex flex-col gap-4 pb-4">
-    <div class="flex flex-col gap-1">
-        <h2 class="text-body font-semibold text-text-primary">{{ strings.ACCOUNT_VISIBILITY_HEADING }}</h2>
-    </div>
-    <form method="post" action="/settings" class="flex flex-col gap-4">
-        <fieldset class="flex flex-col gap-3">
+<section class="flex flex-col gap-4 pb-4" id="account-section">
+    <h2 class="text-body font-semibold text-text-primary">{{ strings.ACCOUNT_VISIBILITY_HEADING }}</h2>
+    <form
+        id="settings-account-form"
+        method="post"
+        action="/settings"
+        class="flex flex-col gap-3"
+        data-original-visibility="{{ visibility }}"
+    >
+        <fieldset class="flex flex-col gap-4">
             <legend class="sr-only">{{ strings.ACCOUNT_VISIBILITY_HEADING }}</legend>
-
-            <label class="flex cursor-pointer items-start gap-3 rounded-card border border-border bg-surface-1 px-4 py-3 transition hover:bg-surface-2 has-[:checked]:border-brand">
-                <input
-                    type="radio"
-                    name="visibility"
-                    value="private"
-                    {% if visibility != "public" %}checked{% endif %}
-                    class="mt-1 focus-visible:outline-offset-2"
-                >
-                <span class="flex flex-col gap-1">
-                    <span class="text-body font-medium text-text-primary">{{ strings.ACCOUNT_VISIBILITY_PRIVATE_LABEL }}</span>
-                    <span class="text-caption text-text-secondary">{{ strings.ACCOUNT_VISIBILITY_PRIVATE_DESC }}</span>
-                </span>
-            </label>
-
-            <label class="flex cursor-pointer items-start gap-3 rounded-card border border-border bg-surface-1 px-4 py-3 transition hover:bg-surface-2 has-[:checked]:border-brand">
-                <input
-                    type="radio"
-                    name="visibility"
-                    value="public"
-                    {% if visibility == "public" %}checked{% endif %}
-                    class="mt-1 focus-visible:outline-offset-2"
-                >
-                <span class="flex flex-col gap-1">
-                    <span class="text-body font-medium text-text-primary">{{ strings.ACCOUNT_VISIBILITY_PUBLIC_LABEL }}</span>
-                    <span class="text-caption text-text-secondary">{{ strings.ACCOUNT_VISIBILITY_PUBLIC_DESC }}</span>
-                </span>
-            </label>
+            <div class="flex gap-2">
+                <label class="flex-1 cursor-pointer rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-secondary transition hover:bg-surface-2 has-[:checked]:border-2 has-[:checked]:border-brand has-[:checked]:text-text-primary has-[:checked]:font-semibold">
+                    <input
+                        type="radio"
+                        name="visibility"
+                        value="private"
+                        {% if visibility != "public" %}checked{% endif %}
+                        class="sr-only"
+                    >
+                    <span class="flex items-center justify-center gap-2">
+                        {{ icon("shield", size=18) }}
+                        {{ strings.ACCOUNT_VISIBILITY_PRIVATE_LABEL }}
+                    </span>
+                </label>
+                <label class="flex-1 cursor-pointer rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-secondary transition hover:bg-surface-2 has-[:checked]:border-2 has-[:checked]:border-brand has-[:checked]:text-text-primary has-[:checked]:font-semibold">
+                    <input
+                        type="radio"
+                        name="visibility"
+                        value="public"
+                        {% if visibility == "public" %}checked{% endif %}
+                        class="sr-only"
+                    >
+                    <span class="flex items-center justify-center gap-2">
+                        {{ icon("globe", size=18) }}
+                        {{ strings.ACCOUNT_VISIBILITY_PUBLIC_LABEL }}
+                    </span>
+                </label>
+            </div>
+            <div id="visibility-explanation" class="text-caption text-text-secondary">
+                <p id="visibility-tagline" class="font-medium"></p>
+                <p id="visibility-description"></p>
+            </div>
+            <span id="visibility-tagline-private" hidden>{{ strings.ACCOUNT_VISIBILITY_PRIVATE_TAGLINE }}</span>
+            <span id="visibility-desc-private" hidden>{{ strings.ACCOUNT_VISIBILITY_PRIVATE_DESC }}</span>
+            <span id="visibility-tagline-public" hidden>{{ strings.ACCOUNT_VISIBILITY_PUBLIC_TAGLINE }}</span>
+            <span id="visibility-desc-public" hidden>{{ strings.ACCOUNT_VISIBILITY_PUBLIC_DESC }}</span>
         </fieldset>
 
-        <button
-            type="submit"
-            class="flex min-h-tap w-full items-center justify-center rounded-button bg-brand px-4 py-3 text-title font-semibold text-on-brand transition focus-visible:outline-offset-2 disabled:opacity-60"
-        >
-            {{ strings.ACCOUNT_VISIBILITY_SAVE }}
-        </button>
-    </form>
-
-</section>
-{% endif %}
-
-{% if not is_guest %}
-<section class="flex flex-col gap-4 border-t border-border py-4">
-    <form
-        method="post"
-        action="/settings/email"
-        class="flex flex-col gap-3"
-    >
         <label class="flex flex-col gap-2" for="account-email">
             <span class="text-caption font-medium text-text-primary">{{ strings.ACCOUNT_EMAIL_LABEL }}</span>
             <input
@@ -77,6 +69,7 @@
                 name="email"
                 type="email"
                 value="{{ email or '' }}"
+                data-original-value="{{ email or '' }}"
                 autocomplete="email"
                 inputmode="email"
                 spellcheck="false"
@@ -84,22 +77,26 @@
             >
         </label>
         {% if email_error %}
-        <p class="text-caption text-danger">{{ email_error }}</p>
+        <div hidden data-toast-message="{{ email_error }}"></div>
         {% endif %}
+
         <button
             type="submit"
+            disabled
             class="flex min-h-tap w-full items-center justify-center rounded-button bg-brand px-4 py-3 text-title font-semibold text-on-brand transition focus-visible:outline-offset-2 disabled:opacity-60"
         >
-            {{ strings.ACCOUNT_EMAIL_UPDATE }}
+            {{ strings.ACCOUNT_VISIBILITY_SAVE }}
         </button>
     </form>
 </section>
 {% endif %}
 
+{# Password #}
 {% if not is_guest %}
 <section class="flex flex-col gap-4 border-t border-border py-4">
     <h2 class="text-body font-semibold text-text-primary">{{ strings.ACCOUNT_PASSWORD_HEADING }}</h2>
     <form
+        id="settings-password-form"
         method="post"
         action="/settings/password"
         class="flex flex-col gap-3"
@@ -126,10 +123,11 @@
             >
         </label>
         {% if password_error %}
-        <p class="text-caption text-danger">{{ password_error }}</p>
+        <div hidden data-toast-message="{{ password_error }}"></div>
         {% endif %}
         <button
             type="submit"
+            disabled
             class="flex min-h-tap w-full items-center justify-center rounded-button bg-brand px-4 py-3 text-title font-semibold text-on-brand transition focus-visible:outline-offset-2 disabled:opacity-60"
         >
             {{ strings.ACCOUNT_PASSWORD_UPDATE }}
@@ -138,7 +136,7 @@
 </section>
 {% endif %}
 
-{# Data actions: export / import — available to every account, including guests. #}
+{# Data, logout, delete #}
 <section class="flex flex-col gap-4 border-t border-border py-4">
     <h2 class="text-body font-semibold text-text-primary">Data</h2>
     <div class="flex gap-3">
@@ -162,11 +160,7 @@
             {{ strings.FOOTER_EXPORT_ENTRIES }}
         </a>
     </div>
-</section>
 
-{# Session actions: logout #}
-<section class="flex flex-col gap-4 border-t border-border py-4">
-    <h2 class="text-body font-semibold text-text-primary">Session</h2>
     <button
         type="button"
         id="logout-button"
@@ -177,12 +171,8 @@
         {{ icon("circle-user", size=18) }}
         {{ strings.FOOTER_LOGOUT }}
     </button>
-</section>
 
-{# Danger zone: delete account — only for non-guest accounts. #}
 {% if not is_guest %}
-<section class="flex flex-col gap-4 border-t border-border py-4">
-    <h2 class="text-body font-semibold text-text-primary">Danger zone</h2>
     <button
         type="button"
         id="delete-open-button"
@@ -193,10 +183,11 @@
     </button>
 
     {% include "components/settings/delete_account_confirm.html.jinja2" %}
-</section>
 {% endif %}
+</section>
 
-<section class="flex flex-col flex-grow items-center justify-end gap-3 py-4">
+{# Legal links #}
+<section class="flex flex-col flex-grow items-center justify-end gap-3 pb-4 pt-16">
     <a
         href="/licenses"
         data-legal="licenses"
@@ -205,22 +196,24 @@
     >
         {{ strings.ACCOUNT_LICENSES_LINK }}
     </a>
-    <a
-        href="/terms"
-        data-legal="terms"
-        data-dialog-title="{{ strings.TERMS_PAGE_TITLE }}"
-        class="text-caption text-text-secondary focus-visible:outline-offset-2"
-    >
-        {{ strings.ACCOUNT_TERMS_LINK }}
-    </a>
-    <a
-        href="/privacy"
-        data-legal="privacy"
-        data-dialog-title="{{ strings.PRIVACY_PAGE_TITLE }}"
-        class="text-caption text-text-secondary focus-visible:outline-offset-2"
-    >
-        {{ strings.ACCOUNT_PRIVACY_LINK }}
-    </a>
+    <div class="flex gap-3">
+        <a
+            href="/terms"
+            data-legal="terms"
+            data-dialog-title="{{ strings.TERMS_PAGE_TITLE }}"
+            class="text-caption text-text-secondary focus-visible:outline-offset-2"
+        >
+            {{ strings.ACCOUNT_TERMS_LINK }}
+        </a>
+        <a
+            href="/privacy"
+            data-legal="privacy"
+            data-dialog-title="{{ strings.PRIVACY_PAGE_TITLE }}"
+            class="text-caption text-text-secondary focus-visible:outline-offset-2"
+        >
+            {{ strings.ACCOUNT_PRIVACY_LINK }}
+        </a>
+    </div>
 </section>
 </div>
 {% endblock tab_settings %}

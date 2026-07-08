@@ -91,11 +91,11 @@
 
   // ── Tab switching ─────────────────────────────────────────────────────
 
-  function switchTab(name) {
+  function switchTab(name, skipMasthead) {
     if (name === activeTab) return;
 
     // Save current tab's masthead before leaving
-    if (activeTab) saveMasthead(activeTab);
+    if (!skipMasthead && activeTab) saveMasthead(activeTab);
 
     document.querySelectorAll(".tab-panel").forEach(function (p) {
       p.classList.remove("tab-panel--active");
@@ -112,7 +112,7 @@
     if (link) link.classList.add("bottom-nav-tab--active");
 
     // Restore target tab's masthead
-    restoreMasthead(name);
+    if (!skipMasthead) restoreMasthead(name);
 
     activeTab = name;
     document.body.setAttribute("data-current-tab", name);
@@ -162,7 +162,7 @@
         var idx = tabHistory[tab].length - 1;
         tabCache[tab][idx] = newHTML;
 
-        switchTab(tab);
+        switchTab(tab, true);
         window.history.pushState({ tab: tab, idx: idx }, "", url);
       });
   }

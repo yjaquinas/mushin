@@ -334,18 +334,20 @@ ACCOUNT_PRIVACY_LINK = "Privacy Policy"
 ACCOUNT_TERMS_LINK = "Terms of Service"
 ACCOUNT_LICENSES_LINK = "Licenses"
 
-ACCOUNT_VISIBILITY_HEADING = "Account privacy"
+ACCOUNT_VISIBILITY_HEADING = "Account"
 ACCOUNT_SHARE = "Share"
 ACCOUNT_SHARE_COPIED = "Profile link copied."
 ACCOUNT_SHARE_FAILED = "Couldn't share the profile link."
 
 # Radio labels mirror the consent screen.
 ACCOUNT_VISIBILITY_PRIVATE_LABEL = "Private"
+ACCOUNT_VISIBILITY_PRIVATE_TAGLINE = "Only visible to you and your fellows."
 ACCOUNT_VISIBILITY_PRIVATE_DESC = (
     "Visitors see your activity names and counts, but not your entries"
     " or notes. Fellows you connect with see everything."
 )
 ACCOUNT_VISIBILITY_PUBLIC_LABEL = "Public"
+ACCOUNT_VISIBILITY_PUBLIC_TAGLINE = "Visible to anyone with your profile link."
 ACCOUNT_VISIBILITY_PUBLIC_DESC = (
     "Your whole record — every activity, entry, and note — is visible to anyone"
     " who has your profile link."
@@ -466,6 +468,7 @@ ENTRY_HIDDEN_BY_MODERATOR = "Hidden by moderator"
 
 FELLOWS_HEADING = "Fellows"
 HOME_FLASH_FELLOWS_PRIVATE = "This profile is private."
+TOAST_DISMISS = "Dismiss"
 # {count} interpolated by the template. Used for non-owner/non-fellow
 # viewers, who see only the number, never the clickable names.
 FELLOWS_COUNT_LABEL = "{count} fellows"

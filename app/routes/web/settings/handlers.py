@@ -50,16 +50,46 @@ def render_account_settings(
     return response
 
 
-def update_visibility_response(user: dict, visibility: str | None) -> RedirectResponse | HTMLResponse:
-    """Persist a new visibility setting and redirect back to account."""
-    if visibility not in users.VALID_VISIBILITIES:
-        return HTMLResponse(status_code=400)
-    users.set_visibility_consent(int(user["id"]), visibility)
+def _email_flash_key(user: dict, email: str | None) -> str | None:
+    """Return ``"email_updated"`` if *email* differs from the stored value, else ``None``."""
+    return "email_updated" if email != user.get("email") else None
+
+
+def update_settings_response(
+    request: Request,
+    user: dict,
+    visibility: str | None = None,
+    email: str | None = None,
+) -> RedirectResponse | HTMLResponse:
+    """Persist visibility and/or email, then redirect back to settings.
+
+    Only fields that differ from the stored value are persisted. On email
+    validation failure the settings page is re-rendered with an inline error.
+    """
+    flash_key: str | None = None
+
+    if visibility is not None:
+        if visibility not in users.VALID_VISIBILITIES:
+            return HTMLResponse(status_code=400)
+        if visibility != user["visibility"]:
+            users.set_visibility_consent(int(user["id"]), visibility)
+            flash_key = "visibility_public" if visibility == "public" else "visibility_private"
+
+    if email is not None:
+        email = email.strip() or None
+        key = _email_flash_key(user, email)
+        if key is not None:
+            if email is not None and not _EMAIL_RE.match(email):
+                return render_account_settings(request, user, email_error=strings.ACCOUNT_EMAIL_INVALID, email_value=email)
+            try:
+                users.set_email(int(user["id"]), email)
+            except Exception:
+                return render_account_settings(request, user, email_error=strings.EMAIL_UPDATE_FAILED, email_value=email)
+            flash_key = flash_key or key
+
     response = RedirectResponse(url="/settings", status_code=303)
-    _set_flash(
-        response,
-        "visibility_public" if visibility == "public" else "visibility_private",
-    )
+    if flash_key:
+        _set_flash(response, flash_key)
     return response
 
 
