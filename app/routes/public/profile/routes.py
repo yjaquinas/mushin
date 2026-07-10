@@ -84,6 +84,7 @@ async def profile(
             context["username"] = username
             context["profile_url"] = profiles.canonical_profile_url(username)
             context["share_label"] = f"@{username}"
+            context["meta_robots"] = "noindex, nofollow"
             context["share_copied_text"] = f"Link to @{username} copied"
             context["share_failed_text"] = "Couldn't share the link."
             response = templates.TemplateResponse(

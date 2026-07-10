@@ -7,7 +7,8 @@ in templates (grep-checked by
 
 Voice: plain, warm, second person, no hype, no urgency/guilt framing. The
 "Mushin 無心" brand mark always ships together and is never explained beyond
-the one-line gloss.
+the one-line gloss. Position the app as a social network for people who
+track — not just a solo logger.
 """
 
 from __future__ import annotations
@@ -29,7 +30,7 @@ APP_GLOSS = "No-mind. Just show up, and watch it add up."
 # ---------------------------------------------------------------------------
 
 ENTRY_TITLE = "Mushin"
-ENTRY_TAGLINE = "A record of what you keep showing up for"
+ENTRY_TAGLINE = "Track. Share. Connect."
 
 ENTRY_AUTH_TAB_LOGIN = "Log in"
 ENTRY_AUTH_TAB_CREATE = "Create account"
@@ -705,3 +706,25 @@ ADMIN_DELETE_USER_BODY = (
 )
 ADMIN_DELETE_USER_CONFIRM = "Delete user"
 ADMIN_DELETE_USER_CANCEL = "Cancel"
+
+# ---------------------------------------------------------------------------
+# SEO / Metadata
+# ---------------------------------------------------------------------------
+
+META_TITLE_INDEX = "Mushin 無心 — Track. Share. Connect."
+META_DESCRIPTION_INDEX = (
+    "A social network for people who track. Log activities, share your "
+    "journey, and connect with others who show up."
+)
+META_DESCRIPTION_PROFILE = (
+    "{username}'s profile on Mushin — a social network for tracking "
+    "progress and connecting with others."
+)
+META_DESCRIPTION_ACTIVITY = (
+    "{activity} by {username} on Mushin — a social network for tracking "
+    "progress and connecting with others."
+)
+OG_IMAGE_URL = "/static/img/og-default.svg"
+META_DESCRIPTION_PRIVACY = "Privacy Policy for Mushin 無心 — how your data is handled on this social progress tracker."
+META_DESCRIPTION_TERMS = "Terms of Service for Mushin 無心 — the rules for using this social progress tracker."
+META_DESCRIPTION_LICENSES = "Open source licenses used by Mushin 無心."

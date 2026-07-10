@@ -22,6 +22,7 @@ from app.routes.web import (
 )
 from app.services.entries import competition, stats
 from app.services.social import profiles
+from app.ui_strings import META_DESCRIPTION_ACTIVITY
 
 
 def _render_owner_activity_detail(
@@ -89,6 +90,7 @@ def _render_owner_activity_detail(
     owner_context["is_owner"] = True
     owner_context["current_page"] = "profile"
     owner_context["page_title"] = username
+    owner_context["meta_robots"] = "noindex, nofollow"
     owner_context["share_url"] = profiles.canonical_activity_url(username, slug)
     owner_context["share_label"] = f"@{username} / {card['name']}"
     owner_context["share_copied_text"] = f"Link to @{username}/{slug} copied"
@@ -184,6 +186,11 @@ def _render_readonly_activity_detail(
         expand_comment_entry_id=expand_comment_entry_id,
     )
     context["top_tags"] = _build_history_tags(context["history"], tz=tz)
+    activity_name = card.get("name", slug)
+    context["meta_description"] = META_DESCRIPTION_ACTIVITY.format(activity=activity_name, username=username)
+    context["og_title"] = f"{activity_name} · {username} · {ui_strings.APP_NAME}"
+    context["og_description"] = META_DESCRIPTION_ACTIVITY.format(activity=activity_name, username=username)
+    context["og_type"] = "article"
 
     return templates.TemplateResponse(
         request=request,

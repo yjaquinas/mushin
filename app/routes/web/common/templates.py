@@ -55,11 +55,23 @@ def _theme_context(request: Request) -> dict[str, str]:
     return {"theme": _theme_from_cookie(request.cookies.get(THEME_COOKIE))}
 
 
+def _canonical_url(request: Request) -> str:
+    url = str(request.url)
+    qs = url.find("?")
+    return url[:qs] if qs != -1 else url
+
+
+def _og_image_url(path: str | None = None) -> str:
+    return path or ui_strings.OG_IMAGE_URL
+
+
 _env = Environment(loader=FileSystemLoader("app/templates"), autoescape=True)
 templates = Jinja2Templates(env=_env, context_processors=[_theme_context])
 templates.env.globals["strings"] = ui_strings
 templates.env.globals["icon"] = _icon
 templates.env.globals["static_asset"] = _static_asset
+templates.env.globals["canonical_url"] = _canonical_url
+templates.env.globals["og_image_url"] = _og_image_url
 templates.env.filters["entry_tags_csv"] = _entry_tags_csv
 
 

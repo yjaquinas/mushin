@@ -1,0 +1,17 @@
+User-agent: *
+Allow: /
+Allow: /privacy
+Allow: /terms
+Allow: /licenses
+Allow: /@*
+Disallow: /home
+Disallow: /settings
+Disallow: /social
+Disallow: /comments
+Disallow: /admin
+Disallow: /auth/
+Disallow: /welcome-sharing
+Disallow: /login
+Disallow: /health
+
+Sitemap: https://mushin.app/sitemap.xml

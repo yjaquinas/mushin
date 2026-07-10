@@ -9,6 +9,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 
+from app import ui_strings
 from app.routes.web.common import templates
 
 router = APIRouter()
@@ -41,5 +42,8 @@ async def licenses_page(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(
         request=request,
         name="web/legal/licenses.html.jinja2",
-        context={"current_page": None},
+        context={
+            "current_page": None,
+            "meta_description": ui_strings.META_DESCRIPTION_LICENSES,
+        },
     )

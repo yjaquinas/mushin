@@ -44,6 +44,7 @@ def render_account_settings(
             "visibility": user["visibility"],
             "current_page": "settings",
             "page_title": strings.SETTINGS_TITLE,
+            "meta_robots": "noindex, nofollow",
         },
     )
     _clear_flash(response)

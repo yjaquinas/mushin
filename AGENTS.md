@@ -2,8 +2,10 @@
 
 ## Project
 
-Mushin (無心, "no-mind") is a multi-user personal progress tracker for
-activities, entries, counts, and streaks. UI copy is centralized for i18n.
+Mushin (無心, "no-mind") is a social network for people who track. It's a
+multi-user progress tracker for activities, entries, counts, and streaks
+with public profiles, mutual fellows connections, comments, and discovery.
+UI copy is centralized for i18n.
 
 Stack: FastAPI + uv + Uvicorn, Tailwind CSS v4 + HTMX + vanilla JS (web),
 Hyperview/HXML (mobile), SQLite. Hosting: Ubuntu 24.04 via Caddy + systemd.

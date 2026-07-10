@@ -75,6 +75,6 @@ async def not_found_handler(request: Request, _exc) -> HTMLResponse:
     return templates.TemplateResponse(
         request=request,
         name="web/errors/404.html.jinja2",
-        context={"current_page": None},
+        context={"current_page": None, "meta_robots": "noindex, nofollow"},
         status_code=404,
     )

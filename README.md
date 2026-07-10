@@ -1,12 +1,12 @@
 # Mushin
 
-Mushin is a social network for people who'd rather log than scroll: no feed,
-no followers, no strangers, just your record and the fellows you connect with
-by mutual consent.
+Mushin (無心, "no-mind") is a social network for people who track. Log
+activities, share your journey, and connect with others who show up. Public
+profiles, mutual fellows connections, comments, and discovery make it a place
+to share progress — not just record it.
 
-Mushin (無心, "no-mind") tracks activities, entries, counts, and streaks
-for multiple users. The backend serves shared service-layer data through web
-HTMX templates and native hypermedia surfaces.
+The backend serves shared service-layer data through web HTMX templates and
+native hypermedia surfaces.
 
 ## Stack
 

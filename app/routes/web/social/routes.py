@@ -27,6 +27,7 @@ from app.routes.web.common.flash import _clear_flash, _read_flash, _set_flash
 from app.services.search import search
 from app.services.search.discovery import recent_public_entries
 from app.services.social import connections, profiles
+from app.ui_strings import META_DESCRIPTION_ACTIVITY, META_DESCRIPTION_PROFILE
 
 router = APIRouter()
 
@@ -55,6 +56,7 @@ async def social_page(
             "feed_entries": recent_public_entries(limit=10),
             "current_page": "social",
             "page_title": strings.SOCIAL_TITLE,
+            "meta_robots": "noindex, nofollow",
         },
     )
 
@@ -119,6 +121,10 @@ async def social_profile(
         context["share_label"] = f"@{username}"
         context["share_copied_text"] = f"Link to @{username} copied"
         context["share_failed_text"] = "Couldn't share the link."
+        context["meta_description"] = META_DESCRIPTION_PROFILE.format(username=username)
+        context["og_title"] = f"{username} · {strings.APP_NAME}"
+        context["og_description"] = META_DESCRIPTION_PROFILE.format(username=username)
+        context["og_type"] = "profile"
 
     response = templates.TemplateResponse(
         request=request,

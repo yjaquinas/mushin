@@ -19,6 +19,10 @@ from app.routes.web.common import (
 )
 from app.services.search.discovery import recent_public_entries
 from app.services.social import profiles
+from app.ui_strings import (
+    META_DESCRIPTION_INDEX,
+    META_TITLE_INDEX,
+)
 
 
 async def render_home(request: Request, user: dict) -> HTMLResponse:
@@ -32,6 +36,7 @@ async def render_home(request: Request, user: dict) -> HTMLResponse:
     context["current_page"] = "profile"
     context["page_title"] = None
     context["username"] = user.get("username")
+    context["meta_robots"] = "noindex, nofollow"
     response = templates.TemplateResponse(
         request=request,
         name="web/home/profile.html.jinja2",
@@ -51,6 +56,10 @@ def render_entry_page(request: Request, *, next_path: str | None = None) -> HTML
         "current_page": None,
         "feed_entries": entries,
         "flash_message": _read_flash(request),
+        "meta_description": META_DESCRIPTION_INDEX,
+        "og_title": META_TITLE_INDEX,
+        "og_description": META_DESCRIPTION_INDEX,
+        "twitter_card_type": "summary_large_image",
     }
     response = templates.TemplateResponse(
         request=request,
