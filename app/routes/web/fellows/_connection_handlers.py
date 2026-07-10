@@ -47,7 +47,7 @@ def cancel_connect_request_confirm_response(request: Request, username: str, fro
     other = _other_or_404(username)
     if isinstance(other, HTMLResponse):
         return other
-    dom_id = _relationship_dom_id(username, from_search=from_search) if from_search else f"fellows-section-{username}"
+    dom_id = _relationship_dom_id(username, from_search=from_search) if from_search else "social-profile-section-fellows"
     return templates.TemplateResponse(
         request=request,
         name="components/fellows/connect_cancel_request_confirm.html.jinja2",

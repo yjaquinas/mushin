@@ -15,7 +15,7 @@
             {% set lines = item.memo.split('\n') %}
             <p class="mt-1 text-caption text-text-secondary line-clamp-2">{{ lines[:2] | join('\n') }}{% if lines | length > 2 %}&hellip;{% endif %}</p>
             {% endif %}
-            <span class="mt-1 self-end text-[0.8rem] text-text-muted whitespace-nowrap">{{ strings.ENTRY_CREATED_AT_LABEL }} <span data-local-timestamp="{{ item.created_at }}">{{ item.created_at }}</span></span>
+            <span class="mt-1 self-end text-[0.8rem] text-text-muted whitespace-nowrap">{{ strings.ENTRY_CREATED_AT_LABEL }} <span data-local-timestamp="{{ item.created_at }}" hidden>{{ item.created_at }}</span></span>
         </div>
         <span class="ml-2 flex shrink-0 items-center self-center text-text-muted opacity-50 transition group-hover:opacity-100">{{ icon("arrow-right", size=20) }}</span>
     </a>

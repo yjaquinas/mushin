@@ -1,9 +1,9 @@
-<div id="fellows-section" class="flex flex-col gap-6">
+<section id="fellows-content" aria-labelledby="fellows-title-page" class="flex flex-col gap-6">
     <a href="{% if is_owner %}{{ home_url }}{% else %}/social/@{{ username }}{% endif %}" class="flex items-center gap-1 text-caption text-text-secondary hover:text-text-primary transition">
         {{ icon('chevron-left', size=16) }} {{ strings.ACTIVITY_BACK_TO_PROFILE }}
     </a>
 
-    <h1 class="text-title font-semibold text-text-primary">{{ strings.FELLOWS_HEADING }}</h1>
+    <h1 id="fellows-title-page" class="text-title font-semibold text-text-primary">{{ strings.FELLOWS_HEADING }}</h1>
 
     {% if fellows.pending_count > 0 and is_owner %}
     {% include "components/fellows/requests_cluster.html.jinja2" with context %}
@@ -32,6 +32,6 @@
     {% else %}
     <p class="text-body text-text-secondary">{{ strings.FELLOWS_COUNT_LABEL.format(count=fellows.fellow_count) }}</p>
     {% endif %}
-</div>
+</section>
 
 <div id="fellow-remove-dialog"></div>

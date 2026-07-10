@@ -10,7 +10,7 @@
   }
 
   function isHistoryTarget(target) {
-    return !!(target && target.id && target.id.startsWith("history-"));
+    return !!(target && target.id && target.id.startsWith("activity-section-history-"));
   }
 
   function selectedTagValues() {

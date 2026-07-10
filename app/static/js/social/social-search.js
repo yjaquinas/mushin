@@ -1,15 +1,15 @@
 (function () {
   document.addEventListener("click", function (e) {
-    var toggle = e.target.closest("#search-toggle");
+    var toggle = e.target.closest("#social-button-search-toggle");
     if (!toggle) return;
 
-    var searchSection = document.getElementById("search-section");
-    var recentSection = document.getElementById("recent-entries-section");
+    var searchSection = document.getElementById("social-section-search");
+    var recentSection = document.getElementById("social-section-feed");
     if (!searchSection || !recentSection) return;
 
-    var searchInput = document.getElementById("search-input");
-    var iconOpen = document.getElementById("search-icon-open");
-    var iconClose = document.getElementById("search-icon-close");
+    var searchInput = document.getElementById("social-field-search");
+    var iconOpen = document.getElementById("social-icon-search-open");
+    var iconClose = document.getElementById("social-icon-search-close");
 
     var wasHidden = searchSection.hidden;
     searchSection.hidden = !wasHidden;

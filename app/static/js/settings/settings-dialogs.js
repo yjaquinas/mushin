@@ -14,17 +14,17 @@
   }
 
   function resetImportDialog() {
-    var template = document.getElementById("entry-import-data-dialog-template");
-    var dialog = document.getElementById("entry-import-data-dialog");
+    var template = document.getElementById("settings-template-entry-import-dialog");
+    var dialog = document.getElementById("settings-dialog-entry-import");
     if (!template || !dialog) return;
     var replacement = template.content.firstElementChild;
     if (!replacement) return;
     dialog.replaceWith(replacement.cloneNode(true));
-    importDlg = initDialog("entry-import-data-dialog") || importDlg;
+    importDlg = initDialog("settings-dialog-entry-import") || importDlg;
   }
 
-  var importDlg = initDialog("entry-import-data-dialog");
-  var deleteDlg = initDialog("delete-account-dialog");
+  var importDlg = initDialog("settings-dialog-entry-import");
+  var deleteDlg = initDialog("settings-dialog-delete-account");
 
   async function copyShareLink(url) {
     if (!url || !navigator.clipboard || !navigator.clipboard.writeText) return false;
@@ -72,32 +72,34 @@
       return;
     }
 
-    var importOpen = event.target.closest("#entry-import-open-button");
+    var importOpen = event.target.closest("#settings-button-entry-import-open");
+    if (importOpen) importDlg = initDialog("settings-dialog-entry-import") || importDlg;
     if (importOpen && importDlg) {
       importDlg.open();
       return;
     }
 
-    var importCancel = event.target.closest("#entry-import-cancel-button");
+    var importCancel = event.target.closest("#settings-button-entry-import-cancel");
     if (importCancel && importDlg) {
       importDlg.close();
       return;
     }
 
-    var deleteOpen = event.target.closest("#delete-open-button");
+    var deleteOpen = event.target.closest("#settings-button-delete-open");
+    if (deleteOpen) deleteDlg = initDialog("settings-dialog-delete-account") || deleteDlg;
     if (deleteOpen && deleteDlg) {
       deleteDlg.open();
       return;
     }
 
-    var deleteCancel = event.target.closest("#delete-cancel-button");
+    var deleteCancel = event.target.closest("#settings-button-delete-cancel");
     if (deleteCancel && deleteDlg) {
       deleteDlg.close();
     }
   });
 
   function autoOpenImportDialog() {
-    var el = document.getElementById("entry-import-data-dialog");
+    var el = document.getElementById("settings-dialog-entry-import");
     if (el && el.hasAttribute("data-auto-open") && importDlg) {
       importDlg.open();
     }
@@ -106,14 +108,14 @@
   autoOpenImportDialog();
 
   document.body.addEventListener("dialog:close", function (event) {
-    if (event.target && event.target.id === "entry-import-data-dialog") {
+    if (event.target && event.target.id === "settings-dialog-entry-import") {
       resetImportDialog();
     }
   });
 
   document.body.addEventListener("htmx:afterSwap", function () {
-    importDlg = initDialog("entry-import-data-dialog") || importDlg;
-    deleteDlg = initDialog("delete-account-dialog") || deleteDlg;
+    importDlg = initDialog("settings-dialog-entry-import") || importDlg;
+    deleteDlg = initDialog("settings-dialog-delete-account") || deleteDlg;
     autoOpenImportDialog();
   });
 })();

@@ -3,16 +3,21 @@
   Context: fellows (fellow_count, fellows list, show_fellow_names, is_owner,
            pending_count), username, error.
 #}
-<div id="fellows-section-{{ username }}" class="flex flex-col gap-3">
+{% set section_scope = "profile" if fellows.is_owner else "social-profile" %}
+<section
+    id="{{ section_scope }}-section-fellows"
+    aria-labelledby="{{ section_scope }}-title-fellows"
+    class="flex flex-col gap-3"
+>
     <div class="flex items-center justify-between gap-3">
-        <span class="text-title font-semibold text-text-primary">{{ strings.FELLOWS_HEADING }}</span>
+        <h2 id="{{ section_scope }}-title-fellows" class="text-title font-semibold text-text-primary">{{ strings.FELLOWS_HEADING }}</h2>
         <div class="flex items-center gap-2">
             {% if not fellows.is_owner and state is defined and viewer_logged_in %}
             {% if state == "none" %}
             <button
                 type="button"
                 hx-post="/fellows/{{ username }}/connect"
-                hx-target="#fellows-section-{{ username }}"
+                hx-target="#{{ section_scope }}-section-fellows"
                 hx-swap="outerHTML"
                 class="rounded-button bg-brand px-2 py-0.5 text-sm font-semibold text-on-brand transition hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
             >{{ strings.CONNECT_ACTION }}</button>
@@ -28,14 +33,14 @@
             <button
                 type="button"
                 hx-post="/fellows/requests/{{ username }}/accept?source=profile"
-                hx-target="#fellows-section-{{ username }}"
+                hx-target="#{{ section_scope }}-section-fellows"
                 hx-swap="outerHTML"
                 class="rounded-button bg-brand px-2 py-0.5 text-sm font-semibold text-on-brand transition hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
             >{{ strings.REQUESTS_ACCEPT }}</button>
             <button
                 type="button"
                 hx-post="/fellows/requests/{{ username }}/decline?source=profile"
-                hx-target="#fellows-section-{{ username }}"
+                hx-target="#{{ section_scope }}-section-fellows"
                 hx-swap="outerHTML"
                 class="rounded-button border border-border px-2 py-0.5 text-sm font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
             >{{ strings.REQUESTS_DECLINE }}</button>
@@ -51,7 +56,7 @@
             <button
                 type="button"
                 hx-post="/fellows/{{ username }}/unblock"
-                hx-target="#fellows-section-{{ username }}"
+                hx-target="#{{ section_scope }}-section-fellows"
                 hx-swap="outerHTML"
                 class="rounded-button border border-border px-2 py-0.5 text-sm font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
             >{{ strings.CONNECT_UNBLOCK }}</button>
@@ -109,6 +114,6 @@
     {% endif %}
     {% endif %}
 
-</div>
+</section>
 <div id="connect-remove-dialog-{{ username }}" hidden></div>
 <div id="connect-cancel-dialog-{{ username }}" hidden></div>

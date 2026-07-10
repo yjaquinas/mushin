@@ -6,13 +6,13 @@
   var dlg = null;
 
   function initLogSheet() {
-    var sheet = document.getElementById("log-sheet-dialog");
+    var sheet = document.getElementById("activity-dialog-log");
     if (!sheet) return null;
     if (!sheet.querySelector('[role="dialog"]')) return null;
     if (sheet.getAttribute("data-log-sheet-init")) return sheet;
 
     sheet.setAttribute("data-log-sheet-init", "true");
-    dlg = new DialogManager("log-sheet-dialog");
+    dlg = new DialogManager("activity-dialog-log");
     dlg.init();
     dialogManagerRegistry.add(dlg);
     dlg.open();
@@ -29,8 +29,8 @@
   }
 
   document.addEventListener("click", function (event) {
-    var cancel = event.target.closest("#log-sheet-cancel");
-    var sheet = document.getElementById("log-sheet-dialog");
+    var cancel = event.target.closest("#activity-button-log-cancel");
+    var sheet = document.getElementById("activity-dialog-log");
     if (!cancel || !sheet || !sheet.contains(cancel)) return;
     resetAndCloseDialog(sheet);
   });
@@ -41,7 +41,7 @@
 
   document.body.addEventListener("htmx:afterSwap", function (event) {
     var target = event.detail && event.detail.target;
-    if (!target || target.id !== "log-sheet-slot") return;
+    if (!target || target.id !== "activity-target-log-sheet") return;
     initLogSheet();
   });
 })();

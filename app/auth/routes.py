@@ -153,6 +153,7 @@ async def delete_account(
 async def logout() -> Response:
     """Clear the session cookie."""
     resp = JSONResponse({"ok": True})
+    resp.headers["HX-Redirect"] = "/"
     resp.delete_cookie(key=sessions.COOKIE_NAME, path="/")
     return resp
 

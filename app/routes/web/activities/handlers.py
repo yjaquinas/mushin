@@ -59,6 +59,11 @@ def _activity_form_error(request: Request, message: str) -> HTMLResponse | Redir
     return templates.TemplateResponse(
         request=request,
         name="components/activities/activity_form.html.jinja2",
-        context={"hx_post": "/activities", "hx_target": "#cards", "hx_swap": "beforeend", "name_error": message},
+        context={
+            "hx_post": "/activities",
+            "hx_target": "#profile-target-activity-cards",
+            "hx_swap": "beforeend",
+            "name_error": message,
+        },
         status_code=400,
     )

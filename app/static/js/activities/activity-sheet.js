@@ -2,20 +2,20 @@
 //
 // Uses DialogManager for focus-trap, Escape key, and overlay-click.
 // Auto-opens on load and closes on successful form submission.
-// Handles both initial page load and HTMX-swap into #sheet.
+// Handles both initial page load and HTMX-swap into #profile-target-activity-sheet.
 
 (function () {
   "use strict";
 
   function initSheet() {
-    var sheet = document.getElementById("activity-sheet-dialog");
+    var sheet = document.getElementById("activity-dialog-create");
     if (!sheet) return;
 
     // Prevent duplicate initialization.
     if (sheet.getAttribute("data-activity-sheet-init")) return;
     sheet.setAttribute("data-activity-sheet-init", "true");
 
-    var dlg = new DialogManager("activity-sheet-dialog");
+    var dlg = new DialogManager("activity-dialog-create");
     dlg.init();
     dialogManagerRegistry.add(dlg);
     dlg.open();
@@ -34,16 +34,16 @@
   // Initial page load.
   initSheet();
 
-  // HTMX swap into #sheet (the new-activity entry point).
+  // HTMX swap into #profile-target-activity-sheet (the new-activity entry point).
   document.body.addEventListener("htmx:afterSwap", function (event) {
-    if (event.detail.target.id !== "sheet") return;
+    if (event.detail.target.id !== "profile-target-activity-sheet") return;
     initSheet();
   });
 
   document.addEventListener("click", function (event) {
-    var cancel = event.target.closest("#activity-sheet-cancel");
+    var cancel = event.target.closest("#activity-button-create-cancel");
     if (!cancel) return;
-    var sheet = document.getElementById("activity-sheet-dialog");
+    var sheet = document.getElementById("activity-dialog-create");
     if (sheet) sheet.setAttribute("hidden", "");
   });
 })();

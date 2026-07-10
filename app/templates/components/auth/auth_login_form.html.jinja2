@@ -21,7 +21,7 @@
     default /@{username} profile. Absent/None renders no hidden field, and
     the JS falls back to its normal redirect_url behavior.
 #}
-<div id="auth-form" class="flex flex-col gap-4">
+<div id="auth-form" role="tabpanel" aria-labelledby="auth-tab-login" class="flex flex-col gap-4">
     {% include "components/auth/auth_tabs.html.jinja2" with context %}
 
     <form

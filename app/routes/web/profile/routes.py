@@ -1,7 +1,7 @@
 """Profile bio — inline-editable section on the owner profile page.
 
 The ``/profile/bio`` and ``/profile/bio-edit`` endpoints return HTMX fragments
-that are swapped into ``#bio-section`` on the profile page.
+that are swapped into ``#profile-section-bio`` on the profile page.
 The ``POST /profile/bio`` persists changes and returns the display fragment.
 """
 

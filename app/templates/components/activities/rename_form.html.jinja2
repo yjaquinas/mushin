@@ -1,7 +1,7 @@
 {# Activity-rename dialog. HTMX swaps this whole component into
-   #rename-activity-dialog and JS opens it automatically. #}
+   #activity-dialog-rename and JS opens it automatically. #}
 <div
-    id="rename-activity-dialog"
+    id="activity-dialog-rename"
     hidden
     data-auto-open
 >
@@ -22,7 +22,7 @@
 
             <form
                 hx-post="/activities/{{ activity_id }}/rename"
-                hx-target="#rename-activity-dialog"
+                hx-target="#activity-dialog-rename"
                 hx-swap="outerHTML"
                 class="flex flex-col gap-4"
             >

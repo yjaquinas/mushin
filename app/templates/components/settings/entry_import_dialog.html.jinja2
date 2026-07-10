@@ -3,7 +3,7 @@
   entries JSON file and merging it into the current account.
 
   The form posts to /import-entries (multipart/form-data) and targets
-  this whole component (#entry-import-data-dialog) so the route can
+   this whole component (#settings-dialog-entry-import) so the route can
   re-render it in place with an inline error on failure, or show a
   success summary on success.
 
@@ -15,7 +15,7 @@
     open_on_error     - when true, the dialog opens immediately on swap-in.
 #}
 <div
-    id="entry-import-data-dialog"
+    id="settings-dialog-entry-import"
     hidden
     {% if open_on_error %}data-auto-open{% endif %}
 >
@@ -26,10 +26,10 @@
         <div
             role="dialog"
             aria-modal="true"
-            aria-labelledby="entry-import-data-title"
+            aria-labelledby="settings-title-entry-import"
             class="flex w-full max-w-md flex-col gap-4 rounded-card border border-border bg-surface-1 p-4 sm:rounded-card"
         >
-            <h2 id="entry-import-data-title" class="text-body font-semibold text-text-primary">
+            <h2 id="settings-title-entry-import" class="text-body font-semibold text-text-primary">
                 {{ strings.IMPORT_ENTRIES_TITLE }}
             </h2>
 
@@ -44,7 +44,7 @@
                 </div>
                 <button
                     type="button"
-                    id="entry-import-cancel-button"
+                    id="settings-button-entry-import-cancel"
                     class="min-h-tap w-full rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline-offset-2"
                 >
                     {{ strings.IMPORT_ENTRIES_CLOSE }}
@@ -59,17 +59,17 @@
                 <form
                     hx-post="/import-entries"
                     hx-encoding="multipart/form-data"
-                    hx-target="#entry-import-data-dialog"
+                    hx-target="#settings-dialog-entry-import"
                     hx-swap="outerHTML"
                     class="flex flex-col gap-4"
                 >
                     <div class="flex flex-col gap-1">
-                        <label for="entry-import-data-file" class="text-caption font-medium text-text-secondary">
+                        <label for="settings-field-entry-import-file" class="text-caption font-medium text-text-secondary">
                             {{ strings.IMPORT_ENTRIES_FILE_LABEL }}
                         </label>
                         <input
                             type="file"
-                            id="entry-import-data-file"
+                            id="settings-field-entry-import-file"
                             name="file"
                             accept=".json,application/json"
                             required
@@ -87,7 +87,7 @@
 
                     <button
                         type="button"
-                        id="entry-import-cancel-button"
+                        id="settings-button-entry-import-cancel"
                         class="min-h-tap w-full rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline-offset-2"
                     >
                         {{ strings.IMPORT_ENTRIES_CANCEL }}

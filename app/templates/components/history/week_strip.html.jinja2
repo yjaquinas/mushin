@@ -26,7 +26,7 @@
                 {% else %}
                 hx-get="/activities/{{ activity_id }}/history?period=week&anchor={{ history.anchor }}&day={{ cell.date }}"
                 {% endif %}
-                hx-target="#history-{{ activity_id }}"
+                hx-target="#activity-section-history-{{ activity_id }}"
                 hx-swap="outerHTML"
             >
                 {{ cell.day }}

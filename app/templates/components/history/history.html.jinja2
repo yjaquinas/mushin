@@ -9,7 +9,7 @@
     - a day selected: a "clear selection" control followed by *only* that
       day's entries (components/history/day_entries.html.jinja2).
 
-  This whole div is the HTMX swap target (#history-{{ activity_id }}) for
+  This whole div is the HTMX swap target (#activity-section-history-{{ activity_id }}) for
   every period-switch, prev/next, day-select, and clear-selection
   interaction — `hx-swap="outerHTML"`. Tapping an already-selected day cell
   omits `&day=...` from its own hx-get, so re-tapping it has the same effect
@@ -31,7 +31,7 @@
   Context: activity_id, history (see app.routes.web._build_history_context).
 #}
 <div
-    id="history-{{ activity_id }}"
+    id="activity-section-history-{{ activity_id }}"
     class="flex flex-col gap-3"
 >
     {# Sentinel: refreshes the whole history section when entries change.
@@ -43,7 +43,7 @@
         hx-get="/activities/{{ activity_id }}/history"
         hx-vals='{"period": "{{ history.period }}", "anchor": "{{ history.anchor }}"}'
         hx-trigger="log-saved from:body"
-        hx-target="#history-{{ activity_id }}"
+        hx-target="#activity-section-history-{{ activity_id }}"
         hx-swap="outerHTML"
     ></span>
     {# Period switcher #}
@@ -57,11 +57,11 @@
             <button
                 type="button"
                 role="tab"
-                id="history-tab-{{ activity_id }}-{{ period_key }}"
+                id="activity-tab-history-{{ activity_id }}-{{ period_key }}"
                 aria-selected="{{ "true" if is_selected else "false" }}"
                 {% if is_selected and history.selected_day is none %}data-history-focus{% endif %}
                 hx-get="/activities/{{ activity_id }}/history?period={{ period_key }}&anchor={{ history.today_anchor }}"
-                hx-target="#history-{{ activity_id }}"
+                hx-target="#activity-section-history-{{ activity_id }}"
                 hx-swap="outerHTML"
                 class="min-h-tap min-w-tap flex-1 rounded-button px-3 text-body transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-strong
                     {% if is_selected %}
@@ -81,7 +81,7 @@
         <button
             type="button"
             hx-get="/activities/{{ activity_id }}/history?period={{ history.period }}&anchor={{ history.prev_anchor }}"
-            hx-target="#history-{{ activity_id }}"
+            hx-target="#activity-section-history-{{ activity_id }}"
             hx-swap="outerHTML"
             class="min-h-tap min-w-tap rounded-button px-2 text-body text-text-secondary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-strong"
             aria-label="{% if history.period == 'week' %}{{ strings.HISTORY_PREV_WEEK }}{% else %}{{ strings.CALENDAR_PREV_MONTH }}{% endif %}"
@@ -96,7 +96,7 @@
         <button
             type="button"
             hx-get="/activities/{{ activity_id }}/history?period={{ history.period }}&anchor={{ history.next_anchor }}"
-            hx-target="#history-{{ activity_id }}"
+            hx-target="#activity-section-history-{{ activity_id }}"
             hx-swap="outerHTML"
             class="min-h-tap min-w-tap rounded-button px-2 text-body text-text-secondary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-strong"
             aria-label="{% if history.period == 'week' %}{{ strings.HISTORY_NEXT_WEEK }}{% else %}{{ strings.CALENDAR_NEXT_MONTH }}{% endif %}"
@@ -134,7 +134,7 @@
                                     {% else %}
                                     hx-get="/activities/{{ activity_id }}/history?period=month&anchor={{ history.anchor }}&day={{ day.date }}"
                                     {% endif %}
-                                    hx-target="#history-{{ activity_id }}"
+                                    hx-target="#activity-section-history-{{ activity_id }}"
                                     hx-swap="outerHTML"
                                 >
                                     {{ day.day }}
@@ -167,7 +167,7 @@
         <button
             type="button"
             hx-get="/activities/{{ activity_id }}/history?period={{ history.period }}&anchor={{ history.anchor }}"
-            hx-target="#history-{{ activity_id }}"
+            hx-target="#activity-section-history-{{ activity_id }}"
             hx-swap="outerHTML"
             class="min-h-tap flex w-fit items-center gap-1 rounded-button px-2 text-body text-text-secondary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-strong"
         >

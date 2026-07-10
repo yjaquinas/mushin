@@ -14,11 +14,11 @@
   }
 
   function isHistoryPeriodSwitch(trigger) {
-    return !!(trigger && trigger.matches('[role="tab"][id^="history-tab-"]'));
+    return !!(trigger && trigger.matches('[role="tab"][id^="activity-tab-history-"]'));
   }
 
   function isHistoryTarget(target) {
-    return !!(target && target.id && target.id.startsWith("history-"));
+    return !!(target && target.id && target.id.startsWith("activity-section-history-"));
   }
 
   function setEntryExpandedState(entryId, open, root) {
@@ -135,7 +135,7 @@
   document.body.addEventListener("htmx:beforeRequest", function (event) {
     var trigger = htmxTrigger(event);
     if (!isHistoryPeriodSwitch(trigger)) return;
-    var historyRoot = trigger.closest('[id^="history-"]');
+    var historyRoot = trigger.closest('[id^="activity-section-history-"]');
     if (historyRoot) collapseExpandedEntries(historyRoot);
   });
 })();

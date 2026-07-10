@@ -13,8 +13,8 @@
     return dlg;
   }
 
-  var renameDlg = initDialog("rename-activity-dialog");
-  var deleteDlg = initDialog("activity-delete-dialog");
+  var renameDlg = initDialog("activity-dialog-rename");
+  var deleteDlg = initDialog("activity-dialog-delete");
   var dynamicDialogs = {};
 
   function autoOpenDialog(id, dlg) {
@@ -32,7 +32,7 @@
       return;
     }
 
-    var deleteCancel = event.target.closest("#activity-delete-cancel-button");
+    var deleteCancel = event.target.closest("#activity-button-delete-cancel");
     if (deleteCancel && deleteDlg) {
       deleteDlg.close();
       return;
@@ -48,19 +48,19 @@
   });
 
   document.body.addEventListener("htmx:afterSwap", function (event) {
-    renameDlg = initDialog("rename-activity-dialog") || renameDlg;
-    deleteDlg = initDialog("activity-delete-dialog") || deleteDlg;
+    renameDlg = initDialog("activity-dialog-rename") || renameDlg;
+    deleteDlg = initDialog("activity-dialog-delete") || deleteDlg;
 
     var target = event.detail && event.detail.target;
     if (!target || !target.id) return;
 
-    if (target.id === "rename-activity-dialog") {
-      autoOpenDialog("rename-activity-dialog", renameDlg);
+    if (target.id === "activity-dialog-rename") {
+      autoOpenDialog("activity-dialog-rename", renameDlg);
       return;
     }
 
-    if (target.id === "activity-delete-dialog") {
-      autoOpenDialog("activity-delete-dialog", deleteDlg);
+    if (target.id === "activity-dialog-delete") {
+      autoOpenDialog("activity-dialog-delete", deleteDlg);
       return;
     }
 

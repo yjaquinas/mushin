@@ -1,315 +1,275 @@
 (function () {
   "use strict";
 
+  var TAB_NAMES = ["profile", "social", "settings"];
+  var tabState = {
+    profile: { index: -1, entries: [] },
+    social: { index: -1, entries: [] },
+    settings: { index: -1, entries: [] },
+  };
   var activeTab = null;
 
-  // Per-tab virtual history stacks: [{ url, idx }]
-  var tabHistory = {
-    profile: [],
-    social: [],
-    settings: [],
-  };
-
-  // Panel innerHTML cache per history index: { tab: { idx: html } }
-  var tabCache = { profile: {}, social: {}, settings: {} };
-
-  // Input field values per cache entry: { tab: { idx: { [index]: value } } }
-  var inputCache = { profile: {}, social: {}, settings: {} };
-
-  // Masthead innerHTML saved when switching away from a tab
-  var tabMasthead = {};
-
-  // ── Helpers ───────────────────────────────────────────────────────────
-
   function panelFor(name) {
-    return document.getElementById("tab-panel-" + name);
+    return document.getElementById("tab-" + name);
   }
 
   function mastheadEl() {
     return document.getElementById("masthead-area");
   }
 
-  function savePanelInputs(tab, idx) {
-    var panel = panelFor(tab);
-    if (!panel) return;
-    var inputs = panel.querySelectorAll("input, textarea, select");
-    var values = {};
-    inputs.forEach(function (el, i) {
-      values[i] = el.value;
-    });
-    if (!inputCache[tab]) inputCache[tab] = {};
-    inputCache[tab][idx] = values;
+  function currentEntry(tab) {
+    var state = tabState[tab];
+    if (!state || state.index < 0) return null;
+    return state.entries[state.index] || null;
   }
 
-  function restorePanelInputs(tab, idx) {
-    var values = inputCache[tab] && inputCache[tab][idx];
-    if (!values) return;
-    var panel = panelFor(tab);
-    if (!panel) return;
+  function captureInputs(panel) {
+    var values = {};
+    if (!panel) return values;
+    panel.querySelectorAll("input, textarea, select").forEach(function (el, i) {
+      if (el.type === "checkbox" || el.type === "radio") {
+        values[i] = { checked: el.checked };
+      } else {
+        values[i] = { value: el.value };
+      }
+    });
+    return values;
+  }
+
+  function restoreInputs(panel, values) {
+    if (!panel || !values) return;
     var inputs = panel.querySelectorAll("input, textarea, select");
     Object.keys(values).forEach(function (i) {
-      if (inputs[i]) inputs[i].value = values[i];
-    });
-  }
-
-  // ── Masthead ──────────────────────────────────────────────────────────
-
-  function updateMasthead(doc) {
-    var local = mastheadEl();
-    var remote = doc && doc.querySelector("#masthead-area");
-    if (!local) return;
-    local.innerHTML = remote ? remote.innerHTML : "";
-    var title = local.querySelector("h1");
-    if (title && title.textContent.trim()) {
-      local.removeAttribute("hidden");
-    } else {
-      local.setAttribute("hidden", "");
-    }
-  }
-
-  function saveMasthead(tab) {
-    var h = mastheadEl();
-    if (h) tabMasthead[tab] = h.innerHTML;
-  }
-
-  function restoreMasthead(tab) {
-    var h = mastheadEl();
-    if (!h) return;
-    var html = tabMasthead[tab];
-    if (html !== undefined) {
-      h.innerHTML = html;
-      var title = h.querySelector("h1");
-      if (title && title.textContent.trim()) {
-        h.removeAttribute("hidden");
+      if (!inputs[i]) return;
+      if (Object.prototype.hasOwnProperty.call(values[i], "checked")) {
+        inputs[i].checked = values[i].checked;
       } else {
-        h.setAttribute("hidden", "");
+        inputs[i].value = values[i].value;
       }
+    });
+  }
+
+  function captureMasthead() {
+    var masthead = mastheadEl();
+    return masthead ? masthead.innerHTML : "";
+  }
+
+  function restoreMasthead(html) {
+    var masthead = mastheadEl();
+    if (!masthead) return;
+    masthead.innerHTML = html || "";
+    var title = masthead.querySelector("h1");
+    if (title && title.textContent.trim()) {
+      masthead.removeAttribute("hidden");
     } else {
-      h.setAttribute("hidden", "");
+      masthead.setAttribute("hidden", "");
     }
   }
 
-  // ── Tab switching ─────────────────────────────────────────────────────
-
-  function switchTab(name, skipMasthead) {
-    if (name === activeTab) return;
-
-    // Save current tab's masthead before leaving
-    if (!skipMasthead && activeTab) saveMasthead(activeTab);
-
-    document.querySelectorAll(".tab-panel").forEach(function (p) {
-      p.classList.remove("tab-panel--active");
-    });
-    document.querySelectorAll(".bottom-nav-tab").forEach(function (l) {
-      l.classList.remove("bottom-nav-tab--active");
-    });
-
-    var panel = panelFor(name);
-    var link = document.querySelector(
-      '[data-tab="' + name + '"].bottom-nav-tab',
-    );
-    if (panel) panel.classList.add("tab-panel--active");
-    if (link) link.classList.add("bottom-nav-tab--active");
-
-    // Restore target tab's masthead
-    if (!skipMasthead) restoreMasthead(name);
-
-    activeTab = name;
-    document.body.setAttribute("data-current-tab", name);
+  function saveActiveEntry() {
+    if (!activeTab) return;
+    var entry = currentEntry(activeTab);
+    var panel = panelFor(activeTab);
+    if (!entry || !panel) return;
+    entry.panelHTML = panel.innerHTML;
+    entry.mastheadHTML = captureMasthead();
+    entry.inputs = captureInputs(panel);
   }
 
-  // ── Central navigator ─────────────────────────────────────────────────
+  function setActiveChrome(tab) {
+    TAB_NAMES.forEach(function (name) {
+      var panel = panelFor(name);
+      if (panel) {
+        var isActive = name === tab;
+        panel.classList.toggle("tab-panel--active", isActive);
+        panel.hidden = !isActive;
+        panel.setAttribute("aria-hidden", isActive ? "false" : "true");
+      }
+    });
 
-  function navigate(url) {
+    document.querySelectorAll(".bottom-nav-tab").forEach(function (link) {
+      var isActive = link.getAttribute("data-tab") === tab;
+      link.classList.toggle("bottom-nav-tab--active", isActive);
+      if (isActive) {
+        link.setAttribute("aria-current", "page");
+      } else {
+        link.removeAttribute("aria-current");
+      }
+    });
+
+    activeTab = tab;
+    document.body.setAttribute("data-current-tab", tab);
+  }
+
+  function restoreEntry(tab, idx, options) {
+    var state = tabState[tab];
+    var entry = state && state.entries[idx];
+    var panel = panelFor(tab);
+    if (!entry || !panel) return false;
+
+    if (!options || !options.skipSave) saveActiveEntry();
+    state.index = idx;
+    panel.innerHTML = entry.panelHTML || "";
+    if (window.htmx) window.htmx.process(panel);
+    restoreInputs(panel, entry.inputs);
+    restoreMasthead(entry.mastheadHTML);
+    setActiveChrome(tab);
+    document.body.dispatchEvent(
+      new CustomEvent("tab:panel-rendered", { detail: { tab: tab, panel: panel } }),
+    );
+    return true;
+  }
+
+  function pushBrowserState(tab, idx, url, replace) {
+    var state = { tab: tab, idx: idx };
+    if (replace) {
+      window.history.replaceState(state, "", url);
+    } else {
+      window.history.pushState(state, "", url);
+    }
+  }
+
+  function appendEntry(tab, entry, replaceCurrent) {
+    var state = tabState[tab];
+    if (!state) return -1;
+
+    if (replaceCurrent && state.index >= 0) {
+      state.entries[state.index] = entry;
+      return state.index;
+    }
+
+    if (state.index < state.entries.length - 1) {
+      state.entries = state.entries.slice(0, state.index + 1);
+    }
+    state.entries.push(entry);
+    state.index = state.entries.length - 1;
+    return state.index;
+  }
+
+  function entryFromDocument(doc, tab, url) {
+    var remotePanel = doc.getElementById("tab-" + tab);
+    var remoteMasthead = doc.getElementById("masthead-area");
+    if (!remotePanel) return null;
+    return {
+      url: url,
+      panelHTML: remotePanel.innerHTML,
+      mastheadHTML: remoteMasthead ? remoteMasthead.innerHTML : "",
+      inputs: captureInputs(remotePanel),
+    };
+  }
+
+  function navigate(url, options) {
     fetch(url, { headers: { "X-In-Tab-Nav": "1" } })
-      .then(function (r) {
-        return r.text();
+      .then(function (response) {
+        return response.text();
       })
       .then(function (html) {
         var doc = new DOMParser().parseFromString(html, "text/html");
-        var newTab = doc.body.getAttribute("data-current-tab");
-
-        // Non-tabbed page (e.g. entry/legal for non-logged-in users) —
-        // do a full navigation instead of swapping into a tab panel.
-        if (!newTab) {
+        var tab = doc.body.getAttribute("data-current-tab");
+        if (!tab || !tabState[tab]) {
           window.location.href = url;
           return;
         }
 
-        var tab = newTab;
-
-        // Save current tab's masthead before any DOM changes
-        if (activeTab) saveMasthead(activeTab);
-
-        updateMasthead(doc);
-
-        // If switching tabs, save the freshly-updated masthead for the
-        // target tab before switchTab restores the old cached version
-        if (tab !== activeTab) saveMasthead(tab);
-
-        var panel = panelFor(tab);
-        var remotePanel = doc.getElementById("tab-panel-" + tab);
-        var newHTML = "";
-        if (panel && remotePanel) {
-          // Save current panel's inputs before replacing
-          if (tab === activeTab) savePanelInputs(tab, tabHistory[tab].length - 1);
-          newHTML = remotePanel.innerHTML;
-          panel.innerHTML = newHTML;
-          if (window.htmx) window.htmx.process(panel);
+        var entry = entryFromDocument(doc, tab, url);
+        if (!entry) {
+          window.location.href = url;
+          return;
         }
 
-        tabHistory[tab].push({ url: url });
-        var idx = tabHistory[tab].length - 1;
-        tabCache[tab][idx] = newHTML;
-
-        switchTab(tab, true);
-        window.history.pushState({ tab: tab, idx: idx }, "", url);
+        saveActiveEntry();
+        var idx = appendEntry(tab, entry, options && options.replaceCurrent);
+        restoreEntry(tab, idx, { skipSave: true });
+        pushBrowserState(tab, idx, url, options && options.replaceState);
+      })
+      .catch(function () {
+        window.location.href = url;
       });
   }
 
-  // ── Bottom-nav click ──────────────────────────────────────────────────
+  function switchToTab(tab, url) {
+    var state = tabState[tab];
+    if (!state) return;
+    if (state.index >= 0) {
+      restoreEntry(tab, state.index);
+      pushBrowserState(tab, state.index, currentEntry(tab).url, false);
+    } else {
+      navigate(url);
+    }
+  }
 
   document.addEventListener("click", function (e) {
     var tabLink = e.target.closest(".bottom-nav-tab[data-tab]");
     if (!tabLink) return;
     e.preventDefault();
 
-    var name = tabLink.getAttribute("data-tab");
+    var tab = tabLink.getAttribute("data-tab");
     var url = tabLink.getAttribute("href");
-
-    // Clicking the already-active tab: flush history, go to root.
-    if (name === activeTab) {
-      tabHistory[name] = [];
-      tabCache[name] = {};
-      navigate(url);
+    if (tab === activeTab) {
+      navigate(url, { replaceCurrent: false });
       return;
     }
-
-    var panel = panelFor(name);
-
-    if (panel && panel.children.length > 0) {
-      // Panel has cached content — just switch tabs.
-      switchTab(name);
-      var stack = tabHistory[name];
-      var lastEntry = stack.length > 0 ? stack[stack.length - 1] : null;
-      window.history.pushState(
-        { tab: name, idx: lastEntry ? lastEntry.idx : 0 },
-        "",
-        lastEntry ? lastEntry.url : url,
-      );
-    } else {
-      navigate(url);
-    }
+    switchToTab(tab, url);
   });
-
-  // ── In-tab link interception ──────────────────────────────────────────
 
   document.addEventListener("click", function (e) {
     var link = e.target.closest(
       "a[href^='/']:not([data-tab]):not([data-tab-back]):not([target])",
     );
-    if (!link) return;
-    // Only intercept while a tab is active (no interception on login/legal pages)
-    if (!activeTab) return;
-    // Don't intercept dialog-triggering legal links
+    if (!link || !activeTab) return;
     if (link.hasAttribute("data-legal")) return;
-    // Don't intercept HTMX-enhanced elements
     if (
       link.hasAttribute("hx-get") ||
       link.hasAttribute("hx-post") ||
       link.hasAttribute("hx-put") ||
       link.hasAttribute("hx-delete") ||
       link.hasAttribute("hx-patch")
-    )
+    ) {
       return;
+    }
     e.preventDefault();
     navigate(link.getAttribute("href"));
   });
-
-  // ── Masthead back button ──────────────────────────────────────────────
 
   document.addEventListener("click", function (e) {
     var backBtn = e.target.closest("[data-tab-back]");
     if (!backBtn) return;
     e.preventDefault();
-    // Let the popstate handler restore cached panel + masthead — no fetch.
     window.history.back();
   });
 
-  // ── Browser back / forward ────────────────────────────────────────────
-
   window.addEventListener("popstate", function (e) {
     var state = e.state || {};
-    if (!state.tab || !activeTab) return;
-
-    if (state.tab !== activeTab) {
-      switchTab(state.tab);
-    } else {
-      // Same-tab — restore the masthead saved when this state was entered
-      restoreMasthead(state.tab);
-    }
-
-    // Restore cached panel content for this history index
-    var panel = panelFor(state.tab);
-    var cache = tabCache[state.tab] && tabCache[state.tab][state.idx];
-    if (panel && cache !== undefined) {
-      panel.innerHTML = cache;
-      if (window.htmx) window.htmx.process(panel);
-      restorePanelInputs(state.tab, state.idx);
-    }
-
-    // Sync tabHistory to the current index
-    if (tabHistory[state.tab] && state.idx !== undefined) {
-      tabHistory[state.tab] = tabHistory[state.tab].slice(0, state.idx + 1);
-    }
+    if (!state.tab || state.idx === undefined) return;
+    restoreEntry(state.tab, state.idx);
   });
-
-  // ── Tag HTMX-swapped history entries ──────────────────────────────────
 
   document.body.addEventListener("htmx:afterSettle", function (e) {
     if (!activeTab) return;
     var panel = e.detail.target && e.detail.target.closest(".tab-panel");
     if (!panel) return;
-
-    // Save current panel content to cache before HTMX replaces it?
-    // No — htmx:afterSettle fires AFTER the swap, so the content is already
-    // in the DOM. We tag the history entry and cache the new content.
-    // Use the current history state's idx so HTMX replaces don't collide
-    // with navigate() pushes (which compute idx from tabHistory length).
+    saveActiveEntry();
     var state = window.history.state || {};
-    var idx = state.idx !== undefined ? state.idx : tabHistory[activeTab].length;
-    savePanelInputs(activeTab, idx);
-    tabCache[activeTab][idx] = panel.innerHTML;
-    window.history.replaceState(
-      { tab: activeTab, idx: idx },
-      "",
-      window.location.href,
-    );
+    if (state.tab === activeTab && state.idx !== undefined) {
+      pushBrowserState(activeTab, state.idx, window.location.href, true);
+    }
   });
 
-  // ── Init ──────────────────────────────────────────────────────────────
-
   document.addEventListener("DOMContentLoaded", function () {
-    var initialTab =
-      document.body.getAttribute("data-current-tab") || "";
-    if (initialTab) {
-      activeTab = initialTab;
-      tabHistory[initialTab] = [{ url: window.location.href }];
-      var panel = panelFor(initialTab);
-      if (panel) {
-        tabCache[initialTab][0] = panel.innerHTML;
-        savePanelInputs(initialTab, 0);
-      }
-      window.history.replaceState(
-        { tab: initialTab, idx: 0 },
-        "",
-        window.location.href,
-      );
-    }
+    var initialTab = document.body.getAttribute("data-current-tab") || "";
+    if (!tabState[initialTab]) return;
 
-    if (window.htmx && activeTab) {
-      var panel = panelFor(activeTab);
-      if (panel) window.htmx.process(panel);
-    }
+    var panel = panelFor(initialTab);
+    var entry = {
+      url: window.location.href,
+      panelHTML: panel ? panel.innerHTML : "",
+      mastheadHTML: captureMasthead(),
+      inputs: captureInputs(panel),
+    };
+    var idx = appendEntry(initialTab, entry, false);
+    setActiveChrome(initialTab);
+    pushBrowserState(initialTab, idx, window.location.href, true);
+
+    if (window.htmx && panel) window.htmx.process(panel);
   });
 })();

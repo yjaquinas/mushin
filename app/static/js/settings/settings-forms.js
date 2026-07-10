@@ -1,25 +1,24 @@
 (function () {
   "use strict";
 
-  var accountForm = document.getElementById("settings-account-form");
-  var passwordForm = document.getElementById("settings-password-form");
-
   function updateVisibilityExplanation(value) {
-    var taglineEl = document.getElementById("visibility-tagline");
-    var descEl = document.getElementById("visibility-description");
+    var taglineEl = document.getElementById("settings-text-visibility-tagline");
+    var descEl = document.getElementById("settings-text-visibility-description");
     if (!taglineEl || !descEl) return;
-    var taglineSrc = document.getElementById("visibility-tagline-" + value);
-    var descSrc = document.getElementById("visibility-desc-" + value);
+    var taglineSrc = document.getElementById("settings-text-visibility-tagline-" + value);
+    var descSrc = document.getElementById("settings-text-visibility-desc-" + value);
     if (taglineSrc) taglineEl.textContent = taglineSrc.textContent;
     if (descSrc) descEl.textContent = descSrc.textContent;
   }
 
-  // Account form: save button disabled by default, enable when privacy
-  // selection or email value differs from the stored value.
-  if (accountForm) {
+  function initAccountForm() {
+    var accountForm = document.getElementById("settings-form-account");
+    if (!accountForm || accountForm.settingsInit) return;
+    accountForm.settingsInit = true;
+    accountForm.removeAttribute("data-settings-init");
+
     var submitBtn = accountForm.querySelector("[type=submit]");
-    var radios = accountForm.querySelectorAll("[name=visibility]");
-    var emailInput = document.getElementById("account-email");
+    var emailInput = document.getElementById("settings-field-email");
     var originalVisibility = accountForm.getAttribute("data-original-visibility");
     var originalEmail = emailInput ? emailInput.getAttribute("data-original-value") || "" : "";
 
@@ -31,35 +30,45 @@
       submitBtn.disabled = !visChanged && !emailChanged;
     }
 
-    if (submitBtn && originalVisibility) {
-      submitBtn.disabled = true;
-      updateVisibilityExplanation(originalVisibility);
+    if (!submitBtn || !originalVisibility) return;
+    submitBtn.disabled = true;
+    updateVisibilityExplanation(originalVisibility);
 
-      radios.forEach(function (radio) {
-        radio.addEventListener("change", function () {
-          if (radio.checked) updateVisibilityExplanation(radio.value);
-          checkAccountForm();
-        });
-      });
-
-      if (emailInput) {
-        emailInput.addEventListener("input", checkAccountForm);
+    accountForm.addEventListener("change", function (event) {
+      if (event.target && event.target.name === "visibility") {
+        updateVisibilityExplanation(event.target.value);
       }
-    }
+      checkAccountForm();
+    });
+    accountForm.addEventListener("input", checkAccountForm);
+    checkAccountForm();
   }
 
-  // Password: enable submit only when both fields are non-empty.
-  if (passwordForm) {
-    var currentPw = document.getElementById("account-current-password");
-    var newPw = document.getElementById("account-new-password");
-    var pwSubmit = passwordForm.querySelector("[type=submit]");
-    if (currentPw && newPw && pwSubmit) {
-      pwSubmit.disabled = true;
-      function checkPasswordFields() {
-        pwSubmit.disabled = !currentPw.value || !newPw.value;
-      }
-      currentPw.addEventListener("input", checkPasswordFields);
-      newPw.addEventListener("input", checkPasswordFields);
+  function initPasswordForm() {
+    var passwordForm = document.getElementById("settings-form-password");
+    if (!passwordForm || passwordForm.settingsInit) return;
+    passwordForm.settingsInit = true;
+    passwordForm.removeAttribute("data-settings-init");
+
+    var currentPw = document.getElementById("settings-field-current-password");
+    var newPw = document.getElementById("settings-field-new-password");
+    var submitBtn = passwordForm.querySelector("[type=submit]");
+    if (!currentPw || !newPw || !submitBtn) return;
+
+    submitBtn.disabled = true;
+    function checkPasswordFields() {
+      submitBtn.disabled = !currentPw.value || !newPw.value;
     }
+    currentPw.addEventListener("input", checkPasswordFields);
+    newPw.addEventListener("input", checkPasswordFields);
   }
+
+  function initSettingsForms() {
+    initAccountForm();
+    initPasswordForm();
+  }
+
+  document.addEventListener("DOMContentLoaded", initSettingsForms);
+  document.body.addEventListener("htmx:afterSwap", initSettingsForms);
+  document.body.addEventListener("tab:panel-rendered", initSettingsForms);
 })();

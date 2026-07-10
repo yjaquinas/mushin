@@ -49,7 +49,7 @@ def period_tabs(selected_period: str) -> list[dict[str, str | bool]]:
 def today_value(period: str) -> str:
     today = datetime.now().astimezone().date()
     if period == "weekly":
-        return (today - timedelta(days=today.weekday())).isoformat()
+        return _week_start(today).isoformat()
     if period == "monthly":
         return today.strftime("%Y-%m")
     if period == "yearly":
@@ -71,7 +71,11 @@ def drill_week_value(month_value: str) -> str:
         target = today
     else:
         target = month_start
-    return (target - timedelta(days=target.weekday())).isoformat()
+    return _week_start(target).isoformat()
+
+
+def _week_start(day: date) -> date:
+    return day - timedelta(days=(day.weekday() + 1) % 7)
 
 
 def _window(
@@ -95,7 +99,7 @@ def _parse_day(value: str | None, fallback: date) -> date:
 
 def _parse_week(value: str | None, fallback: date) -> date:
     base = _parse_day(value, fallback)
-    return base - timedelta(days=base.weekday())
+    return _week_start(base)
 
 
 def _parse_month(value: str | None, fallback: date) -> date:

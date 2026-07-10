@@ -1,8 +1,8 @@
-<section id="bio-section" class="flex flex-col gap-3 rounded-card border border-border bg-surface-1 p-4">
+<section id="profile-section-bio" class="flex flex-col gap-3 rounded-card border border-border bg-surface-1 p-4">
     <h2 class="text-title font-semibold text-text-primary">{{ strings.PROFILE_BIO_HEADING }}</h2>
     <form
         hx-post="/profile/bio"
-        hx-target="#bio-section"
+        hx-target="#profile-section-bio"
         hx-swap="outerHTML"
         class="flex flex-col gap-3"
     >
@@ -31,11 +31,11 @@
                 <button
                     type="button"
                     hx-get="/profile/bio"
-                    hx-target="#bio-section"
+                    hx-target="#profile-section-bio"
                     hx-swap="outerHTML"
                     class="min-h-tap rounded-button border border-border px-3 text-body text-text-secondary transition hover:bg-surface-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
                 >{{ strings.PROFILE_BIO_CANCEL }}</button>
             </div>
         </div>
     </form>
-</div>
+</section>

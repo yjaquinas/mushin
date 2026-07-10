@@ -46,11 +46,13 @@ def _month_grid(
     last = date(year, month, cal.monthrange(year, month)[1])
     weeks: list[list[dict[str, object] | None]] = []
     week: list[dict[str, object] | None] = []
-    cursor = first - timedelta(days=first.weekday())
-    end = last + timedelta(days=(6 - last.weekday()))
+    cursor = first - timedelta(days=(first.weekday() + 1) % 7)
+    end = last + timedelta(days=(5 - last.weekday()) % 7)
     while cursor <= end:
-        week_start = cursor - timedelta(days=cursor.weekday())
-        current_week = week_start == (date.today() - timedelta(days=date.today().weekday()))
+        week_start = cursor - timedelta(days=(cursor.weekday() + 1) % 7)
+        current_week = week_start == (
+            date.today() - timedelta(days=(date.today().weekday() + 1) % 7)
+        )
         week.append(
             {
                 "date": cursor.isoformat(),

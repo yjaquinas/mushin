@@ -72,8 +72,8 @@
   });
 
   document.body.addEventListener("log-saved", function () {
-    document.querySelectorAll("#log-sheet-dialog form").forEach(resetFormFields);
+    document.querySelectorAll("#activity-dialog-log form").forEach(resetFormFields);
     resetLogTrigger();
-    hide(document.getElementById("log-sheet-dialog"));
+    hide(document.getElementById("activity-dialog-log"));
   });
 })();

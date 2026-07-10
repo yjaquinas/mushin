@@ -3,7 +3,7 @@
   No context required — all strings come from the global `strings` object.
 #}
 <div
-    id="delete-account-dialog"
+    id="settings-dialog-delete-account"
     hidden
     class="fixed inset-0 z-50 flex items-end justify-center bg-text-primary/50 sm:items-center"
     role="presentation"
@@ -11,10 +11,10 @@
     <div
         role="dialog"
         aria-modal="true"
-        aria-labelledby="delete-account-title"
+        aria-labelledby="settings-title-delete-account"
         class="flex w-full max-w-md flex-col gap-4 rounded-card border border-border bg-surface-1 p-4 sm:rounded-card"
     >
-        <h2 id="delete-account-title" class="text-body font-semibold text-text-primary">
+        <h2 id="settings-title-delete-account" class="text-body font-semibold text-text-primary">
             {{ strings.DELETE_DATA_TITLE }}
         </h2>
         <p class="text-caption text-text-secondary">{{ strings.DELETE_DATA_BODY }}</p>
@@ -32,7 +32,7 @@
             </button>
             <button
                 type="button"
-                id="delete-cancel-button"
+                id="settings-button-delete-cancel"
                 class="min-h-tap w-full rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline-offset-2"
             >
                 {{ strings.DELETE_DATA_CANCEL }}

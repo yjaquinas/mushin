@@ -62,6 +62,7 @@ ENTRY_CREATED_AT_LABEL = "created at"
 
 HOME_TITLE = "Your profile"
 HOME_EMPTY = "Nothing started yet."
+HOME_ACTIVITIES_HEADING = "Activities"
 
 # One-shot flash confirmation shown after a successful /account/visibility
 # save (see app/routes/web.py — the flash cookie is read once, then cleared).
@@ -342,6 +343,7 @@ ACCOUNT_SHARE_FAILED = "Couldn't share the profile link."
 
 # Radio labels mirror the consent screen.
 ACCOUNT_VISIBILITY_PRIVATE_LABEL = "Private"
+ACCOUNT_VISIBILITY_CURRENT_BADGE = "Current saved value"
 ACCOUNT_VISIBILITY_PRIVATE_TAGLINE = "Only visible to you and your fellows."
 ACCOUNT_VISIBILITY_PRIVATE_DESC = (
     "Visitors see your activity names and counts, but not your entries"
@@ -600,6 +602,7 @@ COMMENTS_PAGE_SHOW_OLDER = "Show older"
 NAV_PROFILE = "Profile"
 NAV_SOCIAL = "Social"
 NAV_SETTINGS = "Settings"
+NAV_APP = "App navigation"
 
 # ---------------------------------------------------------------------------
 # Admin (operator dashboard, HTTP Basic Auth gated)

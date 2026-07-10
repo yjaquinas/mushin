@@ -68,6 +68,10 @@
     syncLocalTimestamps(event.detail.elt || document);
   });
 
+  document.body.addEventListener("tab:panel-rendered", function (event) {
+    syncLocalTimestamps(event.detail.panel || document);
+  });
+
   document.body.addEventListener("htmx:configRequest", function (event) {
     var form = event.detail.elt ? event.detail.elt.closest("form") : null;
     if (form && form.matches("[data-comment-form]") && event.detail.parameters) {

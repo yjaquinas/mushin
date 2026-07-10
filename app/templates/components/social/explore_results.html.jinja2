@@ -11,16 +11,12 @@
         <h2 class="text-body font-medium text-text-secondary">{{ strings.SEARCH_PEOPLE_HEADING }}</h2>
         <ul class="flex flex-col gap-2">
             {% for person in people %}
-            <li hx-get="/social/@{{ person.username }}"
-                hx-push-url="true"
-                hx-target="#tab-panel-social"
-                hx-select="#tab-panel-social"
-                hx-swap="outerHTML"
-                hx-select-oob="#masthead-area"
-                class="flex min-h-tap items-center justify-between gap-3 rounded-card px-3 py-2 transition hover:bg-surface-2 cursor-pointer"
-                tabindex="0" role="link">
-                <span class="min-w-0 truncate font-medium text-text-primary">@{{ person.username }}</span>
-                <span class="shrink-0" onclick="event.stopPropagation()">
+            <li class="flex min-h-tap items-center justify-between gap-3 rounded-card px-3 py-2 transition hover:bg-surface-2">
+                <a
+                    href="/social/@{{ person.username }}"
+                    class="flex min-h-tap min-w-0 flex-1 items-center truncate font-medium text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-strong"
+                >@{{ person.username }}</a>
+                <span class="shrink-0">
                     {% with
                         username=person.username,
                         state=person.relationship_state,
@@ -43,15 +39,13 @@
         <h2 class="text-body font-medium text-text-secondary">{{ strings.SEARCH_TAGS_HEADING }}</h2>
         <ul class="flex flex-col gap-2">
             {% for entry in tags %}
-            <li hx-get="/social{{ entry.activity_url }}{% if entry.detail_visible %}?entry_id={{ entry.entry_id }}{% endif %}"
-                hx-push-url="true"
-                hx-target="#tab-panel-social"
-                hx-select="#tab-panel-social"
-                hx-swap="outerHTML"
-                hx-select-oob="#masthead-area"
-                class="flex min-h-tap items-center gap-3 rounded-card px-3 py-2 transition hover:bg-surface-2 cursor-pointer"
-                tabindex="0" role="link">
-                <span class="line-clamp-2 text-body text-text-primary">{{ entry.memo }}</span>
+            <li>
+                <a
+                    href="/social{{ entry.activity_url }}{% if entry.detail_visible %}?entry_id={{ entry.entry_id }}{% endif %}"
+                    class="flex min-h-tap items-center gap-3 rounded-card px-3 py-2 text-body text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-strong"
+                >
+                    <span class="line-clamp-2">{{ entry.memo }}</span>
+                </a>
             </li>
             {% endfor %}
         </ul>
@@ -63,18 +57,16 @@
         <h2 class="text-body font-medium text-text-secondary">{{ strings.SEARCH_ACTIVITIES_HEADING }}</h2>
         <ul class="flex flex-col gap-2">
             {% for activity in activities %}
-            <li hx-get="/social{{ activity.url }}"
-                hx-push-url="true"
-                hx-target="#tab-panel-social"
-                hx-select="#tab-panel-social"
-                hx-swap="outerHTML"
-                hx-select-oob="#masthead-area"
-                class="flex min-h-tap items-center gap-3 rounded-card px-3 py-2 transition hover:bg-surface-2 cursor-pointer"
-                tabindex="0" role="link">
-                <span class="flex min-w-0 flex-col">
-                    <span class="truncate font-medium text-text-primary">{{ activity.name }}</span>
-                    <span class="text-caption text-text-secondary">@{{ activity.username }}</span>
-                </span>
+            <li>
+                <a
+                    href="/social{{ activity.url }}"
+                    class="flex min-h-tap items-center gap-3 rounded-card px-3 py-2 transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-strong"
+                >
+                    <span class="flex min-w-0 flex-col">
+                        <span class="truncate font-medium text-text-primary">{{ activity.name }}</span>
+                        <span class="text-caption text-text-secondary">@{{ activity.username }}</span>
+                    </span>
+                </a>
             </li>
             {% endfor %}
         </ul>

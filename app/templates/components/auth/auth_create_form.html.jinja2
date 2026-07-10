@@ -19,7 +19,7 @@
     this fragment is server-rendered directly (currently always empty; the
     JS path fills [data-auth-error] client-side).
 #}
-<div id="auth-form" class="flex flex-col gap-4">
+<div id="auth-form" role="tabpanel" aria-labelledby="auth-tab-create" class="flex flex-col gap-4">
     {% include "components/auth/auth_tabs.html.jinja2" with context %}
 
     <form
@@ -37,12 +37,12 @@
                 id="create-username"
                 name="username"
                 required
+                autocomplete="username"
                 value="{{ username | default('') }}"
                 placeholder="5-20 chars, lowercase/number/_ only"
                 class="min-h-tap rounded-input border border-border bg-surface-1 px-3 py-1 text-body text-text-primary focus-visible:outline-2"
             />
         </div>
-        <input hidden autocomplete="username" />
 
         <div class="flex flex-col gap-1">
             <label for="create-password" class="text-caption font-medium text-text-secondary">

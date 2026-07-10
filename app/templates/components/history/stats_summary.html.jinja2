@@ -1,7 +1,7 @@
 {# Shared summary card: title (optional), all-time count, current-year heatmap,
    and top tags. #}
 <section
-    id="stats-summary-{{ activity_id }}"
+    id="activity-section-summary-{{ activity_id }}"
     class="flex flex-col gap-4 rounded-card border border-border bg-surface-1 p-4"
     {% if is_owner | default(false) %}
     hx-get="/activities/{{ activity_id }}/stats-summary"
@@ -11,7 +11,7 @@
 >
     {% if card_name is defined and card_name %}
     {% if title_editable | default(false) %}
-    <div id="rename-heading" class="flex items-center">
+    <div id="activity-header-rename" class="flex items-center">
         <div class="flex-1"></div>
         <h1 class="text-title font-semibold text-text-primary">{{ card_name }}</h1>
         <div class="flex flex-1 justify-end">
@@ -19,7 +19,7 @@
                 type="button"
                 aria-label="{{ strings.RENAME_LABEL }}"
                 hx-get="/activities/{{ activity_id }}/rename-form"
-                hx-target="#rename-activity-dialog"
+                hx-target="#activity-dialog-rename"
                 hx-swap="outerHTML"
                 class="min-h-tap min-w-tap flex items-center justify-center rounded text-text-muted transition hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
             >{{ icon('pencil', size=20) }}</button>

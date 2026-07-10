@@ -3,16 +3,16 @@
 {% block title %}{{ strings.SETTINGS_TITLE }} · {{ strings.APP_NAME }}{% endblock %}
 
 {% block tab_settings %}
-<div class="flex flex-grow flex-col">
+<div id="settings-content" class="flex flex-grow flex-col">
 {% if flash_message %}
 <div hidden data-toast-message="{{ flash_message }}"></div>
 {% endif %}
 
 {% if not is_guest %}
-<section class="flex flex-col gap-4 pb-4" id="account-section">
+<section class="flex flex-col gap-4 pb-4" id="settings-section-account">
     <h2 class="text-body font-semibold text-text-primary">{{ strings.ACCOUNT_VISIBILITY_HEADING }}</h2>
     <form
-        id="settings-account-form"
+        id="settings-form-account"
         method="post"
         action="/settings"
         class="flex flex-col gap-3"
@@ -29,9 +29,16 @@
                         {% if visibility != "public" %}checked{% endif %}
                         class="sr-only"
                     >
-                    <span class="flex items-center justify-center gap-2">
-                        {{ icon("shield", size=18) }}
-                        {{ strings.ACCOUNT_VISIBILITY_PRIVATE_LABEL }}
+                    <span class="relative flex items-center justify-center">
+                        <span class="flex items-center justify-center gap-2">
+                            {{ icon("shield", size=18) }}
+                            {{ strings.ACCOUNT_VISIBILITY_PRIVATE_LABEL }}
+                        </span>
+                        {% if visibility != "public" %}
+                        <span class="absolute right-0 text-brand" aria-label="{{ strings.ACCOUNT_VISIBILITY_CURRENT_BADGE }}">
+                            {{ icon("check", size=18) }}
+                        </span>
+                        {% endif %}
                     </span>
                 </label>
                 <label class="flex-1 cursor-pointer rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-secondary transition hover:bg-surface-2 has-[:checked]:border-2 has-[:checked]:border-brand has-[:checked]:text-text-primary has-[:checked]:font-semibold">
@@ -42,26 +49,33 @@
                         {% if visibility == "public" %}checked{% endif %}
                         class="sr-only"
                     >
-                    <span class="flex items-center justify-center gap-2">
-                        {{ icon("globe", size=18) }}
-                        {{ strings.ACCOUNT_VISIBILITY_PUBLIC_LABEL }}
+                    <span class="relative flex items-center justify-center">
+                        <span class="flex items-center justify-center gap-2">
+                            {{ icon("globe", size=18) }}
+                            {{ strings.ACCOUNT_VISIBILITY_PUBLIC_LABEL }}
+                        </span>
+                        {% if visibility == "public" %}
+                        <span class="absolute right-0 text-brand" aria-label="{{ strings.ACCOUNT_VISIBILITY_CURRENT_BADGE }}">
+                            {{ icon("check", size=18) }}
+                        </span>
+                        {% endif %}
                     </span>
                 </label>
             </div>
-            <div id="visibility-explanation" class="text-caption text-text-secondary">
-                <p id="visibility-tagline" class="font-medium"></p>
-                <p id="visibility-description"></p>
+            <div id="settings-target-visibility-explanation" class="text-caption text-text-secondary">
+                <p id="settings-text-visibility-tagline" class="font-medium"></p>
+                <p id="settings-text-visibility-description"></p>
             </div>
-            <span id="visibility-tagline-private" hidden>{{ strings.ACCOUNT_VISIBILITY_PRIVATE_TAGLINE }}</span>
-            <span id="visibility-desc-private" hidden>{{ strings.ACCOUNT_VISIBILITY_PRIVATE_DESC }}</span>
-            <span id="visibility-tagline-public" hidden>{{ strings.ACCOUNT_VISIBILITY_PUBLIC_TAGLINE }}</span>
-            <span id="visibility-desc-public" hidden>{{ strings.ACCOUNT_VISIBILITY_PUBLIC_DESC }}</span>
+            <span id="settings-text-visibility-tagline-private" hidden>{{ strings.ACCOUNT_VISIBILITY_PRIVATE_TAGLINE }}</span>
+            <span id="settings-text-visibility-desc-private" hidden>{{ strings.ACCOUNT_VISIBILITY_PRIVATE_DESC }}</span>
+            <span id="settings-text-visibility-tagline-public" hidden>{{ strings.ACCOUNT_VISIBILITY_PUBLIC_TAGLINE }}</span>
+            <span id="settings-text-visibility-desc-public" hidden>{{ strings.ACCOUNT_VISIBILITY_PUBLIC_DESC }}</span>
         </fieldset>
 
-        <label class="flex flex-col gap-2" for="account-email">
+        <label class="flex flex-col gap-2" for="settings-field-email">
             <span class="text-caption font-medium text-text-primary">{{ strings.ACCOUNT_EMAIL_LABEL }}</span>
             <input
-                id="account-email"
+                id="settings-field-email"
                 name="email"
                 type="email"
                 value="{{ email or '' }}"
@@ -89,28 +103,28 @@
 
 {# Password #}
 {% if not is_guest %}
-<section class="flex flex-col gap-4 border-t border-border py-4">
+<section id="settings-section-password" class="flex flex-col gap-4 border-t border-border py-4">
     <h2 class="text-body font-semibold text-text-primary">{{ strings.ACCOUNT_PASSWORD_HEADING }}</h2>
     <form
-        id="settings-password-form"
+        id="settings-form-password"
         method="post"
         action="/settings/password"
         class="flex flex-col gap-3"
     >
-        <label class="flex flex-col gap-2" for="account-current-password">
+        <label class="flex flex-col gap-2" for="settings-field-current-password">
             <span class="text-caption font-medium text-text-primary">{{ strings.ACCOUNT_PASSWORD_CURRENT_LABEL }}</span>
             <input
-                id="account-current-password"
+                id="settings-field-current-password"
                 name="current_password"
                 type="password"
                 autocomplete="current-password"
                 class="min-h-tap rounded-button border border-border bg-surface-1 px-4 py-3 text-body text-text-primary placeholder:text-text-muted focus-visible:outline-offset-2"
             >
         </label>
-        <label class="flex flex-col gap-2" for="account-new-password">
+        <label class="flex flex-col gap-2" for="settings-field-new-password">
             <span class="text-caption font-medium text-text-primary">{{ strings.ACCOUNT_PASSWORD_NEW_LABEL }}</span>
             <input
-                id="account-new-password"
+                id="settings-field-new-password"
                 name="new_password"
                 type="password"
                 autocomplete="new-password"
@@ -133,7 +147,7 @@
 {% endif %}
 
 {# Theme #}
-<section class="border-t border-border py-4">
+<section id="settings-section-theme" class="border-t border-border py-4">
     <div class="flex items-center justify-between">
         <span class="text-body font-semibold text-text-primary">{{ strings.SETTINGS_THEME_HEADING }}</span>
         {% include "components/common/theme_toggle_settings.html.jinja2" with context %}
@@ -141,16 +155,16 @@
 </section>
 
 {# Data, logout, delete #}
-<section class="flex flex-col gap-4 border-t border-border py-4">
+<section id="settings-section-data" class="flex flex-col gap-4 border-t border-border py-4">
     <h2 class="text-body font-semibold text-text-primary">Data</h2>
     <div class="flex gap-3">
       {% include "components/settings/entry_import_dialog.html.jinja2" with context %}
-      <template id="entry-import-data-dialog-template">
+      <template id="settings-template-entry-import-dialog">
         {% include "components/settings/entry_import_dialog.html.jinja2" with context %}
       </template>
       <button
           type="button"
-          id="entry-import-open-button"
+          id="settings-button-entry-import-open"
           class="flex min-h-tap flex-1 items-center justify-center gap-2 rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline-offset-2"
       >
           {{ icon("arrow-down-tray", size=18) }}
@@ -167,7 +181,7 @@
 
     <button
         type="button"
-        id="logout-button"
+        id="settings-button-logout"
         hx-post="/auth/logout"
         hx-swap="none"
         class="flex min-h-tap w-full items-center justify-center gap-2 rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline-offset-2"
@@ -179,7 +193,7 @@
 {% if not is_guest %}
     <button
         type="button"
-        id="delete-open-button"
+        id="settings-button-delete-open"
         class="flex min-h-tap w-full items-center justify-center gap-2 rounded-button border border-danger bg-danger-subtle px-4 py-3 text-body font-semibold text-danger transition hover:opacity-90 focus-visible:outline-offset-2"
     >
         {{ icon("trash", size=18) }}
@@ -191,7 +205,7 @@
 </section>
 
 {# Legal links #}
-<section class="flex flex-col flex-grow items-center justify-end gap-3 pb-4 pt-16">
+<section id="settings-section-legal" class="flex flex-col flex-grow items-center justify-end gap-3 pb-4 pt-16">
     <a
         href="/licenses"
         data-legal="licenses"
@@ -219,5 +233,35 @@
         </a>
     </div>
 </section>
+
+{# Legal dialog — content loaded via HTMX into #settings-target-legal-content. #}
+<div
+    id="settings-dialog-legal"
+    hidden
+    class="fixed inset-0 z-50 flex items-end justify-center bg-overlay/50 sm:items-center"
+    role="presentation"
+>
+    <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="settings-title-legal-dialog"
+        tabindex="-1"
+        class="flex max-h-[90vh] w-full max-w-screen-sm flex-col rounded-t-card border border-border bg-surface-1 shadow-soft sm:rounded-card"
+    >
+        <div class="flex items-center justify-between border-b border-border px-4 py-3">
+            <h2 id="settings-title-legal-dialog" class="text-title font-semibold text-text-primary"></h2>
+            <button
+                id="settings-button-legal-close"
+                type="button"
+                class="flex min-h-tap min-w-tap items-center justify-center rounded-button text-text-secondary transition hover:bg-surface-2 focus-visible:outline-offset-2"
+                aria-label="{{ strings.LEGAL_DIALOG_CLOSE }}"
+            >
+                {{ icon("x", size=20) }}
+            </button>
+        </div>
+        <div id="settings-target-legal-content" class="overflow-y-auto px-4 py-4 text-body text-text-secondary">
+        </div>
+    </div>
+</div>
 </div>
 {% endblock tab_settings %}

@@ -17,13 +17,13 @@
 {% set tag_group_fields = fields | selectattr("kind", "equalto", "tag_group") | list %}
 {% set has_tag_group = tag_group_fields | length > 0 %}
 
-{% set dialog_id = "log-sheet-dialog" %}
+{% set dialog_id = "activity-dialog-log" %}
 {% set form_action = "/activities/" ~ activity_id ~ "/log" %}
 {% set form_swap = "none" %}
 {% set title = name %}
 {% set submit_label = strings.LOG_SUBMIT %}
 {% set cancel_label = strings.LOG_CANCEL %}
-{% set cancel_button_id = "log-sheet-cancel" %}
+{% set cancel_button_id = "activity-button-log-cancel" %}
 {% set auto_open = true %}
 {% set disable_backdrop_close = true %}
 {% set disable_escape_close = true %}

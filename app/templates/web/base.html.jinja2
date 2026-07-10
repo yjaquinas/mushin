@@ -72,10 +72,10 @@
     >
         {% if page_title %}
         <div class="flex w-full max-w-screen-md items-center justify-between gap-2 px-4">
-            <a href="/" class="flex shrink-0 items-center">
+            <span class="flex shrink-0 items-center">
                 <img src="{{ static_asset('/static/logo.png') }}" alt="{{ strings.APP_NAME }}" class="theme-light h-7 w-auto">
                 <img src="{{ static_asset('/static/logo-dark.png') }}" alt="{{ strings.APP_NAME }}" class="theme-dark h-7 w-auto">
-            </a>
+            </span>
             <h1 class="text-title font-semibold text-text-primary truncate">{{ page_title }}</h1>
             {% if share_url or profile_url %}
             {% include "components/common/_profile_share_button.html.jinja2" with context %}
@@ -90,56 +90,33 @@
         class="mx-auto flex w-full max-w-screen-md grow flex-col gap-4 px-4 py-4"
     >
         <div
-            id="tab-panel-profile"
+            id="tab-profile"
             class="tab-panel flex flex-col gap-4{% if current_tab == 'profile' or current_tab == none %} tab-panel--active{% endif %}"
             data-tab="profile"
+            aria-hidden="{{ 'false' if current_tab == 'profile' or current_tab == none else 'true' }}"
+            {% if current_tab != 'profile' and current_tab != none %}hidden{% endif %}
         >
             {% block tab_profile %}{% block content %}{% endblock %}{% endblock %}
         </div>
         <div
-            id="tab-panel-social"
+            id="tab-social"
             class="tab-panel flex flex-col gap-4{% if current_tab == 'social' %} tab-panel--active{% endif %}"
             data-tab="social"
+            aria-hidden="{{ 'false' if current_tab == 'social' else 'true' }}"
+            {% if current_tab != 'social' %}hidden{% endif %}
         >
             {% block tab_social %}{% endblock %}
         </div>
         <div
-            id="tab-panel-settings"
+            id="tab-settings"
             class="tab-panel{% if current_tab == 'settings' %} tab-panel--active{% endif %}"
             data-tab="settings"
+            aria-hidden="{{ 'false' if current_tab == 'settings' else 'true' }}"
+            {% if current_tab != 'settings' %}hidden{% endif %}
         >
             {% block tab_settings %}{% endblock %}
         </div>
     </main>
-    {# Legal dialog — content loaded via HTMX into #legal-dialog-content. #}
-    <div
-        id="legal-dialog"
-        hidden
-        class="fixed inset-0 z-50 flex items-end justify-center bg-overlay/50 sm:items-center"
-        role="presentation"
-    >
-        <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="legal-dialog-title"
-            class="flex max-h-[90vh] w-full max-w-screen-sm flex-col rounded-t-card border border-border bg-surface-1 shadow-soft sm:rounded-card"
-        >
-            <div class="flex items-center justify-between border-b border-border px-4 py-3">
-                <h2 id="legal-dialog-title" class="text-title font-semibold text-text-primary"></h2>
-                <button
-                    id="legal-dialog-close"
-                    type="button"
-                    class="flex min-h-tap min-w-tap items-center justify-center rounded-button text-text-secondary transition hover:bg-surface-2 focus-visible:outline-offset-2"
-                    aria-label="{{ strings.LEGAL_DIALOG_CLOSE }}"
-                >
-                    {{ icon("x", size=20) }}
-                </button>
-            </div>
-            <div id="legal-dialog-content" class="overflow-y-auto px-4 py-4 text-body text-text-secondary">
-            </div>
-        </div>
-    </div>
-
     <div
         id="toast"
         hidden
@@ -161,12 +138,13 @@
 
     {# Bottom navigation bar — visible only on tabbed pages (profile/social/settings). #}
     {% if current_tab is not none %}
-    <nav class="bottom-nav" aria-label="{{ strings.NAV_PROFILE }}">
+    <nav class="bottom-nav" aria-label="{{ strings.NAV_APP }}">
         <div class="bottom-nav__inner">
             <a
                 href="{{ home_url }}"
                 class="bottom-nav-tab{% if current_tab == 'profile' %} bottom-nav-tab--active{% endif %}"
                 aria-label="{{ strings.NAV_PROFILE }}"
+                {% if current_tab == 'profile' %}aria-current="page"{% endif %}
                 data-tab="profile"
             >
                 {{ icon("user", size=22) }}
@@ -175,6 +153,7 @@
                 href="/social"
                 class="bottom-nav-tab{% if current_tab == 'social' %} bottom-nav-tab--active{% endif %}"
                 aria-label="{{ strings.NAV_SOCIAL }}"
+                {% if current_tab == 'social' %}aria-current="page"{% endif %}
                 data-tab="social"
             >
                 {{ icon("compass", size=22) }}
@@ -183,6 +162,7 @@
                 href="/settings"
                 class="bottom-nav-tab{% if current_tab == 'settings' %} bottom-nav-tab--active{% endif %}"
                 aria-label="{{ strings.NAV_SETTINGS }}"
+                {% if current_tab == 'settings' %}aria-current="page"{% endif %}
                 data-tab="settings"
             >
                 {{ icon("cog", size=22) }}
