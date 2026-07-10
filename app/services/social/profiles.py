@@ -21,7 +21,7 @@ def get_public_user(conn: sqlite3.Connection, username: str) -> dict | None:
     "consent_seen_at"}``.
     """
     row = conn.execute(
-        "SELECT id, username, visibility, consent_seen_at"
+        "SELECT id, username, visibility, consent_seen_at, bio"
         " FROM user WHERE username = ? AND deleted_at IS NULL",
         (username,),
     ).fetchone()
@@ -32,6 +32,7 @@ def get_public_user(conn: sqlite3.Connection, username: str) -> dict | None:
         "username": row["username"],
         "visibility": row["visibility"],
         "consent_seen_at": row["consent_seen_at"],
+        "bio": row["bio"],
     }
 
 

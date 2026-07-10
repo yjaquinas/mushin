@@ -113,6 +113,7 @@ async def social_profile(
         context = _read_only_social_profile_context(
             conn, username, owner_id, cap=cap, tz=tz, current_uid=current_uid,
             visibility=profile_user["visibility"],
+            bio=profile_user.get("bio", ""),
         )
         context["flash_message"] = _read_flash(request)
         context["current_page"] = "social"
@@ -215,6 +216,7 @@ def _read_only_social_profile_context(
     tz,
     current_uid: int | None,
     visibility: str = "public",
+    bio: str = "",
 ) -> dict:
     """Assemble the read-only profile context for the social tab."""
     linked = cap in ("connected", "public")
@@ -231,4 +233,5 @@ def _read_only_social_profile_context(
         "fellows": fellows_context,
         "state": state,
         "viewer_logged_in": current_uid is not None,
+        "bio": bio,
     }

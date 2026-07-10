@@ -18,6 +18,7 @@ _FLASH_MESSAGES: dict[str, str] = {
     "visibility_private": ui_strings.HOME_FLASH_VISIBILITY_PRIVATE,
     "email_updated": ui_strings.HOME_FLASH_EMAIL_UPDATED,
     "password_updated": ui_strings.HOME_FLASH_PASSWORD_UPDATED,
+    "bio_updated": ui_strings.HOME_FLASH_BIO_UPDATED,
     "login_required": ui_strings.HOME_FLASH_LOGIN_REQUIRED,
     "fellows_private": ui_strings.HOME_FLASH_FELLOWS_PRIVATE,
 }

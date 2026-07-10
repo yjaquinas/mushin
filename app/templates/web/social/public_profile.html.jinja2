@@ -21,6 +21,10 @@
 
 {% include "components/fellows/fellows_section.html.jinja2" with context %}
 
+{% if bio %}
+<p class="mt-4 text-body text-text-secondary">{{ bio }}</p>
+{% endif %}
+
 {% if view_mode == "limited" %}
 <p class="text-caption text-text-muted">{{ strings.PROFILE_LIMITED_NOTICE.format(username=username) }}</p>
 {% endif %}

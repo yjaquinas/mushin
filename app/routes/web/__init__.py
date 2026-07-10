@@ -93,6 +93,7 @@ from app.routes.web.history.routes import router as _history_router
 from app.routes.web.home.routes import router as _home_router
 from app.routes.web.social.routes import router as _social_router
 from app.routes.web.legal.routes import router as _legal_router
+from app.routes.web.profile.routes import router as _profile_router
 
 router = APIRouter()
 router.include_router(_home_router)
@@ -106,3 +107,4 @@ router.include_router(_entries_router)
 router.include_router(_social_router)
 router.include_router(_fellows_router)
 router.include_router(_legal_router)
+router.include_router(_profile_router)

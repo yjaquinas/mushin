@@ -362,6 +362,8 @@ ACCOUNT_EMAIL_UPDATE = "Update email"
 ACCOUNT_EMAIL_INVALID = "Enter a valid email address."
 ACCOUNT_EMAIL_TAKEN = "That email address is already in use."
 
+HOME_FLASH_BIO_UPDATED = "Bio updated."
+
 SETTINGS_THEME_HEADING = "Theme"
 
 # ---------------------------------------------------------------------------
@@ -439,6 +441,13 @@ LEGAL_DIALOG_CLOSE = "Close dialog"
 # ---------------------------------------------------------------------------
 # Public profiles (/@{username}, /@{username}/{slug})
 # ---------------------------------------------------------------------------
+
+PROFILE_BIO_HEADING = "About me"
+PROFILE_BIO_EMPTY = "Write a short bio."
+PROFILE_BIO_EDIT = "Edit bio"
+PROFILE_BIO_SAVE = "Save"
+PROFILE_BIO_CANCEL = "Cancel"
+PROFILE_BIO_TOO_LONG = "Bio must be 100 characters or fewer."
 
 PROFILE_ACTIVITIES_EMPTY = "No activities logged yet."
 PROFILE_ACTIVITIES_HEADING = "Activities"

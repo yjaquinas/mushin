@@ -254,6 +254,16 @@ def set_email(user_id: int, email: str | None) -> None:
         )
 
 
+def set_bio(user_id: int, bio: str) -> None:
+    """Update the bio for *user_id*."""
+    with db.connect() as conn:
+        conn.execute("BEGIN")
+        conn.execute(
+            "UPDATE user SET bio = ? WHERE id = ?",
+            (bio, user_id),
+        )
+
+
 def get_user_timezone(user_id: int) -> ZoneInfo:
     """Return the user's timezone.
 

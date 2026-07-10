@@ -34,6 +34,7 @@ def _read_only_profile_context(
     tz: Any,
     current_uid: int | None,
     visibility: str = "public",
+    bio: str = "",
 ) -> dict[str, Any]:
     """Assemble the read-only ``public_profile.html.jinja2`` context for *cap*."""
     linked = cap in ("connected", "public")
@@ -50,6 +51,7 @@ def _read_only_profile_context(
         "fellows": fellows_context,
         "state": state,
         "viewer_logged_in": current_uid is not None,
+        "bio": bio,
     }
 
 
@@ -77,7 +79,7 @@ async def profile(
                 if gate is not None:
                     return gate
             tz = users.get_user_timezone(owner_id)
-            context = _build_home_context(conn, owner_id, tz)
+            context = _build_home_context(conn, owner_id, tz, bio=(full_user or {}).get("bio", ""))
             context["flash_message"] = _read_flash(request)
             context["current_page"] = "profile"
             context["page_title"] = username

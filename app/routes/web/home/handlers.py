@@ -31,7 +31,7 @@ async def render_home(request: Request, user: dict) -> HTMLResponse:
     tz = users.get_user_timezone(owner_id)
     with db.connect() as conn:
         conn.execute("BEGIN")
-        context = _build_home_context(conn, owner_id, tz)
+        context = _build_home_context(conn, owner_id, tz, bio=user.get("bio", ""))
     context["flash_message"] = _read_flash(request)
     context["current_page"] = "profile"
     context["page_title"] = None

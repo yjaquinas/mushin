@@ -99,11 +99,12 @@ def _build_fellows_context(
     return context
 
 
-def _build_home_context(conn: sqlite3.Connection, owner_id: int, tz: ZoneInfo) -> dict[str, Any]:
+def _build_home_context(conn: sqlite3.Connection, owner_id: int, tz: ZoneInfo, bio: str = "") -> dict[str, Any]:
     cards = [_build_card_context(conn, owner_id, row, tz=tz, linked=True) for row in _list_activities(conn, owner_id)]
     return {
         "cards": cards,
         "examples": categories.EXAMPLE_ACTIVITIES,
         "fellows": _build_fellows_context(owner_id, viewer_id=owner_id, is_owner=True),
         "unseen_comments": comments.unseen_comment_count(conn, owner_id),
+        "bio": bio,
     }
