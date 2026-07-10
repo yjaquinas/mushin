@@ -57,34 +57,12 @@ Private accounts may still be discoverable by identity and activity names.
 
 All user-facing copy must be centralized. Do not hardcode template strings.
 
-## Design tokens
+## Design & branding
 
-Design tokens are the source of truth. Token names must be semantic roles, not
-raw colors, so all renderers share one palette.
-
-Role families in `@theme`:
-
-- `brand`, `brand-subtle`, `on-brand`
-- `surface-0`, `surface-1`, `surface-2`
-- `text-primary`, `text-secondary`, `text-muted`
-- `border`, `border-strong`
-- `accent`, `accent-subtle`, `accent-text`
-- `level`, `level-subtle`
-- `danger`, `danger-subtle`
-- `heat-0` through `heat-4`
-
-Keep light/dark token values synchronized in:
-
-1. `@theme { ... }`
-2. `@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { ... } }`
-3. `[data-theme="dark"] { ... }`
-
-Blocks 2 and 3 must stay identical. Light is the default theme unless a
-recorded decision says otherwise.
-
-Accent and brand tokens should be used by role, not by visual convenience.
-All surfaces should reuse the same token names rather than maintaining a second
-palette.
+Brand identity (voice, color palette, logo, icon, OG image, typography) and
+design tokens (role families, theme synchronization rules) are documented in
+`BRAND.md`. Refer to it for any design, asset, or token work. Do not duplicate
+brand guidelines here.
 
 ## HTMX
 

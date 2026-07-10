@@ -17,6 +17,7 @@ dependencies = [
     "httpx>=0.28.1",
     "geoip2>=4.8",
     "user-agents>=2.2.0",
+    "pillow>=12.3.0",
 ]
 
 [dependency-groups]

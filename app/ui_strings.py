@@ -724,7 +724,7 @@ META_DESCRIPTION_ACTIVITY = (
     "{activity} by {username} on Mushin — a social network for tracking "
     "progress and connecting with others."
 )
-OG_IMAGE_URL = "/static/img/og-default.svg"
+OG_IMAGE_URL = "/static/img/og-default.png"
 META_DESCRIPTION_PRIVACY = "Privacy Policy for Mushin 無心 — how your data is handled on this social progress tracker."
 META_DESCRIPTION_TERMS = "Terms of Service for Mushin 無心 — the rules for using this social progress tracker."
 META_DESCRIPTION_LICENSES = "Open source licenses used by Mushin 無心."
