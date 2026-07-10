@@ -128,7 +128,7 @@ async def social_profile(
 
     response = templates.TemplateResponse(
         request=request,
-        name="web/home/public_profile.html.jinja2",
+        name="web/social/public_profile.html.jinja2",
         context=context,
     )
     _clear_flash(response)

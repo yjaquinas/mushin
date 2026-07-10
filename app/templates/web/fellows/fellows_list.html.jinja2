@@ -5,13 +5,13 @@
 {% block tab_profile %}
 {% if is_owner %}
 {% block content %}
-{% include "web/fellows/_fellows_content.html.jinja2" with context %}
+{% include "components/fellows/_fellows_content.html.jinja2" with context %}
 {% endblock %}
 {% endif %}
 {% endblock %}
 
 {% block tab_social %}
 {% if not is_owner %}
-{% include "web/fellows/_fellows_content.html.jinja2" with context %}
+{% include "components/fellows/_fellows_content.html.jinja2" with context %}
 {% endif %}
 {% endblock %}

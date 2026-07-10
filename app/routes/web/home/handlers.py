@@ -63,7 +63,7 @@ def render_entry_page(request: Request, *, next_path: str | None = None) -> HTML
     }
     response = templates.TemplateResponse(
         request=request,
-        name="web/comments/entry.html.jinja2",
+        name="web/home/entry.html.jinja2",
         context=context,
     )
     _clear_flash(response)

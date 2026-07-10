@@ -31,9 +31,10 @@
 
     <title>{% block title %}{{ title | default(strings.APP_NAME) }}{% endblock %}</title>
     <link rel="stylesheet" href="{{ static_asset('/static/style.css') }}">
-    <link rel="icon" type="image/png" sizes="32x32" href="{{ static_asset('/static/favicon/favicon-32x32.png') }}">
-    <link rel="icon" type="image/png" sizes="16x16" href="{{ static_asset('/static/favicon/favicon-16x16.png') }}">
-    <link rel="apple-touch-icon" sizes="180x180" href="{{ static_asset('/static/favicon/apple-touch-icon.png') }}">
+    <style>html[data-theme="dark"] .theme-light{display:none}html:not([data-theme="dark"]) .theme-dark{display:none}</style>
+    <link rel="icon" type="image/png" href="{{ static_asset('/static/logo.png') }}">
+    <link rel="apple-touch-icon" href="{{ static_asset('/static/logo.png') }}">
+    <script>(function(){if(document.cookie.indexOf('mushin_theme=')===-1){var t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t);document.cookie='mushin_theme='+t+';path=/;max-age=31536000;SameSite=Lax'}})();</script>
     <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.10/dist/htmx.min.js" integrity="sha384-H5SrcfygHmAuTDZphMHqBJLc3FhssKjG7w/CeCpFReSfwBWDTKpkzPP8c+cLsK+V" crossorigin="anonymous"></script>
     <script defer src="{{ static_asset('/static/js/common/tab-navigation.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/common/toast.js') }}"></script>
@@ -66,13 +67,16 @@
         (hidden when no title) so JS can update it on tab switch. #}
     <header
         id="masthead-area"
-        class="flex w-full items-center justify-center border-b border-border py-3"
+        class="flex w-full items-center justify-center border-b border-border h-14"
         {% if not page_title %}hidden{% endif %}
     >
         {% if page_title %}
         <div class="flex w-full max-w-screen-md items-center justify-between gap-2 px-4">
-            <span class="min-w-[44px]"></span>
-            <h1 class="text-title font-semibold text-text-primary">{{ page_title }}</h1>
+            <a href="/" class="flex shrink-0 items-center">
+                <img src="{{ static_asset('/static/logo.png') }}" alt="{{ strings.APP_NAME }}" class="theme-light h-7 w-auto">
+                <img src="{{ static_asset('/static/logo-dark.png') }}" alt="{{ strings.APP_NAME }}" class="theme-dark h-7 w-auto">
+            </a>
+            <h1 class="text-title font-semibold text-text-primary truncate">{{ page_title }}</h1>
             {% if share_url or profile_url %}
             {% include "components/common/_profile_share_button.html.jinja2" with context %}
             {% else %}
@@ -111,7 +115,7 @@
     <div
         id="legal-dialog"
         hidden
-        class="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center"
+        class="fixed inset-0 z-50 flex items-end justify-center bg-overlay/50 sm:items-center"
         role="presentation"
     >
         <div

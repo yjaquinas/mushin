@@ -18,18 +18,15 @@
 {% if flash_message %}
 <div hidden data-toast-message="{{ flash_message }}"></div>
 {% endif %}
-<section class="flex flex-col justify-center gap-8 py-8">
+<section class="flex flex-col justify-center gap-8 pb-8">
     <header class="flex flex-col items-center gap-4 text-center">
-        <img
-            src="{{ static_asset('/static/logo-light.png') }}"
-            alt="{{ strings.APP_NAME }}"
-            class="h-16 w-auto"
-        >
+        <img src="{{ static_asset('/static/img/og-default.png') }}" alt="{{ strings.APP_NAME }}" class="theme-light w-full">
+        <img src="{{ static_asset('/static/img/og-dark.png') }}" alt="{{ strings.APP_NAME }}" class="theme-dark w-full">
         <h1 class="text-hero-numeral font-semibold leading-tight text-text-primary">
-            {{ strings.ENTRY_TITLE }} <span class="text-text-muted">{{ strings.APP_NAME_HANJA }}</span>
+          {{ strings.ENTRY_TAGLINE }}
+            <!--{{ strings.ENTRY_TITLE }} <span class="text-text-muted">{{ strings.APP_NAME_HANJA }}</span>-->
         </h1>
         <p class="text-body text-text-secondary">{{ strings.APP_GLOSS }}</p>
-        <p class="text-caption text-text-muted">{{ strings.ENTRY_TAGLINE }}</p>
     </header>
 
     {% include "components/auth/auth_login_form.html.jinja2" with context %}

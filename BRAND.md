@@ -48,6 +48,8 @@ These hold their hex values regardless of theme (used in masthead, brand glyph):
 |---|---|
 | Obsidian | `#0F172A` |
 | Cinnabar | `#E34234` |
+| Overlay | `#121C30` |
+| On-danger | `#EEE3CF` |
 
 Accent is used sparingly — selected states, focus rings, progress bars, the tagline in OG imagery. It should never overwhelm. Primary is the dominant weight.
 

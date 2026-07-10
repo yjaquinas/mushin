@@ -28,6 +28,10 @@
 @theme {
   /* ── Palette ──────────────────────────────────────────────────────────── */
 
+  /* Semantic aliases for what were Tailwind's black/white */
+  --color-overlay: #121c30;
+  --color-on-danger: #eee3cf;
+
   /*
    * Brand — the studio ink. Used for the app name, primary actions, and the
    * hero numeral. Obsidian-based rather than pure black — slightly warm so

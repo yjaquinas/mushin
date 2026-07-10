@@ -16,7 +16,6 @@ from app.routes.web.entries.route_handlers import (
     get_entry_edit_form_response,
     log_sheet_response,
     owner_id_from_user,
-    remove_match_row_response,
     update_entry_response,
 )
 from app.routes.web.common import _current_user

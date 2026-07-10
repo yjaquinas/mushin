@@ -17,7 +17,6 @@ from app.routes.web.entries.handlers import (
     update_entry_body,
 )
 from app.routes.web.entries.log_handler import create_log_body
-from app.routes.web.entries.match_rows import add_match_row_body, remove_match_row_body
 from app.routes.web.common import templates
 from app.services.common import db as _db
 from app.services.entries import entries
@@ -138,25 +137,6 @@ def delete_entry_response(activity_id: int, entry_id: int, owner_id: int) -> HTM
 
 async def log_sheet_response(request: Request, activity_id: int, owner_id: int) -> HTMLResponse:
     return await log_sheet_body(request, activity_id, owner_id)
-
-
-async def add_match_row_response(
-    request: Request,
-    activity_id: int,
-    field_def_id: int,
-    owner_id: int,
-) -> HTMLResponse:
-    return await add_match_row_body(request, activity_id, field_def_id, owner_id)
-
-
-async def remove_match_row_response(
-    request: Request,
-    activity_id: int,
-    field_def_id: int,
-    row_index: int,
-    owner_id: int,
-) -> HTMLResponse:
-    return await remove_match_row_body(request, activity_id, field_def_id, row_index, owner_id)
 
 
 async def create_log_response(request: Request, activity_id: int, owner_id: int) -> HTMLResponse:

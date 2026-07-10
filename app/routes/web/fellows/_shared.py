@@ -82,7 +82,7 @@ def _render_fellows_page_content(
     )
     return templates.TemplateResponse(
         request=request,
-        name="web/fellows/_fellows_content.html.jinja2",
+        name="components/fellows/_fellows_content.html.jinja2",
         context={
             "fellows": fellows_context,
             "username": username,

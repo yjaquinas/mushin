@@ -22,7 +22,7 @@
                     hx-post="/@{{ username }}/{{ slug }}/entries/{{ entry_id }}/comments/{{ comment_id }}/delete"
                     hx-target="#comment-thread-{{ entry_id }}"
                     hx-swap="outerHTML"
-                    class="min-h-tap w-full rounded-button bg-danger px-4 py-3 text-body font-semibold text-white transition hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                    class="min-h-tap w-full rounded-button bg-danger px-4 py-3 text-body font-semibold text-on-danger transition hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
                 >
                     {{ strings.COMMENTS_DELETE_CONFIRM }}
                 </button>

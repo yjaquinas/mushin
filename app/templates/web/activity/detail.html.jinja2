@@ -31,12 +31,7 @@
         </button>
     </div>
 
-    {# 3. Competition #}
-    {% if record is not none %}
-        {% include "components/history/competition_stats.html.jinja2" with context %}
-    {% endif %}
-
-    {# 5. History #}
+    {# 3. History #}
     <section class="flex flex-col gap-3 rounded-card border border-border bg-surface-1 p-4">
         {% include "components/history/history.html.jinja2" with context %}
     </section>
