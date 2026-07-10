@@ -22,14 +22,15 @@
 {% include "components/fellows/fellows_section.html.jinja2" with context %}
 
 {% if bio %}
-<p class="mt-4 text-body text-text-secondary">{{ bio }}</p>
+<section class="flex flex-col gap-3 rounded-card border border-border bg-surface-1 p-4">
+    <h2 class="text-title font-semibold text-text-primary">{{ strings.PROFILE_BIO_HEADING_SOCIAL.format(username=username) }}</h2>
+    <p class="break-words text-body text-text-secondary">{{ bio }}</p>
+</section>
 {% endif %}
 
 {% if view_mode == "limited" %}
 <p class="text-caption text-text-muted">{{ strings.PROFILE_LIMITED_NOTICE.format(username=username) }}</p>
 {% endif %}
-
-<h2 class="mt-6 text-title font-semibold text-text-primary">{{ strings.PROFILE_ACTIVITIES_HEADING }}</h2>
 
 {% if not cards %}
 <section class="flex flex-col gap-4 rounded-card border border-border bg-surface-1 p-4">

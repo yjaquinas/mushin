@@ -20,11 +20,7 @@
 
 {% include "components/fellows/fellows_section.html.jinja2" with context %}
 
-<div id="bio-section">
-    {% include "components/profile/_bio_display.html.jinja2" with context %}
-</div>
-
-<h2 class="mt-6 text-title font-semibold text-text-primary">{{ strings.PROFILE_ACTIVITIES_HEADING }}</h2>
+{% include "components/profile/_bio_display.html.jinja2" with context %}
 
 {% if not cards %}
 <div id="home-empty-state" class="flex flex-col items-center gap-3 py-12 text-center">

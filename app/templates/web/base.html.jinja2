@@ -91,14 +91,14 @@
     >
         <div
             id="tab-panel-profile"
-            class="tab-panel{% if current_tab == 'profile' or current_tab == none %} tab-panel--active{% endif %}"
+            class="tab-panel flex flex-col gap-4{% if current_tab == 'profile' or current_tab == none %} tab-panel--active{% endif %}"
             data-tab="profile"
         >
             {% block tab_profile %}{% block content %}{% endblock %}{% endblock %}
         </div>
         <div
             id="tab-panel-social"
-            class="tab-panel{% if current_tab == 'social' %} tab-panel--active{% endif %}"
+            class="tab-panel flex flex-col gap-4{% if current_tab == 'social' %} tab-panel--active{% endif %}"
             data-tab="social"
         >
             {% block tab_social %}{% endblock %}

@@ -443,6 +443,8 @@ LEGAL_DIALOG_CLOSE = "Close dialog"
 # ---------------------------------------------------------------------------
 
 PROFILE_BIO_HEADING = "About me"
+PROFILE_BIO_PLACEHOLDER = "Write a short bio. Max 100 characters."
+PROFILE_BIO_HEADING_SOCIAL = "About {username}"
 PROFILE_BIO_EMPTY = "Write a short bio."
 PROFILE_BIO_EDIT = "Edit bio"
 PROFILE_BIO_SAVE = "Save"
@@ -450,7 +452,6 @@ PROFILE_BIO_CANCEL = "Cancel"
 PROFILE_BIO_TOO_LONG = "Bio must be 100 characters or fewer."
 
 PROFILE_ACTIVITIES_EMPTY = "No activities logged yet."
-PROFILE_ACTIVITIES_HEADING = "Activities"
 
 # Quiet line above the character-sheet (limited) view of a private account.
 PROFILE_LIMITED_NOTICE = "{username} is a private user. Connect to see more."

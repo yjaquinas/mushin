@@ -1,4 +1,4 @@
-<div id="bio-section" class="flex flex-col gap-3 rounded-card border border-border bg-surface-1 p-4">
+<section id="bio-section" class="flex flex-col gap-3 rounded-card border border-border bg-surface-1 p-4">
     <div class="flex items-center justify-between">
         <h2 class="text-title font-semibold text-text-primary">{{ strings.PROFILE_BIO_HEADING }}</h2>
         <button
@@ -11,7 +11,7 @@
         >{{ icon('pencil', size=18) }}</button>
     </div>
     {% if bio %}
-    <p class="text-body text-text-secondary">{{ bio }}</p>
+    <p class="break-words text-body text-text-secondary">{{ bio }}</p>
     {% else %}
     <p class="text-caption text-text-muted">{{ strings.PROFILE_BIO_EMPTY }}</p>
     {% endif %}
