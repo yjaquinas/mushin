@@ -8,7 +8,7 @@
         {{ icon('chevron-left', size=16) }} {{ strings.ACTIVITY_BACK_TO_PROFILE }}
     </a>
     {# 1. Summary card #}
-    {% with card_name=card.name, average_weekly_count=card.average_weekly_count, title_editable=true, show_top_tags=false %}
+    {% with card_name=card.name, average_weekly_count=card.average_weekly_count, title_editable=true, show_top_tags=false, is_secret=card.secret %}
     {% include "components/history/stats_summary.html.jinja2" with context %}
     {% endwith %}
 

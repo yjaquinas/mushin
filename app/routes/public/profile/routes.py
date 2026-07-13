@@ -38,7 +38,7 @@ def _read_only_profile_context(
 ) -> dict[str, Any]:
     """Assemble the read-only ``public_profile.html.jinja2`` context for *cap*."""
     linked = cap in ("connected", "public")
-    activities = _list_activities(conn, owner_id)
+    activities = _list_activities(conn, owner_id, include_secret=False)
     cards = [_build_card_context(conn, owner_id, row, tz=tz, linked=linked) for row in activities]
     fellows_context = _build_fellows_context(owner_id, viewer_id=current_uid, is_owner=False, visibility=visibility)
     state = (

@@ -33,9 +33,10 @@ def search_activities(searcher_id: int, query: str, *, limit: int = 20) -> list[
             "   WHERE (b.blocker_id = ? AND b.blocked_id = u.id)"
             "      OR (b.blocker_id = u.id AND b.blocked_id = ?)"
             " )"
+            " AND (a.secret = 0 OR a.owner_id = ?)"
             " ORDER BY lower(a.name), lower(u.username)"
             " LIMIT ?",
-            (pattern, LIKE_ESCAPE, searcher_id, searcher_id, capped),
+            (pattern, LIKE_ESCAPE, searcher_id, searcher_id, searcher_id, capped),
         ).fetchall()
 
         results = []
@@ -88,6 +89,7 @@ def recent_public_entries(*, limit: int = 10) -> list[dict]:
                    LIMIT 1
                  )
                 WHERE a.archived_at IS NULL
+                  AND a.secret = 0
                   AND u.deleted_at IS NULL
                   AND u.visibility = 'public'
                   AND latest.id IS NOT NULL
@@ -132,16 +134,17 @@ def search_tags(searcher_id: int, query: str, *, limit: int = 20) -> list[dict]:
                FROM entry e
                JOIN activity a ON a.id = e.activity_id
                JOIN user u ON u.id = e.owner_id
-               WHERE e.hidden_at IS NULL
-               AND e.memo IS NOT NULL
-               AND e.memo LIKE ? ESCAPE ?
-               AND u.deleted_at IS NULL
-               AND NOT EXISTS (
-                 SELECT 1 FROM block b
-                 WHERE (b.blocker_id = ? AND b.blocked_id = u.id)
-                    OR (b.blocker_id = u.id AND b.blocked_id = ?)
-               )
-               AND (
+                WHERE e.hidden_at IS NULL
+                AND e.memo IS NOT NULL
+                AND e.memo LIKE ? ESCAPE ?
+                AND u.deleted_at IS NULL
+                AND (a.secret = 0 OR e.owner_id = ?)
+                AND NOT EXISTS (
+                  SELECT 1 FROM block b
+                  WHERE (b.blocker_id = ? AND b.blocked_id = u.id)
+                     OR (b.blocker_id = u.id AND b.blocked_id = ?)
+                )
+                AND (
                  u.id = ?
                  OR u.visibility = 'public'
                  OR EXISTS (
@@ -154,7 +157,7 @@ def search_tags(searcher_id: int, query: str, *, limit: int = 20) -> list[dict]:
                )
                ORDER BY e.created_at DESC
                LIMIT ?""",
-            (pattern, LIKE_ESCAPE, searcher_id, searcher_id, searcher_id, searcher_id, searcher_id, capped * 2),
+             (pattern, LIKE_ESCAPE, searcher_id, searcher_id, searcher_id, searcher_id, searcher_id, searcher_id, capped * 2),
         ).fetchall()
 
         results = []

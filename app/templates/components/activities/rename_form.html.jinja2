@@ -17,7 +17,7 @@
             class="flex w-full max-w-md flex-col gap-4 rounded-card border border-border bg-surface-1 p-4 sm:rounded-card"
         >
             <h2 id="rename-activity-title" class="text-body font-semibold text-text-primary">
-                {{ strings.RENAME_LABEL }}
+                {{ strings.ACTIVITY_EDIT_TITLE }}
             </h2>
 
             <form
@@ -48,10 +48,27 @@
 
                 <p class="text-caption text-text-muted">{{ strings.RENAME_SLUG_NOTICE }}</p>
 
+                <div class="flex items-start gap-3 border-t border-border pt-3">
+                    <input
+                        type="checkbox"
+                        id="activity-secret-edit"
+                        name="secret"
+                        value="1"
+                        {% if is_secret %}checked{% endif %}
+                        class="mt-1 h-4 w-4 rounded border-border text-brand focus-visible:outline-2"
+                    >
+                    <div class="flex flex-col gap-0.5">
+                        <label for="activity-secret-edit" class="text-body font-medium text-text-primary">
+                            {{ strings.ACTIVITY_FORM_SECRET_LABEL }}
+                        </label>
+                        <p class="text-caption text-text-muted">{{ strings.ACTIVITY_FORM_SECRET_HELP }}</p>
+                    </div>
+                </div>
+
                 <button
                     type="submit"
                     class="min-h-tap w-full rounded-button bg-brand px-4 py-3 text-body font-semibold text-on-brand transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-                >{{ strings.RENAME_SAVE }}</button>
+                >{{ strings.ACTIVITY_EDIT_SAVE }}</button>
                 <button
                     type="button"
                     id="rename-activity-cancel-button"

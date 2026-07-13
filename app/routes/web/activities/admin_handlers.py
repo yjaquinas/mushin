@@ -22,17 +22,22 @@ def rename_form_response(request: Request, activity_id: int, owner_id: int) -> H
     return templates.TemplateResponse(
         request=request,
         name="components/activities/rename_form.html.jinja2",
-        context={"activity_id": activity_id, "current_name": row["name"]},
+        context={"activity_id": activity_id, "current_name": row["name"], "is_secret": bool(row["secret"])},
     )
 
 
-def rename_activity_response(request: Request, activity_id: int, owner_id: int, user: dict, name: str) -> HTMLResponse:
+def rename_activity_response(request: Request, activity_id: int, owner_id: int, user: dict, name: str, secret: bool | None = None) -> HTMLResponse:
     try:
         with db.connect() as conn:
             conn.execute("BEGIN")
-            new_slug = categories.rename_activity(
-                conn, owner_id=owner_id, activity_id=activity_id, new_name=name
-            )
+            if secret is not None:
+                new_slug = categories.update_activity(
+                    conn, owner_id=owner_id, activity_id=activity_id, name=name, secret=secret
+                )
+            else:
+                new_slug = categories.rename_activity(
+                    conn, owner_id=owner_id, activity_id=activity_id, new_name=name
+                )
     except ActivityNotFoundError:
         return HTMLResponse(status_code=404)
     except ValueError as exc:

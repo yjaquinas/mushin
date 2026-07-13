@@ -37,6 +37,7 @@ async def rename_activity(
     request: Request,
     activity_id: int,
     name: Annotated[str, Form()],
+    secret: Annotated[bool, Form()] = False,
     session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
 ) -> HTMLResponse:
     """Rename *activity_id* and redirect to the new canonical URL.
@@ -49,7 +50,7 @@ async def rename_activity(
     user = _current_user(session)
     if user is None:
         return RedirectResponse(url="/", status_code=303)
-    return rename_activity_response(request, activity_id, int(user["id"]), user, name)
+    return rename_activity_response(request, activity_id, int(user["id"]), user, name, secret=secret)
 
 
 @router.get("/activities/{activity_id}/delete-confirm", response_class=HTMLResponse)

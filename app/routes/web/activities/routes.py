@@ -38,6 +38,7 @@ async def new_activity(
 async def create_activity(
     request: Request,
     name: Annotated[str, Form()],
+    secret: Annotated[bool, Form()] = False,
     session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
 ) -> HTMLResponse | RedirectResponse:
     """Create a general-log activity (manual form or one-tap example adopt).
@@ -48,7 +49,7 @@ async def create_activity(
     user = _current_user(session)
     if user is None:
         return RedirectResponse(url="/", status_code=303)
-    return create_activity_response(request, user, name)
+    return create_activity_response(request, user, name, secret=secret)
 
 
 

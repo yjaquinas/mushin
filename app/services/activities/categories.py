@@ -57,7 +57,7 @@ def _normalize_icon(icon: str | None) -> str:
     return DEFAULT_ICON
 
 
-def create_activity(owner_id: int, *, name: str, icon: str | None = None) -> dict:
+def create_activity(owner_id: int, *, name: str, icon: str | None = None, secret: bool = False) -> dict:
     """Create an activity for *owner_id*.
 
     In one transaction, inserts one ``activity`` row (a per-owner-unique
@@ -74,9 +74,9 @@ def create_activity(owner_id: int, *, name: str, icon: str | None = None) -> dic
 
         cur = conn.execute(
             "INSERT INTO activity"
-            " (owner_id, name, slug, sort_order, icon)"
-            " VALUES (?, ?, ?, ?, ?)",
-            (owner_id, name, slug, 0, safe_icon),
+            " (owner_id, name, slug, sort_order, icon, secret)"
+            " VALUES (?, ?, ?, ?, ?, ?)",
+            (owner_id, name, slug, 0, safe_icon, int(secret)),
         )
         activity_id = cur.lastrowid
 
@@ -124,6 +124,65 @@ def rename_activity(
         owner_id=owner_id,
         activity_id=activity_id,
         slug=slug,
+    )
+    return slug
+
+
+def update_activity(
+    conn: sqlite3.Connection,
+    *,
+    owner_id: int,
+    activity_id: int,
+    name: str | None = None,
+    secret: bool | None = None,
+) -> str | None:
+    """Update an activity's name and/or secret flag. Returns the new slug if name changed."""
+    if name is not None:
+        name = name.strip()
+        if not name:
+            raise ValueError("activity name must not be empty")
+        if len(name) < 2:
+            raise ValueError("activity name must be at least 2 characters")
+        if len(name) > RENAME_ACTIVITY_MAX_NAME:
+            raise ValueError(f"activity name must be at most {RENAME_ACTIVITY_MAX_NAME} characters")
+
+    assignments = []
+    params = []
+
+    if name is not None:
+        slug = unique_slug(conn, owner_id, name)
+        assignments.append("name = ?")
+        params.append(name)
+        assignments.append("slug = ?")
+        params.append(slug)
+    else:
+        slug = None
+
+    if secret is not None:
+        assignments.append("secret = ?")
+        params.append(int(secret))
+
+    if not assignments:
+        return slug
+
+    rows = _db.update(
+        conn,
+        "activity",
+        owner_id,
+        assignments=", ".join(assignments),
+        assignment_params=params,
+        where="id = ?",
+        params=(activity_id,),
+    )
+    if rows == 0:
+        raise ActivityNotFoundError(f"activity {activity_id} not found for owner {owner_id}")
+
+    log.info(
+        "activities.update",
+        owner_id=owner_id,
+        activity_id=activity_id,
+        slug=slug,
+        secret=secret,
     )
     return slug
 

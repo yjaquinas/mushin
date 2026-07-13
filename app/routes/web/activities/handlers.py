@@ -18,7 +18,7 @@ def new_activity_response(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(request=request, name="components/activities/activity_sheet.html.jinja2", context={})
 
 
-def create_activity_response(request: Request, user: dict, name: str) -> HTMLResponse | RedirectResponse:
+def create_activity_response(request: Request, user: dict, name: str, secret: bool = False) -> HTMLResponse | RedirectResponse:
     owner_id = int(user["id"])
     name = name.strip()
     if not name:
@@ -38,7 +38,7 @@ def create_activity_response(request: Request, user: dict, name: str) -> HTMLRes
         ).fetchone():
             return _activity_form_error(request, ui_strings.ACTIVITY_FORM_NAME_DUPLICATE)
 
-    result = categories.create_activity(owner_id, name=name)
+    result = categories.create_activity(owner_id, name=name, secret=secret)
     with db.connect() as conn:
         slug = conn.execute(
             "SELECT slug FROM activity WHERE id = ? AND owner_id = ?",

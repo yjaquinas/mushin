@@ -13,15 +13,18 @@ from app.services.entries import comments, entries, stats
 from app.services.social import connections
 
 
-def _list_activities(conn: sqlite3.Connection, owner_id: int) -> list[sqlite3.Row]:
-    return conn.execute(
+def _list_activities(conn: sqlite3.Connection, owner_id: int, *, include_secret: bool = True) -> list[sqlite3.Row]:
+    rows = conn.execute(
         """SELECT id, name, slug, count, streak,
-                  last_entry_at, icon
+                  last_entry_at, icon, secret
              FROM activity
             WHERE owner_id = ? AND archived_at IS NULL
             ORDER BY sort_order, id""",
         (owner_id,),
     ).fetchall()
+    if not include_secret:
+        rows = [r for r in rows if not r["secret"]]
+    return rows
 
 
 def _field_defs_for_activity(conn: sqlite3.Connection, activity_id: int) -> list[sqlite3.Row]:
@@ -47,6 +50,7 @@ def _build_card_context(
         "slug": activity_row["slug"] if "slug" in activity_row.keys() else None,
         "icon": activity_row["icon"] or categories.DEFAULT_ICON,
         "name": activity_row["name"],
+        "secret": bool(activity_row["secret"]) if "secret" in activity_row.keys() else False,
         "show_breadcrumb": False,
         "count_mode": "running",
         "hero_label": counts.get("lifetime", activity_row["count"] or 0),

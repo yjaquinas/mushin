@@ -157,6 +157,12 @@ async def social_activity(
         if activity_id is None:
             return HTMLResponse(status_code=404)
 
+        is_secret = conn.execute(
+            "SELECT secret FROM activity WHERE id = ?", (activity_id,)
+        ).fetchone()
+        if is_secret and is_secret["secret"] and current_uid != owner_id:
+            return HTMLResponse(status_code=404)
+
         cap = profiles.viewer_capability(
             conn, current_user_id=current_uid, profile_user=profile_user
         )
@@ -220,7 +226,7 @@ def _read_only_social_profile_context(
 ) -> dict:
     """Assemble the read-only profile context for the social tab."""
     linked = cap in ("connected", "public")
-    activities = _list_activities(conn, owner_id)
+    activities = _list_activities(conn, owner_id, include_secret=False)
     cards = [_build_card_context(conn, owner_id, row, tz=tz, linked=linked) for row in activities]
     fellows_context = _build_fellows_context(owner_id, viewer_id=current_uid, is_owner=False, visibility=visibility)
     state = (

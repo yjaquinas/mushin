@@ -91,6 +91,13 @@ ACTIVITY_FORM_CANCEL = "Cancel"
 ACTIVITY_FORM_NAME_REQUIRED = "Activity name is required"
 ACTIVITY_FORM_NAME_DUPLICATE = "An activity with this name already exists."
 
+ACTIVITY_FORM_SECRET_LABEL = "Secret"
+ACTIVITY_FORM_SECRET_HELP = "Only you can see this activity — even your fellows won't see it."
+ACTIVITY_SECRET_BADGE = "SECRET"
+
+ACTIVITY_EDIT_TITLE = "Edit activity"
+ACTIVITY_EDIT_SAVE = "Save"
+
 # Hero numeral suffixes / labels
 HOME_COUNT_UNIT = "times"  # generic running-count unit ("3 times")
 

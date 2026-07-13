@@ -39,6 +39,22 @@
         {% endif %}
     </div>
 
+    <div class="flex items-start gap-3">
+        <input
+            type="checkbox"
+            id="activity-secret"
+            name="secret"
+            value="1"
+            class="mt-1 h-4 w-4 rounded border-border text-brand focus-visible:outline-2"
+        >
+        <div class="flex flex-col gap-0.5">
+            <label for="activity-secret" class="text-body font-medium text-text-primary">
+                {{ strings.ACTIVITY_FORM_SECRET_LABEL }}
+            </label>
+            <p class="text-caption text-text-muted">{{ strings.ACTIVITY_FORM_SECRET_HELP }}</p>
+        </div>
+    </div>
+
     <button
         type="submit"
         {% if hx_post is defined %}hx-disabled-elt="this"{% endif %}

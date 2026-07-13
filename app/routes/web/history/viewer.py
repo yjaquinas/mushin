@@ -15,10 +15,12 @@ def resolve_history_viewer(conn: Any, activity_id: int, current_uid: int | None)
     from fastapi.responses import HTMLResponse
 
     owner_row = conn.execute(
-        """SELECT u.id, u.username, u.visibility, st.slug AS activity_slug FROM activity st JOIN user u ON u.id = st.owner_id WHERE st.id = ?""",
+        """SELECT u.id, u.username, u.visibility, st.slug AS activity_slug, st.secret FROM activity st JOIN user u ON u.id = st.owner_id WHERE st.id = ?""",
         (activity_id,),
     ).fetchone()
     if owner_row is None:
+        return HTMLResponse(status_code=404)
+    if owner_row["secret"] and (current_uid is None or current_uid != int(owner_row["id"])):
         return HTMLResponse(status_code=404)
     profile_user = {
         "id": owner_row["id"],

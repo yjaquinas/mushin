@@ -39,6 +39,12 @@ async def public_activity(
         if activity_id is None:
             return HTMLResponse(status_code=404)
 
+        is_secret = conn.execute(
+            "SELECT secret FROM activity WHERE id = ?", (activity_id,)
+        ).fetchone()
+        if is_secret and is_secret["secret"] and current_uid != owner_id:
+            return HTMLResponse(status_code=404)
+
         cap = profiles.viewer_capability(conn, current_user_id=current_uid, profile_user=user)
         tz = users.get_user_timezone(owner_id)
 
@@ -48,7 +54,7 @@ async def public_activity(
         if cap == "owner":
             sub_row = conn.execute(
                 """SELECT st.id, st.name, st.slug, st.count, st.streak,
-                          st.last_entry_at, st.icon
+                          st.last_entry_at, st.icon, st.secret
                      FROM activity st
                     WHERE st.id = ? AND st.owner_id = ?""",
                 (activity_id, owner_id),
