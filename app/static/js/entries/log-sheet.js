@@ -44,4 +44,16 @@
     if (!target || target.id !== "activity-target-log-sheet") return;
     initLogSheet();
   });
+
+  document.body.addEventListener("log-saved", function () {
+    var sheet = document.getElementById("activity-dialog-log");
+    if (sheet) {
+      sheet.querySelectorAll("form").forEach(function (form) {
+        form.reset();
+      });
+      var trigger = document.querySelector("[data-log-trigger]");
+      if (trigger) trigger.setAttribute("aria-expanded", "false");
+    }
+    if (dlg) dlg.close();
+  });
 })();
