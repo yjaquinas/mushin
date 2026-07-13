@@ -492,8 +492,8 @@ TOAST_DISMISS = "Dismiss"
 PWA_INSTALL_TEXT = "Install Mushin for quick access from your home screen."
 PWA_INSTALL_BUTTON = "Install"
 PWA_INSTALL_DISMISS = "Not now"
-PWA_INSTALL_SAFARI_IOS_TEXT = "Install Mushin for quick access. Tap Share, then Add to Home Screen."
-PWA_INSTALL_SAFARI_MAC_TEXT = "Install Mushin for quick access. Click Share, then Add to Dock."
+PWA_INSTALL_SAFARI_IOS_TEXT = "Install Mushin for quick access. Share, View More, then Add to Home Screen."
+PWA_INSTALL_SAFARI_MAC_TEXT = "Install Mushin for quick access. Share, then Add to Dock."
 
 # {count} interpolated by the template. Used for non-owner/non-fellow
 # viewers, who see only the number, never the clickable names.
