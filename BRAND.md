@@ -8,11 +8,11 @@ The brand mark is always **Mushin 無心** together. The kanji is never explaine
 
 ### Tagline
 
-*Track. Share. Connect.*
+_Track. Share. Connect._
 
 ### One-line gloss
 
-*No-mind. Just show up, and watch it add up.*
+_No-mind. Just show up, and watch it add up._
 
 ## Voice
 
@@ -22,33 +22,33 @@ Warm, plain, second person. No hype, no urgency, no guilt framing. The tone is c
 
 ### Light mode (default)
 
-| Role | Hex |
-|---|---|
-| **Primary** (brand) | `#0F172A` |
-| Background | `#F8FAFC` |
+| Role                    | Hex       |
+| ----------------------- | --------- |
+| **Primary** (brand)     | `#0F172A` |
+| Background              | `#F8FAFC` |
 | Surface (cards, sheets) | `#FFFFFF` |
-| **Accent** (cinnabar) | `#E34234` |
-| Text | `#0F172A` |
+| **Accent** (cinnabar)   | `#E34234` |
+| Text                    | `#0F172A` |
 
 ### Dark mode
 
-| Role | Hex |
-|---|---|
-| **Primary** (brand) | `#5A6B85` |
-| Background | `#0F172A` |
+| Role                    | Hex       |
+| ----------------------- | --------- |
+| **Primary** (brand)     | `#5A6B85` |
+| Background              | `#0F172A` |
 | Surface (cards, sheets) | `#1E293B` |
-| **Accent** (cinnabar) | `#FF6B5B` |
-| Text | `#F8FAFC` |
+| **Accent** (cinnabar)   | `#FF6B5B` |
+| Text                    | `#F8FAFC` |
 
 ### Non-swapping brand anchors
 
 These hold their hex values regardless of theme (used in masthead, brand glyph):
 
-| Name | Hex |
-|---|---|
-| Obsidian | `#0F172A` |
-| Cinnabar | `#E34234` |
-| Overlay | `#121C30` |
+| Name      | Hex       |
+| --------- | --------- |
+| Obsidian  | `#0F172A` |
+| Cinnabar  | `#E34234` |
+| Overlay   | `#121C30` |
 | On-danger | `#EEE3CF` |
 
 Accent is used sparingly — selected states, focus rings, progress bars, the tagline in OG imagery. It should never overwhelm. Primary is the dominant weight.
