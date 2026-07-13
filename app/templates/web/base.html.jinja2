@@ -50,6 +50,7 @@
     <script defer src="{{ static_asset('/static/js/common/textareas.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/common/local-time.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/common/sw-register.js') }}"></script>
+    <script defer src="{{ static_asset('/static/js/common/pwa-install.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/common/legal-dialog.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/entries/entry-form-defaults.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/entries/entry-expansion.js') }}"></script>
@@ -89,6 +90,41 @@
         </div>
         {% endif %}
     </header>
+    <div
+        id="pwa-install-banner"
+        hidden
+        class="flex w-full items-center justify-center border-b border-border bg-surface-1"
+    >
+        <div class="flex w-full max-w-screen-md items-center gap-3 px-4 py-3">
+            <span class="hidden shrink-0 self-center sm:flex">{{ icon("arrow-down-tray", size=20) }}</span>
+            <p
+                id="pwa-install-text"
+                class="flex-1 text-body text-text-primary whitespace-pre-line"
+                data-default="{{ strings.PWA_INSTALL_TEXT }}"
+                data-safari-ios="{{ strings.PWA_INSTALL_SAFARI_IOS_TEXT }}"
+                data-safari-mac="{{ strings.PWA_INSTALL_SAFARI_MAC_TEXT }}"
+            >
+                {{ strings.PWA_INSTALL_TEXT }}
+            </p>
+            <div class="flex shrink-0 items-center gap-2">
+                <button
+                    id="pwa-install-btn"
+                    type="button"
+                    class="min-h-tap rounded-button bg-brand px-3 text-body font-medium text-on-brand transition hover:opacity-90 focus-visible:outline-offset-2"
+                >
+                    {{ strings.PWA_INSTALL_BUTTON }}
+                </button>
+            </div>
+            <button
+                id="pwa-install-close"
+                type="button"
+                class="flex min-h-tap min-w-tap shrink-0 items-center justify-center rounded-button text-text-secondary transition hover:bg-surface-2 focus-visible:outline-offset-2"
+                aria-label="{{ strings.TOAST_DISMISS }}"
+            >
+                {{ icon("x", size=20) }}
+            </button>
+        </div>
+    </div>
     <main
         id="main-content"
         class="mx-auto flex w-full max-w-screen-md grow flex-col gap-4 px-4 py-4"
