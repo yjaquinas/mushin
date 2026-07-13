@@ -14,6 +14,8 @@
     <meta property="og:site_name" content="{{ strings.APP_NAME }}">
     <meta property="og:locale" content="en_US">
     <meta property="og:image" content="{{ og_image_url(og_image | default(none)) }}">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
     {% endblock %}
 
     {% block twitter_card %}
@@ -34,6 +36,7 @@
     <style>html[data-theme="dark"] .theme-light{display:none}html:not([data-theme="dark"]) .theme-dark{display:none}</style>
     <link rel="icon" type="image/png" href="{{ static_asset('/static/logo.png') }}">
     <link rel="apple-touch-icon" href="{{ static_asset('/static/logo.png') }}">
+    <link rel="manifest" href="{{ static_asset('/static/manifest.json') }}">
     <script>(function(){if(document.cookie.indexOf('mushin_theme=')===-1){var t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t);document.cookie='mushin_theme='+t+';path=/;max-age=31536000;SameSite=Lax'}})();</script>
     <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.10/dist/htmx.min.js" integrity="sha384-H5SrcfygHmAuTDZphMHqBJLc3FhssKjG7w/CeCpFReSfwBWDTKpkzPP8c+cLsK+V" crossorigin="anonymous"></script>
     <script defer src="{{ static_asset('/static/js/common/tab-navigation.js') }}"></script>
@@ -46,6 +49,7 @@
     <script defer src="{{ static_asset('/static/js/auth/logout.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/common/textareas.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/common/local-time.js') }}"></script>
+    <script defer src="{{ static_asset('/static/js/common/sw-register.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/common/legal-dialog.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/entries/entry-form-defaults.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/entries/entry-expansion.js') }}"></script>
