@@ -139,3 +139,38 @@ async def admin_set_comment_visibility(
 ) -> RedirectResponse:
     """Hide or unhide a related comment."""
     return await _admin_handlers.set_comment_visibility(user_id, comment_id, hidden=hidden)
+
+
+@router.post("/admin/users/{user_id}/plan", dependencies=[Depends(_require_admin)])
+async def admin_set_user_plan(
+    user_id: int,
+    plan: Annotated[str, Form()],
+) -> RedirectResponse:
+    """Change a user's plan (for testing)."""
+    return await _admin_handlers.set_user_plan(user_id, plan=plan)
+
+
+@router.get("/admin/plans", response_class=HTMLResponse, dependencies=[Depends(_require_admin)])
+async def admin_plans(request: Request) -> HTMLResponse:
+    """Operator dashboard for plan configuration."""
+    return await _admin_handlers.plans(request)
+
+
+@router.post("/admin/plans/{plan}", dependencies=[Depends(_require_admin)])
+async def admin_update_plan(
+    plan: str,
+    max_activities: Annotated[int, Form()],
+    max_entries_per_date: Annotated[int, Form()],
+    secret_activities: Annotated[bool, Form()] = False,
+    price_monthly: Annotated[int | None, Form()] = None,
+    price_yearly: Annotated[int | None, Form()] = None,
+) -> RedirectResponse:
+    """Update a plan's configuration."""
+    return await _admin_handlers.update_plan(
+        plan,
+        max_activities=max_activities,
+        max_entries_per_date=max_entries_per_date,
+        secret_activities=secret_activities,
+        price_monthly=price_monthly,
+        price_yearly=price_yearly,
+    )

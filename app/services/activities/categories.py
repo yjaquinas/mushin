@@ -17,6 +17,7 @@ from app.models import db
 from app.services.common import db as _db
 from app.services.entries.entries import ActivityNotFoundError
 from app.services.activities.slugs import unique_slug
+from app.services.plans import check_activity_limit, check_secret_activity_allowed
 
 log = structlog.get_logger()
 
@@ -69,6 +70,10 @@ def create_activity(owner_id: int, *, name: str, icon: str | None = None, secret
 
     with db.connect() as conn:
         conn.execute("BEGIN")
+
+        check_activity_limit(conn, owner_id)
+        if secret:
+            check_secret_activity_allowed(conn, owner_id)
 
         slug = unique_slug(conn, owner_id, name)
 

@@ -144,3 +144,52 @@ def _selected_value(request: Request, period: str) -> str | None:
         "yearly": "year",
     }
     return request.query_params.get(key_by_period.get(period, "day"))
+
+
+async def plans(request: Request) -> HTMLResponse:
+    """Admin plan configuration page."""
+    from app.services.admin.reports import plans_context
+
+    with db.connect() as conn:
+        context = plans_context(conn)
+    context["admin_section"] = "plans"
+    return templates.TemplateResponse(
+        request=request,
+        name="admin/dashboard.html.jinja2",
+        context=context,
+    )
+
+
+async def update_plan(
+    plan: str,
+    *,
+    max_activities: int,
+    max_entries_per_date: int,
+    secret_activities: bool,
+    price_monthly: int | None,
+    price_yearly: int | None,
+) -> RedirectResponse:
+    """Update a plan's limits and pricing."""
+    with db.connect() as conn:
+        conn.execute("BEGIN")
+        admin_actions.update_plan_config(
+            conn,
+            plan,
+            max_activities=max_activities,
+            max_entries_per_date=max_entries_per_date,
+            secret_activities=secret_activities,
+            price_monthly=price_monthly,
+            price_yearly=price_yearly,
+        )
+    return RedirectResponse(url="/admin/plans", status_code=303)
+
+
+async def set_user_plan(user_id: int, *, plan: str) -> RedirectResponse:
+    """Change a user's plan (for testing)."""
+    with db.connect() as conn:
+        conn.execute("BEGIN")
+        try:
+            admin_actions.set_user_plan(conn, user_id, plan)
+        except admin_actions.AdminValidationError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return user_detail_redirect(user_id)

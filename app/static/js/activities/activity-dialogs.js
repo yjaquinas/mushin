@@ -47,6 +47,16 @@
     }
   });
 
+  // Prevent checking the secret checkbox in rename when the plan doesn't allow it.
+  document.addEventListener("change", function (event) {
+    if (event.target.id !== "activity-secret-edit") return;
+    if (!event.target.checked) return;
+    var form = event.target.closest("form");
+    if (!form || form.getAttribute("data-secret-allowed") === "true") return;
+    event.target.checked = false;
+    window.showToast(form.getAttribute("data-secret-toast"), "warning");
+  });
+
   document.body.addEventListener("htmx:afterSwap", function (event) {
     renameDlg = initDialog("activity-dialog-rename") || renameDlg;
     deleteDlg = initDialog("activity-dialog-delete") || deleteDlg;

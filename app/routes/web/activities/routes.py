@@ -31,7 +31,7 @@ async def new_activity(
     user = _current_user(session)
     if user is None:
         return RedirectResponse(url="/", status_code=303)
-    return new_activity_response(request)
+    return new_activity_response(request, user)
 
 
 @router.post("/activities", response_model=None)

@@ -46,4 +46,14 @@
     var sheet = document.getElementById("activity-dialog-create");
     if (sheet) sheet.setAttribute("hidden", "");
   });
+
+  // Prevent checking the secret checkbox when the user's plan doesn't allow it.
+  document.addEventListener("change", function (event) {
+    if (event.target.id !== "activity-secret") return;
+    if (!event.target.checked) return;
+    var form = event.target.closest("form");
+    if (!form || form.getAttribute("data-secret-allowed") === "true") return;
+    event.target.checked = false;
+    window.showToast(form.getAttribute("data-secret-toast"), "warning");
+  });
 })();

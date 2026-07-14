@@ -8,6 +8,7 @@ from fastapi import Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.auth import passwords, sessions, users
+from app.models import db
 from app.routes.web.common import (
     THEME_COOKIE,
     THEME_CYCLE,
@@ -18,6 +19,7 @@ from app.routes.web.common import (
     templates,
 )
 from app.routes.web.common import ui_strings as strings
+from app.services.plans import get_all_plan_configs, get_user_plan_config
 
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
@@ -32,6 +34,13 @@ def render_account_settings(
 ) -> HTMLResponse:
     """Render the settings page for the current user."""
     email = email_value if email_value is not None else user.get("email")
+    owner_id = int(user["id"])
+    with db.connect() as conn:
+        user_plan = get_user_plan_config(conn, owner_id) or {}
+        activity_count = conn.execute(
+            "SELECT COUNT(*) FROM activity WHERE owner_id = ? AND archived_at IS NULL",
+            (owner_id,),
+        ).fetchone()[0]
     response = templates.TemplateResponse(
         request=request,
         name="web/settings/settings.html.jinja2",
@@ -45,10 +54,35 @@ def render_account_settings(
             "current_page": "settings",
             "page_title": strings.SETTINGS_TITLE,
             "meta_robots": "noindex, nofollow",
+            "user_plan": user_plan,
+            "activity_count": activity_count,
         },
     )
     _clear_flash(response)
     return response
+
+
+def settings_plans_page(request: Request, user: dict) -> HTMLResponse:
+    """Render the plans comparison page inside the settings tab."""
+    owner_id = int(user["id"])
+    with db.connect() as conn:
+        plans = get_all_plan_configs(conn)
+        current_user_plan = user.get("plan", "basic")
+    basic = next((p for p in plans if p["plan"] == "basic"), None)
+    pro = next((p for p in plans if p["plan"] == "pro"), None)
+    return templates.TemplateResponse(
+        request=request,
+        name="web/settings/plans.html.jinja2",
+        context={
+            "current_page": "settings",
+            "meta_robots": "noindex, nofollow",
+            "page_title": "Plans",
+            "basic": basic,
+            "pro": pro,
+            "current_user_plan": current_user_plan,
+            "user": user,
+        },
+    )
 
 
 def _email_flash_key(user: dict, email: str | None) -> str | None:

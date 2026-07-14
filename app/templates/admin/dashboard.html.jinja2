@@ -23,6 +23,8 @@
             {% include "components/admin/_admin_user_detail.html.jinja2" with context %}
         {% elif admin_section == "users" %}
             {% include "components/admin/_admin_users.html.jinja2" with context %}
+        {% elif admin_section == "plans" %}
+            {% include "components/admin/_admin_plans.html.jinja2" with context %}
         {% else %}
             {% include "components/admin/_admin_monitor.html.jinja2" with context %}
         {% endif %}

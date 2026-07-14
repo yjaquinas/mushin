@@ -156,5 +156,39 @@ def _ensure_unique_identity(
         raise AdminValidationError("That username is already in use.")
 
 
+def set_user_plan(conn: sqlite3.Connection, user_id: int, plan: str) -> None:
+    """Set a user's plan. Raises ``AdminValidationError`` if plan doesn't exist."""
+    from app.services.plans import set_user_plan as _set_plan
+
+    if not _set_plan(conn, user_id, plan):
+        raise AdminValidationError(f"Plan {plan!r} does not exist.")
+
+
+def update_plan_config(
+    conn: sqlite3.Connection,
+    plan: str,
+    *,
+    name: str | None = None,
+    max_activities: int | None = None,
+    max_entries_per_date: int | None = None,
+    secret_activities: bool | None = None,
+    price_monthly: int | None = None,
+    price_yearly: int | None = None,
+) -> None:
+    """Update a plan config's editable fields. Delegates to the plans service."""
+    from app.services.plans import update_plan_config as _update
+
+    _update(
+        conn,
+        plan,
+        name=name,
+        max_activities=max_activities,
+        max_entries_per_date=max_entries_per_date,
+        secret_activities=secret_activities,
+        price_monthly=price_monthly,
+        price_yearly=price_yearly,
+    )
+
+
 def _now_iso() -> str:
     return datetime.now(UTC).isoformat()

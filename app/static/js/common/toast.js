@@ -2,11 +2,11 @@
   "use strict";
 
   function hide(el) {
-    if (el) el.setAttribute("hidden", "");
+    if (el) el.hidden = true;
   }
 
   function show(el) {
-    if (el) el.removeAttribute("hidden");
+    if (el) el.hidden = false;
   }
 
   var toastTimer = null;
@@ -45,14 +45,6 @@
     }, TOAST_DISMISS_MS);
   }
 
-  function dismissToast() {
-    var toast = document.getElementById("toast");
-    var textEl = document.getElementById("toast-text");
-    if (toastTimer) window.clearTimeout(toastTimer);
-    hide(toast);
-    if (textEl) textEl.textContent = "";
-  }
-
   window.showToast = showToast;
 
   document.body.addEventListener("show-toast", function (e) {
@@ -64,10 +56,15 @@
       showToast(messageNode.dataset.toastMessage, messageNode.dataset.toastVariant || "informative");
       messageNode.remove();
     });
+  });
 
-    var closeBtn = document.getElementById("toast-close");
-    if (closeBtn) {
-      closeBtn.addEventListener("click", dismissToast);
-    }
+  document.addEventListener("click", function (event) {
+    if (!event.target.closest("#toast")) return;
+    var toast = document.getElementById("toast");
+    if (!toast || toast.hidden) return;
+    if (toastTimer) window.clearTimeout(toastTimer);
+    toast.hidden = true;
+    var textEl = document.getElementById("toast-text");
+    if (textEl) textEl.textContent = "";
   });
 })();

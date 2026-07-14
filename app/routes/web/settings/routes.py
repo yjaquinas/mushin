@@ -16,6 +16,7 @@ from app.auth import sessions
 from app.routes.web.settings.handlers import (
     delete_account_response,
     render_account_settings,
+    settings_plans_page,
     toggle_theme_response,
     update_email_response,
     update_password_response,
@@ -44,6 +45,20 @@ async def settings_page(
         _set_flash(response, "login_required")
         return response
     return render_account_settings(request, user)
+
+
+@router.get("/settings/plans", response_class=HTMLResponse, response_model=None)
+async def settings_plans(
+    request: Request,
+    session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
+) -> HTMLResponse | RedirectResponse:
+    """Plans comparison page, rendered inside the settings tab."""
+    user = _current_user(session)
+    if user is None:
+        response = RedirectResponse(url="/", status_code=303)
+        _set_flash(response, "login_required")
+        return response
+    return settings_plans_page(request, user)
 
 
 @router.post("/settings", response_model=None)

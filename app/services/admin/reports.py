@@ -29,12 +29,15 @@ def user_detail_context(conn: sqlite3.Connection, user_id: int) -> dict[str, obj
     user = _admin_user(conn, user_id)
     if user is None:
         return None
-    return {
+    context = {
         "detail_user": user,
         "recent_activities": _recent_activities(conn, owner_id=user_id),
         "recent_entries": _recent_entries(conn, owner_id=user_id),
         "recent_comments": _recent_comments(conn, user_id=user_id),
     }
+    context.update(payments_context(conn, user_id))
+    context.update(plans_context(conn))
+    return context
 
 
 def _recent_activities(
@@ -129,13 +132,31 @@ def _users(conn: sqlite3.Connection) -> list[sqlite3.Row]:
     ).fetchall()
 
 
+def plans_context(conn: sqlite3.Connection) -> dict[str, object]:
+    """Return all plan configs for the admin plans page."""
+    from app.services.plans import get_all_plan_configs
+    return {
+        "plans": get_all_plan_configs(conn),
+    }
+
+
+def payments_context(conn: sqlite3.Connection, user_id: int) -> dict[str, object]:
+    """Return payment records for *user_id*."""
+    from app.services.plans import get_user_payments
+    return {
+        "payments": get_user_payments(conn, user_id),
+    }
+
+
 def _admin_user(conn: sqlite3.Connection, user_id: int) -> sqlite3.Row | None:
     return conn.execute(
         """
-        SELECT id, username, email, created_at,
-               last_active_at, visibility, suspended_at, deleted_at
-        FROM user
-        WHERE id = ?
+        SELECT u.id, u.username, u.email, u.created_at,
+               u.last_active_at, u.visibility, u.suspended_at, u.deleted_at,
+               u.plan, pc.name AS plan_name
+        FROM user u
+        LEFT JOIN plan_config pc ON pc.plan = u.plan
+        WHERE u.id = ?
         """,
         (user_id,),
     ).fetchone()

@@ -1,0 +1,89 @@
+{% extends "web/base.html.jinja2" %}
+
+{% block title %}{{ strings.PLANS_PAGE_TITLE }} · {{ strings.APP_NAME }}{% endblock %}
+
+{% block tab_settings %}
+<div id="settings-content" class="flex flex-grow flex-col">
+    <a href="/settings"
+       class="flex items-center gap-1 text-caption text-text-secondary hover:text-text-primary transition mb-4"
+    >
+        {{ icon("chevron-left", size=16) }} {{ strings.PLANS_BACK_TO_SETTINGS }}
+    </a>
+
+    <div class="mt-6 grid gap-6 sm:grid-cols-2 sm:items-stretch">
+
+        {# ── Basic card ── #}
+        <section class="flex flex-col rounded-card border p-6
+            {% if current_user_plan == "basic" %}border-2 border-border-strong{% else %}border-border{% endif %}
+            bg-surface-1">
+            <h2 class="text-title font-semibold text-text-primary">{{ strings.PLANS_BASIC_NAME }}</h2>
+            <div class="border-b border-border mt-3 mb-4"></div>
+            <p class="text-hero-numeral font-semibold text-text-primary">{{ strings.PLANS_FREE }}</p>
+            <ul class="mt-6 flex flex-col gap-3 flex-1">
+                <li class="flex items-center gap-3 text-body text-text-primary">
+                    <span class="shrink-0 text-accent">{{ icon("check", size=16) }}</span>
+                    {{ strings.PLANS_FEATURE_ACTIVITIES.format(count=basic.max_activities) }}
+                </li>
+                <li class="flex items-center gap-3 text-body text-text-primary">
+                    <span class="shrink-0 text-accent">{{ icon("check", size=16) }}</span>
+                    {{ strings.PLANS_FEATURE_ENTRIES.format(count=basic.max_entries_per_date) }}
+                </li>
+            </ul>
+            <div class="pt-8">
+                {% if current_user_plan == "basic" %}
+                <div class="flex min-h-tap w-full items-center justify-center rounded-button border border-border-strong bg-surface-2 px-4 py-3 text-caption font-medium text-text-secondary">
+                    {{ strings.PLANS_CURRENT_PLAN_STRONG }}
+                </div>
+                {% else %}
+                <a href="/settings"
+                   class="flex min-h-tap w-full items-center justify-center rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-secondary transition hover:bg-surface-2"
+                >{{ strings.PLANS_GET_STARTED }}</a>
+                {% endif %}
+            </div>
+        </section>
+
+        {# ── Premium card ── #}
+        <section class="flex flex-col rounded-card border p-6
+            {% if current_user_plan == "pro" %}border-2 border-border-strong{% else %}border-border{% endif %}
+            bg-surface-1">
+            <h2 class="text-title font-semibold text-text-primary">{{ strings.PLANS_PREMIUM_NAME }}</h2>
+            <div class="border-b border-border mt-3 mb-4"></div>
+            <p class="text-hero-numeral font-semibold text-text-primary">
+                {% if pro and pro.price_monthly %}
+                ${{ "{:,.0f}".format(pro.price_monthly / 100) }}
+                <span class="text-body text-text-secondary">{{ strings.PLANS_PER_MONTH }}</span>
+                {% else %}
+                {{ strings.PLANS_FREE }}
+                {% endif %}
+            </p>
+            <ul class="mt-6 flex flex-col gap-3 flex-1">
+                <li class="flex items-center gap-3 text-body text-text-primary">
+                    <span class="shrink-0 text-accent">{{ icon("check", size=16) }}</span>
+                    {{ strings.PLANS_FEATURE_ACTIVITIES.format(count=pro.max_activities) }}
+                </li>
+                <li class="flex items-center gap-3 text-body text-text-primary">
+                    <span class="shrink-0 text-accent">{{ icon("check", size=16) }}</span>
+                    {{ strings.PLANS_FEATURE_ENTRIES.format(count=pro.max_entries_per_date) }}
+                </li>
+                {% if pro.secret_activities %}
+                <li class="flex items-center gap-3 text-body text-text-primary">
+                    <span class="shrink-0 text-accent">{{ icon("check", size=16) }}</span>
+                    {{ strings.PLANS_FEATURE_SECRET }}
+                </li>
+                {% endif %}
+            </ul>
+            <div class="pt-8">
+                {% if current_user_plan == "pro" %}
+                <div class="flex min-h-tap w-full items-center justify-center rounded-button border border-border-strong bg-surface-2 px-4 py-3 text-caption font-medium text-text-secondary">
+                    {{ strings.PLANS_CURRENT_PLAN_STRONG }}
+                </div>
+                {% else %}
+                <div class="flex min-h-tap w-full items-center justify-center rounded-button border border-border bg-surface-1 px-4 py-3 text-caption font-medium text-text-muted">
+                    {{ strings.PLANS_COMING_SOON }}
+                </div>
+                {% endif %}
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}

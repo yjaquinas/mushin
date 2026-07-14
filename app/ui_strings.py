@@ -80,7 +80,7 @@ ACCOUNT_EMAIL_UPDATE_FAILED = "Could not update email address."
 
 HOME_EXAMPLES_HINT = "or try"
 HOME_EXAMPLE_ADD = "Add"
-HOME_ADD_ACTIVITY = "Add an Activity"
+HOME_ADD_ACTIVITY = "Add a new activity"
 
 ACTIVITY_NEW_TITLE = "New activity"
 ACTIVITY_FORM_NAME_LABEL = "Name"
@@ -91,7 +91,7 @@ ACTIVITY_FORM_CANCEL = "Cancel"
 ACTIVITY_FORM_NAME_REQUIRED = "Activity name is required"
 ACTIVITY_FORM_NAME_DUPLICATE = "An activity with this name already exists."
 
-ACTIVITY_FORM_SECRET_LABEL = "Secret"
+ACTIVITY_FORM_SECRET_LABEL = "Secret Activity"
 ACTIVITY_FORM_SECRET_HELP = "Only you can see this activity — even your fellows won't see it."
 ACTIVITY_SECRET_BADGE = "SECRET"
 
@@ -759,3 +759,67 @@ OG_IMAGE_URL = "/static/img/og-default.png"
 META_DESCRIPTION_PRIVACY = "Privacy Policy for Mushin 無心 — how your data is handled on this social progress tracker."
 META_DESCRIPTION_TERMS = "Terms of Service for Mushin 無心 — the rules for using this social progress tracker."
 META_DESCRIPTION_LICENSES = "Open source licenses used by Mushin 無心."
+
+# ---------------------------------------------------------------------------
+# Plans & upgrade
+# ---------------------------------------------------------------------------
+
+PLANS_PAGE_TITLE = "Plans"
+PLANS_HEADING = "Choose your plan"
+PLANS_SUBHEADING = "Unlock more activities, entries, and features as your tracking grows."
+PLANS_BASIC_NAME = "Basic"
+PLANS_PREMIUM_NAME = "Premium"
+PLANS_FREE = "Free"
+PLANS_PER_MONTH = "/ month"
+PLANS_GET_STARTED = "Get started"
+PLANS_COMING_SOON = "Coming soon"
+PLANS_FEATURE_ACTIVITIES = "{count} activities"
+PLANS_FEATURE_ENTRIES = "{count} entries per date"
+PLANS_FEATURE_SECRET = "Secret activities"
+
+ACTIVITY_LIMIT_TOAST = "Basic plan: {max} activities. Premium includes {pro_max}."
+ENTRY_DATE_LIMIT_TOAST = "Basic plan: {max} entry per day. Premium allows {pro_max}."
+SECRET_ACTIVITY_TOAST = "Secret activities are available on the Premium plan."
+
+# Plans page (inside settings)
+PLANS_BACK_TO_SETTINGS = "Back to settings"
+PLANS_CURRENT_PLAN_STRONG = "Your current plan"
+
+# Settings — plan section
+SETTINGS_PLAN_HEADING = "Plan"
+SETTINGS_PLAN_ACTIVITIES_USED = "{used} / {max} activities in use"
+SETTINGS_PLAN_CURRENT_LABEL = "Current plan"
+SETTINGS_PLAN_VIEW_BUTTON = "View plans"
+
+# Admin — plans
+ADMIN_NAV_PLANS = "Plans"
+ADMIN_PLANS_HEADING = "Plans"
+ADMIN_PLANS_NOTE = "Configure plan limits and pricing. Changes take effect immediately."
+ADMIN_PLAN_NAME = "Name"
+ADMIN_PLAN_MAX_ACTIVITIES = "Max activities"
+ADMIN_PLAN_MAX_ENTRIES = "Max entries per date"
+ADMIN_PLAN_SECRET = "Secret activities"
+ADMIN_PLAN_PRICE_MONTHLY = "Price (monthly, cents)"
+ADMIN_PLAN_PRICE_YEARLY = "Price (yearly, cents)"
+ADMIN_PLAN_SAVE = "Save"
+ADMIN_PLAN_SAVED = "Plan settings saved."
+ADMIN_PLAN_ERROR_INVALID = "Plan settings could not be saved."
+ADMIN_PLAN_COLUMN_PLAN = "Plan"
+ADMIN_PLAN_COLUMN_LIMITS = "Limits"
+ADMIN_PLAN_COLUMN_PRICING = "Pricing"
+
+# Admin — user plan
+ADMIN_USER_PLAN_HEADING = "Plan"
+ADMIN_USER_PLAN_LABEL = "Current plan"
+ADMIN_USER_PLAN_SET = "Set plan"
+ADMIN_USER_PLAN_CHANGED = "Plan changed."
+
+# Admin — payment history
+ADMIN_PAYMENTS_HEADING = "Payment History"
+ADMIN_PAYMENTS_EMPTY = "No payment records yet."
+ADMIN_PAYMENTS_COLUMN_DATE = "Date"
+ADMIN_PAYMENTS_COLUMN_PLAN = "Plan"
+ADMIN_PAYMENTS_COLUMN_AMOUNT = "Amount"
+ADMIN_PAYMENTS_COLUMN_STATUS = "Status"
+ADMIN_PAYMENTS_COLUMN_METHOD = "Method"
+ADMIN_PAYMENTS_COLUMN_PERIOD = "Period"

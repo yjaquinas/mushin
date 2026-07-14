@@ -1,0 +1,46 @@
+<section class="rounded-card border border-border bg-surface-1 p-4">
+    <h2 class="text-lg font-semibold">{{ strings.ADMIN_PLANS_HEADING }}</h2>
+    <p class="mt-1 text-sm text-text-secondary">{{ strings.ADMIN_PLANS_NOTE }}</p>
+    <div class="mt-4 flex flex-col gap-4">
+        {% for plan in plans %}
+        <form
+            method="post"
+            action="/admin/plans/{{ plan.plan }}"
+            class="rounded-card border border-border bg-surface-0 p-4"
+        >
+            <div class="flex flex-wrap items-center gap-4">
+                <h3 class="text-body font-semibold text-text-primary min-w-[4rem]">{{ plan.name }}</h3>
+                <label class="flex flex-col gap-0.5 text-caption text-text-secondary">
+                    {{ strings.ADMIN_PLAN_MAX_ACTIVITIES }}
+                    <input name="max_activities" type="number" value="{{ plan.max_activities }}"
+                           class="w-20 rounded border border-border bg-surface-1 px-2 py-1 text-body text-text-primary">
+                </label>
+                <label class="flex flex-col gap-0.5 text-caption text-text-secondary">
+                    {{ strings.ADMIN_PLAN_MAX_ENTRIES }}
+                    <input name="max_entries_per_date" type="number" value="{{ plan.max_entries_per_date }}"
+                           class="w-20 rounded border border-border bg-surface-1 px-2 py-1 text-body text-text-primary">
+                </label>
+                <label class="flex items-center gap-2 text-caption text-text-secondary">
+                    <input name="secret_activities" type="checkbox" value="1"
+                           {% if plan.secret_activities %}checked{% endif %}
+                           class="rounded border-border">
+                    {{ strings.ADMIN_PLAN_SECRET }}
+                </label>
+                <label class="flex flex-col gap-0.5 text-caption text-text-secondary">
+                    {{ strings.ADMIN_PLAN_PRICE_MONTHLY }}
+                    <input name="price_monthly" type="number" value="{{ plan.price_monthly or '' }}" placeholder="—"
+                           class="w-24 rounded border border-border bg-surface-1 px-2 py-1 text-body text-text-primary">
+                </label>
+                <label class="flex flex-col gap-0.5 text-caption text-text-secondary">
+                    {{ strings.ADMIN_PLAN_PRICE_YEARLY }}
+                    <input name="price_yearly" type="number" value="{{ plan.price_yearly or '' }}" placeholder="—"
+                           class="w-24 rounded border border-border bg-surface-1 px-2 py-1 text-body text-text-primary">
+                </label>
+                <button class="rounded-button bg-brand px-3 py-1.5 text-sm font-semibold text-on-brand transition hover:opacity-90">
+                    {{ strings.ADMIN_PLAN_SAVE }}
+                </button>
+            </div>
+        </form>
+        {% endfor %}
+    </div>
+</section>

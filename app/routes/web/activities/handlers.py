@@ -11,11 +11,43 @@ from app import ui_strings
 from app.models import db
 from app.routes.web.common import templates
 from app.services.activities import categories
+from app.services.plans import ActivityLimitError, SecretActivityForbiddenError, get_all_plan_configs, get_plan_config
 from app.services.social import profiles
 
 
-def new_activity_response(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse(request=request, name="components/activities/activity_sheet.html.jinja2", context={})
+def new_activity_response(request: Request, user: dict) -> HTMLResponse:
+    """Return the create-activity sheet, or a toast if the user's plan limit is reached."""
+    owner_id = int(user["id"])
+    with db.connect() as conn:
+        from app.services.plans import get_user_plan_config
+        cfg = get_user_plan_config(conn, owner_id)
+        max_activities = cfg["max_activities"] if cfg else 3
+        secret_allowed = cfg["secret_activities"] if cfg else False
+        count = conn.execute(
+            "SELECT COUNT(*) FROM activity WHERE owner_id = ? AND archived_at IS NULL",
+            (owner_id,),
+        ).fetchone()[0]
+        if count >= max_activities:
+            pro_cfg = get_plan_config(conn, "pro")
+            pro_max = pro_cfg["max_activities"] if pro_cfg else 20
+            response = HTMLResponse(content="")
+            response.headers["HX-Trigger"] = json.dumps({
+                "show-toast": {
+                    "message": ui_strings.ACTIVITY_LIMIT_TOAST.format(max=max_activities, pro_max=pro_max),
+                    "variant": "warning",
+                }
+            })
+            response.headers["HX-Reswap"] = "none"
+            return response
+
+    return templates.TemplateResponse(
+        request=request,
+        name="components/activities/activity_sheet.html.jinja2",
+        context={
+            "secret_allowed": secret_allowed,
+            "secret_toast_message": ui_strings.SECRET_ACTIVITY_TOAST,
+        },
+    )
 
 
 def create_activity_response(request: Request, user: dict, name: str, secret: bool = False) -> HTMLResponse | RedirectResponse:
@@ -30,6 +62,7 @@ def create_activity_response(request: Request, user: dict, name: str, secret: bo
         return response
 
     with db.connect() as conn:
+        conn.execute("BEGIN")
         if conn.execute(
             "SELECT 1 FROM activity"
             " WHERE owner_id = ? AND LOWER(name) = LOWER(?) AND archived_at IS NULL"
@@ -38,7 +71,34 @@ def create_activity_response(request: Request, user: dict, name: str, secret: bo
         ).fetchone():
             return _activity_form_error(request, ui_strings.ACTIVITY_FORM_NAME_DUPLICATE)
 
-    result = categories.create_activity(owner_id, name=name, secret=secret)
+    try:
+        result = categories.create_activity(owner_id, name=name, secret=secret)
+    except ActivityLimitError:
+        with db.connect() as conn:
+            plans = get_all_plan_configs(conn)
+        basic = next((p for p in plans if p["plan"] == "basic"), {})
+        pro = next((p for p in plans if p["plan"] == "pro"), {})
+        max_act = basic.get("max_activities", 3)
+        pro_max = pro.get("max_activities", 20)
+        response = HTMLResponse(content="", status_code=400)
+        response.headers["HX-Trigger"] = json.dumps({
+            "show-toast": {
+                "message": ui_strings.ACTIVITY_LIMIT_TOAST.format(max=max_act, pro_max=pro_max),
+                "variant": "warning",
+            }
+        })
+        response.headers["HX-Reswap"] = "none"
+        return response
+    except SecretActivityForbiddenError:
+        response = HTMLResponse(content="")
+        response.headers["HX-Trigger"] = json.dumps({
+            "show-toast": {
+                "message": ui_strings.SECRET_ACTIVITY_TOAST,
+                "variant": "warning",
+            }
+        })
+        response.headers["HX-Reswap"] = "none"
+        return response
     with db.connect() as conn:
         slug = conn.execute(
             "SELECT slug FROM activity WHERE id = ? AND owner_id = ?",

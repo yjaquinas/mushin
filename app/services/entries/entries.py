@@ -42,6 +42,7 @@ from zoneinfo import ZoneInfo
 import structlog
 
 from app.models import db
+from app.services.plans import check_entry_date_limit
 
 log = structlog.get_logger()
 
@@ -234,6 +235,8 @@ def create(
         ).fetchone()
         if act is None:
             raise ActivityNotFoundError(f"activity {activity_id} not found for owner {owner_id}")
+
+        check_entry_date_limit(conn, owner_id, activity_id, occurred_at, tz)
 
         now = _now_iso()
         cur = conn.execute(

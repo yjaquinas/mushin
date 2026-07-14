@@ -19,6 +19,7 @@ from app.models.db import DATABASE_PATH  # noqa: E402
 from app.models.migrate import run_migrations  # noqa: E402
 from app.routes.admin import router as admin_router  # noqa: E402
 from app.routes.data_io import router as data_io_router  # noqa: E402
+from app.routes.plans import router as plans_router  # noqa: E402
 from app.routes.public import router as public_router  # noqa: E402
 from app.routes.web import router as web_router  # noqa: E402
 
@@ -51,6 +52,9 @@ app.include_router(auth_router)
 
 # Page-UI routes (entry screen, character-sheet profile, quick-add log flow).
 app.include_router(web_router)
+
+# Public plans page.
+app.include_router(plans_router)
 
 # Public, unauthenticated profile routes (/@{username}, /@{username}/{slug}).
 app.include_router(public_router)

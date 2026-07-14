@@ -163,17 +163,9 @@
         role="status"
         aria-live="polite"
         data-toast-variant="informative"
-        class="fixed left-1/2 top-6 z-50 flex w-[calc(100%-2rem)] max-w-screen-sm -translate-x-1/2 items-center gap-2 rounded-card border px-4 py-2 text-body shadow-soft"
+        class="fixed left-1/2 top-6 z-50 flex w-[calc(100%-2rem)] max-w-screen-sm -translate-x-1/2 items-center gap-2 rounded-card border px-4 py-2 text-body shadow-soft cursor-pointer select-none"
     >
         <span id="toast-text" class="flex-1"></span>
-        <button
-            id="toast-close"
-            type="button"
-            class="flex min-h-tap min-w-tap shrink-0 items-center justify-center rounded-button text-text-secondary transition hover:bg-surface-2 focus-visible:outline-offset-2"
-            aria-label="{{ strings.TOAST_DISMISS }}"
-        >
-            {{ icon("x", size=20) }}
-        </button>
     </div>
 
     {# Bottom navigation bar — visible only on tabbed pages (profile/social/settings). #}

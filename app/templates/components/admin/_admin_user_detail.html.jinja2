@@ -13,6 +13,11 @@
                 {{ strings.ADMIN_FIELD_EMAIL }}: {{ detail_user.email }}
             </p>
             {% endif %}
+            {% if detail_user.plan %}
+            <p class="mt-1 text-sm text-text-secondary">
+                {{ strings.ADMIN_USER_PLAN_LABEL }}: <span class="font-medium text-text-primary">{{ detail_user.plan_name or detail_user.plan }}</span>
+            </p>
+            {% endif %}
             {% if detail_user.deleted_at %}
             <p class="mt-2 text-sm font-medium text-text-secondary">{{ strings.ADMIN_STATUS_DELETED }}: {{ detail_user.deleted_at }}</p>
             {% elif detail_user.suspended_at %}
@@ -66,6 +71,21 @@
             {{ strings.ADMIN_DELETE_USER_HEADING }}
         </button>
         {% endif %}
+
+        {# ── Plan change form ── #}
+        <form method="post" action="/admin/users/{{ detail_user.id }}/plan" class="mt-4 border-t border-border pt-4">
+            <h4 class="text-sm font-semibold text-text-primary">{{ strings.ADMIN_USER_PLAN_HEADING }}</h4>
+            <div class="mt-2 flex gap-2">
+                <select name="plan" class="flex-1 rounded border border-border bg-surface-0 px-3 py-2 text-sm text-text-primary">
+                    {% for p in plans %}
+                    <option value="{{ p.plan }}" {{ "selected" if p.plan == detail_user.plan else "" }}>{{ p.name }}</option>
+                    {% endfor %}
+                </select>
+                <button class="rounded-button bg-brand px-4 py-2 text-sm font-medium text-on-brand">
+                    {{ strings.ADMIN_USER_PLAN_SET }}
+                </button>
+            </div>
+        </form>
         <form method="post" action="/admin/users/{{ detail_user.id }}/visibility" class="mt-4 border-t border-border pt-4">
             <h4 class="text-sm font-semibold text-text-primary">{{ strings.ADMIN_VISIBILITY_HEADING }}</h4>
             <p class="mt-1 text-xs text-text-secondary">{{ strings.ADMIN_VISIBILITY_CURRENT.format(visibility=detail_user.visibility) }}</p>

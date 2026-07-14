@@ -21,6 +21,8 @@
     action="/activities"
     {% endif %}
     class="flex flex-col gap-4"
+    data-secret-allowed="{{ "true" if secret_allowed|default(true) else "false" }}"
+    data-secret-toast="{{ secret_toast_message|default("Secret activities are available on the Premium plan.") }}"
 >
     <div class="flex flex-col gap-1">
         <label for="activity-name" class="text-caption font-medium text-text-secondary">

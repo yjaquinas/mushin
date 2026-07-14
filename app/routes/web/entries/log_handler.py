@@ -5,10 +5,14 @@ from __future__ import annotations
 from fastapi import Request
 from fastapi.responses import HTMLResponse
 
+import json
+
+from app import ui_strings
 from app.auth import users
 from app.models import db
 from app.services.entries import entries
 from app.services.entries.entries import PayloadError
+from app.services.plans import EntryDateLimitError, get_all_plan_configs
 
 
 async def create_log_body(
@@ -57,6 +61,22 @@ async def create_log_body(
         )
     except PayloadError:
         return HTMLResponse(status_code=422)
+    except EntryDateLimitError:
+        with db.connect() as conn:
+            plans = get_all_plan_configs(conn)
+        basic = next((p for p in plans if p["plan"] == "basic"), {})
+        pro = next((p for p in plans if p["plan"] == "pro"), {})
+        max_val = basic.get("max_entries_per_date", 1)
+        pro_max = pro.get("max_entries_per_date", 10)
+        response = HTMLResponse(content="", status_code=400)
+        response.headers["HX-Trigger"] = json.dumps({
+            "show-toast": {
+                "message": ui_strings.ENTRY_DATE_LIMIT_TOAST.format(max=max_val, pro_max=pro_max),
+                "variant": "warning",
+            }
+        })
+        response.headers["HX-Reswap"] = "none"
+        return response
 
     html = ""
 
