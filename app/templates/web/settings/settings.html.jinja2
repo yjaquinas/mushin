@@ -285,22 +285,31 @@
 {% endif %}
 </section>
 
-{# Legal links #}
-<section id="settings-section-legal" class="flex flex-col flex-grow items-center justify-end gap-3 pb-4 pt-16">
-    <a
-        href="/licenses"
-        data-legal="licenses"
-        data-dialog-title="{{ strings.LICENSES_PAGE_TITLE }}"
-        class="text-caption text-text-secondary focus-visible:outline-offset-2"
-    >
-        {{ strings.ACCOUNT_LICENSES_LINK }}
-    </a>
-    <div class="flex gap-3">
+{# About + legal links #}
+<section id="settings-section-about" class="flex flex-col gap-3 border-t border-border py-4">
+    <h2 class="text-body font-semibold text-text-primary">{{ strings.SETTINGS_ABOUT_HEADING }}</h2>
+    <p class="text-caption text-text-secondary">
+        {{ strings.APP_NAME }} {{ strings.APP_NAME_HANJA }}
+    </p>
+    <p class="text-caption text-text-secondary">
+        <a href="mailto:{{ strings.SETTINGS_CONTACT_EMAIL }}" class="underline underline-offset-2 focus-visible:outline-offset-2">
+            {{ strings.SETTINGS_CONTACT_EMAIL }}
+        </a>
+    </p>
+    <div class="flex gap-3 pt-2">
+        <a
+            href="/licenses"
+            data-legal="licenses"
+            data-dialog-title="{{ strings.LICENSES_PAGE_TITLE }}"
+            class="text-caption text-text-secondary underline underline-offset-2 focus-visible:outline-offset-2"
+        >
+            {{ strings.ACCOUNT_LICENSES_LINK }}
+        </a>
         <a
             href="/terms"
             data-legal="terms"
             data-dialog-title="{{ strings.TERMS_PAGE_TITLE }}"
-            class="text-caption text-text-secondary focus-visible:outline-offset-2"
+            class="text-caption text-text-secondary underline underline-offset-2 focus-visible:outline-offset-2"
         >
             {{ strings.ACCOUNT_TERMS_LINK }}
         </a>
@@ -308,7 +317,7 @@
             href="/privacy"
             data-legal="privacy"
             data-dialog-title="{{ strings.PRIVACY_PAGE_TITLE }}"
-            class="text-caption text-text-secondary focus-visible:outline-offset-2"
+            class="text-caption text-text-secondary underline underline-offset-2 focus-visible:outline-offset-2"
         >
             {{ strings.ACCOUNT_PRIVACY_LINK }}
         </a>

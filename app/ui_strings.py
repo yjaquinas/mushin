@@ -23,6 +23,7 @@ APP_NAME_HANJA = "無心"
 # Error pages
 ERROR_PAGE_NOT_FOUND = "The page you're looking for doesn't exist."
 ERROR_PAGE_HOME = "Go home"
+ERROR_PAGE_CONTACT_LABEL = "Need help?"
 APP_GLOSS = "No-mind. Just show up, and watch it add up."
 
 # ---------------------------------------------------------------------------
@@ -49,6 +50,7 @@ ENTRY_DEMO_LINK = "See an example record →"
 
 ENTRY_CONSENT_NOTICE = "By creating an account or continuing, you agree to our"
 ENTRY_CONSENT_LINK_TEXT = "Privacy Policy"
+ENTRY_CONTACT_LABEL = "Contact"
 ENTRY_AUTH_ERROR_DEFAULT_TITLE = "Sign in"
 ENTRY_AUTH_ERROR_CLOSE = "Back"
 
@@ -363,6 +365,9 @@ ACCOUNT_VISIBILITY_PUBLIC_DESC = (
     "Your whole record — every activity, entry, and note — is visible to anyone"
     " who has your profile link."
 )
+
+SETTINGS_ABOUT_HEADING = "About"
+SETTINGS_CONTACT_EMAIL = "mushin@aqnas.xyz"
 
 ACCOUNT_VISIBILITY_SAVE = "Save"
 ACCOUNT_EMAIL_HEADING = "Email address"

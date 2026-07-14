@@ -7,5 +7,11 @@
     <a href="/" class="rounded-button bg-brand px-4 py-3 text-title font-semibold text-on-brand">
         {{ strings.ERROR_PAGE_HOME }}
     </a>
+    <p class="text-caption text-text-secondary">
+        {{ strings.ERROR_PAGE_CONTACT_LABEL }}
+        <a href="mailto:{{ strings.SETTINGS_CONTACT_EMAIL }}" class="underline underline-offset-2 focus-visible:outline-offset-2">
+            {{ strings.SETTINGS_CONTACT_EMAIL }}
+        </a>
+    </p>
 </main>
 {% endblock %}
