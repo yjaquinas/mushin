@@ -150,6 +150,15 @@ async def admin_set_user_plan(
     return await _admin_handlers.set_user_plan(user_id, plan=plan)
 
 
+@router.post("/admin/users/{user_id}/promotion", dependencies=[Depends(_require_admin)])
+async def admin_give_promotion(
+    user_id: int,
+    months: Annotated[int, Form()] = 1,
+) -> RedirectResponse:
+    """Give a user a Premium promotion lasting *months*."""
+    return await _admin_handlers.give_promotion(user_id, months=months)
+
+
 @router.get("/admin/plans", response_class=HTMLResponse, dependencies=[Depends(_require_admin)])
 async def admin_plans(request: Request) -> HTMLResponse:
     """Operator dashboard for plan configuration."""

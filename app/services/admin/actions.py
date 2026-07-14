@@ -156,6 +156,13 @@ def _ensure_unique_identity(
         raise AdminValidationError("That username is already in use.")
 
 
+def give_promotion(conn: sqlite3.Connection, user_id: int, months: int = 1) -> None:
+    """Give a user a Premium promotion lasting *months*."""
+    from app.services.plans import grant_premium_promotion
+
+    grant_premium_promotion(conn, user_id, days=months * 30)
+
+
 def set_user_plan(conn: sqlite3.Connection, user_id: int, plan: str) -> None:
     """Set a user's plan. Raises ``AdminValidationError`` if plan doesn't exist."""
     from app.services.plans import set_user_plan as _set_plan

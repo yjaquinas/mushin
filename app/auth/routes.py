@@ -15,6 +15,8 @@ from fastapi import APIRouter, Cookie, Form, HTTPException, Request, Response
 from fastapi.responses import JSONResponse, RedirectResponse
 
 from app.auth import oauth, passwords, sessions, users
+from app.models import db
+from app.services.plans import grant_premium_promotion
 from app.services.social import profiles
 
 log = structlog.get_logger()
@@ -94,6 +96,13 @@ async def signup(
             except users.IdentityTakenError:
                 detail = "Email is already taken."
         raise HTTPException(status_code=409, detail=detail)
+
+    try:
+        with db.connect() as conn:
+            conn.execute("BEGIN")
+            grant_premium_promotion(conn, user["id"])
+    except Exception:
+        log.warning("auth.signup.promotion_failed", user_id=user["id"])
 
     resp = JSONResponse({"user_id": user["id"], "redirect_url": f"/@{normalized}"})
     _set_session(resp, user["id"])

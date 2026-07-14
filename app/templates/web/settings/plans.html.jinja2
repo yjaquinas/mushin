@@ -44,13 +44,13 @@
 
         {# ── Premium card ── #}
         <section class="flex flex-col rounded-card border p-6
-            {% if current_user_plan == "pro" %}border-2 border-border-strong{% else %}border-border{% endif %}
+            {% if current_user_plan == "premium" %}border-2 border-border-strong{% else %}border-border{% endif %}
             bg-surface-1">
             <h2 class="text-title font-semibold text-text-primary">{{ strings.PLANS_PREMIUM_NAME }}</h2>
             <div class="border-b border-border mt-3 mb-4"></div>
             <p class="text-hero-numeral font-semibold text-text-primary">
-                {% if pro and pro.price_monthly %}
-                ${{ "{:,.0f}".format(pro.price_monthly / 100) }}
+                {% if premium and premium.price_monthly %}
+                ${{ "{:,.0f}".format(premium.price_monthly / 100) }}
                 <span class="text-body text-text-secondary">{{ strings.PLANS_PER_MONTH }}</span>
                 {% else %}
                 {{ strings.PLANS_FREE }}
@@ -59,13 +59,13 @@
             <ul class="mt-6 flex flex-col gap-3 flex-1">
                 <li class="flex items-center gap-3 text-body text-text-primary">
                     <span class="shrink-0 text-accent">{{ icon("check", size=16) }}</span>
-                    {{ strings.PLANS_FEATURE_ACTIVITIES.format(count=pro.max_activities) }}
+                    {{ strings.PLANS_FEATURE_ACTIVITIES.format(count=premium.max_activities) }}
                 </li>
                 <li class="flex items-center gap-3 text-body text-text-primary">
                     <span class="shrink-0 text-accent">{{ icon("check", size=16) }}</span>
-                    {{ strings.PLANS_FEATURE_ENTRIES.format(count=pro.max_entries_per_date) }}
+                    {{ strings.PLANS_FEATURE_ENTRIES.format(count=premium.max_entries_per_date) }}
                 </li>
-                {% if pro.secret_activities %}
+                {% if premium.secret_activities %}
                 <li class="flex items-center gap-3 text-body text-text-primary">
                     <span class="shrink-0 text-accent">{{ icon("check", size=16) }}</span>
                     {{ strings.PLANS_FEATURE_SECRET }}
@@ -73,7 +73,7 @@
                 {% endif %}
             </ul>
             <div class="pt-8">
-                {% if current_user_plan == "pro" %}
+                {% if current_user_plan == "premium" %}
                 <div class="flex min-h-tap w-full items-center justify-center rounded-button border border-border-strong bg-surface-2 px-4 py-3 text-caption font-medium text-text-secondary">
                     {{ strings.PLANS_CURRENT_PLAN_STRONG }}
                 </div>

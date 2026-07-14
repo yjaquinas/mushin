@@ -184,6 +184,14 @@ async def update_plan(
     return RedirectResponse(url="/admin/plans", status_code=303)
 
 
+async def give_promotion(user_id: int, *, months: int = 1) -> RedirectResponse:
+    """Give a user a Premium promotion lasting *months*."""
+    with db.connect() as conn:
+        conn.execute("BEGIN")
+        admin_actions.give_promotion(conn, user_id, months=months)
+    return user_detail_redirect(user_id)
+
+
 async def set_user_plan(user_id: int, *, plan: str) -> RedirectResponse:
     """Change a user's plan (for testing)."""
     with db.connect() as conn:

@@ -19,7 +19,7 @@ from app.routes.web.common import (
     templates,
 )
 from app.routes.web.common import ui_strings as strings
-from app.services.plans import get_all_plan_configs, get_user_plan_config
+from app.services.plans import get_all_plan_configs, get_subscription_end_date, get_user_payments, get_user_plan_config
 
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
@@ -41,6 +41,8 @@ def render_account_settings(
             "SELECT COUNT(*) FROM activity WHERE owner_id = ? AND archived_at IS NULL",
             (owner_id,),
         ).fetchone()[0]
+        payments = get_user_payments(conn, owner_id)
+        subscription_end = get_subscription_end_date(conn, owner_id)
     response = templates.TemplateResponse(
         request=request,
         name="web/settings/settings.html.jinja2",
@@ -56,6 +58,8 @@ def render_account_settings(
             "meta_robots": "noindex, nofollow",
             "user_plan": user_plan,
             "activity_count": activity_count,
+            "payments": payments,
+            "subscription_end": subscription_end,
         },
     )
     _clear_flash(response)
@@ -69,7 +73,7 @@ def settings_plans_page(request: Request, user: dict) -> HTMLResponse:
         plans = get_all_plan_configs(conn)
         current_user_plan = user.get("plan", "basic")
     basic = next((p for p in plans if p["plan"] == "basic"), None)
-    pro = next((p for p in plans if p["plan"] == "pro"), None)
+    premium = next((p for p in plans if p["plan"] == "premium"), None)
     return templates.TemplateResponse(
         request=request,
         name="web/settings/plans.html.jinja2",
@@ -78,7 +82,7 @@ def settings_plans_page(request: Request, user: dict) -> HTMLResponse:
             "meta_robots": "noindex, nofollow",
             "page_title": "Plans",
             "basic": basic,
-            "pro": pro,
+            "premium": premium,
             "current_user_plan": current_user_plan,
             "user": user,
         },

@@ -20,6 +20,9 @@
                 <p class="text-body font-semibold text-text-primary">{{ user_plan.name }}</p>
             </div>
             <p class="text-sm text-text-secondary">{{ strings.SETTINGS_PLAN_ACTIVITIES_USED.format(used=activity_count, max=user_plan.max_activities) }}</p>
+            {% if user_plan.plan == "premium" and subscription_end %}
+            <p class="text-sm text-text-secondary">{{ strings.SETTINGS_PLAN_NEXT_BILLING.format(date=subscription_end[:10]) }}</p>
+            {% endif %}
         </div>
         <a href="/settings/plans"
            class="flex shrink-0 items-center gap-2 rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline-offset-2"
@@ -28,7 +31,63 @@
             {{ strings.SETTINGS_PLAN_VIEW_BUTTON }}
         </a>
     </div>
-    </div>
+
+    {# ── Payment history (expandable) ── #}
+    <details class="group mt-2">
+        <summary class="flex cursor-pointer select-none items-center gap-2 rounded-button px-1 py-2 text-body font-medium text-text-primary transition hover:text-accent focus-visible:outline-offset-2 list-none">
+            <span class="chevron-icon inline-flex transition-transform duration-150">
+                {{ icon("chevron-left", size=16) }}
+            </span>
+            {% if payments %}
+            {{ strings.SETTINGS_PLAN_PAYMENT_COUNT.format(count=payments|length) }}
+            {% else %}
+            {{ strings.SETTINGS_PLAN_PAYMENT_HISTORY }}
+            {% endif %}
+        </summary>
+        {% if payments %}
+        <div class="mt-2 overflow-x-auto">
+            <table class="w-full text-left text-sm">
+                <thead class="text-text-secondary">
+                    <tr>
+                        <th class="py-2 pr-3 font-medium">{{ strings.ADMIN_PAYMENTS_COLUMN_DATE }}</th>
+                        <th class="py-2 pr-3 font-medium">{{ strings.ADMIN_PAYMENTS_COLUMN_AMOUNT }}</th>
+                        <th class="py-2 pr-3 font-medium">{{ strings.ADMIN_PAYMENTS_COLUMN_STATUS }}</th>
+                        <th class="py-2 pr-3 font-medium">{{ strings.ADMIN_PAYMENTS_COLUMN_PERIOD }}</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-border">
+                    {% for p in payments %}
+                    <tr>
+                        <td class="py-2 pr-3 text-text-secondary">{{ p.created_at[:10] }}</td>
+                        <td class="py-2 pr-3 font-medium text-text-primary">
+                            {% if p.payment_method == 'promotion' %}
+                                {{ strings.PLANS_PREMIUM_NAME }} – Promotion
+                            {% else %}
+                                {{ strings.PLANS_PREMIUM_NAME }} – ${{ "{:.2f}".format(p.amount_cents / 100) }}
+                            {% endif %}
+                        </td>
+                        <td class="py-2 pr-3 text-text-secondary">{{ p.status }}</td>
+                        <td class="py-2 pr-3 text-text-secondary">
+                            {% if p.period_start and p.period_end %}
+                            {{ p.period_start[:10] }} – {{ p.period_end[:10] }}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="mt-2 text-sm text-text-secondary">{{ strings.SETTINGS_PLAN_PAYMENT_EMPTY }}</p>
+        {% endif %}
+    </details>
+
+    <style>
+        #settings-section-plan details summary::-webkit-details-marker { display: none; }
+        #settings-section-plan details summary::marker { display: none; }
+        #settings-section-plan details:not([open]) summary .chevron-icon { transform: rotate(180deg); }
+        #settings-section-plan details[open] summary .chevron-icon { transform: rotate(90deg); }
+    </style>
 </section>
 
 <section class="flex flex-col gap-4 py-4" id="settings-section-account">
@@ -178,7 +237,7 @@
 
 {# Data, logout, delete #}
 <section id="settings-section-data" class="flex flex-col gap-4 border-t border-border py-4">
-    <h2 class="text-body font-semibold text-text-primary">Data</h2>
+    <h2 class="text-body font-semibold text-text-primary">{{ strings.SETTINGS_DATA_HEADING }}</h2>
     <div class="flex gap-3">
       {% include "components/settings/entry_import_dialog.html.jinja2" with context %}
       <template id="settings-template-entry-import-dialog">

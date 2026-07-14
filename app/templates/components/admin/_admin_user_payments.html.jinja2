@@ -19,16 +19,14 @@
                     <td class="py-2 pr-3 text-text-secondary">{{ p.created_at }}</td>
                     <td class="py-2 pr-3 font-medium text-text-primary">{{ p.plan }}</td>
                     <td class="py-2 pr-3 text-text-primary">${{ "{:.2f}".format(p.amount_cents / 100) }}</td>
-                    <td class="py-2 pr-3">
-                        <span class="rounded-full px-2 py-0.5 text-caption
-                            {% if p.status == 'completed' %}bg-accent-subtle text-accent-text
-                            {% elif p.status == 'refunded' %}bg-surface-2 text-text-muted
-                            {% elif p.status == 'failed' %}bg-danger-subtle text-danger
-                            {% else %}bg-surface-2 text-text-secondary{% endif %}">
-                            {{ p.status }}
-                        </span>
+                    <td class="py-2 pr-3 text-text-secondary">{{ p.status }}</td>
+                    <td class="py-2 pr-3 text-text-secondary">
+                        {% if p.payment_method == 'promotion' %}
+                            Promotion
+                        {% else %}
+                            {{ p.payment_method or strings.ADMIN_EMPTY_FIELD }}
+                        {% endif %}
                     </td>
-                    <td class="py-2 pr-3 text-text-secondary">{{ p.payment_method or strings.ADMIN_EMPTY_FIELD }}</td>
                     <td class="py-2 pr-3 text-text-secondary">
                         {% if p.period_start and p.period_end %}
                         {{ p.period_start[:10] }} – {{ p.period_end[:10] }}

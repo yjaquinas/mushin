@@ -148,6 +148,39 @@ def get_user_payments(
     ).fetchall()
 
 
+def get_subscription_end_date(conn: sqlite3.Connection, owner_id: int) -> str | None:
+    """Return the ``period_end`` of the latest completed payment for *owner_id*, or ``None``."""
+    row = conn.execute(
+        """SELECT period_end FROM payment
+           WHERE user_id = ? AND status IN ('completed', 'pending')
+           ORDER BY period_end DESC LIMIT 1""",
+        (owner_id,),
+    ).fetchone()
+    return row["period_end"] if row else None
+
+
+def grant_premium_promotion(conn: sqlite3.Connection, user_id: int, days: int = 30) -> None:
+    """Set user to Premium for *days* and insert a $0 promotion payment record.
+
+    Stacks: if the user already has an active subscription, the new period
+    is appended to the existing ``period_end`` rather than starting from now.
+    """
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc).isoformat()
+    existing_end = get_subscription_end_date(conn, user_id)
+    if existing_end:
+        base = datetime.fromisoformat(existing_end)
+    else:
+        base = datetime.now(timezone.utc)
+    period_end = (base + timedelta(days=days)).isoformat()
+    conn.execute("UPDATE user SET plan = 'premium' WHERE id = ?", (user_id,))
+    conn.execute(
+        """INSERT INTO payment (user_id, plan, amount_cents, currency, status, payment_method, period_start, period_end)
+           VALUES (?, 'premium', 0, 'usd', 'completed', 'promotion', ?, ?)""",
+        (user_id, now, period_end),
+    )
+
+
 # ---------------------------------------------------------------------------
 # Limit checkers (raise on violation)
 # ---------------------------------------------------------------------------

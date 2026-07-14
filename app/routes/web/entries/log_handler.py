@@ -65,13 +65,13 @@ async def create_log_body(
         with db.connect() as conn:
             plans = get_all_plan_configs(conn)
         basic = next((p for p in plans if p["plan"] == "basic"), {})
-        pro = next((p for p in plans if p["plan"] == "pro"), {})
+        premium = next((p for p in plans if p["plan"] == "premium"), {})
         max_val = basic.get("max_entries_per_date", 1)
-        pro_max = pro.get("max_entries_per_date", 10)
+        premium_max = premium.get("max_entries_per_date", 10)
         response = HTMLResponse(content="", status_code=400)
         response.headers["HX-Trigger"] = json.dumps({
             "show-toast": {
-                "message": ui_strings.ENTRY_DATE_LIMIT_TOAST.format(max=max_val, pro_max=pro_max),
+                "message": ui_strings.ENTRY_DATE_LIMIT_TOAST.format(max=max_val, premium_max=premium_max),
                 "variant": "warning",
             }
         })

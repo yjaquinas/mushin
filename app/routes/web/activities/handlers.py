@@ -28,12 +28,12 @@ def new_activity_response(request: Request, user: dict) -> HTMLResponse:
             (owner_id,),
         ).fetchone()[0]
         if count >= max_activities:
-            pro_cfg = get_plan_config(conn, "pro")
-            pro_max = pro_cfg["max_activities"] if pro_cfg else 20
+            premium_cfg = get_plan_config(conn, "premium")
+            premium_max = premium_cfg["max_activities"] if premium_cfg else 20
             response = HTMLResponse(content="")
             response.headers["HX-Trigger"] = json.dumps({
                 "show-toast": {
-                    "message": ui_strings.ACTIVITY_LIMIT_TOAST.format(max=max_activities, pro_max=pro_max),
+                    "message": ui_strings.ACTIVITY_LIMIT_TOAST.format(max=max_activities, premium_max=premium_max),
                     "variant": "warning",
                 }
             })
@@ -77,13 +77,13 @@ def create_activity_response(request: Request, user: dict, name: str, secret: bo
         with db.connect() as conn:
             plans = get_all_plan_configs(conn)
         basic = next((p for p in plans if p["plan"] == "basic"), {})
-        pro = next((p for p in plans if p["plan"] == "pro"), {})
+        premium = next((p for p in plans if p["plan"] == "premium"), {})
         max_act = basic.get("max_activities", 3)
-        pro_max = pro.get("max_activities", 20)
+        premium_max = premium.get("max_activities", 20)
         response = HTMLResponse(content="", status_code=400)
         response.headers["HX-Trigger"] = json.dumps({
             "show-toast": {
-                "message": ui_strings.ACTIVITY_LIMIT_TOAST.format(max=max_act, pro_max=pro_max),
+                "message": ui_strings.ACTIVITY_LIMIT_TOAST.format(max=max_act, premium_max=premium_max),
                 "variant": "warning",
             }
         })

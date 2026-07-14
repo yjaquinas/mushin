@@ -339,6 +339,7 @@ VISIBILITY_CONSENT_SUBMIT = "Continue"
 # Same factual, no-alarm register as the consent screen. The toggle restates
 # the consequence briefly on each change (not the full first-run explainer).
 SETTINGS_TITLE = "Settings"
+SETTINGS_DATA_HEADING = "Data"
 ACCOUNT_PRIVACY_LINK = "Privacy Policy"
 ACCOUNT_TERMS_LINK = "Terms of Service"
 ACCOUNT_LICENSES_LINK = "Licenses"
@@ -365,7 +366,7 @@ ACCOUNT_VISIBILITY_PUBLIC_DESC = (
 
 ACCOUNT_VISIBILITY_SAVE = "Save"
 ACCOUNT_EMAIL_HEADING = "Email address"
-ACCOUNT_EMAIL_LABEL = "Email"
+ACCOUNT_EMAIL_LABEL = "Recovery email"
 ACCOUNT_EMAIL_HELP = "For account recovery. Optional."
 ACCOUNT_EMAIL_UPDATE = "Update email"
 ACCOUNT_EMAIL_INVALID = "Enter a valid email address."
@@ -777,8 +778,8 @@ PLANS_FEATURE_ACTIVITIES = "{count} activities"
 PLANS_FEATURE_ENTRIES = "{count} entries per date"
 PLANS_FEATURE_SECRET = "Secret activities"
 
-ACTIVITY_LIMIT_TOAST = "Basic plan: {max} activities. Premium includes {pro_max}."
-ENTRY_DATE_LIMIT_TOAST = "Basic plan: {max} entry per day. Premium allows {pro_max}."
+ACTIVITY_LIMIT_TOAST = "Basic plan: {max} activities. Premium includes {premium_max}."
+ENTRY_DATE_LIMIT_TOAST = "Basic plan: {max} entry per day. Premium allows {premium_max}."
 SECRET_ACTIVITY_TOAST = "Secret activities are available on the Premium plan."
 
 # Plans page (inside settings)
@@ -790,6 +791,10 @@ SETTINGS_PLAN_HEADING = "Plan"
 SETTINGS_PLAN_ACTIVITIES_USED = "{used} / {max} activities in use"
 SETTINGS_PLAN_CURRENT_LABEL = "Current plan"
 SETTINGS_PLAN_VIEW_BUTTON = "View plans"
+SETTINGS_PLAN_NEXT_BILLING = "Next billing: {date}"
+SETTINGS_PLAN_PAYMENT_HISTORY = "Payment history"
+SETTINGS_PLAN_PAYMENT_COUNT = "Payment history ({count})"
+SETTINGS_PLAN_PAYMENT_EMPTY = "No payment records yet."
 
 # Admin — plans
 ADMIN_NAV_PLANS = "Plans"
@@ -813,6 +818,9 @@ ADMIN_USER_PLAN_HEADING = "Plan"
 ADMIN_USER_PLAN_LABEL = "Current plan"
 ADMIN_USER_PLAN_SET = "Set plan"
 ADMIN_USER_PLAN_CHANGED = "Plan changed."
+ADMIN_USER_PLAN_PROMOTION = "Give promotion"
+ADMIN_USER_PLAN_PROMOTION_GIVEN = "Premium promotion granted."
+ADMIN_USER_PLAN_MONTHS_LABEL = "months"
 
 # Admin — payment history
 ADMIN_PAYMENTS_HEADING = "Payment History"

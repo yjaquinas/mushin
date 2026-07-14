@@ -86,6 +86,15 @@
                 </button>
             </div>
         </form>
+        <form method="post" action="/admin/users/{{ detail_user.id }}/promotion" class="mt-3 flex items-center gap-2">
+            <label class="flex items-center gap-1 text-sm text-text-secondary">
+                <input name="months" type="number" value="1" min="1" class="w-16 rounded border border-border bg-surface-1 px-2 py-1.5 text-sm text-text-primary">
+                <span>{{ strings.ADMIN_USER_PLAN_MONTHS_LABEL }}</span>
+            </label>
+            <button class="rounded-button border border-border px-4 py-1.5 text-sm text-accent hover:bg-accent-subtle">
+                {{ strings.ADMIN_USER_PLAN_PROMOTION }}
+            </button>
+        </form>
         <form method="post" action="/admin/users/{{ detail_user.id }}/visibility" class="mt-4 border-t border-border pt-4">
             <h4 class="text-sm font-semibold text-text-primary">{{ strings.ADMIN_VISIBILITY_HEADING }}</h4>
             <p class="mt-1 text-xs text-text-secondary">{{ strings.ADMIN_VISIBILITY_CURRENT.format(visibility=detail_user.visibility) }}</p>
