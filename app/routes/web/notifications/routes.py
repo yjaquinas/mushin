@@ -15,6 +15,8 @@ from app.services.social import notifications
 
 router = APIRouter()
 
+_PAGE_SIZE = 10
+
 
 @router.get("/notifications", response_class=HTMLResponse, response_model=None)
 async def notifications_page(
@@ -36,11 +38,13 @@ async def notifications_page(
             conn,
             owner_id,
             username=user["username"],
+            limit=_PAGE_SIZE + 1,
             before_id=before_id,
         )
         notifications.mark_read(conn, owner_id)
 
-    has_more = len(rows) == 50
+    has_more = len(rows) > _PAGE_SIZE
+    rows = rows[:_PAGE_SIZE]
     next_before_id = rows[-1]["id"] if has_more and rows else None
     return templates.TemplateResponse(
         request=request,

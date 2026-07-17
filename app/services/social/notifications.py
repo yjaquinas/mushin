@@ -51,7 +51,7 @@ def list_notifications(
     user_id: int,
     *,
     username: str,
-    limit: int = 50,
+    limit: int = 10,
     before_id: int | None = None,
 ) -> list[dict[str, Any]]:
     params: list[Any] = [user_id]
