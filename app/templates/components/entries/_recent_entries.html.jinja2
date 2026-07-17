@@ -8,9 +8,10 @@
         class="group flex min-h-tap flex-row transition hover:bg-surface-2 focus-visible:outline-offset-2"
     >
         <div class="flex min-w-0 flex-1 flex-col">
-            <span class="truncate text-caption font-medium text-text-secondary group-hover:text-text-primary">@{{ item.username }}</span>
-            <h3 class="mt-0.5 truncate text-body font-semibold text-text-primary">{{ item.name }}</h3>
-            <span class="mt-0.5 text-caption text-text-muted">{{ item.occurred_at | format_occurred_at(item.time_known) }}</span>
+            <h3 class="truncate text-body font-semibold text-text-primary">
+                <span class="font-medium text-text-secondary group-hover:text-text-primary">@{{ item.username }}</span>
+                {{ item.name }}
+            </h3>
             {% if item.memo %}
             {% set lines = item.memo.split('\n') %}
             <p class="mt-1 text-caption text-text-secondary line-clamp-2">{{ lines[:2] | join('\n') }}{% if lines | length > 2 %}&hellip;{% endif %}</p>

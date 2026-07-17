@@ -19,10 +19,6 @@
 <div hidden data-toast-message="{{ flash_message }}"></div>
 {% endif %}
 
-{% include "components/fellows/fellows_section.html.jinja2" with context %}
-
-<div class="h-px bg-border" aria-hidden="true"></div>
-
 {% if bio %}
 <section class="flat-section py-3">
     <h2 class="flat-section-title">{{ strings.PROFILE_BIO_HEADING_SOCIAL.format(username=username) }}</h2>
@@ -30,6 +26,10 @@
 </section>
 <div class="h-px bg-border" aria-hidden="true"></div>
 {% endif %}
+
+{% include "components/fellows/fellows_section.html.jinja2" with context %}
+
+<div class="h-px bg-border" aria-hidden="true"></div>
 
 {% if view_mode == "limited" %}
 <p class="text-caption text-text-muted">{{ strings.PROFILE_LIMITED_NOTICE.format(username=username) }}</p>
