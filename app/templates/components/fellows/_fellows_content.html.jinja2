@@ -20,7 +20,7 @@
             {% if is_owner %}
             <button
                 type="button"
-                hx-get="/fellows/{{ fellow.username }}/remove-confirm"
+                hx-get="/fellows/{{ fellow.username }}/remove-confirm?source=fellows-page"
                 hx-target="#fellow-remove-dialog"
                 hx-swap="outerHTML"
                 class="rounded-button border border-border px-3 py-1.5 text-caption text-text-secondary transition hover:bg-surface-2"
@@ -32,6 +32,6 @@
     {% else %}
     <p class="text-body text-text-secondary">{{ strings.FELLOWS_COUNT_LABEL.format(count=fellows.fellow_count) }}</p>
     {% endif %}
-</section>
 
-<div id="fellow-remove-dialog"></div>
+    <div id="fellow-remove-dialog"></div>
+</section>

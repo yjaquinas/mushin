@@ -25,6 +25,15 @@
     }
   }
 
+  function autoOpenPendingDialogs(root) {
+    var scope = root && root.querySelectorAll ? root : document;
+    scope.querySelectorAll("[data-auto-open]").forEach(function (el) {
+      if (!el.id || !el.querySelector('[role="dialog"]')) return;
+      dynamicDialogs[el.id] = initDialog(el.id) || dynamicDialogs[el.id];
+      autoOpenDialog(el.id, dynamicDialogs[el.id]);
+    });
+  }
+
   document.addEventListener("click", function (event) {
     var renameCancel = event.target.closest("#rename-activity-cancel-button");
     if (renameCancel && renameDlg) {
@@ -84,5 +93,10 @@
       dynamicDialogs[target.id] = initDialog(target.id) || dynamicDialogs[target.id];
       autoOpenDialog(target.id, dynamicDialogs[target.id]);
     }
+    autoOpenPendingDialogs(document);
+  });
+
+  document.body.addEventListener("htmx:afterSettle", function () {
+    autoOpenPendingDialogs(document);
   });
 })();

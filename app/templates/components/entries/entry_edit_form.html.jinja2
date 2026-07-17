@@ -7,7 +7,7 @@
 {% set form_action = "/activities/" ~ activity_id ~ "/entries/" ~ entry.id %}
 {% set form_target = "closest .entry-row" %}
 {% set form_swap = "outerHTML" %}
-{% set title = activity_name %}
+{% set title = strings.ENTRY_DIALOG_EDIT_TITLE.format(name=activity_name) %}
 {% set submit_label = strings.ENTRY_SAVE %}
 {% set cancel_label = strings.ENTRY_CANCEL %}
 {% set cancel_dialog_close = "entry-edit" %}

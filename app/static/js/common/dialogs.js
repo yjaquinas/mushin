@@ -56,6 +56,7 @@ DialogManager.prototype = {
 
   open: function () {
     if (!this.el) return;
+    dialogManagerRegistry.purgeOrphans();
     this.el.removeAttribute("hidden");
     document.body.style.overflow = "hidden";
     this.el.dispatchEvent(new CustomEvent("dialog:open", { bubbles: true }));
@@ -65,6 +66,7 @@ DialogManager.prototype = {
   close: function () {
     if (!this.el) return;
     this.el.setAttribute("hidden", "");
+    dialogManagerRegistry.purgeOrphans();
     dialogManagerRegistry.remove(this);
     if (dialogManagerRegistry.count() === 0) {
       document.body.style.overflow = "";
@@ -80,6 +82,7 @@ DialogManager.prototype = {
 var dialogManagerRegistry = {
   _list: [],
   add: function (dlg) {
+    if (this._list.indexOf(dlg) !== -1) return;
     this._list.push(dlg);
   },
   remove: function (dlg) {
@@ -87,6 +90,23 @@ var dialogManagerRegistry = {
     if (idx !== -1) this._list.splice(idx, 1);
   },
   count: function () {
-    return this._list.length;
+    var open = 0;
+    for (var i = 0; i < this._list.length; i++) {
+      var dlg = this._list[i];
+      if (dlg.el && dlg.el.parentNode && !dlg.el.hasAttribute("hidden")) open += 1;
+    }
+    return open;
+  },
+  // Remove entries whose element is no longer in the DOM (orphaned by tab
+  // navigation). Prevents stale DialogManagers from blocking overflow restore.
+  purgeOrphans: function () {
+    var remaining = [];
+    for (var i = 0; i < this._list.length; i++) {
+      var dlg = this._list[i];
+      if (dlg.el && dlg.el.parentNode) {
+        remaining.push(dlg);
+      }
+    }
+    this._list = remaining;
   },
 };

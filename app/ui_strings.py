@@ -125,6 +125,9 @@ LOG_NOTES_MAX_LINES_REACHED = "Notes can be up to 10 lines."
 LOG_NOTES_LABEL = "Notes"
 LOG_NOTES_PLACEHOLDER = "How'd it go? Add #tags anywhere."
 
+ENTRY_DIALOG_NEW_TITLE = "New Entry for {name}"
+ENTRY_DIALOG_EDIT_TITLE = "Edit Entry for {name}"
+
 # ---------------------------------------------------------------------------
 # Match-list sub-form (tournament entries)
 # ---------------------------------------------------------------------------
@@ -197,8 +200,6 @@ CALENDAR_TITLE = "Calendar"
 CALENDAR_PREV_MONTH = "Previous month"
 CALENDAR_NEXT_MONTH = "Next month"
 CALENDAR_WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-CALENDAR_DAY_ENTRIES_TITLE = "Entries on this day"
-CALENDAR_DAY_ENTRIES_EMPTY = "No entries on this day."
 
 # Heatmap strip: non-interactive, so HEATMAP_ARIA carries all the
 # accessibility information for the whole strip; individual week-bars are
@@ -237,6 +238,9 @@ HISTORY_TODAY = "Today"
 HISTORY_LOG_EMPTY = "Nothing logged in this period."
 HISTORY_LOG_EMPTY_TAG = "No entries found for this tag in this period."
 HISTORY_CLEAR_SELECTION = "Clear selection"
+HISTORY_PREV_PAGE = "Previous"
+HISTORY_NEXT_PAGE = "Next"
+HISTORY_PAGE_X = "Page"
 
 # ---------------------------------------------------------------------------
 # Tag-frequency / scale-distribution sections
@@ -794,7 +798,7 @@ PLANS_FEATURE_ENTRIES = "{count} entries per date"
 PLANS_FEATURE_SECRET = "Secret activities"
 
 ACTIVITY_LIMIT_TOAST = "Basic plan: {max} activities. Premium includes {premium_max}."
-ENTRY_DATE_LIMIT_TOAST = "Basic plan: {max} entry per day. Premium allows {premium_max}."
+ENTRY_DATE_LIMIT_TOAST = "Your {plan} plan allows {max} entries per day."
 SECRET_ACTIVITY_TOAST = "Secret activities are available on the Premium plan."
 
 # Plans page (inside settings)

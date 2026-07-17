@@ -72,6 +72,8 @@ async def public_fellows(
             "state": state,
             "viewer_logged_in": current_uid is not None,
             "is_owner": cap == "owner",
+            "requests_hx_target": "#fellows-content",
+            "requests_hx_source": "?source=fellows-page",
             "current_page": "profile" if cap == "owner" else "social",
             "page_title": username,
             "profile_url": profiles.canonical_profile_url(username),

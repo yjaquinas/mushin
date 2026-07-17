@@ -194,25 +194,6 @@ async def social_activity(
         )
 
 
-@router.get("/social/@{username}/{slug}/{entry_id}", response_class=HTMLResponse, response_model=None)
-async def social_entry(
-    request: Request,
-    username: str,
-    slug: str,
-    entry_id: int,
-    session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
-) -> HTMLResponse | RedirectResponse:
-    """Deep-link to a specific entry on another user's activity page within the social tab."""
-    user = _current_user(session)
-    if user is None:
-        return RedirectResponse(
-            url=f"/@{username}/{slug}?entry_id={entry_id}", status_code=303
-        )
-    return RedirectResponse(
-        url=f"/social/@{username}/{slug}?entry_id={entry_id}", status_code=303
-    )
-
-
 def _read_only_social_profile_context(
     conn,
     username: str,

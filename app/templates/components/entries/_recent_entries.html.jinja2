@@ -4,7 +4,7 @@
 >
     {% for item in feed_entries %}
     <a
-        href="/social{{ item.activity_url }}/{{ item.entry_id }}"
+        href="/social{{ item.activity_url }}?entry_id={{ item.entry_id }}"
         class="group flex flex-row rounded-card border border-border bg-surface-2 p-4 transition hover:border-strong focus-visible:outline-offset-2"
     >
         <div class="flex min-w-0 flex-1 flex-col">

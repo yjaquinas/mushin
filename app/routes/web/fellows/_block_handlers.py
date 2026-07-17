@@ -10,6 +10,7 @@ from app.routes.web.fellows._shared import (
     _connect_error_message,
     _relationship_dom_id,
     _remove_dialog_dom_id,
+    _render_fellows_page_content,
     _render_fellows_section,
     _render_relationship_affordance,
     _resolve_other_user,
@@ -22,11 +23,16 @@ def _other_or_404(username: str) -> dict | HTMLResponse:
     return other if other is not None else HTMLResponse(status_code=404)
 
 
-def remove_fellow_confirm_response(request: Request, username: str, from_search: bool) -> HTMLResponse:
+def remove_fellow_confirm_response(
+    request: Request, username: str, from_search: bool, from_fellows_page: bool = False
+) -> HTMLResponse:
     other = _other_or_404(username)
     if isinstance(other, HTMLResponse):
         return other
-    dom_id = _relationship_dom_id(username, from_search=from_search) if from_search else "social-profile-section-fellows"
+    if from_fellows_page:
+        dom_id = "fellows-content"
+    else:
+        dom_id = _relationship_dom_id(username, from_search=from_search) if from_search else "social-profile-section-fellows"
     return templates.TemplateResponse(
         request=request,
         name="components/fellows/connect_remove_confirm.html.jinja2",
@@ -35,17 +41,24 @@ def remove_fellow_confirm_response(request: Request, username: str, from_search:
             "dom_id": dom_id,
             "dialog_id": _remove_dialog_dom_id(username, from_search=from_search),
             "from_search": from_search,
+            "from_fellows_page": from_fellows_page,
         },
     )
 
 
-def remove_fellow_response(request: Request, username: str, viewer_id: int, from_search: bool) -> HTMLResponse:
+def remove_fellow_response(
+    request: Request, username: str, viewer_id: int, from_search: bool, from_fellows_page: bool = False
+) -> HTMLResponse:
     other = _other_or_404(username)
     if isinstance(other, HTMLResponse):
         return other
     connections.disconnect(viewer_id, int(other["id"]))
     if from_search:
         return _render_relationship_affordance(request, username, int(other["id"]), viewer_id, from_search=True)
+    if from_fellows_page:
+        return _render_fellows_page_content(
+            request, viewer_id, username=username, viewer_id=viewer_id, is_owner=True
+        )
     return _render_fellows_section(request, int(other["id"]), username=username, viewer_id=viewer_id, is_owner=False)
 
 

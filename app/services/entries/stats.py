@@ -129,9 +129,11 @@ def period_entries(
     end: date,
     *,
     tz: ZoneInfo,
+    limit: int | None = None,
+    offset: int | None = None,
 ) -> list[dict[str, Any]]:
     """Return entries for *activity_id* in the date range [start, end)."""
-    return entries.list_entries(owner_id, activity_id, tz=tz, start=start, end=end)
+    return entries.list_entries(owner_id, activity_id, tz=tz, start=start, end=end, limit=limit, offset=offset)
 
 
 def heatmap_range(

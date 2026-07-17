@@ -59,6 +59,8 @@ async def update_entry_body(request: Request, activity_id: int, entry_id: int, o
 async def log_sheet_body(request: Request, activity_id: int, owner_id: int) -> HTMLResponse:
     tz = users.get_user_timezone(owner_id)
     now = datetime.now(tz)
+    date_param = request.query_params.get("date")
+    selected_date = date_param if date_param else now.strftime("%Y-%m-%d")
     with db.connect() as conn:
         conn.execute("BEGIN")
         row = _db.fetch_one(conn, "activity", owner_id, where="id = ?", params=(activity_id,))
@@ -68,7 +70,7 @@ async def log_sheet_body(request: Request, activity_id: int, owner_id: int) -> H
     return templates.TemplateResponse(
         request=request,
         name="components/entries/log_sheet.html.jinja2",
-        context={"activity_id": activity_id, "name": row["name"], "fields": fields, "today": now.strftime("%Y-%m-%d"), "time_known": True, "time_value": now.strftime("%H:%M")},
+        context={"activity_id": activity_id, "name": row["name"], "fields": fields, "today": selected_date, "time_known": True, "time_value": now.strftime("%H:%M"), "selected_date": selected_date},
     )
 
 

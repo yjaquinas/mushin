@@ -471,6 +471,14 @@
     background: var(--color-surface-2);
   }
 
+  .cal-day--readonly {
+    cursor: default;
+  }
+
+  .cal-day--readonly:hover {
+    background: transparent;
+  }
+
   /* Marked: bolder numeral + a small dot beneath it (shape, not color, carries
    * the signal — the dot uses accent as a secondary affordance only). */
   .cal-day--marked {

@@ -25,10 +25,11 @@ async def activity_history(
     period: str,
     anchor: str | None = None,
     day: str | None = None,
+    page: int = 1,
     session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
 ) -> HTMLResponse:
     return activity_history_response(
-        request, activity_id, period, anchor, day, sessions.read_uid(session)
+        request, activity_id, period, anchor, day, page, sessions.read_uid(session)
     )
 
 

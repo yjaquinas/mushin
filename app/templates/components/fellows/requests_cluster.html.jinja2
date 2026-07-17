@@ -3,6 +3,8 @@
   Context: fellows.incoming_requests / fellows.outgoing_requests,
   fellows.pending_count.
 #}
+{% set requests_hx_target = requests_hx_target | default('#fellows-section') %}
+{% set requests_hx_source = requests_hx_source | default('') %}
 <section class="flex flex-col gap-3">
     <header class="flex flex-wrap items-center gap-2">
         <h2 class="text-title font-medium text-text-primary">
@@ -18,15 +20,15 @@
             <div class="flex flex-wrap items-center gap-2">
                 <button
                     type="button"
-                    hx-post="/fellows/requests/{{ req.username }}/accept"
-                    hx-target="#fellows-section"
+                    hx-post="/fellows/requests/{{ req.username }}/accept{{ requests_hx_source }}"
+                    hx-target="{{ requests_hx_target }}"
                     hx-swap="outerHTML"
                     class="rounded-button border border-border px-3 py-1.5 text-caption text-text-secondary transition hover:bg-surface-2"
                 >{{ strings.REQUESTS_ACCEPT }}</button>
                 <button
                     type="button"
-                    hx-post="/fellows/requests/{{ req.username }}/decline"
-                    hx-target="#fellows-section"
+                    hx-post="/fellows/requests/{{ req.username }}/decline{{ requests_hx_source }}"
+                    hx-target="{{ requests_hx_target }}"
                     hx-swap="outerHTML"
                     class="rounded-button border border-border px-3 py-1.5 text-caption text-text-secondary transition hover:bg-surface-2"
                 >{{ strings.REQUESTS_DECLINE }}</button>
@@ -45,8 +47,8 @@
                 <span class="text-caption text-text-muted">{{ strings.REQUESTS_OUTGOING_HEADING }}</span>
                 <button
                     type="button"
-                    hx-post="/fellows/requests/{{ req.username }}/cancel"
-                    hx-target="#fellows-section"
+                    hx-post="/fellows/requests/{{ req.username }}/cancel{{ requests_hx_source }}"
+                    hx-target="{{ requests_hx_target }}"
                     hx-swap="outerHTML"
                     class="rounded-button border border-border px-3 py-1.5 text-caption text-text-secondary transition hover:bg-surface-2"
                 >{{ strings.REQUESTS_CANCEL }}</button>

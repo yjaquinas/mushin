@@ -12,7 +12,7 @@ from app.auth import users
 from app.models import db
 from app.services.entries import entries
 from app.services.entries.entries import PayloadError
-from app.services.plans import EntryDateLimitError, get_all_plan_configs
+from app.services.plans import EntryDateLimitError, get_user_plan_config
 
 
 async def create_log_body(
@@ -63,15 +63,13 @@ async def create_log_body(
         return HTMLResponse(status_code=422)
     except EntryDateLimitError:
         with db.connect() as conn:
-            plans = get_all_plan_configs(conn)
-        basic = next((p for p in plans if p["plan"] == "basic"), {})
-        premium = next((p for p in plans if p["plan"] == "premium"), {})
-        max_val = basic.get("max_entries_per_date", 1)
-        premium_max = premium.get("max_entries_per_date", 10)
+            cfg = get_user_plan_config(conn, owner_id) or {}
+        plan = cfg.get("plan", "basic")
+        max_val = cfg.get("max_entries_per_date", 1)
         response = HTMLResponse(content="", status_code=400)
         response.headers["HX-Trigger"] = json.dumps({
             "show-toast": {
-                "message": ui_strings.ENTRY_DATE_LIMIT_TOAST.format(max=max_val, premium_max=premium_max),
+                "message": ui_strings.ENTRY_DATE_LIMIT_TOAST.format(plan=plan, max=max_val),
                 "variant": "warning",
             }
         })

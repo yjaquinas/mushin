@@ -38,7 +38,9 @@ async def remove_fellow_confirm(
     user = _current_user(session)
     if user is None:
         return HTMLResponse(status_code=401)
-    return remove_fellow_confirm_response(request, username, source == "search")
+    return remove_fellow_confirm_response(
+        request, username, source == "search", source == "fellows-page"
+    )
 
 
 @router.post("/fellows/{username}/remove", response_class=HTMLResponse)
@@ -52,7 +54,9 @@ async def remove_fellow(
     user = _current_user(session)
     if user is None:
         return HTMLResponse(status_code=401)
-    return remove_fellow_response(request, username, int(user["id"]), source == "search")
+    return remove_fellow_response(
+        request, username, int(user["id"]), source == "search", source == "fellows-page"
+    )
 
 
 @router.get("/fellows/{username}/block-confirm", response_class=HTMLResponse)

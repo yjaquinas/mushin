@@ -127,7 +127,7 @@
             hx-get="/@{{ username }}/{{ slug }}/entries/{{ entry.id }}/comments"
             hx-target="#comment-slot-{{ entry.id }}"
             hx-swap="innerHTML"
-            hx-trigger="load-comments"
+            hx-trigger="{% if expand_comment_entry_id == entry.id %}load{% else %}load-comments{% endif %}"
         ></div>
         {% elif login_redirect_url %}
         <a

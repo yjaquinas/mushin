@@ -89,6 +89,8 @@ def _render_fellows_page_content(
             "is_owner": is_owner,
             "error": error,
             "viewer_logged_in": True,
+            "requests_hx_target": "#fellows-content",
+            "requests_hx_source": "?source=fellows-page",
         },
     )
 

@@ -20,7 +20,7 @@
 {% set dialog_id = "activity-dialog-log" %}
 {% set form_action = "/activities/" ~ activity_id ~ "/log" %}
 {% set form_swap = "none" %}
-{% set title = name %}
+{% set title = strings.ENTRY_DIALOG_NEW_TITLE.format(name=name) %}
 {% set submit_label = strings.LOG_SUBMIT %}
 {% set cancel_label = strings.LOG_CANCEL %}
 {% set cancel_button_id = "activity-button-log-cancel" %}
@@ -32,5 +32,5 @@
 {% set delete_target = None %}
 {% set form_target = None %}
 {% set notes_value = "" %}
-{% set default_to_local_now = true %}
+{% set default_to_local_now = selected_date is none %}
 {% include "components/entries/entry_form_dialog.html.jinja2" with context %}

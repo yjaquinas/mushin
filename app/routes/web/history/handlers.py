@@ -40,16 +40,17 @@ def activity_history_response(
     period: str,
     anchor: str | None,
     day: str | None,
+    page: int,
     current_uid: int | None,
 ) -> HTMLResponse:
-    if period not in ("week", "month", "all"):
+    if period not in ("month", "all"):
         return HTMLResponse(status_code=400)
 
     anchor_date = _parse_date_or_default(anchor)
     if anchor_date is None:
         return HTMLResponse(status_code=400)
-    selected_date = _parse_optional_date(day)
-    if day is not None and selected_date is None:
+    selected_day = _parse_date(day) if day else None
+    if day and selected_day is None:
         return HTMLResponse(status_code=400)
 
     with db.connect() as conn:
@@ -69,12 +70,13 @@ def activity_history_response(
         period=period,
         anchor=anchor_date,
         tz=viewer["tz"],
-        selected=selected_date,
         is_owner=viewer["is_owner"],
         can_comment=viewer["can_comment"],
         username=viewer["username"],
         slug=viewer["slug"],
         login_redirect_url=login_redirect_url,
+        selected_day=selected_day,
+        page=page,
     )
     response = templates.TemplateResponse(
         request=request,
@@ -153,10 +155,10 @@ def _parse_date_or_default(raw: str | None) -> date | None:
         return None
 
 
-def _parse_optional_date(raw: str | None) -> date | None:
-    if raw is None:
-        return None
+def _parse_date(raw: str) -> date | None:
     try:
         return date.fromisoformat(raw)
     except ValueError:
         return None
+
+

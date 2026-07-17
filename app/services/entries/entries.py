@@ -287,6 +287,7 @@ def list_entries(
     start: date | None = None,
     end: date | None = None,
     limit: int | None = None,
+    offset: int | None = None,
 ) -> list[dict[str, Any]]:
     """List entries for an activity, scoped to *owner_id*, newest first."""
     where_parts = ["owner_id = ?", "activity_id = ?", "hidden_at IS NULL"]
@@ -306,11 +307,41 @@ def list_entries(
     if limit is not None:
         sql += " LIMIT ?"
         params.append(limit)
+    if offset is not None:
+        sql += " OFFSET ?"
+        params.append(offset)
 
     with db.connect() as conn:
         conn.execute("BEGIN")
         rows = conn.execute(sql, params).fetchall()
     return [dict(r) for r in rows]
+
+
+def count_entries(
+    owner_id: int,
+    activity_id: int,
+    *,
+    start: date | None = None,
+    end: date | None = None,
+) -> int:
+    """Count non-hidden entries for an activity, scoped to *owner_id*."""
+    where_parts = ["owner_id = ?", "activity_id = ?", "hidden_at IS NULL"]
+    params: list[Any] = [owner_id, activity_id]
+
+    if start is not None:
+        where_parts.append("occurred_at >= ?")
+        params.append(start.isoformat())
+    if end is not None:
+        where_parts.append("occurred_at < ?")
+        end_exclusive = end + __import__("datetime").timedelta(days=1)
+        params.append(end_exclusive.isoformat())
+
+    with db.connect() as conn:
+        conn.execute("BEGIN")
+        row = conn.execute(
+            f"SELECT COUNT(*) AS n FROM entry WHERE {' AND '.join(where_parts)}", params
+        ).fetchone()
+    return row["n"]
 
 
 def list_entries_by_day(

@@ -12,6 +12,8 @@
     if (sheet.getAttribute("data-log-sheet-init")) return sheet;
 
     sheet.setAttribute("data-log-sheet-init", "true");
+    // Remove orphaned instance from registry to prevent body overflow lock
+    if (dlg) dialogManagerRegistry.remove(dlg);
     dlg = new DialogManager("activity-dialog-log");
     dlg.init();
     dialogManagerRegistry.add(dlg);
@@ -25,6 +27,9 @@
     if (form) {
       form.reset();
     }
+    document.querySelectorAll("[data-log-trigger]").forEach(function (trigger) {
+      trigger.setAttribute("aria-expanded", "false");
+    });
     dlg.close();
   }
 

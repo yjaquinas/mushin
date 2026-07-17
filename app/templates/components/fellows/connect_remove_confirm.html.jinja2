@@ -3,7 +3,8 @@
 {% set dom_id = dom_id | default("relationship-affordance") %}
 {% set dialog_id = dialog_id | default("connect-remove-dialog") %}
 {% set from_search = from_search | default(false) %}
-{% set qs = "?source=search" if from_search else "" %}
+{% set from_fellows_page = from_fellows_page | default(false) %}
+{% set qs = "?source=search" if from_search else ("?source=fellows-page" if from_fellows_page else "") %}
 <div id="{{ dialog_id }}" hidden data-auto-open>
     <div
         class="fixed inset-0 z-50 flex items-end justify-center bg-text-primary/50 sm:items-center"
