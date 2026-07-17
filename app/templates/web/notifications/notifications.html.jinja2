@@ -1,0 +1,63 @@
+{% extends "web/base.html.jinja2" %}
+
+{% block title %}{{ strings.NOTIFICATIONS_PAGE_TITLE }} · {{ strings.APP_NAME }}{% endblock %}
+
+{% block tab_notifications %}
+<section class="flex flex-col gap-3" aria-labelledby="notifications-title">
+    <h1 id="notifications-title" class="sr-only">{{ strings.NOTIFICATIONS_PAGE_TITLE }}</h1>
+
+    {% if not notifications %}
+    <p class="py-8 text-center text-body text-text-secondary">{{ strings.NOTIFICATIONS_PAGE_EMPTY }}</p>
+    {% else %}
+    <ul class="flex flex-col gap-2">
+        {% for item in notifications %}
+        <li>
+            <a
+                href="{{ item.target_url }}"
+                class="flex min-h-tap items-start gap-3 rounded-card border border-border bg-surface-1 p-3 transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+            >
+                <span class="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-brand-subtle text-text-secondary">
+                    {% if item.type == 'comment' %}
+                    {{ icon('message-circle', size=18) }}
+                    {% elif item.type == 'connection_request' %}
+                    {{ icon('user-plus', size=18) }}
+                    {% else %}
+                    {{ icon('circle-check', size=18) }}
+                    {% endif %}
+                </span>
+                <span class="flex min-w-0 flex-1 flex-col gap-1">
+                    <span class="flex items-baseline justify-between gap-2">
+                        <span class="line-clamp-2 text-body text-text-primary">
+                            {% if item.type == 'comment' %}
+                            {{ strings.NOTIFICATIONS_COMMENT_TEXT.format(actor=item.actor_username, activity=item.activity_name) }}
+                            {% elif item.type == 'connection_request' %}
+                            {{ strings.NOTIFICATIONS_CONNECTION_REQUEST_TEXT.format(actor=item.actor_username) }}
+                            {% else %}
+                            {{ strings.NOTIFICATIONS_CONNECTION_ACCEPTED_TEXT.format(actor=item.actor_username) }}
+                            {% endif %}
+                        </span>
+                        <span class="flex shrink-0 items-center gap-2 text-caption text-text-muted">
+                            {% if item.is_new %}
+                            <span
+                                aria-label="{{ strings.NOTIFICATIONS_NEW_BADGE_ARIA }}"
+                                class="h-2 w-2 rounded-full bg-brand"
+                            ></span>
+                            {% endif %}
+                            <span data-local-timestamp="{{ item.created_at }}" hidden>{{ item.created_at | format_comment_timestamp }}</span>
+                        </span>
+                    </span>
+                </span>
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+
+    {% if has_more %}
+    <a
+        href="/notifications?before_id={{ next_before_id }}"
+        class="flex min-h-tap items-center justify-center text-body text-text-secondary underline-offset-2 hover:underline focus-visible:outline-offset-2"
+    >{{ strings.NOTIFICATIONS_SHOW_OLDER }}</a>
+    {% endif %}
+    {% endif %}
+</section>
+{% endblock tab_notifications %}

@@ -9,7 +9,7 @@ from zoneinfo import ZoneInfo
 
 from app.routes.web.history.context import _build_card_top_tags
 from app.services.activities import categories
-from app.services.entries import comments, entries, stats
+from app.services.entries import stats
 from app.services.social import connections
 
 
@@ -109,6 +109,5 @@ def _build_home_context(conn: sqlite3.Connection, owner_id: int, tz: ZoneInfo, b
         "cards": cards,
         "examples": categories.EXAMPLE_ACTIVITIES,
         "fellows": _build_fellows_context(owner_id, viewer_id=owner_id, is_owner=True),
-        "unseen_comments": comments.unseen_comment_count(conn, owner_id),
         "bio": bio,
     }

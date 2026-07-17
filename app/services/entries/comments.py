@@ -12,7 +12,7 @@ from typing import Any
 import structlog
 
 from app.auth import users
-from app.services.social import profiles
+from app.services.social import notifications, profiles
 
 log = structlog.get_logger()
 
@@ -119,6 +119,7 @@ def create_comment(
     ctx = _entry_profile_context(conn, entry_id)
     if ctx is None:
         raise CommentNotFoundError(f"entry {entry_id} not found")
+    _activity_id, profile_user = ctx
 
     now = current_timestamp_iso(timezone)
     cur = conn.execute(
@@ -126,6 +127,16 @@ def create_comment(
         (entry_id, author_id, trimmed, now),
     )
     comment_id = cur.lastrowid
+    owner_id = int(profile_user["id"])
+    if owner_id != author_id:
+        notifications.create(
+            conn,
+            user_id=owner_id,
+            type="comment",
+            actor_id=author_id,
+            entry_id=entry_id,
+            created_at=now,
+        )
 
     row = conn.execute(
         "SELECT * FROM comment WHERE id = ?",

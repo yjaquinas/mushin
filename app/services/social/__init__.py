@@ -1,5 +1,5 @@
 """Social/profile service package."""
 
-from app.services.social import connections, profiles
+from app.services.social import connections, notifications, profiles
 
-__all__ = ["connections", "profiles"]
+__all__ = ["connections", "notifications", "profiles"]

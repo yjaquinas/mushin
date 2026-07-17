@@ -619,11 +619,21 @@ COMMENTS_PAGE_EMPTY = "No comments yet."
 COMMENTS_PAGE_NEW_BADGE_ARIA = "New"
 COMMENTS_PAGE_SHOW_OLDER = "Show older"
 
+# Unified notifications page.
+NOTIFICATIONS_PAGE_TITLE = "Notifications"
+NOTIFICATIONS_PAGE_EMPTY = "No notifications yet."
+NOTIFICATIONS_SHOW_OLDER = "Show older"
+NOTIFICATIONS_NEW_BADGE_ARIA = "New"
+NOTIFICATIONS_COMMENT_TEXT = "{actor} commented on your {activity} entry."
+NOTIFICATIONS_CONNECTION_REQUEST_TEXT = "{actor} wants to connect."
+NOTIFICATIONS_CONNECTION_ACCEPTED_TEXT = "{actor} accepted your connection request."
+
 # ---------------------------------------------------------------------------
 # Bottom navigation bar
 # ---------------------------------------------------------------------------
 
 NAV_PROFILE = "Profile"
+NAV_NOTIFICATIONS = "Notifications"
 NAV_SOCIAL = "Social"
 NAV_SETTINGS = "Settings"
 NAV_APP = "App navigation"

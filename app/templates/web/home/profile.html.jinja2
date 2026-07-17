@@ -8,17 +8,6 @@
 <div hidden data-toast-message="{{ flash_message }}"></div>
 {% endif %}
 
-{% if unseen_comments %}
-<header class="flex items-center gap-2 py-2">
-    <h1 class="sr-only">{{ strings.HOME_TITLE }}</h1>
-    <a
-        href="/comments"
-        aria-label="{{ strings.COMMENTS_UNSEEN_ARIA }}"
-        class="flex min-h-tap min-w-tap items-center justify-center rounded-full bg-brand-subtle px-2 text-caption font-medium text-text-secondary transition hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-    >{{ icon('message-circle', size=14) }}<span class="ms-1">{{ strings.COMMENTS_UNSEEN_BADGE.format(count=unseen_comments) }}</span></a>
-</header>
-{% endif %}
-
 {% include "components/fellows/fellows_section.html.jinja2" with context %}
 
 {% include "components/profile/_bio_display.html.jinja2" with context %}

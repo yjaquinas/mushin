@@ -691,7 +691,7 @@
 
   /* ── Bottom navigation bar ─────────────────────────────────────────── */
   /*
-   * Full-width fixed bar at the bottom of the viewport. Three evenly-spaced
+   * Full-width fixed bar at the bottom of the viewport. Evenly-spaced
    * icon tabs with an active-state indicator.
    *
    * Active tab: accent color for icon. Inactive: muted text.
@@ -747,5 +747,28 @@
 
   .bottom-nav-tab svg {
     flex-shrink: 0;
+  }
+
+  .bottom-nav-icon {
+    position: relative;
+    display: inline-flex;
+  }
+
+  .bottom-nav-badge {
+    position: absolute;
+    top: -0.35rem;
+    right: -0.45rem;
+    display: flex;
+    min-width: 1rem;
+    height: 1rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    background: var(--color-brand);
+    color: var(--color-on-brand);
+    font-size: 0.625rem;
+    font-weight: var(--font-weight-semibold);
+    line-height: 1;
+    padding-inline: 0.2rem;
   }
 }

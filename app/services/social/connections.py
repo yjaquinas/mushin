@@ -13,7 +13,7 @@ from datetime import UTC, datetime
 from typing import Literal
 
 from app.models import db
-from app.services.social import profiles
+from app.services.social import notifications, profiles
 
 RelationshipState = Literal[
     "self",
@@ -104,6 +104,13 @@ def send_request(requester_id: int, addressee_id: int) -> int:
                 " WHERE id = ?",
                 (requester_id, addressee_id, now, existing["id"]),
             )
+            notifications.create(
+                conn,
+                user_id=addressee_id,
+                type="connection_request",
+                actor_id=requester_id,
+                created_at=now,
+            )
             return existing["id"]
 
         cur = conn.execute(
@@ -111,6 +118,13 @@ def send_request(requester_id: int, addressee_id: int) -> int:
             " (requester_id, addressee_id, user_lo, user_hi, created_at)"
             " VALUES (?, ?, ?, ?, ?)",
             (requester_id, addressee_id, lo, hi, now),
+        )
+        notifications.create(
+            conn,
+            user_id=addressee_id,
+            type="connection_request",
+            actor_id=requester_id,
+            created_at=now,
         )
         return cur.lastrowid
 
@@ -130,6 +144,13 @@ def accept_request(connection_id: int, acceptor_id: int) -> dict:
             "UPDATE connection SET status = 'accepted', sharing_consent_at = ?, responded_at = ?"
             " WHERE id = ?",
             (now, now, connection_id),
+        )
+        notifications.create(
+            conn,
+            user_id=int(row["requester_id"]),
+            type="connection_accepted",
+            actor_id=acceptor_id,
+            created_at=now,
         )
         return dict(row)
 
@@ -153,6 +174,13 @@ def accept(owner_id: int, other_id: int) -> dict:
             "UPDATE connection SET status = 'accepted', sharing_consent_at = ?, responded_at = ?"
             " WHERE id = ?",
             (now, now, row["id"]),
+        )
+        notifications.create(
+            conn,
+            user_id=int(row["requester_id"]),
+            type="connection_accepted",
+            actor_id=owner_id,
+            created_at=now,
         )
         return dict(row)
 

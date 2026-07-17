@@ -1,10 +1,11 @@
 (function () {
   "use strict";
 
-  var TAB_NAMES = ["profile", "social", "settings"];
+  var TAB_NAMES = ["profile", "social", "notifications", "settings"];
   var tabState = {
     profile: { index: -1, entries: [] },
     social: { index: -1, entries: [] },
+    notifications: { index: -1, entries: [] },
     settings: { index: -1, entries: [] },
   };
   var activeTab = null;
@@ -99,6 +100,11 @@
 
     activeTab = tab;
     document.body.setAttribute("data-current-tab", tab);
+    if (tab === "notifications") {
+      document.querySelectorAll('.bottom-nav-tab[data-tab="notifications"] .bottom-nav-badge').forEach(function (badge) {
+        badge.remove();
+      });
+    }
   }
 
   function restoreEntry(tab, idx, options) {

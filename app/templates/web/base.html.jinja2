@@ -39,6 +39,7 @@
     <link rel="manifest" href="{{ static_asset('/static/manifest.json') }}">
     <script>(function(){if(document.cookie.indexOf('mushin_theme=')===-1){var t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t);document.cookie='mushin_theme='+t+';path=/;max-age=31536000;SameSite=Lax'}})();</script>
     <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.10/dist/htmx.min.js" integrity="sha384-H5SrcfygHmAuTDZphMHqBJLc3FhssKjG7w/CeCpFReSfwBWDTKpkzPP8c+cLsK+V" crossorigin="anonymous"></script>
+    <script>htmx.config.processHidden = true;</script>
     <script defer src="{{ static_asset('/static/js/common/tab-navigation.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/common/toast.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/common/dialogs.js') }}"></script>
@@ -62,7 +63,7 @@
     <script defer src="{{ static_asset('/static/js/entries/log-sheet.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/social/social-search.js') }}"></script>
 </head>
-{% set current_tab = current_page if (current_page is defined and current_page in ('profile', 'social', 'settings')) else none %}
+{% set current_tab = current_page if (current_page is defined and current_page in ('notifications', 'profile', 'social', 'settings')) else none %}
 <body
     class="flex flex-col bg-surface-0 min-h-screen text-text-primary text-body"
     hx-history="false"
@@ -148,6 +149,15 @@
             {% block tab_social %}{% endblock %}
         </div>
         <div
+            id="tab-notifications"
+            class="tab-panel flex flex-col gap-4{% if current_tab == 'notifications' %} tab-panel--active{% endif %}"
+            data-tab="notifications"
+            aria-hidden="{{ 'false' if current_tab == 'notifications' else 'true' }}"
+            {% if current_tab != 'notifications' %}hidden{% endif %}
+        >
+            {% block tab_notifications %}{% endblock %}
+        </div>
+        <div
             id="tab-settings"
             class="tab-panel{% if current_tab == 'settings' %} tab-panel--active{% endif %}"
             data-tab="settings"
@@ -189,6 +199,22 @@
                 data-tab="social"
             >
                 {{ icon("compass", size=22) }}
+            </a>
+            <a
+                href="/notifications"
+                class="bottom-nav-tab{% if current_tab == 'notifications' %} bottom-nav-tab--active{% endif %} relative"
+                aria-label="{{ strings.NAV_NOTIFICATIONS }}"
+                {% if current_tab == 'notifications' %}aria-current="page"{% endif %}
+                data-tab="notifications"
+            >
+                <span class="bottom-nav-icon">
+                    {{ icon("bell", size=22) }}
+                    {% if unseen_notifications %}
+                    <span class="bottom-nav-badge">
+                        {{ "9+" if unseen_notifications >= 9 else unseen_notifications }}
+                    </span>
+                    {% endif %}
+                </span>
             </a>
             <a
                 href="/settings"
