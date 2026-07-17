@@ -5,17 +5,17 @@
 #}
 {% set requests_hx_target = requests_hx_target | default('#fellows-section') %}
 {% set requests_hx_source = requests_hx_source | default('') %}
-<section class="flex flex-col gap-3">
+<section class="flat-section">
     <header class="flex flex-wrap items-center gap-2">
-        <h2 class="text-title font-medium text-text-primary">
+        <h2 class="flat-section-title">
             {{ strings.REQUESTS_HEADING }} ({{ strings.REQUESTS_PENDING_BADGE.format(count=fellows.pending_count) }})
         </h2>
     </header>
 
     {% if fellows.incoming_requests %}
-    <ul class="flex flex-col gap-2">
+    <ul class="flat-list">
         {% for req in fellows.incoming_requests %}
-        <li class="flex items-center justify-between rounded-card border border-border bg-surface-1 px-4 py-3">
+        <li class="flat-row flex items-center justify-between px-4 py-2 sm:py-3">
             <a href="/@{{ req.username }}" class="text-body font-medium text-text-primary hover:underline">{{ req.username }}</a>
             <div class="flex flex-wrap items-center gap-2">
                 <button
@@ -39,9 +39,9 @@
     {% endif %}
 
     {% if fellows.outgoing_requests %}
-    <ul class="flex flex-col gap-2">
+    <ul class="flat-list">
         {% for req in fellows.outgoing_requests %}
-        <li class="flex items-center justify-between rounded-card border border-border bg-surface-1 px-4 py-3">
+        <li class="flat-row flex items-center justify-between px-4 py-2 sm:py-3">
             <a href="/@{{ req.username }}" class="text-body font-medium text-text-primary hover:underline">{{ req.username }}</a>
             <div class="flex flex-wrap items-center gap-2">
                 <span class="text-caption text-text-muted">{{ strings.REQUESTS_OUTGOING_HEADING }}</span>

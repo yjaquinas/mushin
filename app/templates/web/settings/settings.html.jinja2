@@ -3,7 +3,7 @@
 {% block title %}{{ strings.SETTINGS_TITLE }} · {{ strings.APP_NAME }}{% endblock %}
 
 {% block tab_settings %}
-<div id="settings-content" class="flex flex-grow flex-col">
+<div id="settings-content" class="flex flex-grow flex-col gap-2">
 {% if flash_message %}
 <div hidden data-toast-message="{{ flash_message }}"></div>
 {% endif %}
@@ -11,8 +11,8 @@
 {% if not is_guest %}
 
 {# ── Plan section ── #}
-<section class="flex flex-col gap-4 pb-4 border-b border-border" id="settings-section-plan">
-    <h2 class="text-body font-semibold text-text-primary">{{ strings.SETTINGS_PLAN_HEADING }}</h2>
+<section class="flat-section py-4" id="settings-section-plan">
+    <h2 class="flat-section-title">{{ strings.SETTINGS_PLAN_HEADING }}</h2>
     <div class="flex items-start justify-between gap-3">
         <div class="flex flex-col gap-1">
             <div class="flex items-center gap-2">
@@ -89,9 +89,10 @@
         #settings-section-plan details[open] summary .chevron-icon { transform: rotate(90deg); }
     </style>
 </section>
+<div class="h-px bg-border" aria-hidden="true"></div>
 
-<section class="flex flex-col gap-4 py-4" id="settings-section-account">
-    <h2 class="text-body font-semibold text-text-primary">{{ strings.ACCOUNT_VISIBILITY_HEADING }}</h2>
+<section class="flat-section py-4" id="settings-section-account">
+    <h2 class="flat-section-title">{{ strings.ACCOUNT_VISIBILITY_HEADING }}</h2>
     <form
         id="settings-form-account"
         method="post"
@@ -180,12 +181,13 @@
         </button>
     </form>
 </section>
+<div class="h-px bg-border" aria-hidden="true"></div>
 {% endif %}
 
 {# Password #}
 {% if not is_guest %}
-<section id="settings-section-password" class="flex flex-col gap-4 border-t border-border py-4">
-    <h2 class="text-body font-semibold text-text-primary">{{ strings.ACCOUNT_PASSWORD_HEADING }}</h2>
+<section id="settings-section-password" class="flat-section py-4">
+    <h2 class="flat-section-title">{{ strings.ACCOUNT_PASSWORD_HEADING }}</h2>
     <form
         id="settings-form-password"
         method="post"
@@ -225,19 +227,21 @@
         </button>
     </form>
 </section>
+<div class="h-px bg-border" aria-hidden="true"></div>
 {% endif %}
 
 {# Theme #}
-<section id="settings-section-theme" class="border-t border-border py-4">
+<section id="settings-section-theme" class="py-4">
     <div class="flex items-center justify-between">
-        <span class="text-body font-semibold text-text-primary">{{ strings.SETTINGS_THEME_HEADING }}</span>
+        <span class="flat-section-title">{{ strings.SETTINGS_THEME_HEADING }}</span>
         {% include "components/common/theme_toggle_settings.html.jinja2" with context %}
     </div>
 </section>
+<div class="h-px bg-border" aria-hidden="true"></div>
 
 {# Data, logout, delete #}
-<section id="settings-section-data" class="flex flex-col gap-4 border-t border-border py-4">
-    <h2 class="text-body font-semibold text-text-primary">{{ strings.SETTINGS_DATA_HEADING }}</h2>
+<section id="settings-section-data" class="flat-section py-4">
+    <h2 class="flat-section-title">{{ strings.SETTINGS_DATA_HEADING }}</h2>
     <div class="flex gap-3">
       {% include "components/settings/entry_import_dialog.html.jinja2" with context %}
       <template id="settings-template-entry-import-dialog">
@@ -284,9 +288,10 @@
     {% include "components/settings/delete_account_confirm.html.jinja2" %}
 {% endif %}
 </section>
+<div class="h-px bg-border" aria-hidden="true"></div>
 
 {# About + legal links #}
-<section id="settings-section-about" class="flex flex-col gap-3 border-t border-border py-4">
+<section id="settings-section-about" class="flex flex-col gap-3 py-4">
     <h2 class="text-body font-semibold text-text-primary">{{ strings.SETTINGS_ABOUT_HEADING }}</h2>
     <p class="text-caption text-text-secondary">
         {{ strings.APP_NAME }} {{ strings.APP_NAME_HANJA }}

@@ -29,6 +29,7 @@
         hx-target="#activity-section-history-{{ activity_id }}"
         hx-swap="outerHTML"
     ></span>
+    <h2 class="flat-section-title">{{ strings.HISTORY_LOG_HEADING }}</h2>
     {# Period switcher #}
     <div role="tablist" aria-label="{{ strings.HISTORY_PERIOD_SWITCHER_LABEL }}" class="flex gap-2">
         {% for period_key, period_label in [

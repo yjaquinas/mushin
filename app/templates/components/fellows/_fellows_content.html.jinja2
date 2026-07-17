@@ -3,7 +3,7 @@
         {{ icon('chevron-left', size=16) }} {{ strings.ACTIVITY_BACK_TO_PROFILE }}
     </a>
 
-    <h1 id="fellows-title-page" class="text-title font-semibold text-text-primary">{{ strings.FELLOWS_HEADING }}</h1>
+    <h1 id="fellows-title-page" class="flat-section-title">{{ strings.FELLOWS_HEADING }}</h1>
 
     {% if fellows.pending_count > 0 and is_owner %}
     {% include "components/fellows/requests_cluster.html.jinja2" with context %}
@@ -12,10 +12,10 @@
     {% if fellows.fellow_count == 0 %}
     <p class="text-body text-text-secondary">{{ strings.FELLOWS_EMPTY }}</p>
     {% elif fellows.show_fellow_names %}
-    <ul class="flex flex-col gap-2">
+    <ul class="flat-list">
         {% set all_fellows = fellows.fellows %}
         {% for fellow in all_fellows %}
-        <li class="flex items-center justify-between rounded-card border border-border bg-surface-1 px-4 py-3">
+        <li class="flat-row flex items-center justify-between px-4 py-2 sm:rounded-card sm:border sm:border-border sm:bg-surface-1 sm:py-3">
             <a href="/@{{ fellow.username }}" class="text-body font-medium text-text-primary hover:underline">{{ fellow.username }}</a>
             {% if is_owner %}
             <button

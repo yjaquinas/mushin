@@ -8,7 +8,7 @@
 {% block title %}{% if card %}{{ card.name }} · {% endif %}{{ username }} · {{ strings.APP_NAME }}{% endblock %}
 
 {% block tab_social %}
-<div class="flex flex-col gap-6">
+<div class="flex flex-col gap-4">
     <a href="/social/@{{ username }}" class="flex items-center gap-1 text-caption text-text-secondary hover:text-text-primary transition">
         {{ icon('chevron-left', size=16) }} {{ strings.PROFILE_VISIT.format(username=username) }}
     </a>
@@ -16,10 +16,16 @@
     {% include "components/history/stats_summary.html.jinja2" with context %}
     {% endwith %}
 
+    <div class="h-px bg-border" aria-hidden="true"></div>
+
     {# Merged calendar/log view #}
-    <section class="flex flex-col gap-3 rounded-card border border-border bg-surface-1 p-4">
+    <section class="flat-section py-4">
         {% include "components/history/history.html.jinja2" with context %}
     </section>
+
+    {% if field_stats.tag_groups or field_stats.scales %}
+    <div class="h-px bg-border" aria-hidden="true"></div>
+    {% endif %}
 
     {# Field stats — analytics tail, correctly last #}
     {% include "components/history/field_stats.html.jinja2" with context %}

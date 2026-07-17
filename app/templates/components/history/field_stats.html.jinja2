@@ -20,7 +20,7 @@
 <div>
 {% endif %}
 {% if field_stats.tag_groups %}
-<section class="flex flex-col gap-3 rounded-card border border-border bg-surface-1 p-4">
+<section class="flat-section py-4">
     {% for group in field_stats.tag_groups %}
         <div class="flex flex-col gap-2">
             <h3 class="text-body font-medium text-text-primary">{{ group.label }}</h3>
@@ -47,7 +47,8 @@
 {% endif %}
 
 {% if field_stats.scales %}
-<section class="flex flex-col gap-3 rounded-card border border-border bg-surface-1 p-4">
+{% if field_stats.tag_groups %}<div class="h-px bg-border" aria-hidden="true"></div>{% endif %}
+<section class="flat-section py-4">
     {% for scale in field_stats.scales %}
         <div class="flex flex-col gap-2">
             <h3 class="text-body font-medium text-text-primary">{{ scale.label }}</h3>

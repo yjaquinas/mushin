@@ -44,13 +44,13 @@
     {% endif %}
 
     <div class="flex flex-row gap-3">
-        <dl class="flex-1 rounded-card bg-surface-0 px-3 py-2">
+        <dl class="flex-1 bg-surface-0 px-3 py-2">
             <div class="flex items-center justify-between gap-3">
                 <dt class="text-caption text-text-muted">{{ strings.STATS_AVERAGE_WEEKLY_LABEL }}</dt>
                 <dd class="text-title font-medium text-text-primary">{{ average_weekly_count | default(0) | format_average_weekly_count }}</dd>
             </div>
         </dl>
-        <dl class="flex-1 rounded-card bg-surface-0 px-3 py-2">
+        <dl class="flex-1 bg-surface-0 px-3 py-2">
             <div class="flex items-center justify-between gap-3">
                 <dt class="text-caption text-text-muted">{{ strings.STATS_PERIOD_LIFETIME }}</dt>
                 <dd class="text-title font-medium text-text-primary">{{ counts.lifetime | format_count }}</dd>

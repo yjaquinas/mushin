@@ -7,10 +7,10 @@
 <section
     id="{{ section_scope }}-section-fellows"
     aria-labelledby="{{ section_scope }}-title-fellows"
-    class="flex flex-col gap-3"
+    class="flat-section"
 >
     <div class="flex items-center justify-between gap-3">
-        <h2 id="{{ section_scope }}-title-fellows" class="text-title font-semibold text-text-primary">{{ strings.FELLOWS_HEADING }}</h2>
+        <h2 id="{{ section_scope }}-title-fellows" class="flat-section-title">{{ strings.FELLOWS_HEADING }}</h2>
         <div class="flex items-center gap-2">
             {% if not fellows.is_owner and state is defined and viewer_logged_in %}
             {% if state == "none" %}
@@ -92,7 +92,7 @@
         <li class="shrink-0">
             <a
                 href="/@{{ fellow.username }}"
-                class="flex min-h-tap w-16 flex-col items-center gap-1 rounded-card px-1 py-2 text-center transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                class="flex min-h-tap w-16 flex-col items-center gap-1 px-1 py-2 text-center transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
             >
                 <span
                     class="flex h-10 w-10 min-h-tap min-w-tap items-center justify-center rounded-full border border-border-strong bg-surface-2 text-body font-semibold text-text-primary"

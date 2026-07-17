@@ -1,5 +1,6 @@
 {% from "components/entries/_entry_row.html.jinja2" import entry_row %}
-<section class="flex flex-col gap-3 border-t border-border pt-3" aria-labelledby="history-selected-day-{{ activity_id }}">
+<div class="h-px bg-border" aria-hidden="true"></div>
+<section class="flex flex-col gap-3 pt-3" aria-labelledby="history-selected-day-{{ activity_id }}">
     <div class="flex items-center justify-between gap-2">
         <h4 id="history-selected-day-{{ activity_id }}" class="text-body font-medium text-text-primary">
             {{ strings.HISTORY_SELECTED_DAY.format(date=history.selected_day_label) }}

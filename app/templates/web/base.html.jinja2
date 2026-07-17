@@ -128,11 +128,11 @@
     </div>
     <main
         id="main-content"
-        class="mx-auto flex w-full max-w-screen-md grow flex-col gap-4 px-4 py-4"
+        class="mx-auto flex w-full max-w-screen-md grow flex-col gap-6 px-4 py-5 sm:gap-4 sm:py-4"
     >
         <div
             id="tab-profile"
-            class="tab-panel flex flex-col gap-4{% if current_tab == 'profile' or current_tab == none %} tab-panel--active{% endif %}"
+            class="tab-panel flex flex-col {% if current_tab == 'profile' or current_tab == none %} tab-panel--active{% endif %}"
             data-tab="profile"
             aria-hidden="{{ 'false' if current_tab == 'profile' or current_tab == none else 'true' }}"
             {% if current_tab != 'profile' and current_tab != none %}hidden{% endif %}
@@ -173,7 +173,7 @@
         role="status"
         aria-live="polite"
         data-toast-variant="informative"
-        class="fixed left-1/2 top-6 z-50 flex w-[calc(100%-2rem)] max-w-screen-sm -translate-x-1/2 items-center gap-2 rounded-card border px-4 py-2 text-body shadow-soft cursor-pointer select-none"
+        class="fixed left-1/2 top-6 z-50 flex w-[calc(100%-2rem)] max-w-screen-sm -translate-x-1/2 items-center gap-2 border px-4 py-2 text-body shadow-soft cursor-pointer select-none"
     >
         <span id="toast-text" class="flex-1"></span>
     </div>

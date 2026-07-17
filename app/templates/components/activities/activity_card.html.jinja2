@@ -15,9 +15,10 @@
 #}
 {% if card.linked %}
 <article id="card-{{ card.id }}">
+    {% set activity_href = "/@" ~ username ~ "/" ~ card.slug %}
     <a
-        href="/@{{ username }}/{{ card.slug }}"
-        class="flex flex-col gap-2 rounded-card transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-strong"
+        href="{{ activity_href }}"
+        class="flex flex-col transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-strong"
     >
         {% with activity_id=card.id, counts=card.counts, streaks=card.streaks, average_weekly_count=card.average_weekly_count, heatmap=card.heatmap, top_tags=card.top_tags, is_owner=false, card_name=card.name, show_top_tags=false, is_secret=card.secret %}
         {% include "components/history/stats_summary.html.jinja2" with context %}

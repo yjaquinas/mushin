@@ -5,13 +5,13 @@
 {% if not query %}
 <p class="py-2 text-center text-caption text-text-secondary">{{ strings.SEARCH_PROMPT }}</p>
 {% else %}
-<div class="flex flex-col gap-6">
+    <div class="flex flex-col gap-6">
     {% if kind in ("people", "all") and people %}
-    <section class="flex flex-col gap-2">
-        <h2 class="text-body font-medium text-text-secondary">{{ strings.SEARCH_PEOPLE_HEADING }}</h2>
-        <ul class="flex flex-col gap-2">
+    <section class="flat-section">
+        <h2 class="flat-section-title">{{ strings.SEARCH_PEOPLE_HEADING }}</h2>
+        <ul class="flat-list">
             {% for person in people %}
-            <li class="flex min-h-tap items-center justify-between gap-3 rounded-card px-3 py-2 transition hover:bg-surface-2">
+            <li class="flex min-h-tap items-center justify-between gap-3 px-4 py-2 transition hover:bg-surface-2">
                 <a
                     href="/social/@{{ person.username }}"
                     class="flex min-h-tap min-w-0 flex-1 items-center truncate font-medium text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-strong"
@@ -35,14 +35,14 @@
     {% endif %}
 
     {% if kind in ("tags", "all") and tags %}
-    <section class="flex flex-col gap-2">
-        <h2 class="text-body font-medium text-text-secondary">{{ strings.SEARCH_TAGS_HEADING }}</h2>
-        <ul class="flex flex-col gap-2">
+    <section class="flat-section">
+        <h2 class="flat-section-title">{{ strings.SEARCH_TAGS_HEADING }}</h2>
+        <ul class="flat-list">
             {% for entry in tags %}
             <li>
                 <a
                     href="/social{{ entry.activity_url }}{% if entry.detail_visible %}?entry_id={{ entry.entry_id }}{% endif %}"
-                    class="flex min-h-tap items-center gap-3 rounded-card px-3 py-2 text-body text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-strong"
+                    class="flex min-h-tap items-center gap-3 px-4 py-2 text-body text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-strong"
                 >
                     <span class="line-clamp-2">{{ entry.memo }}</span>
                 </a>
@@ -53,14 +53,14 @@
     {% endif %}
 
     {% if kind in ("activities", "all") and activities %}
-    <section class="flex flex-col gap-2">
-        <h2 class="text-body font-medium text-text-secondary">{{ strings.SEARCH_ACTIVITIES_HEADING }}</h2>
-        <ul class="flex flex-col gap-2">
+    <section class="flat-section">
+        <h2 class="flat-section-title">{{ strings.SEARCH_ACTIVITIES_HEADING }}</h2>
+        <ul class="flat-list">
             {% for activity in activities %}
             <li>
                 <a
                     href="/social{{ activity.url }}"
-                    class="flex min-h-tap items-center gap-3 rounded-card px-3 py-2 transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-strong"
+                    class="flex min-h-tap items-center gap-3 px-4 py-2 transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-strong"
                 >
                     <span class="flex min-w-0 flex-col">
                         <span class="truncate font-medium text-text-primary">{{ activity.name }}</span>

@@ -10,14 +10,14 @@
         {{ icon("chevron-left", size=16) }} {{ strings.PLANS_BACK_TO_SETTINGS }}
     </a>
 
-    <div class="mt-6 grid gap-6 sm:grid-cols-2 sm:items-stretch">
+    <div class="grid gap-8 sm:grid-cols-2 sm:items-stretch">
 
         {# ── Basic card ── #}
-        <section class="flex flex-col rounded-card border p-6
-            {% if current_user_plan == "basic" %}border-2 border-border-strong{% else %}border-border{% endif %}
-            bg-surface-1">
-            <h2 class="text-title font-semibold text-text-primary">{{ strings.PLANS_BASIC_NAME }}</h2>
-            <div class="border-b border-border mt-3 mb-4"></div>
+        <section class="flex flex-col py-4 sm:p-6
+            {% if current_user_plan == "basic" %}sm:border-2 sm:border-border-strong{% endif %}
+            ">
+            <h2 class="flat-section-title sm:text-title sm:text-text-primary">{{ strings.PLANS_BASIC_NAME }}</h2>
+            <div class="h-px bg-border mt-3 mb-4" aria-hidden="true"></div>
             <p class="text-hero-numeral font-semibold text-text-primary">{{ strings.PLANS_FREE }}</p>
             <ul class="mt-6 flex flex-col gap-3 flex-1">
                 <li class="flex items-center gap-3 text-body text-text-primary">
@@ -42,12 +42,14 @@
             </div>
         </section>
 
+        <div class="h-px bg-border sm:hidden" aria-hidden="true"></div>
+
         {# ── Premium card ── #}
-        <section class="flex flex-col rounded-card border p-6
-            {% if current_user_plan == "premium" %}border-2 border-border-strong{% else %}border-border{% endif %}
-            bg-surface-1">
-            <h2 class="text-title font-semibold text-text-primary">{{ strings.PLANS_PREMIUM_NAME }}</h2>
-            <div class="border-b border-border mt-3 mb-4"></div>
+        <section class="flex flex-col py-4 sm:p-6
+            {% if current_user_plan == "premium" %}sm:border-2 sm:border-border-strong{% endif %}
+            ">
+            <h2 class="flat-section-title sm:text-title sm:text-text-primary">{{ strings.PLANS_PREMIUM_NAME }}</h2>
+            <div class="h-px bg-border mt-3 mb-4" aria-hidden="true"></div>
             <p class="text-hero-numeral font-semibold text-text-primary">
                 {% if premium and premium.price_monthly %}
                 ${{ "{:,.0f}".format(premium.price_monthly / 100) }}
