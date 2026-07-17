@@ -14,16 +14,15 @@ import sqlite3
 import structlog
 
 from app.models import db
+from app.services.activities.slugs import unique_slug
 from app.services.common import db as _db
 from app.services.entries.entries import ActivityNotFoundError
-from app.services.activities.slugs import unique_slug
 from app.services.plans import check_activity_limit, check_secret_activity_allowed
 
 log = structlog.get_logger()
 
-#: Maximum length (characters) of an activity name accepted by
-#: :func:`rename_activity`.
-RENAME_ACTIVITY_MAX_NAME = 200
+#: Maximum length (characters) of an activity name.
+ACTIVITY_MAX_NAME = 20
 
 #: Default fallback icon when an activity has no icon (or an unknown one).
 DEFAULT_ICON = "circle-dot"
@@ -58,7 +57,9 @@ def _normalize_icon(icon: str | None) -> str:
     return DEFAULT_ICON
 
 
-def create_activity(owner_id: int, *, name: str, icon: str | None = None, secret: bool = False) -> dict:
+def create_activity(
+    owner_id: int, *, name: str, icon: str | None = None, secret: bool = False
+) -> dict:
     """Create an activity for *owner_id*.
 
     In one transaction, inserts one ``activity`` row (a per-owner-unique
@@ -66,6 +67,8 @@ def create_activity(owner_id: int, *, name: str, icon: str | None = None, secret
 
     Returns ``{"activity_id": int}``.
     """
+    if len(name) > ACTIVITY_MAX_NAME:
+        raise ValueError(f"activity name must be at most {ACTIVITY_MAX_NAME} characters")
     safe_icon = _normalize_icon(icon)
 
     with db.connect() as conn:
@@ -107,8 +110,8 @@ def rename_activity(
         raise ValueError("activity name must not be empty")
     if len(name) < 2:
         raise ValueError("activity name must be at least 2 characters")
-    if len(name) > RENAME_ACTIVITY_MAX_NAME:
-        raise ValueError(f"activity name must be at most {RENAME_ACTIVITY_MAX_NAME} characters")
+    if len(name) > ACTIVITY_MAX_NAME:
+        raise ValueError(f"activity name must be at most {ACTIVITY_MAX_NAME} characters")
 
     slug = unique_slug(conn, owner_id, name)
 
@@ -148,8 +151,8 @@ def update_activity(
             raise ValueError("activity name must not be empty")
         if len(name) < 2:
             raise ValueError("activity name must be at least 2 characters")
-        if len(name) > RENAME_ACTIVITY_MAX_NAME:
-            raise ValueError(f"activity name must be at most {RENAME_ACTIVITY_MAX_NAME} characters")
+        if len(name) > ACTIVITY_MAX_NAME:
+            raise ValueError(f"activity name must be at most {ACTIVITY_MAX_NAME} characters")
 
     assignments = []
     params = []

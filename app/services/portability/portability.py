@@ -7,12 +7,12 @@ tags), and social graph metadata.
 
 from __future__ import annotations
 
-import sqlite3
 from datetime import UTC, datetime
 from typing import Any
 
 from app.models import db
 from app.models.db import connect
+from app.services.activities.categories import ACTIVITY_MAX_NAME
 
 SCHEMA_VERSION = 3
 ENTRY_EXPORT_SCHEMA_VERSION = 1
@@ -66,21 +66,25 @@ def export_data(owner_id: int) -> dict:
                 (owner_id, act["id"]),
             ).fetchall()
 
-            activity_list.append({
-                "name": act["name"],
-                "slug": act["slug"],
-                "icon": act["icon"],
-                "entries": [
-                    {
-                        "occurred_at": e["occurred_at"],
-                        "memo": e["memo"] or "",
-                        "num_value": float(e["num_value"]) if e["num_value"] is not None else None,
-                        "tags": e["tags"] or "",
-                        "time_known": e["time_known"] == 1,
-                    }
-                    for e in entries
-                ],
-            })
+            activity_list.append(
+                {
+                    "name": act["name"],
+                    "slug": act["slug"],
+                    "icon": act["icon"],
+                    "entries": [
+                        {
+                            "occurred_at": e["occurred_at"],
+                            "memo": e["memo"] or "",
+                            "num_value": float(e["num_value"])
+                            if e["num_value"] is not None
+                            else None,
+                            "tags": e["tags"] or "",
+                            "time_known": e["time_known"] == 1,
+                        }
+                        for e in entries
+                    ],
+                }
+            )
 
     return {
         "schema_version": SCHEMA_VERSION,
@@ -124,16 +128,29 @@ def import_data(owner_id: int, payload: dict) -> dict[str, int]:
     for i, act in enumerate(activities_data):
         if not isinstance(act, dict):
             raise ImportValidationError(f"Activity {i} is not an object.")
-        if "name" not in act or not isinstance(act["name"], str) or not act["name"].strip():
+        if (
+            "name" not in act
+            or not isinstance(act["name"], str)
+            or not act["name"].strip()
+            or len(act["name"].strip()) > ACTIVITY_MAX_NAME
+        ):
             raise ImportValidationError(f"Activity {i} has invalid name.")
         entries = act.get("entries", [])
         if not isinstance(entries, list):
             raise ImportValidationError(f"Activity '{act['name']}' entries must be a list.")
         for j, entry in enumerate(entries):
             if not isinstance(entry, dict):
-                raise ImportValidationError(f"Entry {j} in activity '{act['name']}' is not an object.")
-            if "occurred_at" not in entry or not isinstance(entry["occurred_at"], str) or not entry["occurred_at"].strip():
-                raise ImportValidationError(f"Entry {j} in activity '{act['name']}' missing occurred_at.")
+                raise ImportValidationError(
+                    f"Entry {j} in activity '{act['name']}' is not an object."
+                )
+            if (
+                "occurred_at" not in entry
+                or not isinstance(entry["occurred_at"], str)
+                or not entry["occurred_at"].strip()
+            ):
+                raise ImportValidationError(
+                    f"Entry {j} in activity '{act['name']}' missing occurred_at."
+                )
             _validate_iso_timestamp(
                 entry["occurred_at"],
                 f"Entry {j} in activity '{act['name']}' has invalid occurred_at.",
@@ -200,7 +217,17 @@ def import_data(owner_id: int, payload: dict) -> dict[str, int]:
                     conn.execute(
                         "INSERT INTO entry (owner_id, activity_id, occurred_at, memo, num_value, tags, time_known, created_at, updated_at)"
                         " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                        (owner_id, act_id, occurred_at, memo, num_value, tags, 1 if time_known else 0, now, now),
+                        (
+                            owner_id,
+                            act_id,
+                            occurred_at,
+                            memo,
+                            num_value,
+                            tags,
+                            1 if time_known else 0,
+                            now,
+                            now,
+                        ),
                     )
                     entries_imported += 1
 
@@ -251,17 +278,19 @@ def export_entries(owner_id: int) -> dict:
                 (owner_id, act["id"]),
             ).fetchall()
 
-            activity_list.append({
-                "name": act["name"],
-                "entries": [
-                    {
-                        "occurred_at": e["occurred_at"],
-                        "memo": e["memo"] or "",
-                        "time_known": e["time_known"] == 1,
-                    }
-                    for e in entries
-                ],
-            })
+            activity_list.append(
+                {
+                    "name": act["name"],
+                    "entries": [
+                        {
+                            "occurred_at": e["occurred_at"],
+                            "memo": e["memo"] or "",
+                            "time_known": e["time_known"] == 1,
+                        }
+                        for e in entries
+                    ],
+                }
+            )
 
     return {
         "schema_version": ENTRY_EXPORT_SCHEMA_VERSION,
@@ -346,9 +375,7 @@ def _validated_entry_export_activities(payload: dict[str, Any]) -> list[dict[str
 
     schema_version = payload.get("schema_version")
     if schema_version != ENTRY_EXPORT_SCHEMA_VERSION:
-        raise EntryImportError(
-            f"Unsupported entry export schema version: {schema_version!r}."
-        )
+        raise EntryImportError(f"Unsupported entry export schema version: {schema_version!r}.")
 
     exported_at = payload.get("exported_at")
     if not isinstance(exported_at, str) or not exported_at.strip():
@@ -367,7 +394,12 @@ def _validated_entry_export_activities(payload: dict[str, Any]) -> list[dict[str
     for i, act in enumerate(activities_data):
         if not isinstance(act, dict):
             raise EntryImportError(f"Activity {i} is not an object.")
-        if "name" not in act or not isinstance(act["name"], str) or not act["name"].strip():
+        if (
+            "name" not in act
+            or not isinstance(act["name"], str)
+            or not act["name"].strip()
+            or len(act["name"].strip()) > ACTIVITY_MAX_NAME
+        ):
             raise EntryImportError(f"Activity {i} has invalid name.")
         entries = act.get("entries", [])
         if not isinstance(entries, list):
@@ -375,8 +407,14 @@ def _validated_entry_export_activities(payload: dict[str, Any]) -> list[dict[str
         for j, entry in enumerate(entries):
             if not isinstance(entry, dict):
                 raise EntryImportError(f"Entry {j} in activity '{act['name']}' is not an object.")
-            if "occurred_at" not in entry or not isinstance(entry["occurred_at"], str) or not entry["occurred_at"].strip():
-                raise EntryImportError(f"Entry {j} in activity '{act['name']}' missing occurred_at.")
+            if (
+                "occurred_at" not in entry
+                or not isinstance(entry["occurred_at"], str)
+                or not entry["occurred_at"].strip()
+            ):
+                raise EntryImportError(
+                    f"Entry {j} in activity '{act['name']}' missing occurred_at."
+                )
             _validate_iso_timestamp(
                 entry["occurred_at"],
                 f"Entry {j} in activity '{act['name']}' has invalid occurred_at.",
