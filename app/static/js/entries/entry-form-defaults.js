@@ -19,9 +19,7 @@
 
   function setEntryFormToLocalNow(form) {
     var now = new Date();
-    var dateInput = form.querySelector('input[name="date"]');
     var timeInput = form.querySelector('input[name="time"]');
-    if (dateInput) dateInput.value = localDateValue(now);
     if (timeInput) timeInput.value = localTimeValue(now);
   }
 
