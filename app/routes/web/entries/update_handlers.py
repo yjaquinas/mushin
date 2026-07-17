@@ -70,7 +70,16 @@ async def log_sheet_body(request: Request, activity_id: int, owner_id: int) -> H
     return templates.TemplateResponse(
         request=request,
         name="components/entries/log_sheet.html.jinja2",
-        context={"activity_id": activity_id, "name": row["name"], "fields": fields, "today": selected_date, "time_known": True, "time_value": now.strftime("%H:%M"), "selected_date": selected_date},
+        context={
+            "activity_id": activity_id,
+            "name": row["name"],
+            "fields": fields,
+            "today": selected_date,
+            "time_known": date_param is None,
+            "time_value": now.strftime("%H:%M"),
+            "selected_date": selected_date,
+            "default_to_local_now": date_param is None,
+        },
     )
 
 

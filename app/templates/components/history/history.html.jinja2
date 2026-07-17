@@ -62,7 +62,7 @@
     <div class="flex items-center justify-between">
         <button
             type="button"
-            hx-get="/activities/{{ activity_id }}/history?period={{ history.period }}&anchor={{ history.prev_anchor }}"
+            hx-get="/activities/{{ activity_id }}/history?period={{ history.period }}&anchor={{ history.prev_anchor }}{% if history.selected_day %}&day={{ history.selected_day }}{% endif %}"
             hx-target="#activity-section-history-{{ activity_id }}"
             hx-swap="outerHTML"
             class="min-h-tap min-w-tap rounded-button px-2 text-body text-text-secondary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-strong"
@@ -77,7 +77,7 @@
         </div>
         <button
             type="button"
-            hx-get="/activities/{{ activity_id }}/history?period={{ history.period }}&anchor={{ history.next_anchor }}"
+            hx-get="/activities/{{ activity_id }}/history?period={{ history.period }}&anchor={{ history.next_anchor }}{% if history.selected_day %}&day={{ history.selected_day }}{% endif %}"
             hx-target="#activity-section-history-{{ activity_id }}"
             hx-swap="outerHTML"
             class="min-h-tap min-w-tap rounded-button px-2 text-body text-text-secondary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-strong"
@@ -109,10 +109,11 @@
                                 {% if history.is_owner %}
                                 <button
                                     type="button"
-                                    class="cal-day{% if day.marked %} cal-day--marked{% endif %}{% if day.today %} cal-day--today{% endif %}{% if not day.current_month %} cal-day--adjacent{% endif %}{% if day.adjacent_group_start %} cal-day--adjacent-start{% endif %}{% if day.adjacent_group_end %} cal-day--adjacent-end{% endif %}"
-                                    hx-get="/activities/{{ activity_id }}/log?date={{ day.date }}"
-                                    hx-target="#activity-target-log-sheet"
-                                    hx-swap="innerHTML"
+                                    aria-pressed="{{ 'true' if day.selected else 'false' }}"
+                                    class="cal-day{% if day.marked %} cal-day--marked{% endif %}{% if day.today %} cal-day--today{% endif %}{% if day.selected %} cal-day--selected{% endif %}{% if not day.current_month %} cal-day--adjacent{% endif %}{% if day.adjacent_group_start %} cal-day--adjacent-start{% endif %}{% if day.adjacent_group_end %} cal-day--adjacent-end{% endif %}"
+                                    hx-get="/activities/{{ activity_id }}/history?period=month&anchor={{ history.anchor }}&day={{ day.date }}"
+                                    hx-target="#activity-section-history-{{ activity_id }}"
+                                    hx-swap="outerHTML"
                                 >
                                     {{ day.day }}
                                 </button>
@@ -145,13 +146,17 @@
     {% endif %}
 
     {# Log area #}
+    {% if history.selected_day %}
+    {% include "components/history/_selected_day.html.jinja2" with context %}
+    {% else %}
     {% include "components/history/period_log.html.jinja2" with context %}
+    {% endif %}
 
-    {% if history.total_pages > 1 %}
+    {% if not history.selected_day and history.total_pages > 1 %}
     <nav class="flex items-center justify-center gap-1" aria-label="pagination">
         {% if history.page > 1 %}
         <button type="button" class="min-h-tap min-w-[2rem] rounded-button px-2 py-1 text-body text-text-secondary transition hover:bg-surface-2"
-            hx-get="/activities/{{ activity_id }}/history?period={{ history.period }}&anchor={{ history.anchor }}&page={{ history.page - 1 }}"
+            hx-get="/activities/{{ activity_id }}/history?period={{ history.period }}&anchor={{ history.anchor }}{% if history.selected_day %}&day={{ history.selected_day }}{% endif %}&page={{ history.page - 1 }}"
             hx-target="#activity-section-history-{{ activity_id }}" hx-swap="outerHTML"
         >
             &laquo;
@@ -167,7 +172,7 @@
                 {% else %}
                     text-text-secondary hover:bg-surface-2
                 {% endif %}"
-                hx-get="/activities/{{ activity_id }}/history?period={{ history.period }}&anchor={{ history.anchor }}&page={{ p }}"
+                hx-get="/activities/{{ activity_id }}/history?period={{ history.period }}&anchor={{ history.anchor }}{% if history.selected_day %}&day={{ history.selected_day }}{% endif %}&page={{ p }}"
                 hx-target="#activity-section-history-{{ activity_id }}" hx-swap="outerHTML"
             >
                 {{ p }}
@@ -176,7 +181,7 @@
         {% endfor %}
         {% if history.page < history.total_pages %}
         <button type="button" class="min-h-tap min-w-[2rem] rounded-button px-2 py-1 text-body text-text-secondary transition hover:bg-surface-2"
-            hx-get="/activities/{{ activity_id }}/history?period={{ history.period }}&anchor={{ history.anchor }}&page={{ history.page + 1 }}"
+            hx-get="/activities/{{ activity_id }}/history?period={{ history.period }}&anchor={{ history.anchor }}{% if history.selected_day %}&day={{ history.selected_day }}{% endif %}&page={{ history.page + 1 }}"
             hx-target="#activity-section-history-{{ activity_id }}" hx-swap="outerHTML"
         >
             &raquo;

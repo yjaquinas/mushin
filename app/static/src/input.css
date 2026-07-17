@@ -428,10 +428,10 @@
   /*
    * .cal-day — a single day cell in the month calendar.
    *
-   * Only days with entries (--marked) are rendered as interactive <button>
-   * elements; days with no entries use <span class="cal-day--empty"> and
-   * are non-interactive. All cells share .cal-day's sizing (≥44px tap
-   * target) so the grid stays uniform.
+   * On an owner's calendar, every day is an interactive <button> so a date
+   * can be inspected before logging. Visitor calendars keep unmarked days
+   * read-only. All cells share .cal-day's sizing (≥44px tap target) so the
+   * grid stays uniform.
    *
    * State affordances:
    *   .cal-day--marked — a day with at least one entry. Signaled by a

@@ -15,16 +15,18 @@ from app.services.entries import comments, entries, stats
 def _build_history_context(activity_id: int, owner_id: int, *, period: str, anchor: date, tz: ZoneInfo, is_owner: bool = False, can_comment: bool = False, username: str | None = None, slug: str | None = None, expand_comment_entry_id: int | None = None, login_redirect_url: str | None = None, tag: str | None = None, selected_day: date | None = None, page: int = 1, page_size: int = 10) -> dict[str, Any]:
     _PAGE_SIZE = page_size
     today = datetime.now(UTC).date()
+    day_entries: list[dict[str, Any]] = []
 
     if period == "all":
         total_count = entries.count_entries(owner_id, activity_id)
         rows = entries.list_entries(owner_id, activity_id, tz=tz, limit=_PAGE_SIZE, offset=(page - 1) * _PAGE_SIZE)
         selected_day = None
     elif selected_day is not None:
-        total_count = entries.count_entries(owner_id, activity_id, start=selected_day, end=selected_day)
-        rows = entries.list_entries(owner_id, activity_id, tz=tz, start=selected_day, end=selected_day, limit=_PAGE_SIZE, offset=(page - 1) * _PAGE_SIZE)
         start = stats._shift_period(anchor, period, 0)
         end = stats._shift_period(anchor, period, 1) - timedelta(days=1)
+        day_entries = entries.list_entries_by_day(owner_id, activity_id, selected_day, tz=tz)
+        total_count = len(day_entries)
+        rows = []
         visual, label = _period_visual(period, activity_id, owner_id, start, end, tz, selected_day, today)
     else:
         start = stats._shift_period(anchor, period, 0)
@@ -35,7 +37,7 @@ def _build_history_context(activity_id: int, owner_id: int, *, period: str, anch
 
     total_pages = max(1, (total_count + _PAGE_SIZE - 1) // _PAGE_SIZE)
     log = _group_log(rows, tz)
-    _decorate_comment_counts(log, None)
+    _decorate_comment_counts(log, day_entries)
 
     base = {
         "period": period,
@@ -49,6 +51,8 @@ def _build_history_context(activity_id: int, owner_id: int, *, period: str, anch
         "expand_comment_entry_id": expand_comment_entry_id if period != "all" else None,
         "login_redirect_url": login_redirect_url,
         "selected_day": selected_day.isoformat() if selected_day is not None else None,
+        "selected_day_label": selected_day.strftime("%a, %b %-d, %Y") if selected_day is not None else None,
+        "day_entries": day_entries,
         "page": page,
         "total_pages": total_pages,
         "total_count": total_count,

@@ -1,0 +1,39 @@
+{% from "components/entries/_entry_row.html.jinja2" import entry_row %}
+<section class="flex flex-col gap-3 border-t border-border pt-3" aria-labelledby="history-selected-day-{{ activity_id }}">
+    <div class="flex items-center justify-between gap-2">
+        <h4 id="history-selected-day-{{ activity_id }}" class="text-body font-medium text-text-primary">
+            {{ strings.HISTORY_SELECTED_DAY.format(date=history.selected_day_label) }}
+        </h4>
+        <div class="flex items-center gap-1">
+            {% if history.is_owner %}
+            <button
+                type="button"
+                hx-get="/activities/{{ activity_id }}/log?date={{ history.selected_day }}"
+                hx-target="#activity-target-log-sheet"
+                hx-swap="innerHTML"
+                class="min-h-tap rounded-button bg-brand px-3 text-caption font-semibold text-on-brand transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+            >
+                {{ strings.HISTORY_ADD_ENTRY }}
+            </button>
+            {% endif %}
+            <button
+                type="button"
+                hx-get="/activities/{{ activity_id }}/history?period={{ history.period }}&anchor={{ history.anchor }}"
+                hx-target="#activity-section-history-{{ activity_id }}"
+                hx-swap="outerHTML"
+                class="min-h-tap rounded-button px-2 text-caption font-medium text-text-secondary transition hover:bg-surface-1 hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-strong"
+            >
+                {{ strings.HISTORY_CLEAR_SELECTION }}
+            </button>
+        </div>
+    </div>
+    {% if history.day_entries %}
+    <ul class="divide-y divide-border">
+        {% for entry in history.day_entries %}
+            {{ entry_row(entry, activity_id, is_owner=history.is_owner, can_comment=history.can_comment, username=history.username, slug=history.slug, expand_comment_entry_id=history.expand_comment_entry_id, login_redirect_url=history.login_redirect_url) }}
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-caption text-text-muted">{{ strings.HISTORY_LOG_EMPTY }}</p>
+    {% endif %}
+</section>
