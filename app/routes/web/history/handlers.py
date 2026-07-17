@@ -59,6 +59,9 @@ def activity_history_response(
     if isinstance(viewer, HTMLResponse):
         return viewer
 
+    if anchor is None:
+        anchor_date = datetime.now(viewer["tz"]).date()
+
     login_redirect_url = None
     if not viewer["is_owner"] and current_uid is None and viewer["username"] and viewer["slug"]:
         target = profiles.safe_next_path(profiles.canonical_activity_url(viewer["username"], viewer["slug"]))
@@ -160,5 +163,3 @@ def _parse_date(raw: str) -> date | None:
         return date.fromisoformat(raw)
     except ValueError:
         return None
-
-

@@ -3,7 +3,7 @@
 <section class="flex flex-col gap-3 pt-3" aria-labelledby="history-selected-day-{{ activity_id }}">
     <div class="flex items-center justify-between gap-2">
         <h4 id="history-selected-day-{{ activity_id }}" class="text-body font-medium text-text-primary">
-            {{ strings.HISTORY_SELECTED_DAY.format(date=history.selected_day_label) }}
+            {{ history.selected_day }}
         </h4>
         <div class="flex items-center gap-1">
             {% if history.is_owner %}
@@ -22,9 +22,10 @@
                 hx-get="/activities/{{ activity_id }}/history?period={{ history.period }}&anchor={{ history.anchor }}"
                 hx-target="#activity-section-history-{{ activity_id }}"
                 hx-swap="outerHTML"
-                class="min-h-tap rounded-button px-2 text-caption font-medium text-text-secondary transition hover:bg-surface-1 hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-strong"
+                class="flex min-h-tap min-w-tap items-center justify-center rounded-button text-text-secondary transition hover:bg-surface-1 hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-strong"
+                aria-label="{{ strings.HISTORY_CLEAR_SELECTION }}"
             >
-                {{ strings.HISTORY_CLEAR_SELECTION }}
+                {{ icon("x", size=20) }}
             </button>
         </div>
     </div>

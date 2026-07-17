@@ -29,7 +29,6 @@
         hx-target="#activity-section-history-{{ activity_id }}"
         hx-swap="outerHTML"
     ></span>
-    <h2 class="flat-section-title">{{ strings.HISTORY_LOG_HEADING }}</h2>
     {# Period switcher #}
     <div role="tablist" aria-label="{{ strings.HISTORY_PERIOD_SWITCHER_LABEL }}" class="flex gap-2">
         {% for period_key, period_label in [
@@ -112,7 +111,7 @@
                                     type="button"
                                     aria-pressed="{{ 'true' if day.selected else 'false' }}"
                                     class="cal-day{% if day.marked %} cal-day--marked{% endif %}{% if day.today %} cal-day--today{% endif %}{% if day.selected %} cal-day--selected{% endif %}{% if not day.current_month %} cal-day--adjacent{% endif %}{% if day.adjacent_group_start %} cal-day--adjacent-start{% endif %}{% if day.adjacent_group_end %} cal-day--adjacent-end{% endif %}"
-                                    hx-get="/activities/{{ activity_id }}/history?period=month&anchor={{ history.anchor }}&day={{ day.date }}"
+                                    hx-get="/activities/{{ activity_id }}/history?period=month&anchor={{ history.anchor }}{% if not day.selected %}&day={{ day.date }}{% endif %}"
                                     hx-target="#activity-section-history-{{ activity_id }}"
                                     hx-swap="outerHTML"
                                 >
@@ -123,7 +122,7 @@
                                     type="button"
                                     aria-pressed="{{ 'true' if day.selected else 'false' }}"
                                     class="cal-day cal-day--marked{% if day.today %} cal-day--today{% endif %}{% if day.selected %} cal-day--selected{% endif %}{% if not day.current_month %} cal-day--adjacent{% endif %}{% if day.adjacent_group_start %} cal-day--adjacent-start{% endif %}{% if day.adjacent_group_end %} cal-day--adjacent-end{% endif %}"
-                                    hx-get="/activities/{{ activity_id }}/history?period=month&anchor={{ history.anchor }}&day={{ day.date }}"
+                                    hx-get="/activities/{{ activity_id }}/history?period=month&anchor={{ history.anchor }}{% if not day.selected %}&day={{ day.date }}{% endif %}"
                                     hx-target="#activity-section-history-{{ activity_id }}"
                                     hx-swap="outerHTML"
                                 >

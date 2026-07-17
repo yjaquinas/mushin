@@ -17,7 +17,7 @@
         <span class="flex-shrink-0 inline-flex items-center rounded-full bg-brand-subtle px-2 py-0.5 text-xs font-medium text-on-brand">{{ strings.ACTIVITY_SECRET_BADGE }}</span>
         {% endif %}
         </div>
-        <h1 class="text-title font-semibold text-text-primary">{{ card_name }}</h1>
+        <h1 class="min-w-0 flex-1 truncate text-center text-title font-semibold text-text-primary">{{ card_name }}</h1>
         <div class="flex flex-1 justify-end">
             <button
                 type="button"
@@ -25,8 +25,8 @@
                 hx-get="/activities/{{ activity_id }}/rename-form"
                 hx-target="#activity-dialog-rename"
                 hx-swap="outerHTML"
-                class="min-h-tap min-w-tap flex items-center justify-center rounded text-text-muted transition hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-            >{{ icon('pencil', size=20) }}</button>
+                class="flex size-7 items-center justify-center rounded text-text-muted transition hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+            >{{ icon('pencil', size=18) }}</button>
         </div>
     </div>
     {% elif is_secret | default(false) %}
@@ -34,11 +34,11 @@
         <div class="flex flex-1">
             <span class="rounded-full bg-brand-subtle px-2 py-0.5 inline-flex items-center text-xs font-medium text-on-brand">{{ strings.ACTIVITY_SECRET_BADGE }}</span>
         </div>
-        <h2 class="text-title font-semibold text-text-primary">{{ card_name }}</h2>
+        <h2 class="min-w-0 flex-1 truncate text-center text-title font-semibold text-text-primary">{{ card_name }}</h2>
         <div class="flex flex-1"></div>
     </div>
     {% else %}
-    <h2 class="text-center text-title font-semibold text-text-primary">{{ card_name }}</h2>
+    <h2 class="truncate text-center text-title font-semibold text-text-primary">{{ card_name }}</h2>
     {% endif %}
     <div class="-mx-4 border-t border-border"></div>
     {% endif %}
