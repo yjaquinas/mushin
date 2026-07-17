@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
 from urllib.parse import quote
 
@@ -40,7 +40,7 @@ def _render_owner_activity_detail(
     tz: Any,
 ) -> HTMLResponse:
     """Build + render the full owner-dashboard ``activity_detail.html.jinja2``."""
-    today = datetime.now(UTC).date()
+    today = datetime.now(tz).date()
 
     expand_comment_entry_id = _resolve_comment_deep_link(
         request.query_params.get("entry_id"), activity_id=activity_id, owner_id=owner_id
@@ -165,7 +165,7 @@ def _render_readonly_activity_detail(
     context["share_copied_text"] = f"Link to @{username}/{slug} copied"
     context["share_failed_text"] = "Couldn't share the link."
 
-    today = datetime.now(UTC).date()
+    today = datetime.now(tz).date()
 
     expand_comment_entry_id = _resolve_comment_deep_link(
         request.query_params.get("entry_id"), activity_id=activity_id, owner_id=owner_id

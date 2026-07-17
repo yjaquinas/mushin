@@ -8,7 +8,7 @@ imported anywhere outside the ``web`` package's own context-assembly chain.
 from __future__ import annotations
 
 import calendar as cal
-from datetime import UTC, date, datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -45,7 +45,7 @@ def _build_calendar_context(
     (no cell selected) for callers that don't track a tapped day.
     """
     first, last = _month_bounds(year, month)
-    today = datetime.now(UTC).date()
+    today = datetime.now(tz).date()
     leading_pad = (first.weekday() + 1) % 7
     trailing_pad = (7 - ((leading_pad + last.day) % 7)) % 7
     visible_start = first - timedelta(days=leading_pad)

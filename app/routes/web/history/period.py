@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from datetime import UTC, date, datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -14,7 +14,7 @@ from app.services.entries import comments, entries, stats
 
 def _build_history_context(activity_id: int, owner_id: int, *, period: str, anchor: date, tz: ZoneInfo, is_owner: bool = False, can_comment: bool = False, username: str | None = None, slug: str | None = None, expand_comment_entry_id: int | None = None, login_redirect_url: str | None = None, tag: str | None = None, selected_day: date | None = None, page: int = 1, page_size: int = 10) -> dict[str, Any]:
     _PAGE_SIZE = page_size
-    today = datetime.now(UTC).date()
+    today = datetime.now(tz).date()
     day_entries: list[dict[str, Any]] = []
 
     if period == "all":
