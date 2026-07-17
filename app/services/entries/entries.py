@@ -351,10 +351,14 @@ def list_entries_by_day(
     *,
     tz: ZoneInfo,
 ) -> list[dict[str, Any]]:
-    """List entries for a specific local day."""
-    start = target_day
-    end = target_day + __import__("datetime").timedelta(days=1)
-    return list_entries(owner_id, activity_id, tz=tz, start=start, end=end)
+    """List entries whose stored wall-clock day is ``target_day``.
+
+    ISO8601 strings with offsets do not sort by calendar day as SQLite text,
+    so SQL start/end bounds can include entries from an adjacent stored day.
+    Match the day bucketing used by the calendar instead.
+    """
+    rows = list_entries(owner_id, activity_id, tz=tz)
+    return [entry for entry in rows if _local_day(entry["occurred_at"], tz) == target_day]
 
 
 # ---------------------------------------------------------------------------
