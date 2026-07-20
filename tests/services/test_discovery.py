@@ -2,12 +2,10 @@ from __future__ import annotations
 
 from app.models import db
 from app.routes.web.common.templates import _format_feed_entry_timestamp
-from app.services.search.discovery import recent_public_entries
+from app.services.search.discovery import recent_fellow_entries, recent_public_entries
 
 
-def test_recent_public_entries_returns_individual_visible_entries(
-    tmp_path, monkeypatch
-) -> None:
+def test_recent_public_entries_returns_individual_visible_entries(tmp_path, monkeypatch) -> None:
     database_path = tmp_path / "mushin.db"
     monkeypatch.setattr(db, "DATABASE_PATH", str(database_path))
 
@@ -90,3 +88,50 @@ def test_format_feed_entry_timestamp_uses_entry_date_and_optional_time() -> None
 
     assert _format_feed_entry_timestamp(occurred_at) == "Jul 20 2:05 PM"
     assert _format_feed_entry_timestamp(occurred_at, time_known=False) == "Jul 20"
+
+
+def test_recent_fellow_entries_returns_only_consented_fellows(tmp_path, monkeypatch) -> None:
+    database_path = tmp_path / "mushin.db"
+    monkeypatch.setattr(db, "DATABASE_PATH", str(database_path))
+
+    with db.connect() as conn:
+        conn.executescript(
+            """
+            CREATE TABLE user (id INTEGER PRIMARY KEY, username TEXT NOT NULL, deleted_at TEXT);
+            CREATE TABLE activity (
+                id INTEGER PRIMARY KEY, owner_id INTEGER NOT NULL, name TEXT NOT NULL,
+                slug TEXT, archived_at TEXT, secret INTEGER NOT NULL DEFAULT 0
+            );
+            CREATE TABLE entry (
+                id INTEGER PRIMARY KEY, owner_id INTEGER NOT NULL, activity_id INTEGER NOT NULL,
+                memo TEXT, occurred_at TEXT NOT NULL, time_known INTEGER NOT NULL DEFAULT 1,
+                created_at TEXT NOT NULL, hidden_at TEXT
+            );
+            CREATE TABLE connection (
+                id INTEGER PRIMARY KEY, user_lo INTEGER NOT NULL, user_hi INTEGER NOT NULL,
+                status TEXT NOT NULL, sharing_consent_at TEXT
+            );
+            INSERT INTO user VALUES (1, 'viewer', NULL), (2, 'fellow', NULL),
+                (3, 'pending', NULL), (4, 'unconsented', NULL);
+            INSERT INTO activity VALUES
+                (1, 2, 'Reading', 'reading', NULL, 0),
+                (2, 2, 'Secret', 'secret', NULL, 1),
+                (3, 3, 'Running', 'running', NULL, 0),
+                (4, 4, 'Writing', 'writing', NULL, 0);
+            INSERT INTO entry VALUES
+                (1, 2, 1, 'visible', '2026-01-01', 1, '2026-01-04T00:00:00Z', NULL),
+                (2, 2, 2, 'secret', '2026-01-02', 1, '2026-01-05T00:00:00Z', NULL),
+                (3, 3, 3, 'pending', '2026-01-03', 1, '2026-01-06T00:00:00Z', NULL),
+                (4, 4, 4, 'unconsented', '2026-01-04', 1, '2026-01-07T00:00:00Z', NULL);
+            INSERT INTO connection VALUES
+                (1, 1, 2, 'accepted', '2026-01-01T00:00:00Z'),
+                (2, 1, 3, 'pending', NULL),
+                (3, 1, 4, 'accepted', NULL);
+            """
+        )
+
+    feed = recent_fellow_entries(1)
+
+    assert [(item["entry_id"], item["username"], item["name"]) for item in feed] == [
+        (1, "fellow", "Reading")
+    ]

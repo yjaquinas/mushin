@@ -1,0 +1,17 @@
+<div id="social-feed-content" class="flex flex-col gap-4">
+    <div role="tablist" aria-label="{{ strings.SOCIAL_FEED_FILTER_LABEL }}" class="flex gap-2">
+        {% for scope, label in [("public", strings.SOCIAL_FEED_FILTER_PUBLIC), ("fellows", strings.SOCIAL_FEED_FILTER_FELLOWS)] %}
+        {% set selected = feed_scope == scope %}
+        <button
+            type="button"
+            role="tab"
+            id="social-feed-tab-{{ scope }}"
+            aria-selected="{{ 'true' if selected else 'false' }}"
+            aria-controls="recent-entries"
+            {% if not selected %}hx-get="/social/feed?scope={{ scope }}" hx-target="#social-feed-content" hx-swap="outerHTML"{% endif %}
+            class="min-h-tap flex-1 rounded-button px-3 text-body transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-strong {% if selected %}border border-border-strong bg-surface-2 font-semibold text-text-primary{% else %}border border-border text-text-secondary hover:bg-surface-2{% endif %}"
+        >{{ label }}</button>
+        {% endfor %}
+    </div>
+    {% include "components/entries/_recent_entries.html.jinja2" %}
+</div>

@@ -87,6 +87,39 @@ def recent_public_entries(*, limit: int = 10) -> list[dict]:
             (capped,),
         ).fetchall()
 
+    return _feed_entries(rows)
+
+
+def recent_fellow_entries(viewer_id: int, *, limit: int = 10) -> list[dict]:
+    """Return recent non-secret entries from accepted, consented fellows."""
+    capped = clamp_limit(limit)
+    with db.connect() as conn:
+        conn.execute("BEGIN")
+        rows = conn.execute(
+            """SELECT a.id, a.name, a.slug,
+                      u.username,
+                      e.id AS entry_id, e.memo, e.occurred_at, e.time_known, e.created_at
+                 FROM connection c
+                 JOIN user u ON u.id = CASE WHEN c.user_lo = ? THEN c.user_hi ELSE c.user_lo END
+                 JOIN entry e ON e.owner_id = u.id
+                 JOIN activity a ON a.id = e.activity_id
+                WHERE (c.user_lo = ? OR c.user_hi = ?)
+                  AND c.status = 'accepted'
+                  AND c.sharing_consent_at IS NOT NULL
+                  AND e.hidden_at IS NULL
+                  AND a.archived_at IS NULL
+                  AND a.secret = 0
+                  AND u.deleted_at IS NULL
+                ORDER BY e.created_at DESC, e.id DESC
+                LIMIT ?""",
+            (viewer_id, viewer_id, viewer_id, capped),
+        ).fetchall()
+
+    return _feed_entries(rows)
+
+
+def _feed_entries(rows) -> list[dict]:
+    """Decorate feed rows with canonical public URLs."""
     return [
         {
             "id": row["id"],
@@ -146,7 +179,17 @@ def search_tags(searcher_id: int, query: str, *, limit: int = 20) -> list[dict]:
                )
                ORDER BY e.created_at DESC
                LIMIT ?""",
-             (pattern, LIKE_ESCAPE, searcher_id, searcher_id, searcher_id, searcher_id, searcher_id, searcher_id, capped * 2),
+            (
+                pattern,
+                LIKE_ESCAPE,
+                searcher_id,
+                searcher_id,
+                searcher_id,
+                searcher_id,
+                searcher_id,
+                searcher_id,
+                capped * 2,
+            ),
         ).fetchall()
 
         results = []
@@ -161,21 +204,27 @@ def search_tags(searcher_id: int, query: str, *, limit: int = 20) -> list[dict]:
                 current_user_id=searcher_id,
                 profile_user=profile_user,
             )
-            can_open_detail = capability in {"owner", "connected", "public"} and bool(row["activity_slug"])
+            can_open_detail = capability in {"owner", "connected", "public"} and bool(
+                row["activity_slug"]
+            )
             profile_url = profiles.canonical_profile_url(row["username"])
-            activity_url = profiles.canonical_activity_url(row["username"], row["activity_slug"] or "")
+            activity_url = profiles.canonical_activity_url(
+                row["username"], row["activity_slug"] or ""
+            )
 
-            results.append({
-                "entry_id": row["id"],
-                "username": row["username"],
-                "activity_name": row["activity_name"],
-                "memo": row["memo"],
-                "occurred_at": row["occurred_at"],
-                "time_known": bool(row["time_known"]),
-                "created_at": row["created_at"],
-                "activity_url": activity_url if can_open_detail else profile_url,
-                "detail_visible": can_open_detail,
-            })
+            results.append(
+                {
+                    "entry_id": row["id"],
+                    "username": row["username"],
+                    "activity_name": row["activity_name"],
+                    "memo": row["memo"],
+                    "occurred_at": row["occurred_at"],
+                    "time_known": bool(row["time_known"]),
+                    "created_at": row["created_at"],
+                    "activity_url": activity_url if can_open_detail else profile_url,
+                    "detail_visible": can_open_detail,
+                }
+            )
 
             if len(results) >= capped:
                 break

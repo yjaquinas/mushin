@@ -26,6 +26,6 @@
     <div class="h-px bg-border" aria-hidden="true"></div>
     {% endif %}
     {% else %}
-    <p class="text-caption text-text-muted">{{ strings.ENTRY_FEED_EMPTY }}</p>
+    <p class="text-caption text-text-muted">{{ strings.SOCIAL_FEED_FELLOWS_EMPTY if feed_scope | default('public') == 'fellows' else strings.ENTRY_FEED_EMPTY }}</p>
     {% endfor %}
 </div>

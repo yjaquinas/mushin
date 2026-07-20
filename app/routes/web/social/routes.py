@@ -1,11 +1,4 @@
-"""Social (people, tags, and activities).
-
-Session-authenticated. The page route always renders the full page (with
-recent public entries and a hidden search section); the results route is
-HTMX-only, debounced by the search box itself (see web/social/social.html
-.jinja2), and always returns the components/social/explore_results.html
-.jinja2 fragment.
-"""
+"""Social routes; handler bodies live in companion modules."""
 
 from __future__ import annotations
 
@@ -14,20 +7,11 @@ from typing import Annotated
 from fastapi import APIRouter, Cookie, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
-from app.auth import sessions, users as auth_users
+from app.auth import sessions
+from app.auth import users as auth_users
 from app.models import db
-from app.routes.web import (
-    _build_card_context,
-    _build_fellows_context,
-    _list_activities,
-)
-from app.routes.web.common import _current_user, templates
-from app.routes.web.common import ui_strings as strings
-from app.routes.web.common.flash import _clear_flash, _read_flash, _set_flash
-from app.services.search import search
-from app.services.search.discovery import recent_public_entries
-from app.services.social import connections, profiles
-from app.ui_strings import META_DESCRIPTION_ACTIVITY, META_DESCRIPTION_PROFILE
+from app.routes.web.social import _feed_handlers, _profile_handlers
+from app.services.social import profiles
 
 router = APIRouter()
 
@@ -37,28 +21,16 @@ async def social_page(
     request: Request,
     session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
 ) -> HTMLResponse | RedirectResponse:
-    """Render the social page — a search box plus an initially-empty results region."""
-    user = _current_user(session)
-    if user is None:
-        response = RedirectResponse(url="/", status_code=303)
-        _set_flash(response, "login_required")
-        return response
+    return await _feed_handlers.social_page(request, session)
 
-    return templates.TemplateResponse(
-        request=request,
-        name="web/social/social.html.jinja2",
-        context={
-            "query": "",
-            "kind": "",
-            "people": [],
-            "tags": [],
-            "activities": [],
-            "feed_entries": recent_public_entries(limit=10),
-            "current_page": "social",
-            "page_title": strings.SOCIAL_TITLE,
-            "meta_robots": "noindex, nofollow",
-        },
-    )
+
+@router.get("/social/feed", response_class=HTMLResponse)
+async def social_feed(
+    request: Request,
+    scope: Annotated[str, Query(pattern="^(public|fellows)$")] = "public",
+    session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
+) -> HTMLResponse:
+    return await _feed_handlers.social_feed(request, session, scope)
 
 
 @router.get("/social/results", response_class=HTMLResponse)
@@ -67,20 +39,7 @@ async def social_results(
     q: Annotated[str, Query()] = "",
     session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
 ) -> HTMLResponse:
-    """Return the grouped search results fragment for the search box."""
-    user = _current_user(session)
-    if user is None:
-        return HTMLResponse(status_code=401)
-    owner_id = int(user["id"])
-
-    query = q.strip()
-    results = search.grouped_results(owner_id, query, limit=20)
-
-    return templates.TemplateResponse(
-        request=request,
-        name="components/social/explore_results.html.jinja2",
-        context=results,
-    )
+    return await _feed_handlers.social_results(request, session, q)
 
 
 @router.get("/social/@{username}", response_class=HTMLResponse, response_model=None)
@@ -89,51 +48,7 @@ async def social_profile(
     username: str,
     session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
 ) -> HTMLResponse | RedirectResponse:
-    """Render another user's profile within the social tab."""
-    current_uid = sessions.read_uid(session)
-
-    with db.connect() as conn:
-        conn.execute("BEGIN")
-        profile_user = profiles.get_public_user(conn, username)
-        if profile_user is None:
-            return HTMLResponse(status_code=404)
-
-        owner_id = int(profile_user["id"])
-        cap = profiles.viewer_capability(
-            conn, current_user_id=current_uid, profile_user=profile_user
-        )
-
-        if cap == "owner":
-            return RedirectResponse(url="/home", status_code=303)
-
-        if cap == "blocked":
-            return HTMLResponse(status_code=404)
-
-        tz = auth_users.get_user_timezone(owner_id)
-        context = _read_only_social_profile_context(
-            conn, username, owner_id, cap=cap, tz=tz, current_uid=current_uid,
-            visibility=profile_user["visibility"],
-            bio=profile_user.get("bio", ""),
-        )
-        context["flash_message"] = _read_flash(request)
-        context["current_page"] = "social"
-        context["page_title"] = username
-        context["profile_url"] = profiles.canonical_profile_url(username)
-        context["share_label"] = f"@{username}"
-        context["share_copied_text"] = f"Link to @{username} copied"
-        context["share_failed_text"] = "Couldn't share the link."
-        context["meta_description"] = META_DESCRIPTION_PROFILE.format(username=username)
-        context["og_title"] = f"{username} · {strings.APP_NAME}"
-        context["og_description"] = META_DESCRIPTION_PROFILE.format(username=username)
-        context["og_type"] = "profile"
-
-    response = templates.TemplateResponse(
-        request=request,
-        name="web/social/public_profile.html.jinja2",
-        context=context,
-    )
-    _clear_flash(response)
-    return response
+    return await _profile_handlers.social_profile(request, username, sessions.read_uid(session))
 
 
 @router.get("/social/@{username}/{slug}", response_class=HTMLResponse, response_model=None)
@@ -166,22 +81,18 @@ async def social_activity(
         cap = profiles.viewer_capability(
             conn, current_user_id=current_uid, profile_user=profile_user
         )
-
         if cap == "blocked":
             return HTMLResponse(status_code=404)
-
         if cap == "owner":
             target = profiles.canonical_activity_url(username, slug)
             if request.url.query:
                 target = f"{target}?{request.url.query}"
             return RedirectResponse(url=target, status_code=303)
-
         if not profiles.can_view_activity_detail(
             conn, current_user_id=current_uid, profile_user=profile_user
         ):
             return RedirectResponse(url=f"/social/@{username}", status_code=303)
 
-        tz = auth_users.get_user_timezone(owner_id)
         from app.routes.public.activity.handlers import _render_readonly_activity_detail
 
         return _render_readonly_activity_detail(
@@ -191,37 +102,7 @@ async def social_activity(
             slug,
             owner_id,
             activity_id,
-            tz=tz,
+            tz=auth_users.get_user_timezone(owner_id),
             current_user_id=current_uid,
             profile_user=profile_user,
         )
-
-
-def _read_only_social_profile_context(
-    conn,
-    username: str,
-    owner_id: int,
-    *,
-    cap: str,
-    tz,
-    current_uid: int | None,
-    visibility: str = "public",
-    bio: str = "",
-) -> dict:
-    """Assemble the read-only profile context for the social tab."""
-    linked = cap in ("connected", "public")
-    activities = _list_activities(conn, owner_id, include_secret=False)
-    cards = [_build_card_context(conn, owner_id, row, tz=tz, linked=linked) for row in activities]
-    fellows_context = _build_fellows_context(owner_id, viewer_id=current_uid, is_owner=False, visibility=visibility)
-    state = (
-        connections.relationship_state(current_uid, owner_id) if current_uid is not None else "none"
-    )
-    return {
-        "username": username,
-        "view_mode": cap,
-        "cards": cards,
-        "fellows": fellows_context,
-        "state": state,
-        "viewer_logged_in": current_uid is not None,
-        "bio": bio,
-    }
