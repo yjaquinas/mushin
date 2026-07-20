@@ -7,11 +7,14 @@
             role="tab"
             id="social-feed-tab-{{ scope }}"
             aria-selected="{{ 'true' if selected else 'false' }}"
-            aria-controls="recent-entries"
+            aria-controls="social-feed-pages"
             {% if not selected %}hx-get="/social/feed?scope={{ scope }}" hx-target="#social-feed-content" hx-swap="outerHTML"{% endif %}
             class="min-h-tap flex-1 rounded-button px-3 text-body transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-strong {% if selected %}border border-border-strong bg-surface-2 font-semibold text-text-primary{% else %}border border-border text-text-secondary hover:bg-surface-2{% endif %}"
         >{{ label }}</button>
         {% endfor %}
     </div>
-    {% include "components/entries/_recent_entries.html.jinja2" %}
+    <div id="social-feed-pages" class="flex flex-col gap-4" role="tabpanel">
+        {% include "components/social/_feed_page.html.jinja2" %}
+        <p class="text-center text-caption text-text-muted">{{ strings.SOCIAL_FEED_WINDOW_FOOTER }}</p>
+    </div>
 </div>

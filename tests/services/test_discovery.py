@@ -1,8 +1,15 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 from app.models import db
 from app.routes.web.common.templates import _format_feed_entry_timestamp
-from app.services.search.discovery import recent_fellow_entries, recent_public_entries
+from app.services.search.discovery import (
+    FeedCursorError,
+    recent_fellow_entries,
+    recent_public_entries,
+    recent_social_entries,
+)
 
 
 def test_recent_public_entries_returns_individual_visible_entries(tmp_path, monkeypatch) -> None:
@@ -135,3 +142,58 @@ def test_recent_fellow_entries_returns_only_consented_fellows(tmp_path, monkeypa
     assert [(item["entry_id"], item["username"], item["name"]) for item in feed] == [
         (1, "fellow", "Reading")
     ]
+
+
+def test_recent_social_entries_excludes_self_limits_window_and_paginates(tmp_path, monkeypatch) -> None:
+    database_path = tmp_path / "mushin.db"
+    monkeypatch.setattr(db, "DATABASE_PATH", str(database_path))
+
+    with db.connect() as conn:
+        conn.executescript(
+            """
+            CREATE TABLE user (
+                id INTEGER PRIMARY KEY, username TEXT NOT NULL, visibility TEXT NOT NULL,
+                deleted_at TEXT
+            );
+            CREATE TABLE activity (
+                id INTEGER PRIMARY KEY, owner_id INTEGER NOT NULL, name TEXT NOT NULL,
+                slug TEXT, archived_at TEXT, secret INTEGER NOT NULL DEFAULT 0
+            );
+            CREATE TABLE entry (
+                id INTEGER PRIMARY KEY, owner_id INTEGER NOT NULL, activity_id INTEGER NOT NULL,
+                memo TEXT, occurred_at TEXT NOT NULL, time_known INTEGER NOT NULL DEFAULT 1,
+                created_at TEXT NOT NULL, hidden_at TEXT
+            );
+            INSERT INTO user VALUES (1, 'viewer', 'public', NULL),
+                (2, 'other', 'public', NULL);
+            INSERT INTO activity VALUES (1, 1, 'Mine', 'mine', NULL, 0),
+                (2, 2, 'Reading', 'reading', NULL, 0);
+            INSERT INTO entry VALUES
+                (1, 1, 1, 'self', '2026-01-31', 1, '2026-01-31T00:00:00+00:00', NULL),
+                (2, 2, 2, 'newest', '2026-01-30', 1, '2026-01-30T00:00:00+00:00', NULL),
+                (3, 2, 2, 'next', '2026-01-29', 1, '2026-01-29T00:00:00+00:00', NULL),
+                (4, 2, 2, 'old', '2025-12-31', 1, '2025-12-31T00:00:00+00:00', NULL);
+            """
+        )
+
+    now = datetime(2026, 1, 31, tzinfo=UTC)
+    first_page = recent_social_entries(1, "public", limit=1, now=now)
+
+    assert [entry["entry_id"] for entry in first_page["entries"]] == [2]
+    assert first_page["next_cursor"]
+
+    second_page = recent_social_entries(
+        1, "public", limit=1, cursor=first_page["next_cursor"], now=now
+    )
+
+    assert [entry["entry_id"] for entry in second_page["entries"]] == [3]
+    assert second_page["next_cursor"] is None
+
+
+def test_recent_social_entries_rejects_malformed_cursor() -> None:
+    try:
+        recent_social_entries(1, "public", cursor="not a cursor")
+    except FeedCursorError:
+        pass
+    else:
+        raise AssertionError("Expected malformed cursor to be rejected")

@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import base64
+import binascii
+from datetime import UTC, datetime, timedelta
+
 from app.models import db
 from app.services.entries import entries
 from app.services.search.common import LIKE_ESCAPE, clamp_limit, escape_like
@@ -116,6 +120,99 @@ def recent_fellow_entries(viewer_id: int, *, limit: int = 10) -> list[dict]:
         ).fetchall()
 
     return _feed_entries(rows)
+
+
+class FeedCursorError(ValueError):
+    """Raised when a social-feed pagination cursor is malformed."""
+
+
+def recent_social_entries(
+    viewer_id: int,
+    scope: str,
+    *,
+    limit: int = 10,
+    cursor: str | None = None,
+    now: datetime | None = None,
+) -> dict:
+    """Return one viewer-safe, 30-day page of the social feed."""
+    before_created_at, before_entry_id = _decode_feed_cursor(cursor)
+    cutoff = (now or datetime.now(UTC)) - timedelta(days=30)
+    capped = clamp_limit(limit)
+    cursor_sql = ""
+    cursor_params: tuple[object, ...] = ()
+    if before_created_at is not None and before_entry_id is not None:
+        cursor_sql = (
+            " AND (julianday(e.created_at) < julianday(?)"
+            " OR (julianday(e.created_at) = julianday(?) AND e.id < ?))"
+        )
+        cursor_params = (before_created_at, before_created_at, before_entry_id)
+
+    with db.connect() as conn:
+        conn.execute("BEGIN")
+        if scope == "fellows":
+            rows = conn.execute(
+                """SELECT a.id, a.name, a.slug,
+                          u.username,
+                          e.id AS entry_id, e.memo, e.occurred_at, e.time_known, e.created_at
+                     FROM connection c
+                     JOIN user u ON u.id = CASE WHEN c.user_lo = ? THEN c.user_hi ELSE c.user_lo END
+                     JOIN entry e ON e.owner_id = u.id
+                     JOIN activity a ON a.id = e.activity_id
+                    WHERE (c.user_lo = ? OR c.user_hi = ?)
+                      AND c.status = 'accepted'
+                      AND c.sharing_consent_at IS NOT NULL
+                      AND e.owner_id != ?
+                      AND e.hidden_at IS NULL
+                      AND julianday(e.created_at) >= julianday(?)
+                      AND a.archived_at IS NULL
+                      AND a.secret = 0
+                      AND u.deleted_at IS NULL"""
+                + cursor_sql
+                + " ORDER BY julianday(e.created_at) DESC, e.id DESC LIMIT ?",
+                (viewer_id, viewer_id, viewer_id, viewer_id, cutoff.isoformat(), *cursor_params, capped + 1),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                """SELECT a.id, a.name, a.slug,
+                          u.username,
+                          e.id AS entry_id, e.memo, e.occurred_at, e.time_known, e.created_at
+                     FROM entry e
+                     JOIN activity a ON a.id = e.activity_id
+                     JOIN user u ON u.id = e.owner_id
+                    WHERE e.owner_id != ?
+                      AND e.hidden_at IS NULL
+                      AND julianday(e.created_at) >= julianday(?)
+                      AND a.archived_at IS NULL
+                      AND a.secret = 0
+                      AND u.deleted_at IS NULL
+                      AND u.visibility = 'public'"""
+                + cursor_sql
+                + " ORDER BY julianday(e.created_at) DESC, e.id DESC LIMIT ?",
+                (viewer_id, cutoff.isoformat(), *cursor_params, capped + 1),
+            ).fetchall()
+
+    has_more = len(rows) > capped
+    page_rows = rows[:capped]
+    return {
+        "entries": _feed_entries(page_rows),
+        "next_cursor": _encode_feed_cursor(page_rows[-1]) if has_more else None,
+    }
+
+
+def _encode_feed_cursor(row) -> str:
+    value = f"{row['created_at']}|{row['entry_id']}".encode()
+    return base64.urlsafe_b64encode(value).decode().rstrip("=")
+
+
+def _decode_feed_cursor(cursor: str | None) -> tuple[str | None, int | None]:
+    if cursor is None:
+        return None, None
+    try:
+        padded = cursor + "=" * (-len(cursor) % 4)
+        created_at, entry_id = base64.urlsafe_b64decode(padded).decode().rsplit("|", 1)
+        return created_at, int(entry_id)
+    except (binascii.Error, UnicodeDecodeError, ValueError) as exc:
+        raise FeedCursorError("Invalid social-feed cursor.") from exc
 
 
 def _feed_entries(rows) -> list[dict]:

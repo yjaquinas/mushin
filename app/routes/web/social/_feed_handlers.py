@@ -9,7 +9,9 @@ from app.routes.web.common import _current_user, templates
 from app.routes.web.common import ui_strings as strings
 from app.routes.web.common.flash import _set_flash
 from app.services.search import search
-from app.services.search.discovery import recent_fellow_entries, recent_public_entries
+from app.services.search.discovery import FeedCursorError, recent_social_entries
+
+_FEED_PAGE_SIZE = 10
 
 
 async def social_page(request: Request, session: str | None) -> HTMLResponse | RedirectResponse:
@@ -29,7 +31,7 @@ async def social_page(request: Request, session: str | None) -> HTMLResponse | R
             "people": [],
             "tags": [],
             "activities": [],
-            "feed_entries": recent_public_entries(limit=10),
+            "feed_page": recent_social_entries(int(user["id"]), "public", limit=_FEED_PAGE_SIZE),
             "feed_scope": "public",
             "current_page": "social",
             "page_title": strings.SOCIAL_TITLE,
@@ -38,22 +40,28 @@ async def social_page(request: Request, session: str | None) -> HTMLResponse | R
     )
 
 
-async def social_feed(request: Request, session: str | None, scope: str) -> HTMLResponse:
+async def social_feed(
+    request: Request, session: str | None, scope: str, cursor: str | None
+) -> HTMLResponse:
     """Return the selected social feed fragment."""
     user = _current_user(session)
     if user is None:
         return HTMLResponse(status_code=401)
 
     owner_id = int(user["id"])
-    feed_entries = (
-        recent_fellow_entries(owner_id, limit=10)
-        if scope == "fellows"
-        else recent_public_entries(limit=10)
+    try:
+        feed_page = recent_social_entries(owner_id, scope, limit=_FEED_PAGE_SIZE, cursor=cursor)
+    except FeedCursorError:
+        return HTMLResponse(status_code=422)
+    template_name = (
+        "components/social/_feed_page.html.jinja2"
+        if cursor is not None
+        else "components/social/_feed.html.jinja2"
     )
     return templates.TemplateResponse(
         request=request,
-        name="components/social/_feed.html.jinja2",
-        context={"feed_entries": feed_entries, "feed_scope": scope},
+        name=template_name,
+        context={"feed_page": feed_page, "feed_scope": scope, "feed_append": cursor is not None},
     )
 
 

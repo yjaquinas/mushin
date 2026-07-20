@@ -1,5 +1,5 @@
 <div
-    id="recent-entries"
+    {% if recent_entries_id | default('recent-entries') %}id="{{ recent_entries_id | default('recent-entries') }}"{% endif %}
     class="flex flex-col gap-4"
 >
     {% for item in feed_entries %}
@@ -26,6 +26,6 @@
     <div class="h-px bg-border" aria-hidden="true"></div>
     {% endif %}
     {% else %}
-    <p class="text-caption text-text-muted">{{ strings.SOCIAL_FEED_FELLOWS_EMPTY if feed_scope | default('public') == 'fellows' else strings.ENTRY_FEED_EMPTY }}</p>
+    <p class="text-caption text-text-muted">{{ strings.SOCIAL_FEED_WINDOW_EMPTY if feed_scope is defined else strings.ENTRY_FEED_EMPTY }}</p>
     {% endfor %}
 </div>

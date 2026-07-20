@@ -1,0 +1,11 @@
+{% with feed_entries=feed_page.entries, recent_entries_id=(none if feed_append | default(false) else 'recent-entries') %}
+{% include "components/entries/_recent_entries.html.jinja2" %}
+{% endwith %}
+{% if feed_page.next_cursor %}
+<div
+    hx-get="/social/feed?scope={{ feed_scope }}&amp;cursor={{ feed_page.next_cursor }}"
+    hx-trigger="revealed once"
+    hx-swap="outerHTML"
+    aria-label="{{ strings.SOCIAL_FEED_LOADING_ARIA }}"
+></div>
+{% endif %}

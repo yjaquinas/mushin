@@ -28,9 +28,10 @@ async def social_page(
 async def social_feed(
     request: Request,
     scope: Annotated[str, Query(pattern="^(public|fellows)$")] = "public",
+    cursor: Annotated[str | None, Query()] = None,
     session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
 ) -> HTMLResponse:
-    return await _feed_handlers.social_feed(request, session, scope)
+    return await _feed_handlers.social_feed(request, session, scope, cursor)
 
 
 @router.get("/social/results", response_class=HTMLResponse)
