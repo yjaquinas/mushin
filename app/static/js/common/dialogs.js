@@ -93,7 +93,7 @@ var dialogManagerRegistry = {
     var open = 0;
     for (var i = 0; i < this._list.length; i++) {
       var dlg = this._list[i];
-      if (dlg.el && dlg.el.parentNode && !dlg.el.hasAttribute("hidden")) open += 1;
+      if (dlg.el && document.body.contains(dlg.el) && !dlg.el.hasAttribute("hidden")) open += 1;
     }
     return open;
   },
@@ -103,10 +103,17 @@ var dialogManagerRegistry = {
     var remaining = [];
     for (var i = 0; i < this._list.length; i++) {
       var dlg = this._list[i];
-      if (dlg.el && dlg.el.parentNode) {
+      if (dlg.el && document.body.contains(dlg.el)) {
         remaining.push(dlg);
       }
     }
     this._list = remaining;
+    if (this.count() === 0) {
+      document.body.style.overflow = "";
+    }
   },
 };
+
+document.body.addEventListener("htmx:afterSettle", function () {
+  dialogManagerRegistry.purgeOrphans();
+});
