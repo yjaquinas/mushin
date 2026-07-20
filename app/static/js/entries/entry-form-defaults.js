@@ -46,13 +46,32 @@
     });
   }
 
+  function syncDatePickers(scope) {
+    (scope || document).querySelectorAll('input[type="date"][name="date"]').forEach(function (input) {
+      if (input.hasAttribute("data-date-picker-init")) return;
+      input.setAttribute("data-date-picker-init", "true");
+      if (typeof input.showPicker !== "function") return;
+
+      input.addEventListener("click", function (event) {
+        try {
+          input.showPicker();
+          event.preventDefault();
+        } catch (error) {
+          // Let the browser's default picker behavior handle unsupported cases.
+        }
+      });
+    });
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     syncEntryDateTimeForms(document);
     syncNoTimeToggle(document);
+    syncDatePickers(document);
   });
 
   document.body.addEventListener("htmx:afterSwap", function () {
     syncEntryDateTimeForms(document);
     syncNoTimeToggle(document);
+    syncDatePickers(document);
   });
 })();
