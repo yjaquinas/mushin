@@ -93,6 +93,15 @@ def _format_entry_time(occurred_at: str) -> str:
         return ""
 
 
+def _format_feed_entry_timestamp(occurred_at: str, time_known: bool = True) -> str:
+    try:
+        dt = datetime.fromisoformat(occurred_at)
+        date_label = f"{dt.strftime('%b')} {dt.day}"
+        return f"{date_label} {_format_entry_time(occurred_at)}" if time_known else date_label
+    except (ValueError, AttributeError):
+        return occurred_at
+
+
 def _format_comment_timestamp(created_at: str) -> str:
     try:
         dt = datetime.fromisoformat(created_at)
@@ -122,6 +131,7 @@ def _format_streak_days(n: int) -> str:
 
 templates.env.filters["format_occurred_at"] = _format_occurred_at
 templates.env.filters["format_entry_time"] = _format_entry_time
+templates.env.filters["format_feed_entry_timestamp"] = _format_feed_entry_timestamp
 templates.env.filters["format_comment_timestamp"] = _format_comment_timestamp
 templates.env.filters["format_count"] = _format_count
 templates.env.filters["format_average_weekly_count"] = _format_average_weekly_count

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from app.models import db
 from app.services.entries import entries
-from app.services.social import profiles
 from app.services.search.common import LIKE_ESCAPE, clamp_limit, escape_like
+from app.services.social import profiles
 
 
 def search_activities(searcher_id: int, query: str, *, limit: int = 20) -> list[dict]:
@@ -66,34 +66,23 @@ def search_activities(searcher_id: int, query: str, *, limit: int = 20) -> list[
 
 
 def recent_public_entries(*, limit: int = 10) -> list[dict]:
-    """Return public activities with latest entry, one per activity, newest first."""
+    """Return recent public entries, newest added first."""
     capped = clamp_limit(limit)
     with db.connect() as conn:
         conn.execute("BEGIN")
         rows = conn.execute(
             """SELECT a.id, a.name, a.slug,
                       u.username,
-                       latest.id AS entry_id, latest.memo, latest.occurred_at, latest.time_known, latest.created_at,
-                      (SELECT COUNT(*) FROM entry e2
-                        WHERE e2.activity_id = a.id
-                          AND e2.owner_id = a.owner_id
-                          AND e2.hidden_at IS NULL) AS entry_count
-                 FROM activity a
-                 JOIN user u ON u.id = a.owner_id
-                 LEFT JOIN entry latest ON latest.id = (
-                   SELECT e3.id FROM entry e3
-                   WHERE e3.activity_id = a.id
-                     AND e3.owner_id = a.owner_id
-                     AND e3.hidden_at IS NULL
-                   ORDER BY e3.created_at DESC
-                   LIMIT 1
-                 )
-                WHERE a.archived_at IS NULL
+                      e.id AS entry_id, e.memo, e.occurred_at, e.time_known, e.created_at
+                 FROM entry e
+                 JOIN activity a ON a.id = e.activity_id
+                 JOIN user u ON u.id = e.owner_id
+                WHERE e.hidden_at IS NULL
+                  AND a.archived_at IS NULL
                   AND a.secret = 0
                   AND u.deleted_at IS NULL
                   AND u.visibility = 'public'
-                  AND latest.id IS NOT NULL
-                ORDER BY latest.created_at DESC
+                ORDER BY e.created_at DESC, e.id DESC
                 LIMIT ?""",
             (capped,),
         ).fetchall()

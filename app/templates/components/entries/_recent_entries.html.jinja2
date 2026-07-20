@@ -12,6 +12,9 @@
                 <span class="font-medium text-text-secondary group-hover:text-text-primary">@{{ item.username }}</span>
                 {{ item.name }}
             </h3>
+            <p class="mt-0.5 text-caption text-text-muted">
+                {{ item.occurred_at | format_feed_entry_timestamp(item.time_known) }}
+            </p>
             {% if item.memo %}
             {% set lines = item.memo.split('\n') %}
             <p class="mt-1 text-caption text-text-secondary line-clamp-2">{{ lines[:2] | join('\n') }}{% if lines | length > 2 %}&hellip;{% endif %}</p>

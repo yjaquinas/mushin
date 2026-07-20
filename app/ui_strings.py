@@ -567,7 +567,7 @@ CONNECT_ERROR_GENERIC = "That didn't go through."
 # ---------------------------------------------------------------------------
 
 SOCIAL_TITLE = "Social"
-SOCIAL_FEED_HEADING = "Recently updated activities"
+SOCIAL_FEED_HEADING = "Recent entries"
 SEARCH_OPEN_ARIA = "Open search"
 SEARCH_CLOSE_ARIA = "Close search"
 SEARCH_INPUT_LABEL = "Search people, tags, or activities"
