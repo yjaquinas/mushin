@@ -44,6 +44,7 @@
             name="time"
             value="{{ time_value | default("") }}"
             class="min-h-tap rounded-input border border-border bg-surface-1 px-3 py-1 text-body text-text-primary focus-visible:outline-2"
+            {% if not (time_known | default(true)) %}hidden{% endif %}
         >
     </div>
 </div>
