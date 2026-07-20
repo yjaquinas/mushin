@@ -171,7 +171,10 @@ async def social_activity(
             return HTMLResponse(status_code=404)
 
         if cap == "owner":
-            return RedirectResponse(url=f"/@{username}/{slug}", status_code=303)
+            target = profiles.canonical_activity_url(username, slug)
+            if request.url.query:
+                target = f"{target}?{request.url.query}"
+            return RedirectResponse(url=target, status_code=303)
 
         if not profiles.can_view_activity_detail(
             conn, current_user_id=current_uid, profile_user=profile_user

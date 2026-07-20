@@ -41,6 +41,7 @@
     class="entry-row flex flex-col gap-1 py-2"
     data-entry-row
     data-entry-tags="{{ entry.memo | entry_tags_csv }}"
+    {% if expand_comment_entry_id == entry.id %}data-entry-deep-link{% endif %}
 >
     <div class="flex items-center gap-2">
         <button
