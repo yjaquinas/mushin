@@ -29,6 +29,8 @@
 
   function syncNoTimeToggle(scope) {
     (scope || document).querySelectorAll('input[type="checkbox"][name="no_time"]').forEach(function (cb) {
+      if (cb.hasAttribute("data-no-time-init")) return;
+      cb.setAttribute("data-no-time-init", "true");
       var form = cb.closest("form");
       var timeInput = form && form.querySelector('input[type="time"][name="time"]');
       if (!timeInput) return;
@@ -49,8 +51,8 @@
     syncNoTimeToggle(document);
   });
 
-  document.body.addEventListener("htmx:afterSwap", function (event) {
-    syncEntryDateTimeForms(event.detail.target);
-    syncNoTimeToggle(event.detail.target);
+  document.body.addEventListener("htmx:afterSwap", function () {
+    syncEntryDateTimeForms(document);
+    syncNoTimeToggle(document);
   });
 })();

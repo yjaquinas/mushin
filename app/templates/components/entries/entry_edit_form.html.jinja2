@@ -18,4 +18,8 @@
 {% set disable_backdrop_close = true %}
 {% set disable_escape_close = false %}
 {% set notes_value = entry.memo or "" %}
+{% set original_date = today %}
+{% set original_time = time_value %}
+{% set original_memo = entry.memo or "" %}
+{% set original_no_time = "true" if not time_known else "false" %}
 {% include "components/entries/entry_form_dialog.html.jinja2" with context %}

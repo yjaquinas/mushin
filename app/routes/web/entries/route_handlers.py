@@ -84,6 +84,9 @@ async def get_entry_edit_form_response(
             "today": date_value,
             "time_known": entry["time_known"] == 1,
             "time_value": time_value if entry["time_known"] == 1 else "",
+            "original_date": date_value,
+            "original_time": time_value if entry["time_known"] == 1 else "",
+            "original_memo": entry.get("memo") or "",
         },
     )
 

@@ -65,6 +65,12 @@
                 hx-swap="{{ form_swap }}"
                 {% if default_to_local_now | default(false) %}data-default-local-now{% endif %}
                 class="flex flex-col gap-4"
+                {% if entry %}
+                data-original-date="{{ original_date }}"
+                data-original-time="{{ original_time }}"
+                data-original-memo="{{ original_memo }}"
+                data-original-no-time="{{ original_no_time }}"
+                {% endif %}
             >
                 {% set has_tag_group = fields | selectattr("kind", "equalto", "tag_group") | list | length > 0 %}
                 {% include "components/entries/_entry_form_fields.html.jinja2" with context %}
