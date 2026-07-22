@@ -514,16 +514,26 @@
       font-weight 120ms ease;
   }
 
-  .cal-day:hover {
-    background: var(--color-surface-2);
+  @media (hover: hover) {
+    .cal-day:hover {
+      background: var(--color-surface-2);
+    }
+
+    .cal-day--readonly:hover {
+      background: transparent;
+    }
+
+    .cal-day--adjacent:hover {
+      background: color-mix(in srgb, var(--color-surface-2) 70%, transparent);
+    }
+
+    .cal-day--empty:hover {
+      background: transparent;
+    }
   }
 
   .cal-day--readonly {
     cursor: default;
-  }
-
-  .cal-day--readonly:hover {
-    background: transparent;
   }
 
   /* Marked: bolder numeral + a small dot beneath it (shape, not color, carries
@@ -564,10 +574,6 @@
     border-radius: 0;
   }
 
-  .cal-day--adjacent:hover {
-    background: color-mix(in srgb, var(--color-surface-2) 70%, transparent);
-  }
-
   .cal-day--adjacent-start {
     border-top-left-radius: var(--radius-button);
     border-bottom-left-radius: var(--radius-button);
@@ -576,10 +582,6 @@
   .cal-day--adjacent-end {
     border-top-right-radius: var(--radius-button);
     border-bottom-right-radius: var(--radius-button);
-  }
-
-  .cal-day--empty:hover {
-    background: transparent;
   }
 
   /* Today: an outline ring distinguishes the current day by shape, separate
@@ -613,9 +615,27 @@
     color: var(--color-text-primary);
   }
 
-  .admin-day:hover,
-  .admin-grid-card:hover {
-    background: var(--color-surface-2);
+  @media (hover: hover) {
+    .admin-day:hover,
+    .admin-grid-card:hover {
+      background: var(--color-surface-2);
+    }
+
+    .admin-week-row:hover .admin-week-day {
+      background: var(--color-surface-2);
+    }
+
+    .admin-week-row:hover .admin-week-slot {
+      background: var(--color-surface-2);
+    }
+
+    .admin-week-row:hover .admin-week-day--outside {
+      color: color-mix(
+        in srgb,
+        var(--color-text-muted) 72%,
+        var(--color-surface-1)
+      );
+    }
   }
 
   .admin-day--today::after,
@@ -651,14 +671,6 @@
     position: relative;
   }
 
-  .admin-week-row:hover .admin-week-day {
-    background: var(--color-surface-2);
-  }
-
-  .admin-week-row:hover .admin-week-slot {
-    background: var(--color-surface-2);
-  }
-
   .admin-week-slot {
     border-top: 1.5px solid transparent;
     border-bottom: 1.5px solid transparent;
@@ -691,8 +703,7 @@
   }
 
   .admin-week-day--outside,
-  .admin-week-day--selected.admin-week-day--outside,
-  .admin-week-row:hover .admin-week-day--outside {
+  .admin-week-day--selected.admin-week-day--outside {
     color: color-mix(
       in srgb,
       var(--color-text-muted) 72%,
@@ -789,8 +800,10 @@
     transition: color 150ms ease;
   }
 
-  .bottom-nav-tab:hover {
-    color: var(--color-text-primary);
+  @media (hover: hover) {
+    .bottom-nav-tab:hover {
+      color: var(--color-text-primary);
+    }
   }
 
   .bottom-nav-tab--active {
