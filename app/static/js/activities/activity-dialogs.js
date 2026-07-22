@@ -1,4 +1,4 @@
-// Activity-page dialogs: rename activity and delete activity.
+// Activity-page edit-activity dialog.
 
 (function () {
   "use strict";
@@ -14,7 +14,6 @@
   }
 
   var renameDlg = initDialog("activity-dialog-rename");
-  var deleteDlg = initDialog("activity-dialog-delete");
   var dynamicDialogs = {};
 
   function autoOpenDialog(id, dlg) {
@@ -41,12 +40,6 @@
       return;
     }
 
-    var deleteCancel = event.target.closest("#activity-button-delete-cancel");
-    if (deleteCancel && deleteDlg) {
-      deleteDlg.close();
-      return;
-    }
-
     var genericCancel = event.target.closest("[data-dialog-close]");
     if (genericCancel) {
       var host = genericCancel.closest("[id]");
@@ -68,18 +61,12 @@
 
   document.body.addEventListener("htmx:afterSwap", function (event) {
     renameDlg = initDialog("activity-dialog-rename") || renameDlg;
-    deleteDlg = initDialog("activity-dialog-delete") || deleteDlg;
 
     var target = event.detail && event.detail.target;
     if (!target || !target.id) return;
 
     if (target.id === "activity-dialog-rename") {
       autoOpenDialog("activity-dialog-rename", renameDlg);
-      return;
-    }
-
-    if (target.id === "activity-dialog-delete") {
-      autoOpenDialog("activity-dialog-delete", deleteDlg);
       return;
     }
 

@@ -45,21 +45,8 @@
     {# 6. Field stats — analytics tail, correctly last #}
     {% include "components/history/field_stats.html.jinja2" with context %}
 
-    <div class="flex flex-col gap-3 pt-2">
-        <button
-            type="button"
-            hx-get="/activities/{{ activity_id }}/delete-confirm"
-            hx-target="#activity-dialog-delete"
-            hx-swap="outerHTML"
-            class="min-h-tap w-full rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-danger transition hover:bg-surface-2 focus-visible:outline-offset-2"
-        >
-            {{ strings.ACTIVITY_DELETE }}
-        </button>
-    </div>
-
 </div>
 
 <div id="activity-dialog-rename"></div>
-<div id="activity-dialog-delete"></div>
 <div id="activity-target-log-sheet"></div>
 {% endblock %}

@@ -1,6 +1,6 @@
-{# Activity-delete confirm dialog. HTMX swaps this whole component into
-   #activity-dialog-delete and JS opens it automatically. #}
-<div id="activity-dialog-delete" hidden data-auto-open>
+{# The destructive confirmation is the second state of the edit-activity
+   dialog, so it swaps into the same dialog host rather than stacking modals. #}
+<div id="activity-dialog-rename" hidden data-auto-open>
     <div
         class="fixed inset-0 z-50 flex items-end justify-center bg-text-primary/50 sm:items-center"
         role="presentation"
@@ -20,7 +20,7 @@
                 <button
                     type="button"
                     hx-post="/activities/{{ activity_id }}/delete"
-                    hx-target="#activity-dialog-delete"
+                    hx-target="#activity-dialog-rename"
                     hx-swap="outerHTML"
                     class="min-h-tap w-full rounded-button bg-danger px-4 py-3 text-body font-semibold text-on-danger transition hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
                 >
@@ -28,7 +28,9 @@
                 </button>
                 <button
                     type="button"
-                    id="activity-button-delete-cancel"
+                    hx-get="/activities/{{ activity_id }}/rename-form"
+                    hx-target="#activity-dialog-rename"
+                    hx-swap="outerHTML"
                     class="min-h-tap w-full rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline-offset-2"
                 >
                     {{ strings.ACTIVITY_DELETE_CANCEL }}

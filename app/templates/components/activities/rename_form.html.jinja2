@@ -76,6 +76,15 @@
                     id="rename-activity-cancel-button"
                     class="min-h-tap w-full rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-primary transition hover:bg-surface-2 focus-visible:outline-offset-2"
                 >{{ strings.RENAME_CANCEL }}</button>
+
+                <div class="h-px bg-border" aria-hidden="true"></div>
+                <button
+                    type="button"
+                    hx-get="/activities/{{ activity_id }}/delete-confirm"
+                    hx-target="#activity-dialog-rename"
+                    hx-swap="outerHTML"
+                    class="min-h-tap w-full rounded-button border border-danger bg-danger-subtle px-4 py-3 text-body font-semibold text-danger transition hover:opacity-90 focus-visible:outline-offset-2"
+                >{{ strings.ACTIVITY_DELETE }}</button>
             </form>
         </div>
     </div>
