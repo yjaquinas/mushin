@@ -38,6 +38,18 @@ uv sync
 uv run uvicorn app.main:app --reload --port 8000
 ```
 
+## Manual search and distribution routine
+
+The monthly browser-assisted benchmark for Google AI, ChatGPT, Perplexity, and
+Bing/Copilot lives in `manual-routine/`. Run it from the repository root:
+
+```sh
+uv run python manual-routine/run_ai_search_benchmark.py --country "South Korea"
+```
+
+See [`manual-routine/README.md`](manual-routine/README.md) for the complete
+routine, including open follow-ups, monthly review, and benchmark workflow.
+
 ## Structure
 
 ```text
@@ -55,6 +67,7 @@ meetings/        # Meeting outputs
 mobile-client/   # Native shell
 tests/           # pytest tests
 .agents/         # Project-scope agent skills/config
+manual-routine/  # Search, distribution, and AI-search benchmark operations
 AGENTS.md        # Codex/project automation instructions
 ```
 
