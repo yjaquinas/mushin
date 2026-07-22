@@ -91,6 +91,20 @@
 </section>
 <div class="h-px bg-border" aria-hidden="true"></div>
 
+<section id="settings-section-guides" class="flat-section py-4">
+    <a
+        href="/guides"
+        class="flex min-h-tap items-center gap-3 rounded-button border border-border bg-surface-1 px-4 py-3 text-text-primary transition hover:bg-surface-2 focus-visible:outline-offset-2"
+    >
+        {{ icon("book-open", size=20) }}
+        <span class="flex flex-col gap-0.5">
+            <span class="text-body font-medium">{{ strings.GUIDES_BREADCRUMB }}</span>
+            <span class="text-caption text-text-secondary">{{ strings.GUIDES_SETTINGS_DESCRIPTION }}</span>
+        </span>
+    </a>
+</section>
+<div class="h-px bg-border" aria-hidden="true"></div>
+
 <section class="flat-section py-4" id="settings-section-account">
     <h2 class="flat-section-title">{{ strings.ACCOUNT_VISIBILITY_HEADING }}</h2>
     <form

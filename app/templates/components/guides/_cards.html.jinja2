@@ -1,0 +1,9 @@
+{% for guide in guides %}
+<article class="rounded-card border border-border bg-surface-1 p-5 shadow-soft">
+    <h2 class="text-title font-semibold leading-snug text-text-primary">
+        <a href="/guides/{{ guide.slug }}" class="focus-visible:outline-offset-2">{{ guide.title }}</a>
+    </h2>
+    <p class="mt-2 text-body leading-relaxed text-text-secondary">{{ guide.description }}</p>
+    <a href="/guides/{{ guide.slug }}" class="mt-4 inline-flex min-h-tap items-center font-medium underline underline-offset-2 focus-visible:outline-offset-2">{{ strings.GUIDES_INDEX_LINK_LABEL }}</a>
+</article>
+{% endfor %}

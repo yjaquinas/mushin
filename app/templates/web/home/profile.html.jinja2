@@ -17,7 +17,16 @@
 <div class="h-px bg-border" aria-hidden="true"></div>
 
 <section id="profile-section-activities" aria-labelledby="profile-title-activities" class="flat-section">
-    <h2 id="profile-title-activities" class="flat-section-title">{{ strings.HOME_ACTIVITIES_HEADING }}</h2>
+    <div class="flex items-center justify-between gap-3">
+        <h2 id="profile-title-activities" class="flat-section-title">{{ strings.HOME_ACTIVITIES_HEADING }}</h2>
+        <a
+            href="/guides"
+            class="flex min-h-tap shrink-0 items-center gap-2 text-caption font-medium text-text-secondary transition hover:text-text-primary focus-visible:outline-offset-2"
+        >
+            {{ icon("book-open", size=18) }}
+            {{ strings.GUIDES_BREADCRUMB }}
+        </a>
+    </div>
     {% if not cards %}
     <div id="profile-empty-activities" class="flex flex-col items-center gap-3 py-12 text-center">
         <span class="text-[length:var(--spacing-icon-lg)] leading-none text-text-muted" aria-hidden="true">{{ strings.APP_NAME_HANJA }}</span>

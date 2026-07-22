@@ -1,0 +1,39 @@
+{% extends "web/base.html.jinja2" %}
+
+{% block title %}{{ guide.title }} · {{ strings.APP_NAME }}{% endblock %}
+{% block og_type %}{{ og_type }}{% endblock %}
+
+{% block content %}
+<article class="mx-auto flex w-full max-w-2xl flex-col gap-8 py-5 sm:py-10">
+    {% set guide_back_href = "/guides" %}{% include "components/guides/_back_link.html.jinja2" %}
+    <header class="flex flex-col gap-3">
+        <h1 class="text-hero-numeral font-semibold leading-tight text-text-primary">{{ guide.title }}</h1>
+        <p class="text-caption text-text-muted">{{ strings.GUIDES_BYLINE_PREFIX }} {{ strings.GUIDES_EDITORIAL_AUTHOR }} · {{ strings.GUIDES_PUBLISHED_PREFIX }} <time datetime="{{ guide.published_on }}">{{ guide.published_on }}</time></p>
+    </header>
+    <p class="text-body leading-relaxed text-text-secondary">{{ guide.definition }}</p>
+    <section class="flex flex-col gap-3">
+        <h2 class="text-title font-semibold text-text-primary">{{ strings.GUIDES_STEPS_HEADING }}</h2>
+        <ol class="flex list-decimal flex-col gap-2 pl-5 text-body leading-relaxed text-text-secondary">
+            {% for step in guide.steps %}<li>{{ step }}</li>{% endfor %}
+        </ol>
+    </section>
+    <section class="flex flex-col gap-3 rounded-card border border-border bg-surface-1 p-5 shadow-soft">
+        <h2 class="text-title font-semibold text-text-primary">{{ strings.GUIDES_WORKFLOW_HEADING }}</h2>
+        <p class="text-body leading-relaxed text-text-secondary">{{ guide.workflow }}</p>
+    </section>
+    <section class="flex flex-col gap-3">
+        <h2 class="text-title font-semibold text-text-primary">{{ strings.GUIDES_LIMITATIONS_HEADING }}</h2>
+        <p class="text-body leading-relaxed text-text-secondary">{{ guide.limitation }}</p>
+    </section>
+    <section class="rounded-card bg-brand p-5 text-on-brand">
+        <a href="/?next=/home" class="inline-flex min-h-tap items-center font-medium underline underline-offset-2 focus-visible:outline-offset-2">{{ strings.GUIDES_CTA_LABEL }}</a>
+    </section>
+    <section class="flex flex-col gap-4 border-t border-border pt-6">
+        <h2 class="text-title font-semibold text-text-primary">{{ strings.GUIDES_RELATED_HEADING }}</h2>
+        <div class="grid gap-4 sm:grid-cols-2">
+            {% set guides = related_guides %}{% include "components/guides/_cards.html.jinja2" %}
+        </div>
+        <a href="/guides" class="inline-flex min-h-tap items-center self-start underline underline-offset-2 focus-visible:outline-offset-2">{{ strings.GUIDES_BACK_LINK }}</a>
+    </section>
+</article>
+{% endblock %}

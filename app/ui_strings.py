@@ -809,6 +809,30 @@ META_DESCRIPTION_TERMS = "Terms of Service for Mushin 無心 — the rules for u
 META_DESCRIPTION_LICENSES = "Open source licenses used by Mushin 無心."
 
 # ---------------------------------------------------------------------------
+# Guides
+# ---------------------------------------------------------------------------
+
+GUIDES_INDEX_TITLE = "Guides for keeping a practice"
+GUIDES_INDEX_DESCRIPTION = (
+    "Practical guides for building a simple record of the things you want to keep doing."
+)
+GUIDES_INDEX_INTRO = "A few quiet ways to make tracking useful without making it another chore."
+GUIDES_INDEX_LINK_LABEL = "Read the guide"
+GUIDES_INDEX_HOME_LINK = "Explore tracking guides"
+GUIDES_BREADCRUMB = "Guides"
+GUIDES_BYLINE_PREFIX = "By"
+GUIDES_PUBLISHED_PREFIX = "Published"
+GUIDES_STEPS_HEADING = "A simple way to begin"
+GUIDES_WORKFLOW_HEADING = "How this can look in Mushin"
+GUIDES_LIMITATIONS_HEADING = "A useful limit"
+GUIDES_CTA_LABEL = "Start your own record"
+GUIDES_BACK_BUTTON = "Back"
+GUIDES_BACK_LINK = "All guides"
+GUIDES_RELATED_HEADING = "Keep reading"
+GUIDES_EDITORIAL_AUTHOR = "Mushin editorial team"
+GUIDES_SETTINGS_DESCRIPTION = "Practical ideas for starting and keeping a record."
+
+# ---------------------------------------------------------------------------
 # Plans & upgrade
 # ---------------------------------------------------------------------------
 

@@ -1,0 +1,14 @@
+{% extends "web/base.html.jinja2" %}
+
+{% block title %}{{ strings.GUIDES_INDEX_TITLE }} · {{ strings.APP_NAME }}{% endblock %}
+
+{% block content %}
+<section class="flex flex-col gap-3 py-5 sm:py-10">
+    {% set guide_back_href = "/" %}{% include "components/guides/_back_link.html.jinja2" %}
+    <h1 class="text-hero-numeral font-semibold leading-tight text-text-primary">{{ strings.GUIDES_INDEX_TITLE }}</h1>
+    <p class="max-w-2xl text-body leading-relaxed text-text-secondary">{{ strings.GUIDES_INDEX_INTRO }}</p>
+</section>
+<section class="grid gap-4 pb-8 sm:grid-cols-2" aria-label="{{ strings.GUIDES_INDEX_TITLE }}">
+    {% include "components/guides/_cards.html.jinja2" %}
+</section>
+{% endblock %}

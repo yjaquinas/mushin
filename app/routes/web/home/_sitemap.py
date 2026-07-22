@@ -10,7 +10,21 @@ from fastapi.responses import Response
 from app.models import db
 from app.services.search.indexing import sitemap_records
 
-_STABLE_PATHS = ("/", "/privacy", "/terms", "/licenses")
+_STABLE_PATHS = (
+    "/",
+    "/privacy",
+    "/terms",
+    "/licenses",
+    "/guides",
+    "/guides/what-is-a-practice-log",
+    "/guides/simple-habit-tracker-for-showing-up",
+    "/guides/track-a-habit-without-a-chore",
+    "/guides/keep-a-training-log",
+    "/guides/progress-journal-for-steady-study",
+    "/guides/progress-journal-versus-habit-tracker",
+    "/guides/streaks-help-and-do-not",
+    "/guides/start-tracking-one-activity",
+)
 
 
 def sitemap_response(request: Request) -> Response:
