@@ -78,8 +78,7 @@ def find_by_username(username: str) -> dict[str, Any] | None:
     with db.connect() as conn:
         conn.execute("BEGIN")
         row = conn.execute(
-            "SELECT * FROM user"
-            " WHERE username = ? AND deleted_at IS NULL",
+            "SELECT * FROM user WHERE username = ? AND deleted_at IS NULL",
             (username,),
         ).fetchone()
         return _row_to_dict(row)
@@ -148,14 +147,15 @@ def create_user(username: str, password_hash: str, email: str | None = None) -> 
         now = _now_iso()
         cur = conn.execute(
             "INSERT INTO user"
-            " (username, password_hash, email, visibility, consent_seen_at, private_redefinition_seen_at, created_at)"
-            " VALUES (?, ?, ?, 'public', ?, ?, ?)",
+            " (username, password_hash, email, visibility, search_discovery, consent_seen_at, private_redefinition_seen_at, created_at)"
+            " VALUES (?, ?, ?, 'public', 1, ?, ?, ?)",
             (username, password_hash, email, now, now, now),
         )
         user_id = cur.lastrowid
 
         row = conn.execute("SELECT * FROM user WHERE id = ?", (user_id,)).fetchone()
         return dict(row)
+
 
 class AccountError(Exception):
     """Base class for account-layer errors."""

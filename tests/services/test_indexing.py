@@ -36,7 +36,16 @@ def _seed(conn) -> None:
     conn.executemany(
         "INSERT INTO user VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         [
-            (1, "eligible", "public", 1, "2026-02-01T00:00:00Z", "2026-01-01T00:00:00Z", None, None),
+            (
+                1,
+                "eligible",
+                "public",
+                1,
+                "2026-02-01T00:00:00Z",
+                "2026-01-01T00:00:00Z",
+                None,
+                None,
+            ),
             (2, "private", "private", 1, None, "2026-01-01T00:00:00Z", None, None),
             (3, "opted-out", "public", 0, None, "2026-01-01T00:00:00Z", None, None),
         ],
@@ -57,12 +66,21 @@ def _seed(conn) -> None:
         for _ in range(3):
             conn.execute(
                 "INSERT INTO entry VALUES (?, ?, ?, ?, ?, ?)",
-                (entry_id, 1 if activity_id < 5 else (2 if activity_id == 5 else 3), activity_id,
-                 "2026-03-01T00:00:00Z", "2026-03-02T00:00:00Z", None),
+                (
+                    entry_id,
+                    1 if activity_id < 5 else (2 if activity_id == 5 else 3),
+                    activity_id,
+                    "2026-03-01T00:00:00Z",
+                    "2026-03-02T00:00:00Z",
+                    None,
+                ),
             )
             entry_id += 1
     for _ in range(2):
-        conn.execute("INSERT INTO entry VALUES (?, 1, 4, ?, ?, ?)", (entry_id, "2026-03-01T00:00:00Z", None, None))
+        conn.execute(
+            "INSERT INTO entry VALUES (?, 1, 4, ?, ?, ?)",
+            (entry_id, "2026-03-01T00:00:00Z", None, None),
+        )
         entry_id += 1
 
 
@@ -77,11 +95,17 @@ def test_eligibility_requires_public_opt_in_qualifying_activity(tmp_path, monkey
         assert not is_indexable_activity(conn, owner_id=1, activity_id=2, profile_user=eligible)
         assert not is_indexable_activity(conn, owner_id=1, activity_id=3, profile_user=eligible)
         assert not is_indexable_activity(conn, owner_id=1, activity_id=4, profile_user=eligible)
-        assert not is_indexable_profile(conn, {"id": 2, "visibility": "private", "search_discovery": True})
-        assert not is_indexable_profile(conn, {"id": 3, "visibility": "public", "search_discovery": False})
+        assert not is_indexable_profile(
+            conn, {"id": 2, "visibility": "private", "search_discovery": True}
+        )
+        assert not is_indexable_profile(
+            conn, {"id": 3, "visibility": "public", "search_discovery": False}
+        )
 
 
-def test_sitemap_includes_only_eligible_canonical_records_and_valid_xml(tmp_path, monkeypatch) -> None:
+def test_sitemap_includes_only_eligible_canonical_records_and_valid_xml(
+    tmp_path, monkeypatch
+) -> None:
     monkeypatch.setattr(db, "DATABASE_PATH", str(tmp_path / "sitemap.db"))
     with db.connect() as conn:
         _schema(conn)
@@ -94,14 +118,31 @@ def test_sitemap_includes_only_eligible_canonical_records_and_valid_xml(tmp_path
 
     from fastapi import Request
 
-    request = Request({"type": "http", "method": "GET", "scheme": "https", "path": "/sitemap.xml", "headers": [(b"host", b"mushin.aqnas.xyz")], "server": ("mushin.aqnas.xyz", 443)})
+    request = Request(
+        {
+            "type": "http",
+            "method": "GET",
+            "scheme": "https",
+            "path": "/sitemap.xml",
+            "headers": [(b"host", b"mushin.aqnas.xyz")],
+            "server": ("mushin.aqnas.xyz", 443),
+        }
+    )
     response = awaitable_result(home_routes.sitemap_xml(request))
     assert response.headers["content-type"].startswith("application/xml")
     root = ElementTree.fromstring(response.body)
-    locs = [item.text for item in root.findall("{http://www.sitemaps.org/schemas/sitemap/0.9}url/{http://www.sitemaps.org/schemas/sitemap/0.9}loc")]
+    locs = [
+        item.text
+        for item in root.findall(
+            "{http://www.sitemaps.org/schemas/sitemap/0.9}url/{http://www.sitemaps.org/schemas/sitemap/0.9}loc"
+        )
+    ]
     assert "https://mushin.aqnas.xyz/@eligible" in locs
     assert "https://mushin.aqnas.xyz/@eligible/running" in locs
-    assert all("private" not in loc and "secret" not in loc and "empty" not in loc and "two" not in loc for loc in locs)
+    assert all(
+        "private" not in loc and "secret" not in loc and "empty" not in loc and "two" not in loc
+        for loc in locs
+    )
 
 
 def awaitable_result(coro):
@@ -110,10 +151,21 @@ def awaitable_result(coro):
     return asyncio.run(coro)
 
 
-def test_search_discovery_migration_defaults_to_opted_out(tmp_path) -> None:
+def test_search_discovery_defaults_to_opted_in_and_enables_existing_users(tmp_path) -> None:
     database_path = tmp_path / "migrations.db"
     run_migrations(database_path)
     with db.connect_to(database_path) as conn:
         conn.execute("INSERT INTO user (username, password_hash) VALUES ('new-user', 'hash')")
-        row = conn.execute("SELECT search_discovery FROM user WHERE username = 'new-user'").fetchone()
-    assert row[0] == 0
+        row = conn.execute(
+            "SELECT search_discovery FROM user WHERE username = 'new-user'"
+        ).fetchone()
+        assert row[0] == 1
+        conn.execute("UPDATE user SET search_discovery = 0")
+        conn.execute("DELETE FROM _migrations WHERE filename = '0028_enable_search_discovery.sql'")
+
+    run_migrations(database_path)
+    with db.connect_to(database_path) as conn:
+        row = conn.execute(
+            "SELECT search_discovery FROM user WHERE username = 'new-user'"
+        ).fetchone()
+    assert row[0] == 1
