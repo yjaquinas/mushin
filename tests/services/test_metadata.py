@@ -63,6 +63,8 @@ def test_eligible_profile_metadata_is_specific_escaped_and_valid_json_ld() -> No
         request=_request("/@sam"), meta_robots="index, follow", title=data["og_title"], **data
     )
     schema = _json_ld(body)
+    assert '<meta name="msvalidate.01" content="D2DF646CD989072563EED7EE7E93460D">' in body
+    assert body.index('<meta name="msvalidate.01"') < body.index("<body")
 
     assert 'content="Reads &lt;books&gt; &amp; writes &#34;notes&#34;.' in body
     assert "<title>sam · Mushin</title>" in body
