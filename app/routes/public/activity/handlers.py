@@ -21,7 +21,7 @@ from app.routes.web import (
     _resolve_comment_deep_link,
 )
 from app.services.entries import stats
-from app.services.search import indexing
+from app.services.search import indexing, metadata
 from app.services.social import profiles
 from app.ui_strings import META_DESCRIPTION_ACTIVITY
 
@@ -174,7 +174,8 @@ def _render_readonly_activity_detail(
     is_indexable = profile_user is not None and indexing.is_indexable_activity(
         conn, owner_id=owner_id, activity_id=activity_id, profile_user=profile_user
     )
-    context["meta_robots"] = "index, follow" if anon_cap == "public" and is_canonical_public_path and is_indexable else "noindex, nofollow"
+    is_eligible = anon_cap == "public" and is_canonical_public_path and is_indexable
+    context["meta_robots"] = "index, follow" if is_eligible else "noindex, nofollow"
 
     today = datetime.now(tz).date()
 
@@ -202,6 +203,17 @@ def _render_readonly_activity_detail(
     context["og_title"] = f"{activity_name} · {username} · {ui_strings.APP_NAME}"
     context["og_description"] = META_DESCRIPTION_ACTIVITY.format(activity=activity_name, username=username)
     context["og_type"] = "article"
+    if is_eligible:
+        context.update(
+            metadata.activity_metadata(
+                conn,
+                canonical_url=str(request.url).split("?", 1)[0],
+                username=username,
+                owner_id=owner_id,
+                activity_id=activity_id,
+                card=card,
+            )
+        )
 
     return templates.TemplateResponse(
         request=request,

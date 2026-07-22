@@ -17,7 +17,7 @@ from app.routes.web import (
     _read_flash,
     consent_gate_redirect,
 )
-from app.services.search import indexing
+from app.services.search import indexing, metadata
 from app.services.social import profiles
 from app.ui_strings import META_DESCRIPTION_PROFILE
 
@@ -79,6 +79,17 @@ async def profile(
             bio=user.get("bio", "") if cap != "limited" else "",
         )
         is_indexable = cap == "public" and indexing.is_indexable_profile(conn, user)
+        metadata_context = {}
+        if is_indexable:
+            metadata_context = metadata.profile_metadata(
+                conn,
+                canonical_url=str(request.url).split("?", 1)[0],
+                username=username,
+                profile_user=user,
+                cards=context["cards"],
+                fellow_count=context["fellows"]["fellow_count"],
+                bio=context["bio"],
+            )
         context.update(
             flash_message=_read_flash(request),
             current_page="social",
@@ -93,6 +104,7 @@ async def profile(
             og_description=META_DESCRIPTION_PROFILE.format(username=username),
             og_type="profile",
         )
+        context.update(metadata_context)
 
     response = templates.TemplateResponse(
         request=request,

@@ -29,7 +29,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600&display=swap">
     <link rel="canonical" href="{{ canonical_url(request) }}">
-    {% block structured_data %}{% endblock %}
+    {% if structured_data %}
+    <script type="application/ld+json">{{ structured_data | tojson }}</script>
+    {% endif %}
 
     <title>{% block title %}{{ title | default(strings.APP_NAME) }}{% endblock %}</title>
     <link rel="stylesheet" href="{{ static_asset('/static/style.css') }}">

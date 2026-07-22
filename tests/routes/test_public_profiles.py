@@ -91,6 +91,7 @@ async def test_viewable_public_profile_is_noindex_until_search_discovery_is_elig
     response = await profile_routes.profile(_request("/@public-user"), "public-user")
 
     assert '<meta name="robots" content="noindex, nofollow">' in response.body.decode()
+    assert "application/ld+json" not in response.body.decode()
 
 
 async def test_private_activity_redirects_to_the_canonical_profile(

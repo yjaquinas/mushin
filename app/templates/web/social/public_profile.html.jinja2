@@ -19,6 +19,10 @@
 <div hidden data-toast-message="{{ flash_message }}"></div>
 {% endif %}
 
+{% if visible_summary %}
+<p class="text-caption text-text-secondary">{{ visible_summary }}</p>
+{% endif %}
+
 {% if bio %}
 <section class="flat-section py-3">
     <h2 class="flat-section-title">{{ strings.PROFILE_BIO_HEADING_SOCIAL.format(username=username) }}</h2>
