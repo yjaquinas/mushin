@@ -92,7 +92,7 @@ async def social_activity(
         if not profiles.can_view_activity_detail(
             conn, current_user_id=current_uid, profile_user=profile_user
         ):
-            return RedirectResponse(url=f"/social/@{username}", status_code=303)
+            return RedirectResponse(url=profiles.canonical_profile_url(username), status_code=303)
 
         from app.routes.public.activity.handlers import _render_readonly_activity_detail
 

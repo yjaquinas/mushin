@@ -43,7 +43,19 @@
     <div class="flex flex-col gap-3">
         {% for card in cards %}
         <article>
-            {% set activity_href = "/social/@" ~ username ~ "/" ~ card.slug if card.linked else none %}
+            {% if view_mode == "limited" %}
+            <section class="flex flex-col gap-2 rounded-card border border-border bg-surface-1 p-4">
+                <h3 class="truncate text-center text-title font-semibold text-text-primary">{{ card.name }}</h3>
+                <div class="-mx-4 border-t border-border"></div>
+                <dl class="bg-surface-0 px-3 py-2">
+                    <div class="flex items-center justify-between gap-3">
+                        <dt class="text-caption text-text-muted">{{ strings.STATS_PERIOD_LIFETIME }}</dt>
+                        <dd class="text-title font-medium text-text-primary">{{ card.counts.lifetime | format_count }}</dd>
+                    </div>
+                </dl>
+            </section>
+            {% else %}
+            {% set activity_href = "/@" ~ username ~ "/" ~ card.slug if card.linked else none %}
             {% if card.linked %}
             <a
                 href="{{ activity_href }}"
@@ -59,6 +71,7 @@
             </a>
             {% else %}
             </div>
+            {% endif %}
             {% endif %}
         </article>
         {% endfor %}

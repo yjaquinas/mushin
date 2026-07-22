@@ -13,7 +13,7 @@
             {% for person in people %}
             <li class="flex min-h-tap items-center justify-between gap-3 px-4 py-2 transition hover:bg-surface-2">
                 <a
-                    href="/social/@{{ person.username }}"
+                    href="/@{{ person.username }}"
                     class="flex min-h-tap min-w-0 flex-1 items-center truncate font-medium text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-strong"
                 >@{{ person.username }}</a>
                 <span class="shrink-0">
@@ -41,7 +41,7 @@
             {% for entry in tags %}
             <li>
                 <a
-                    href="/social{{ entry.activity_url }}{% if entry.detail_visible %}?entry_id={{ entry.entry_id }}{% endif %}"
+                    href="{{ entry.activity_url }}{% if entry.detail_visible %}?entry_id={{ entry.entry_id }}{% endif %}"
                     class="flex min-h-tap items-center gap-3 px-4 py-2 text-body text-text-primary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-strong"
                 >
                     <span class="line-clamp-2">{{ entry.memo }}</span>
@@ -59,7 +59,7 @@
             {% for activity in activities %}
             <li>
                 <a
-                    href="/social{{ activity.url }}"
+                    href="{{ activity.url }}"
                     class="flex min-h-tap items-center gap-3 px-4 py-2 transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-strong"
                 >
                     <span class="flex min-w-0 flex-col">

@@ -140,7 +140,7 @@ async def robots_txt() -> Response:
         "Disallow: /login\n"
         "Disallow: /health\n"
         "\n"
-        "Sitemap: https://mushin.app/sitemap.xml\n"
+        "Sitemap: https://mushin.aqnas.xyz/sitemap.xml\n"
     )
     return Response(content=content, media_type="text/plain")
 

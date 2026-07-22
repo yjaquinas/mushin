@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Any
+from typing import Annotated
 
 from fastapi import APIRouter, Cookie, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -10,50 +10,17 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from app.auth import sessions, users
 from app.models import db
 from app.routes.public.common.contexts import templates
+from app.routes.public.profile._contexts import read_only_profile_context
 from app.routes.web import (
-    _build_card_context,
-    _build_fellows_context,
     _build_home_context,
     _clear_flash,
-    _home_url_for,
-    _list_activities,
     _read_flash,
     consent_gate_redirect,
 )
-from app.services.social import connections, profiles
+from app.services.social import profiles
+from app.ui_strings import META_DESCRIPTION_PROFILE
 
 router = APIRouter()
-
-
-def _read_only_profile_context(
-    conn: Any,
-    username: str,
-    owner_id: int,
-    *,
-    cap: str,
-    tz: Any,
-    current_uid: int | None,
-    visibility: str = "public",
-    bio: str = "",
-) -> dict[str, Any]:
-    """Assemble the read-only ``public_profile.html.jinja2`` context for *cap*."""
-    linked = cap in ("connected", "public")
-    activities = _list_activities(conn, owner_id, include_secret=False)
-    cards = [_build_card_context(conn, owner_id, row, tz=tz, linked=linked) for row in activities]
-    fellows_context = _build_fellows_context(owner_id, viewer_id=current_uid, is_owner=False, visibility=visibility)
-    state = (
-        connections.relationship_state(current_uid, owner_id) if current_uid is not None else "none"
-    )
-    return {
-        "username": username,
-        "view_mode": cap,
-        "cards": cards,
-        "fellows": fellows_context,
-        "state": state,
-        "viewer_logged_in": current_uid is not None,
-        "bio": bio,
-    }
-
 
 @router.get("/@{username}", response_class=HTMLResponse, response_model=None)
 async def profile(
@@ -100,4 +67,36 @@ async def profile(
         if cap == "blocked":
             return HTMLResponse(status_code=404)
 
-        return RedirectResponse(url=f"/social/@{username}", status_code=303)
+        context = read_only_profile_context(
+            conn,
+            username,
+            owner_id,
+            cap=cap,
+            tz=users.get_user_timezone(owner_id),
+            current_uid=current_uid,
+            visibility=user["visibility"],
+            bio=user.get("bio", "") if cap != "limited" else "",
+        )
+        is_public = cap == "public"
+        context.update(
+            flash_message=_read_flash(request),
+            current_page="social",
+            page_title=username,
+            profile_url=profiles.canonical_profile_url(username),
+            share_label=f"@{username}",
+            share_copied_text=f"Link to @{username} copied",
+            share_failed_text="Couldn't share the link.",
+            meta_robots="index, follow" if is_public else "noindex, nofollow",
+            meta_description=META_DESCRIPTION_PROFILE.format(username=username),
+            og_title=f"{username} · Mushin",
+            og_description=META_DESCRIPTION_PROFILE.format(username=username),
+            og_type="profile",
+        )
+
+    response = templates.TemplateResponse(
+        request=request,
+        name="web/social/public_profile.html.jinja2",
+        context=context,
+    )
+    _clear_flash(response)
+    return response

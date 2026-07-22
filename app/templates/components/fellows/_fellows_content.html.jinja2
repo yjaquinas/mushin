@@ -1,5 +1,5 @@
 <section id="fellows-content" aria-labelledby="fellows-title-page" class="flex flex-col gap-6">
-    <a href="{% if is_owner %}{{ home_url }}{% else %}/social/@{{ username }}{% endif %}" class="flex items-center gap-1 text-caption text-text-secondary hover:text-text-primary transition">
+    <a href="{% if is_owner %}{{ home_url }}{% else %}/@{{ username }}{% endif %}" class="flex items-center gap-1 text-caption text-text-secondary hover:text-text-primary transition">
         {{ icon('chevron-left', size=16) }} {{ strings.ACTIVITY_BACK_TO_PROFILE }}
     </a>
 

@@ -20,7 +20,7 @@ from app.routes.web import (
     _field_defs_for_activity,
     _resolve_comment_deep_link,
 )
-from app.services.entries import competition, stats
+from app.services.entries import stats
 from app.services.social import profiles
 from app.ui_strings import META_DESCRIPTION_ACTIVITY
 
@@ -164,6 +164,15 @@ def _render_readonly_activity_detail(
     context["share_label"] = f"@{username} / {card['name']}"
     context["share_copied_text"] = f"Link to @{username}/{slug} copied"
     context["share_failed_text"] = "Couldn't share the link."
+    anon_cap = (
+        profiles.viewer_capability(conn, current_user_id=None, profile_user=profile_user)
+        if profile_user is not None
+        else None
+    )
+    is_canonical_public_path = str(request.url.path) == profiles.canonical_activity_url(username, slug)
+    context["meta_robots"] = (
+        "index, follow" if anon_cap == "public" and is_canonical_public_path else "noindex, nofollow"
+    )
 
     today = datetime.now(tz).date()
 
