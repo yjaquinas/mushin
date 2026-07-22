@@ -154,6 +154,21 @@
             <span id="settings-text-visibility-desc-public" hidden>{{ strings.ACCOUNT_VISIBILITY_PUBLIC_DESC }}</span>
         </fieldset>
 
+        <label class="flex cursor-pointer items-start gap-3 rounded-button border border-border bg-surface-1 px-4 py-3">
+            <input
+                id="settings-field-search-discovery"
+                name="search_discovery"
+                type="checkbox"
+                {% if search_discovery %}checked{% endif %}
+                data-original-checked="{{ 'true' if search_discovery else 'false' }}"
+                class="mt-1"
+            >
+            <span class="flex flex-col gap-1">
+                <span class="text-body font-medium text-text-primary">{{ strings.ACCOUNT_SEARCH_DISCOVERY_LABEL }}</span>
+                <span class="text-caption text-text-secondary">{{ strings.ACCOUNT_SEARCH_DISCOVERY_DESC }}</span>
+            </span>
+        </label>
+
         <label class="flex flex-col gap-2" for="settings-field-email">
             <span class="text-caption font-medium text-text-primary">{{ strings.ACCOUNT_EMAIL_LABEL }}</span>
             <input
@@ -177,7 +192,7 @@
             disabled
             class="flex min-h-tap w-full items-center justify-center rounded-button bg-brand px-4 py-3 text-title font-semibold text-on-brand transition focus-visible:outline-offset-2 disabled:opacity-60"
         >
-            {{ strings.ACCOUNT_VISIBILITY_SAVE }}
+            {{ strings.ACCOUNT_SETTINGS_SAVE }}
         </button>
     </form>
 </section>

@@ -62,6 +62,7 @@ async def test_public_profile_is_crawlable_at_its_canonical_url(
         lambda *_args: {"id": 1, "visibility": "public", "bio": ""},
     )
     monkeypatch.setattr(profile_routes.profiles, "viewer_capability", lambda *_args, **_kwargs: "public")
+    monkeypatch.setattr(profile_routes.indexing, "is_indexable_profile", lambda *_args: True)
     monkeypatch.setattr(profile_routes.users, "get_user_timezone", lambda _owner_id: None)
     monkeypatch.setattr(profile_routes, "read_only_profile_context", _profile_context)
 
@@ -71,6 +72,25 @@ async def test_public_profile_is_crawlable_at_its_canonical_url(
     body = response.body.decode()
     assert '<link rel="canonical" href="https://mushin.aqnas.xyz/@public-user">' in body
     assert '<meta name="robots" content="index, follow">' in body
+
+
+async def test_viewable_public_profile_is_noindex_until_search_discovery_is_eligible(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(profile_routes.sessions, "read_uid", lambda _session: None)
+    monkeypatch.setattr(profile_routes.db, "connect", _connection)
+    monkeypatch.setattr(
+        profile_routes.profiles,
+        "get_public_user",
+        lambda *_args: {"id": 1, "visibility": "public", "search_discovery": False, "bio": ""},
+    )
+    monkeypatch.setattr(profile_routes.profiles, "viewer_capability", lambda *_args, **_kwargs: "public")
+    monkeypatch.setattr(profile_routes.users, "get_user_timezone", lambda _owner_id: None)
+    monkeypatch.setattr(profile_routes, "read_only_profile_context", _profile_context)
+
+    response = await profile_routes.profile(_request("/@public-user"), "public-user")
+
+    assert '<meta name="robots" content="noindex, nofollow">' in response.body.decode()
 
 
 async def test_private_activity_redirects_to_the_canonical_profile(

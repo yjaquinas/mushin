@@ -92,13 +92,12 @@ def authenticate(username: str, password: str) -> dict[str, Any] | None:
     Uses constant-time comparison via ``secrets.compare_digest`` to prevent
     timing attacks.
     """
-    import secrets
     from app.auth.passwords import verify_password
 
     with db.connect() as conn:
         conn.execute("BEGIN")
         row = conn.execute(
-            "SELECT id, username, password_hash, visibility, consent_seen_at,"
+            "SELECT id, username, password_hash, visibility, search_discovery, consent_seen_at,"
             " private_redefinition_seen_at, comments_seen_at, suspended_at,"
             " deleted_at, created_at, last_active_at"
             " FROM user WHERE username = ? AND deleted_at IS NULL",
@@ -203,6 +202,16 @@ def set_visibility_consent(owner_id: int, visibility: str) -> None:
             "UPDATE user SET visibility = ?, consent_seen_at = ?,"
             " private_redefinition_seen_at = ? WHERE id = ?",
             (visibility, now, now, owner_id),
+        )
+
+
+def set_search_discovery(owner_id: int, enabled: bool) -> None:
+    """Persist the owner's explicit search-engine discovery preference."""
+    with db.connect() as conn:
+        conn.execute("BEGIN")
+        conn.execute(
+            "UPDATE user SET search_discovery = ?, search_discovery_updated_at = ? WHERE id = ?",
+            (int(enabled), _now_iso(), owner_id),
         )
 
 

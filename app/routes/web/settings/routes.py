@@ -13,6 +13,8 @@ from fastapi import APIRouter, Cookie, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.auth import sessions
+from app.routes.web.common import _current_user
+from app.routes.web.common.flash import _set_flash
 from app.routes.web.settings.handlers import (
     delete_account_response,
     render_account_settings,
@@ -22,8 +24,6 @@ from app.routes.web.settings.handlers import (
     update_password_response,
     update_settings_response,
 )
-from app.routes.web.common import _current_user
-from app.routes.web.common.flash import _set_flash
 
 router = APIRouter()
 
@@ -65,6 +65,7 @@ async def settings_plans(
 async def update_settings(
     request: Request,
     visibility: Annotated[str | None, Form()] = None,
+    search_discovery: Annotated[str | None, Form()] = None,
     email: Annotated[str | None, Form()] = None,
     session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
 ) -> RedirectResponse | HTMLResponse:
@@ -78,7 +79,11 @@ async def update_settings(
     user = _current_user(session)
     if user is None:
         return HTMLResponse(status_code=401)
-    return update_settings_response(request, user, visibility=visibility, email=email)
+    if search_discovery not in {None, "on"}:
+        return HTMLResponse(status_code=400)
+    return update_settings_response(
+        request, user, visibility=visibility, search_discovery=search_discovery == "on", email=email
+    )
 
 
 @router.post("/settings/email", response_model=None)

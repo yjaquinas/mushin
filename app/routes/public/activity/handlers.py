@@ -21,6 +21,7 @@ from app.routes.web import (
     _resolve_comment_deep_link,
 )
 from app.services.entries import stats
+from app.services.search import indexing
 from app.services.social import profiles
 from app.ui_strings import META_DESCRIPTION_ACTIVITY
 
@@ -170,9 +171,10 @@ def _render_readonly_activity_detail(
         else None
     )
     is_canonical_public_path = str(request.url.path) == profiles.canonical_activity_url(username, slug)
-    context["meta_robots"] = (
-        "index, follow" if anon_cap == "public" and is_canonical_public_path else "noindex, nofollow"
+    is_indexable = profile_user is not None and indexing.is_indexable_activity(
+        conn, owner_id=owner_id, activity_id=activity_id, profile_user=profile_user
     )
+    context["meta_robots"] = "index, follow" if anon_cap == "public" and is_canonical_public_path and is_indexable else "noindex, nofollow"
 
     today = datetime.now(tz).date()
 

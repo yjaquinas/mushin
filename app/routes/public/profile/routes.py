@@ -17,6 +17,7 @@ from app.routes.web import (
     _read_flash,
     consent_gate_redirect,
 )
+from app.services.search import indexing
 from app.services.social import profiles
 from app.ui_strings import META_DESCRIPTION_PROFILE
 
@@ -77,7 +78,7 @@ async def profile(
             visibility=user["visibility"],
             bio=user.get("bio", "") if cap != "limited" else "",
         )
-        is_public = cap == "public"
+        is_indexable = cap == "public" and indexing.is_indexable_profile(conn, user)
         context.update(
             flash_message=_read_flash(request),
             current_page="social",
@@ -86,7 +87,7 @@ async def profile(
             share_label=f"@{username}",
             share_copied_text=f"Link to @{username} copied",
             share_failed_text="Couldn't share the link.",
-            meta_robots="index, follow" if is_public else "noindex, nofollow",
+            meta_robots="index, follow" if is_indexable else "noindex, nofollow",
             meta_description=META_DESCRIPTION_PROFILE.format(username=username),
             og_title=f"{username} · Mushin",
             og_description=META_DESCRIPTION_PROFILE.format(username=username),

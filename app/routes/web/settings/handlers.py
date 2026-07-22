@@ -19,7 +19,12 @@ from app.routes.web.common import (
     templates,
 )
 from app.routes.web.common import ui_strings as strings
-from app.services.plans import get_all_plan_configs, get_subscription_end_date, get_user_payments, get_user_plan_config
+from app.services.plans import (
+    get_all_plan_configs,
+    get_subscription_end_date,
+    get_user_payments,
+    get_user_plan_config,
+)
 
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
@@ -53,6 +58,7 @@ def render_account_settings(
             "email_error": email_error,
             "password_error": password_error,
             "visibility": user["visibility"],
+            "search_discovery": bool(user.get("search_discovery")),
             "current_page": "settings",
             "page_title": strings.SETTINGS_TITLE,
             "meta_robots": "noindex, nofollow",
@@ -68,7 +74,6 @@ def render_account_settings(
 
 def settings_plans_page(request: Request, user: dict) -> HTMLResponse:
     """Render the plans comparison page inside the settings tab."""
-    owner_id = int(user["id"])
     with db.connect() as conn:
         plans = get_all_plan_configs(conn)
         current_user_plan = user.get("plan", "basic")
@@ -98,6 +103,7 @@ def update_settings_response(
     request: Request,
     user: dict,
     visibility: str | None = None,
+    search_discovery: bool | None = None,
     email: str | None = None,
 ) -> RedirectResponse | HTMLResponse:
     """Persist visibility and/or email, then redirect back to settings.
@@ -113,6 +119,9 @@ def update_settings_response(
         if visibility != user["visibility"]:
             users.set_visibility_consent(int(user["id"]), visibility)
             flash_key = "visibility_public" if visibility == "public" else "visibility_private"
+
+    if search_discovery is not None and search_discovery != bool(user.get("search_discovery")):
+        users.set_search_discovery(int(user["id"]), search_discovery)
 
     if email is not None:
         email = email.strip() or None

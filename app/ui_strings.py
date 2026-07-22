@@ -371,10 +371,17 @@ ACCOUNT_VISIBILITY_PUBLIC_DESC = (
     " who has your profile link."
 )
 
+ACCOUNT_SEARCH_DISCOVERY_LABEL = "Allow search engine discovery"
+ACCOUNT_SEARCH_DISCOVERY_DESC = (
+    "External search engines may show your public profile and qualifying activities. "
+    "They decide when to add or remove results."
+)
+
 SETTINGS_ABOUT_HEADING = "About"
 SETTINGS_CONTACT_EMAIL = "mushin@aqnas.xyz"
 
-ACCOUNT_VISIBILITY_SAVE = "Save"
+ACCOUNT_SETTINGS_SAVE = "Save"
+ACCOUNT_VISIBILITY_SAVE = ACCOUNT_SETTINGS_SAVE
 ACCOUNT_EMAIL_HEADING = "Email address"
 ACCOUNT_EMAIL_LABEL = "Recovery email"
 ACCOUNT_EMAIL_HELP = "For account recovery. Optional."

@@ -19,15 +19,18 @@
 
     var submitBtn = accountForm.querySelector("[type=submit]");
     var emailInput = document.getElementById("settings-field-email");
+    var searchDiscovery = document.getElementById("settings-field-search-discovery");
     var originalVisibility = accountForm.getAttribute("data-original-visibility");
     var originalEmail = emailInput ? emailInput.getAttribute("data-original-value") || "" : "";
+    var originalSearchDiscovery = searchDiscovery && searchDiscovery.getAttribute("data-original-checked") === "true";
 
     function checkAccountForm() {
       if (!submitBtn) return;
       var checked = accountForm.querySelector("[name=visibility]:checked");
       var visChanged = checked && checked.value !== originalVisibility;
       var emailChanged = emailInput && emailInput.value !== originalEmail;
-      submitBtn.disabled = !visChanged && !emailChanged;
+      var discoveryChanged = searchDiscovery && searchDiscovery.checked !== originalSearchDiscovery;
+      submitBtn.disabled = !visChanged && !emailChanged && !discoveryChanged;
     }
 
     if (!submitBtn || !originalVisibility) return;
