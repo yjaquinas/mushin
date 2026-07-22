@@ -9,6 +9,7 @@ from fastapi.responses import Response
 
 from app.models import db
 from app.services.search.indexing import sitemap_records
+from app.services.search.topic_hubs import published_topic_paths
 
 _STABLE_PATHS = (
     "/",
@@ -37,8 +38,10 @@ def sitemap_response(request: Request) -> Response:
     with db.connect() as conn:
         conn.execute("BEGIN")
         records = sitemap_records(conn)
+        topic_paths = published_topic_paths(conn)
 
     urls = [{"path": path, "lastmod": None} for path in _STABLE_PATHS]
+    urls.extend({"path": path, "lastmod": None} for path in topic_paths)
     urls.extend(records)
     lines = ['<?xml version="1.0" encoding="UTF-8"?>', '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
     for record in urls:

@@ -833,6 +833,17 @@ GUIDES_EDITORIAL_AUTHOR = "Mushin editorial team"
 GUIDES_SETTINGS_DESCRIPTION = "Practical ideas for starting and keeping a record."
 
 # ---------------------------------------------------------------------------
+# Editorial topic hubs
+# ---------------------------------------------------------------------------
+
+TOPIC_HUBS_ACTIVITIES_HEADING = "Public activity records"
+TOPIC_HUBS_BYLINE = "Tracked by @{username}"
+TOPIC_HUBS_ENTRY_COUNT = "{count} visible entries"
+TOPIC_HUBS_PAGINATION_LABEL = "More activity records"
+TOPIC_HUBS_GUIDES_HEADING = "Related guides"
+TOPIC_HUBS_GUIDES_LINK = "Tracking guides"
+
+# ---------------------------------------------------------------------------
 # Plans & upgrade
 # ---------------------------------------------------------------------------
 

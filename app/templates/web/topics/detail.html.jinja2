@@ -1,0 +1,35 @@
+{% extends "web/base.html.jinja2" %}
+
+{% block title %}{{ topic.title }} · {{ strings.APP_NAME }}{% endblock %}
+
+{% block content %}
+<main class="mx-auto flex w-full max-w-3xl flex-col gap-8 py-5 sm:py-10">
+    <header class="flex flex-col gap-3">
+        <a href="/guides" class="inline-flex min-h-tap items-center self-start underline underline-offset-2 focus-visible:outline-offset-2">{{ strings.TOPIC_HUBS_GUIDES_LINK }}</a>
+        <h1 class="text-hero-numeral font-semibold leading-tight text-text-primary">{{ topic.title }}</h1>
+        <p class="max-w-2xl text-body leading-relaxed text-text-secondary">{{ topic.definition }}</p>
+    </header>
+    <section class="flex flex-col gap-4" aria-label="{{ strings.TOPIC_HUBS_ACTIVITIES_HEADING }}">
+        <h2 class="text-title font-semibold text-text-primary">{{ strings.TOPIC_HUBS_ACTIVITIES_HEADING }}</h2>
+        <div class="grid gap-4 sm:grid-cols-2">
+            {% for activity in activities %}
+            <article class="rounded-card border border-border bg-surface-1 p-5 shadow-soft">
+                <h3 class="text-title font-semibold text-text-primary"><a href="{{ activity.url }}" class="focus-visible:outline-offset-2">{{ activity.name }}</a></h3>
+                <p class="mt-2 text-body text-text-secondary">{{ strings.TOPIC_HUBS_BYLINE.format(username=activity.username) }}</p>
+                <p class="mt-1 text-caption text-text-muted">{{ strings.TOPIC_HUBS_ENTRY_COUNT.format(count=activity.entry_count) }}</p>
+            </article>
+            {% endfor %}
+        </div>
+        {% if has_previous or has_next %}
+        <nav class="flex items-center justify-between gap-4" aria-label="{{ strings.TOPIC_HUBS_PAGINATION_LABEL }}">
+            {% if has_previous %}<a href="/topics/{{ topic.slug }}{% if page > 2 %}/page/{{ page - 1 }}{% endif %}" class="inline-flex min-h-tap items-center underline underline-offset-2 focus-visible:outline-offset-2">{{ strings.HISTORY_PREV_PAGE }}</a>{% else %}<span></span>{% endif %}
+            {% if has_next %}<a href="/topics/{{ topic.slug }}/page/{{ page + 1 }}" class="inline-flex min-h-tap items-center underline underline-offset-2 focus-visible:outline-offset-2">{{ strings.HISTORY_NEXT_PAGE }}</a>{% endif %}
+        </nav>
+        {% endif %}
+    </section>
+    <section class="flex flex-col gap-4 border-t border-border pt-6">
+        <h2 class="text-title font-semibold text-text-primary">{{ strings.TOPIC_HUBS_GUIDES_HEADING }}</h2>
+        <div class="grid gap-4 sm:grid-cols-2">{% include "components/guides/_cards.html.jinja2" %}</div>
+    </section>
+</main>
+{% endblock %}
