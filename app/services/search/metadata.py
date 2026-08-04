@@ -166,13 +166,6 @@ def activity_metadata(
     if dates["modified"]:
         schema["dateModified"] = dates["modified"]
 
-    summary = ui_strings.PUBLIC_ACTIVITY_SUMMARY.format(
-        username=username, activity=title, total=total
-    )
-    if streak:
-        summary = f"{summary} {ui_strings.PUBLIC_ACTIVITY_SUMMARY_STREAK.format(streak=streak)}"
-    if dates["first"] and dates["last"]:
-        summary = f"{summary} {ui_strings.PUBLIC_ACTIVITY_SUMMARY_RANGE.format(start=dates['first'], end=dates['last'])}"
     return {
         "meta_description": description,
         "og_title": ui_strings.META_TITLE_ACTIVITY_PUBLIC.format(activity=title, username=username),
@@ -180,5 +173,4 @@ def activity_metadata(
         "og_type": "website",
         "twitter_card_type": "summary_large_image",
         "structured_data": schema,
-        "visible_summary": summary,
     }

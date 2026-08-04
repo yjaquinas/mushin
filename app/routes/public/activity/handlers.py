@@ -117,7 +117,7 @@ def _render_readonly_activity_detail(
 ) -> HTMLResponse:
     """Build + render the read-only ``public_activity.html.jinja2`` response."""
     sub_row = conn.execute(
-        """SELECT st.id, st.name, st.count, st.streak,
+        """SELECT st.id, st.name, st.count, st.streak, st.created_at,
                   st.last_entry_at, st.icon, st.secret
              FROM activity st
             WHERE st.id = ? AND st.owner_id = ?""",

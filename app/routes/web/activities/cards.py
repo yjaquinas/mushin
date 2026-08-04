@@ -15,7 +15,7 @@ from app.services.social import connections
 
 def _list_activities(conn: sqlite3.Connection, owner_id: int, *, include_secret: bool = True) -> list[sqlite3.Row]:
     rows = conn.execute(
-        """SELECT id, name, slug, count, streak,
+        """SELECT id, name, slug, count, streak, created_at,
                   last_entry_at, icon, secret
              FROM activity
             WHERE owner_id = ? AND archived_at IS NULL
@@ -50,6 +50,7 @@ def _build_card_context(
         "slug": activity_row["slug"] if "slug" in activity_row.keys() else None,
         "icon": activity_row["icon"] or categories.DEFAULT_ICON,
         "name": activity_row["name"],
+        "created_at": activity_row["created_at"],
         "secret": bool(activity_row["secret"]) if "secret" in activity_row.keys() else False,
         "show_breadcrumb": False,
         "count_mode": "running",

@@ -107,7 +107,7 @@ def stats_summary_fragment_response(request: Request, activity_id: int, owner_id
     tz, field_defs = owner_ctx
     with db.connect() as conn:
         row = conn.execute(
-            "SELECT name FROM activity WHERE id = ? AND owner_id = ?",
+            "SELECT name, created_at FROM activity WHERE id = ? AND owner_id = ?",
             (activity_id, owner_id),
         ).fetchone()
         card_name = row["name"] if row else None
@@ -118,6 +118,7 @@ def stats_summary_fragment_response(request: Request, activity_id: int, owner_id
         context={
             "activity_id": activity_id,
             "card_name": card_name,
+            "created_at": row["created_at"] if row else None,
             "counts": cs["counts"],
             "streaks": cs["streaks"],
             "average_weekly_count": cs["average_weekly_count"],

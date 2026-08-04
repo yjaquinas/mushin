@@ -108,6 +108,7 @@ def test_eligible_activity_metadata_is_truthful_and_noindex_page_emits_no_json_l
     assert '<meta property="og:title" content="Reading &lt;&#34;classics&#34;&gt; · sam · Mushin">' in body
     assert '<meta property="og:type" content="website">' in body
     assert "Recorded from 2026-01-01 to 2026-07-20." in body
+    assert "visible_summary" not in data
     assert schema["@type"] == "CollectionPage"
     assert schema["mainEntity"]["@type"] == "Collection"  # type: ignore[index]
     assert schema["mainEntity"]["temporalCoverage"] == "2026-01-01/2026-07-20"  # type: ignore[index]
