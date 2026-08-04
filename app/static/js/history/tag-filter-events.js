@@ -16,7 +16,7 @@
 
     if (event.target.closest("[data-tag-clear]")) {
       tags.setSelected([]);
-      tags.apply(document);
+      if (!tags.reloadAllHistory()) tags.apply(document);
       return;
     }
 
@@ -28,7 +28,7 @@
     if (existingIndex === -1) nextSelected.push(tagName);
     else nextSelected.splice(existingIndex, 1);
     tags.setSelected(nextSelected);
-    tags.apply(document);
+    if (!tags.reloadAllHistory()) tags.apply(document);
   }, true);
 
   document.addEventListener("DOMContentLoaded", function () {
@@ -47,6 +47,15 @@
     if (tags.isHistoryTarget(event.detail.target)) {
       event.detail.serverResponse = tags.prefilterHistoryMarkup(event.detail.serverResponse);
     }
+  });
+
+  document.body.addEventListener("htmx:configRequest", function (event) {
+    var parameters = event.detail.parameters || {};
+    var period = parameters.period;
+    if (!period && event.detail.path) {
+      period = new URL(event.detail.path, window.location.origin).searchParams.get("period");
+    }
+    if (period === "all") parameters.tags = tags.selected().join(",");
   });
 
   window.addEventListener("resize", function () {

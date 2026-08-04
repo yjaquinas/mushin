@@ -117,10 +117,31 @@
   }
 
   function applyTagFilter(scope) {
+    var historyRoot = document.querySelector('[id^="activity-section-history-"]');
+    if (historyRoot && historyRoot.dataset.historyPeriod === "all") {
+      setSelectedTagValues((historyRoot.dataset.historySelectedTags || "").split(",").filter(Boolean));
+    }
     var section = document.querySelector("[data-tags-section]");
     if (section) applyTagChipState(section);
     syncFilteredEntryLists(scope || document);
     syncTagSections(document);
+  }
+
+  function reloadAllHistory() {
+    var root = document.querySelector('[id^="activity-section-history-"][data-history-period="all"]');
+    if (!root || !window.htmx) return false;
+    var activityId = root.id.slice("activity-section-history-".length);
+    window.htmx.ajax("GET", "/activities/" + activityId + "/history", {
+      target: root,
+      swap: "outerHTML",
+      values: {
+        period: "all",
+        anchor: root.dataset.historyAnchor || "",
+        page: 1,
+        tags: selectedTagValues().join(",")
+      }
+    });
+    return true;
   }
 
   window.MushinTagFilter = {
@@ -129,6 +150,7 @@
     prefilterHistoryMarkup: prefilterHistoryMarkup,
     selected: selectedTagValues,
     setSelected: setSelectedTagValues,
-    syncSection: syncTagSection
+    syncSection: syncTagSection,
+    reloadAllHistory: reloadAllHistory
   };
 })();

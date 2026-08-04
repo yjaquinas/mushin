@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from datetime import UTC, date, datetime
 from urllib.parse import quote
 
@@ -41,6 +42,7 @@ def activity_history_response(
     anchor: str | None,
     day: str | None,
     page: int,
+    tags: str | None,
     current_uid: int | None,
 ) -> HTMLResponse:
     if period not in ("month", "all"):
@@ -52,6 +54,7 @@ def activity_history_response(
     selected_day = _parse_date(day) if day else None
     if day and selected_day is None:
         return HTMLResponse(status_code=400)
+    selected_tags = _parse_history_tags(tags)
 
     with db.connect() as conn:
         conn.execute("BEGIN")
@@ -78,6 +81,7 @@ def activity_history_response(
         username=viewer["username"],
         slug=viewer["slug"],
         login_redirect_url=login_redirect_url,
+        selected_tags=selected_tags if period == "all" else None,
         selected_day=selected_day,
         page=page,
     )
@@ -98,6 +102,13 @@ def activity_history_response(
     if period != "all":
         response.headers["HX-Trigger"] = json.dumps({"history-period-changed": {"period": period}})
     return response
+
+
+def _parse_history_tags(raw_tags: str | None) -> list[str]:
+    """Normalize the comma-separated tag selection used by All history."""
+    if not raw_tags:
+        return []
+    return sorted({tag.lower() for tag in raw_tags.split(",") if re.fullmatch(r"\w+", tag)})
 
 
 def stats_summary_fragment_response(request: Request, activity_id: int, owner_id: int) -> HTMLResponse:

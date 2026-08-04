@@ -16,6 +16,9 @@
 <div
     id="activity-section-history-{{ activity_id }}"
     class="flex flex-col gap-3"
+    data-history-period="{{ history.period }}"
+    data-history-anchor="{{ history.anchor }}"
+    data-history-selected-tags="{{ history.tags_query }}"
 >
     {# Sentinel: refreshes the whole history section when entries change.
        Lives here (not on the parent div) so its hx-vals don't bleed into
@@ -156,7 +159,7 @@
     <nav class="flex items-center justify-center gap-1" aria-label="pagination">
         {% if history.page > 1 %}
         <button type="button" class="min-h-tap min-w-[2rem] rounded-button px-2 py-1 text-body text-text-secondary transition hover:bg-surface-2"
-            hx-get="/activities/{{ activity_id }}/history?period={{ history.period }}&anchor={{ history.anchor }}{% if history.selected_day %}&day={{ history.selected_day }}{% endif %}&page={{ history.page - 1 }}"
+            hx-get="/activities/{{ activity_id }}/history?period={{ history.period }}&anchor={{ history.anchor }}{% if history.selected_day %}&day={{ history.selected_day }}{% endif %}&page={{ history.page - 1 }}{% if history.tags_query %}&tags={{ history.tags_query }}{% endif %}"
             hx-target="#activity-section-history-{{ activity_id }}" hx-swap="outerHTML"
         >
             &laquo;
@@ -172,7 +175,7 @@
                 {% else %}
                     text-text-secondary hover:bg-surface-2
                 {% endif %}"
-                hx-get="/activities/{{ activity_id }}/history?period={{ history.period }}&anchor={{ history.anchor }}{% if history.selected_day %}&day={{ history.selected_day }}{% endif %}&page={{ p }}"
+                hx-get="/activities/{{ activity_id }}/history?period={{ history.period }}&anchor={{ history.anchor }}{% if history.selected_day %}&day={{ history.selected_day }}{% endif %}&page={{ p }}{% if history.tags_query %}&tags={{ history.tags_query }}{% endif %}"
                 hx-target="#activity-section-history-{{ activity_id }}" hx-swap="outerHTML"
             >
                 {{ p }}
@@ -181,7 +184,7 @@
         {% endfor %}
         {% if history.page < history.total_pages %}
         <button type="button" class="min-h-tap min-w-[2rem] rounded-button px-2 py-1 text-body text-text-secondary transition hover:bg-surface-2"
-            hx-get="/activities/{{ activity_id }}/history?period={{ history.period }}&anchor={{ history.anchor }}{% if history.selected_day %}&day={{ history.selected_day }}{% endif %}&page={{ history.page + 1 }}"
+            hx-get="/activities/{{ activity_id }}/history?period={{ history.period }}&anchor={{ history.anchor }}{% if history.selected_day %}&day={{ history.selected_day }}{% endif %}&page={{ history.page + 1 }}{% if history.tags_query %}&tags={{ history.tags_query }}{% endif %}"
             hx-target="#activity-section-history-{{ activity_id }}" hx-swap="outerHTML"
         >
             &raquo;

@@ -8,12 +8,12 @@ from fastapi import APIRouter, Cookie, Request
 from fastapi.responses import HTMLResponse
 
 from app.auth import sessions
+from app.routes.web.common import _current_user
 from app.routes.web.history.handlers import (
     activity_history_response,
     field_stats_fragment_response,
     stats_summary_fragment_response,
 )
-from app.routes.web.common import _current_user
 
 router = APIRouter()
 
@@ -26,10 +26,11 @@ async def activity_history(
     anchor: str | None = None,
     day: str | None = None,
     page: int = 1,
+    tags: str | None = None,
     session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
 ) -> HTMLResponse:
     return activity_history_response(
-        request, activity_id, period, anchor, day, page, sessions.read_uid(session)
+        request, activity_id, period, anchor, day, page, tags, sessions.read_uid(session)
     )
 
 

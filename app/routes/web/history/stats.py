@@ -67,8 +67,10 @@ def _aggregate_memo_hashtags(
 
 
 def _build_history_tags(history: dict[str, Any], *, tz: ZoneInfo) -> dict[str, Any] | None:
-    """Aggregate hashtags for the entries currently shown by a history view."""
-    if history.get("selected_day") is not None:
+    """Aggregate hashtags for a history view's appropriate source entries."""
+    if history.get("tag_source_rows") is not None:
+        rows = history["tag_source_rows"]
+    elif history.get("selected_day") is not None:
         rows = history.get("day_entries") or []
     else:
         rows = [entry for group in history.get("log", []) for entry in group.get("entries", [])]

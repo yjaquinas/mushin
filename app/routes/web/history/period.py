@@ -12,14 +12,25 @@ from app.routes.web.history.calendar import _build_calendar_context
 from app.services.entries import comments, entries, stats
 
 
-def _build_history_context(activity_id: int, owner_id: int, *, period: str, anchor: date, tz: ZoneInfo, is_owner: bool = False, can_comment: bool = False, username: str | None = None, slug: str | None = None, expand_comment_entry_id: int | None = None, login_redirect_url: str | None = None, tag: str | None = None, selected_day: date | None = None, page: int = 1, page_size: int = 10) -> dict[str, Any]:
+def _build_history_context(activity_id: int, owner_id: int, *, period: str, anchor: date, tz: ZoneInfo, is_owner: bool = False, can_comment: bool = False, username: str | None = None, slug: str | None = None, expand_comment_entry_id: int | None = None, login_redirect_url: str | None = None, selected_tags: list[str] | None = None, selected_day: date | None = None, page: int = 1, page_size: int = 10) -> dict[str, Any]:
     _PAGE_SIZE = page_size
     today = datetime.now(tz).date()
     day_entries: list[dict[str, Any]] = []
 
+    selected_tags = sorted(set(selected_tags or []))
+    tag_source_rows: list[dict[str, Any]] | None = None
+
     if period == "all":
-        total_count = entries.count_entries(owner_id, activity_id)
-        rows = entries.list_entries(owner_id, activity_id, tz=tz, limit=_PAGE_SIZE, offset=(page - 1) * _PAGE_SIZE)
+        # Hashtags live in free-text memos, so exact matching uses the shared
+        # parser rather than a SQL substring match (which would treat #run as
+        # a match for #runner).  Loading the activity history here also gives
+        # the tag rail its complete, not page-local, source set.
+        tag_source_rows = entries.list_entries(owner_id, activity_id, tz=tz)
+        matching_rows = _rows_matching_any_tag(tag_source_rows, selected_tags)
+        total_count = len(matching_rows)
+        total_pages = max(1, (total_count + _PAGE_SIZE - 1) // _PAGE_SIZE)
+        page = min(max(1, page), total_pages)
+        rows = matching_rows[(page - 1) * _PAGE_SIZE : page * _PAGE_SIZE]
         selected_day = None
     elif selected_day is not None:
         start = stats._shift_period(anchor, period, 0)
@@ -35,7 +46,8 @@ def _build_history_context(activity_id: int, owner_id: int, *, period: str, anch
         rows = stats.period_entries(activity_id, owner_id, start, end, tz=tz, limit=_PAGE_SIZE, offset=(page - 1) * _PAGE_SIZE)
         visual, label = _period_visual(period, activity_id, owner_id, start, end, tz, None, today)
 
-    total_pages = max(1, (total_count + _PAGE_SIZE - 1) // _PAGE_SIZE)
+    if period != "all":
+        total_pages = max(1, (total_count + _PAGE_SIZE - 1) // _PAGE_SIZE)
     log = _group_log(rows, tz)
     _decorate_comment_counts(log, day_entries)
 
@@ -57,6 +69,9 @@ def _build_history_context(activity_id: int, owner_id: int, *, period: str, anch
         "total_pages": total_pages,
         "total_count": total_count,
         "page_range": _page_range(page, total_pages),
+        "selected_tags": selected_tags,
+        "tags_query": ",".join(selected_tags),
+        "tag_source_rows": tag_source_rows,
     }
 
     if period == "all":
@@ -64,6 +79,18 @@ def _build_history_context(activity_id: int, owner_id: int, *, period: str, anch
     else:
         base.update({"label": label, "visual": visual, "prev_anchor": stats._shift_period(anchor, period, -1).isoformat(), "next_anchor": stats._shift_period(anchor, period, 1).isoformat(), "start": start.isoformat(), "end": end.isoformat()})
     return base
+
+
+def _rows_matching_any_tag(rows: list[dict[str, Any]], selected_tags: list[str]) -> list[dict[str, Any]]:
+    """Return *rows* containing any selected normalized memo hashtag."""
+    if not selected_tags:
+        return rows
+    wanted = set(selected_tags)
+    return [
+        row
+        for row in rows
+        if wanted.intersection(entries.parse_hashtags(str(row.get("memo") or "")))
+    ]
 
 
 def _group_log(rows: list[dict[str, Any]], tz: ZoneInfo) -> list[dict[str, Any]]:
