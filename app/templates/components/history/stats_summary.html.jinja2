@@ -57,9 +57,6 @@
             </div>
         </dl>
     </div>
-    {% if created_at %}
-    <p class="text-caption text-text-muted">{{ strings.ACTIVITY_TRACKING_SINCE.format(date=created_at[:10]) }}</p>
-    {% endif %}
     <div class="flex flex-col gap-4">
         {% if heatmap is defined %}
         {% set active_weeks = heatmap | selectattr('intensity', 'gt', 0) | list | length %}
@@ -99,6 +96,9 @@
         </div>
         {% endif %}
 
-        {% include "components/activities/_top_tags_content.html.jinja2" with context %}
+    {% include "components/activities/_top_tags_content.html.jinja2" with context %}
     </div>
+    {% if created_at %}
+    <p class="self-end text-xs text-text-muted">{{ strings.ACTIVITY_TRACKING_SINCE.format(date=created_at[:10]) }}</p>
+    {% endif %}
 </section>
