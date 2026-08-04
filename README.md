@@ -5,15 +5,14 @@ activities, share your journey, and connect with others who show up. Public
 profiles, mutual fellows connections, comments, and discovery make it a place
 to share progress — not just record it.
 
-The backend serves shared service-layer data through web HTMX templates and
-native hypermedia surfaces.
+The backend serves the product through web HTMX templates backed by a shared
+service layer.
 
 ## Stack
 
 - Python 3.12, FastAPI, uv, Uvicorn
 - Jinja2 templates
 - HTMX v2 for web interactions
-- Hyperview/HXML mobile surface, with `mobile-client/` as the React Native shell
 - SQLite with WAL journaling
 - Tailwind CSS v4
 - Caddy v2 and systemd on Ubuntu 24.04
@@ -52,7 +51,6 @@ app/
 deploy/          # Production deploy entry point
 infra/           # Caddy, systemd, backup, and retention units/scripts
 meetings/        # Meeting outputs
-mobile-client/   # Native shell
 tests/           # pytest tests
 .agents/         # Project-scope agent skills/config
 AGENTS.md        # Codex/project automation instructions

@@ -1,7 +1,7 @@
 """Activity management for Mushin.
 
-Renderer-agnostic: no HTTP, no templates. Returns plain Python data structures
-both renderers (HTMX web, HXML native) consume.
+Web-layer agnostic: no HTTP or templates. Returns plain Python data structures
+for route handlers to consume.
 
 Every write is scoped by ``owner_id`` (required, positional) — multi-user
 isolation is the project's non-negotiable invariant.

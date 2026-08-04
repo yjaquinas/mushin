@@ -1,11 +1,9 @@
 /*
  * Mushin — Tailwind v4 entry
  *
- * This is the single source of truth for all design tokens.
- * One palette, renderer-agnostic: the same CSS custom-property names
- * map to Tailwind v4 utilities here and will map to HXML style
- * attributes when native parity lands (Phase 5). Never duplicate the
- * palette — see TOKENS.md at the repo root for the naming contract
+ * This is the single source of truth for all design tokens. The CSS
+ * custom-property names map directly to Tailwind v4 utilities. Never
+ * duplicate the palette — see TOKENS.md at the repo root for the naming contract
  * (role-token philosophy, light/dark swap convention, the two
  * fixed-value exceptions).
  *
@@ -230,8 +228,8 @@
  * (cookie/toggle). No OS/prefers-color-scheme detection — default on first
  * visit (no cookie) is always light.
  *
- * Same token names as light — only values change, so both the Tailwind
- * mapping (web) and the future HXML mapping (native) consume one contract.
+ * Same token names as light — only values change, so the web UI consumes
+ * one consistent contract.
  *
  * Re-derived (not naively darkened) so the invariants still hold:
  *   - accent-subtle is a dark, desaturated tint suitable as a background

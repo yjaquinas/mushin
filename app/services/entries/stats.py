@@ -1,8 +1,8 @@
-"""Renderer-agnostic stats for the Mushin service layer.
+"""Web-layer-agnostic stats for the Mushin service layer.
 
-No HTTP, no Jinja, no HXML. Every function takes ``owner_id`` as a required
+No HTTP or Jinja. Every function takes ``owner_id`` as a required
 argument (multi-user isolation is non-negotiable) and returns plain Python data
-structures (dicts / lists of dicts) that either renderer can consume.
+structures (dicts / lists of dicts) for route handlers to consume.
 
 The user's local timezone is the calendar
 ------------------------------------------

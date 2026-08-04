@@ -1,6 +1,6 @@
 """Entry comments for the Mushin service layer.
 
-Renderer-agnostic: no HTTP, no Jinja, no HXML.
+Web-layer agnostic: no HTTP or Jinja.
 """
 
 from __future__ import annotations

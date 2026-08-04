@@ -7,13 +7,12 @@ multi-user progress tracker for activities, entries, counts, and streaks
 with public profiles, mutual fellows connections, comments, and discovery.
 UI copy is centralized for i18n.
 
-Stack: FastAPI + uv + Uvicorn, Tailwind CSS v4 + HTMX + vanilla JS (web),
-Hyperview/HXML (mobile), SQLite. Hosting: Ubuntu 24.04 via Caddy + systemd.
+Stack: FastAPI + uv + Uvicorn, Tailwind CSS v4 + HTMX + vanilla JS, SQLite.
+Hosting: Ubuntu 24.04 via Caddy + systemd.
 
 Model: `activity -> entry`.
 
-Architecture: one backend with web and native hypermedia surfaces on a shared
-service layer.
+Architecture: one web backend with a shared service layer.
 
 ## Working context
 
@@ -97,9 +96,8 @@ extract a shared helper in the nearest `_` companion module.
 
 SVG icons should live as standalone files and be rendered through shared
 template utilities. Do not inline SVG in templates. Keep icon styling
-consistent and based on `currentColor`. For mobile-facing icon buttons,
-prefer larger glyph sizes (roughly `18-20` px) inside the existing tap
-targets to reduce fat-finger misses.
+consistent and based on `currentColor`. For icon buttons, use glyph sizes
+appropriate to their existing tap targets.
 
 Context processors, globals, and filters must be registered once and reused by
 every template surface.

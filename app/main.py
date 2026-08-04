@@ -25,10 +25,9 @@ from app.routes.web import router as web_router  # noqa: E402
 
 log = structlog.get_logger()
 
-# Module layout (templates and static now live inside the app module):
+# Module layout (templates and static live inside the app module):
 #   app/main.py           ← this file
 #   app/templates/web/    ← HTMX templates
-#   app/templates/mobile/ ← HXML templates (if --mobile)
 #   app/static/           ← CSS, JS, images
 APP_DIR = Path(__file__).resolve().parent
 STATIC_DIR = APP_DIR / "static"

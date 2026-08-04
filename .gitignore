@@ -46,11 +46,6 @@ htmlcov/
 *.swo
 .DS_Store
 
-# Node (for mobile-client)
-mobile-client/node_modules/
-mobile-client/.expo/
-mobile-client/dist/
-
 # Data
 data/*.db
 data/*.db-*

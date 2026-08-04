@@ -1,8 +1,8 @@
 """Entry create / read / update / delete for the Mushin service layer.
 
-Renderer-agnostic: no HTTP, no Jinja, no HXML. Functions take ``owner_id`` as a
-required argument and return plain Python data structures (dicts) that either
-renderer can consume.
+Web-layer agnostic: no HTTP or Jinja. Functions take ``owner_id`` as a
+required argument and return plain Python data structures (dicts) for route
+handlers to consume.
 
 An *entry* belongs to an activity and carries flat columns:
 ``occurred_at``, ``memo``, ``num_value``, ``tags`` (comma-separated),
