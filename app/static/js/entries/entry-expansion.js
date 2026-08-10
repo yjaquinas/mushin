@@ -117,9 +117,23 @@
     });
   }
 
+  function scrollToDeepLinkedComment() {
+    var match = window.location.hash.match(/^#comment-(\d+)$/);
+    var target = match && document.getElementById("comment-" + match[1]);
+    if (!target) {
+      match = window.location.hash.match(/^#comment-slot-(\d+)$/);
+      target = match && document.getElementById("comment-slot-" + match[1]);
+    }
+    if (!target) return;
+    window.requestAnimationFrame(function () {
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     syncExpandedEntries(document);
     scrollToDeepLinkedEntry(document);
+    scrollToDeepLinkedComment();
   });
 
   document.body.addEventListener("htmx:afterSwap", function (event) {
@@ -130,6 +144,7 @@
       syncExpandedEntries(target);
       scrollToDeepLinkedEntry(target);
     }
+    scrollToDeepLinkedComment();
   });
 
   document.body.addEventListener("htmx:beforeRequest", function (event) {

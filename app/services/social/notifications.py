@@ -6,11 +6,25 @@ import sqlite3
 from datetime import UTC, datetime
 from typing import Any, Literal
 
-NotificationType = Literal["comment", "connection_request", "connection_accepted"]
+NotificationType = Literal[
+    "comment",
+    "comment_reply",
+    "comment_reply_participant",
+    "connection_request",
+    "connection_accepted",
+]
 
 
 def current_timestamp_iso() -> str:
     return datetime.now(UTC).isoformat()
+
+
+def comment_preview(body: str) -> str:
+    """Return a compact, single-line notification excerpt for a comment."""
+    words = body.split()
+    if len(words) <= 12:
+        return " ".join(words)
+    return f"{' '.join(words[:12])}…"
 
 
 def create(
@@ -20,13 +34,23 @@ def create(
     type: NotificationType,
     actor_id: int,
     entry_id: int | None = None,
+    comment_id: int | None = None,
+    comment_preview: str | None = None,
     created_at: str | None = None,
 ) -> int:
     """Create one notification row and return its id."""
     cur = conn.execute(
-        "INSERT INTO notification (user_id, type, actor_id, entry_id, created_at)"
-        " VALUES (?, ?, ?, ?, ?)",
-        (user_id, type, actor_id, entry_id, created_at or current_timestamp_iso()),
+        "INSERT INTO notification (user_id, type, actor_id, entry_id, comment_id, comment_preview, created_at)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (
+            user_id,
+            type,
+            actor_id,
+            entry_id,
+            comment_id,
+            comment_preview,
+            created_at or current_timestamp_iso(),
+        ),
     )
     return int(cur.lastrowid)
 
@@ -56,7 +80,7 @@ def list_notifications(
 ) -> list[dict[str, Any]]:
     params: list[Any] = [user_id]
     sql = (
-        "SELECT n.id, n.type, n.actor_id, n.entry_id, n.created_at, n.read_at,"
+        "SELECT n.id, n.type, n.actor_id, n.entry_id, n.comment_id, n.comment_preview, n.created_at, n.read_at,"
         "       actor.username AS actor_username,"
         "       owner.username AS owner_username,"
         "       a.name AS activity_name, a.slug AS activity_slug"
@@ -79,16 +103,20 @@ def list_notifications(
 
 def _row_context(row: dict[str, Any], username: str) -> dict[str, Any]:
     row["is_new"] = row["read_at"] is None
+    if row["comment_preview"]:
+        row["comment_preview"] = comment_preview(row["comment_preview"])
     row["target_url"] = _target_url(row, username)
     return row
 
 
 def _target_url(row: dict[str, Any], username: str) -> str:
-    if row["type"] == "comment" and row.get("owner_username") and row.get("activity_slug"):
+    if row["type"] in {"comment", "comment_reply", "comment_reply_participant"} and row.get("owner_username") and row.get("activity_slug"):
         entry_id = row["entry_id"]
+        comment_id = row.get("comment_id")
+        fragment = f"#comment-{comment_id}" if comment_id is not None else f"#comment-slot-{entry_id}"
         return (
             f"/@{row['owner_username']}/{row['activity_slug']}"
-            f"?entry_id={entry_id}#comment-slot-{entry_id}"
+            f"?entry_id={entry_id}{fragment}"
         )
     if row["type"] == "connection_request":
         return f"/@{username}/fellows"

@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Cookie, Form, Request
+from fastapi import APIRouter, Cookie, Form, Query, Request
 from fastapi.responses import HTMLResponse
 
 from app.auth import sessions
-from app.routes.public.comments import handlers
+from app.routes.public.comments import handlers, reply_handlers
 
 router = APIRouter()
 
@@ -46,6 +46,45 @@ async def post_entry_comment(
 ) -> HTMLResponse:
     return await handlers.post_entry_comment_body(
         request, username, slug, entry_id, body, comment_timezone, session
+    )
+
+
+@router.post(
+    "/@{username}/{slug}/entries/{entry_id}/comments/{comment_id}/replies",
+    response_class=HTMLResponse,
+    response_model=None,
+)
+async def post_entry_comment_reply(
+    request: Request,
+    username: str,
+    slug: str,
+    entry_id: int,
+    comment_id: int,
+    body: Annotated[str, Form()],
+    comment_timezone: Annotated[str | None, Form()] = None,
+    session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
+) -> HTMLResponse:
+    return await reply_handlers.post_entry_comment_reply_body(
+        request, username, slug, entry_id, comment_id, body, comment_timezone, session
+    )
+
+
+@router.get(
+    "/@{username}/{slug}/entries/{entry_id}/comments/{comment_id}/reply-form",
+    response_class=HTMLResponse,
+    response_model=None,
+)
+async def get_entry_comment_reply_form(
+    request: Request,
+    username: str,
+    slug: str,
+    entry_id: int,
+    comment_id: int,
+    closed: Annotated[bool, Query()] = False,
+    session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
+) -> HTMLResponse:
+    return await reply_handlers.get_entry_comment_reply_form_body(
+        request, username, slug, entry_id, comment_id, closed, session
     )
 
 

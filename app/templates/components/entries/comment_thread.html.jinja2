@@ -1,65 +1,31 @@
-{#
-  Comment thread fragment for a single entry.
-  Context: activity_id, entry_id, username, comments, can_comment,
-           viewer_logged_in, current_user_id, entry_owner_id, slug
-#}
+{# Context: activity_id, entry_id, username, comments, can_comment,
+   viewer_logged_in, current_user_id, entry_owner_id, slug #}
 <div id="comment-thread-{{ entry_id }}" class="flex flex-col gap-3 pt-2">
     {% if not comments %}
     <p class="text-caption text-text-muted">{{ strings.COMMENTS_EMPTY }}</p>
     {% else %}
-        <ul class="flex flex-col gap-2">
+    <ul class="flex flex-col gap-3">
         {% for comment in comments %}
-        {% set author_name = comment.author_username %}
-        {% set is_entry_owner_comment = comment.author_id == entry_owner_id %}
-        {% set is_current_user_comment = current_user_id is not none and comment.author_id == current_user_id %}
-        <li class="flex flex-col gap-0.5">
-            <div class="flex items-baseline justify-between gap-2">
-                <span class="flex min-w-0 items-center gap-2 text-caption font-medium">
-                    {% if is_entry_owner_comment %}
-                    <span class="min-w-0 truncate text-[var(--color-obsidian)]">
-                        {{ author_name }}
-                    </span>
-                    <span class="rounded-full bg-surface-2 px-1 py-px text-[10px] leading-none text-[var(--color-obsidian)]">
-                        {{ strings.COMMENTS_AUTHOR_OWNER }}
-                    </span>
-                    {% elif is_current_user_comment %}
-                    <span class="min-w-0 truncate text-accent-text">
-                        {{ author_name }}
-                    </span>
-                    <span class="rounded-full bg-accent-subtle px-1 py-px text-[10px] leading-none text-accent-text">
-                        {{ strings.COMMENTS_AUTHOR_YOU }}
-                    </span>
-                    {% elif comment.author_username %}
-                    <a
-                        href="/@{{ comment.author_username }}"
-                        class="min-w-0 truncate text-text-secondary underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-                    >{{ author_name }}</a>
-                    {% else %}
-                    <span class="min-w-0 truncate text-text-secondary">
-                        {{ author_name }}
-                    </span>
-                    {% endif %}
-                </span>
-                <span class="text-caption text-text-muted" data-local-timestamp="{{ comment.created_at }}" hidden>{{ comment.created_at | format_comment_timestamp }}</span>
-            </div>
-            <div class="flex items-start justify-between gap-2">
-                {% if comment.hidden_at %}
-                <p class="min-w-0 flex-1 text-body text-text-muted italic">{{ strings.COMMENTS_HIDDEN_BY_MODERATOR }}</p>
-                {% else %}
-                <p class="min-w-0 flex-1 whitespace-pre-wrap break-all text-body text-text-primary">{{ comment.body }}</p>
-                {% endif %}
-                {% if current_user_id is not none and (current_user_id == comment.author_id or current_user_id == entry_owner_id) %}
-                <button
-                    type="button"
-                    aria-label="{{ strings.COMMENTS_DELETE }}"
-                    hx-get="/@{{ username }}/{{ slug }}/entries/{{ entry_id }}/comments/{{ comment.id }}/delete-confirm"
-                    hx-target="#comment-delete-dialog-{{ comment.id }}"
-                    hx-swap="outerHTML"
-                    class="min-h-tap min-w-tap flex shrink-0 items-center justify-center rounded text-text-muted transition hover:text-danger focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-                >{{ icon('trash', size=18) }}<span class="sr-only">{{ strings.COMMENTS_DELETE }}</span></button>
-                {% endif %}
-            </div>
-            <div id="comment-delete-dialog-{{ comment.id }}"></div>
+        <li id="comment-{{ comment.id }}" class="flex flex-col gap-0">
+            {% set is_reply = false %}
+            {% set thread_can_reply = can_comment and not comment.deleted_at %}
+            {% set can_reply = thread_can_reply %}
+            {% include "components/entries/_comment_item.html.jinja2" %}
+            <div id="comment-reply-form-{{ comment.id }}"></div>
+            {% if comment.replies %}
+            <ul class="ms-4 flex flex-col gap-0 border-s border-border ps-3">
+                {% for reply in comment.replies %}
+                <li id="comment-{{ reply.id }}" class="flex flex-col gap-0">
+                    {% set is_reply = true %}
+                    {% set parent_comment = comment %}
+                    {% set comment = reply %}
+                    {% set can_reply = thread_can_reply %}
+                    {% include "components/entries/_comment_item.html.jinja2" %}
+                    <div id="comment-reply-form-{{ comment.id }}"></div>
+                </li>
+                {% endfor %}
+            </ul>
+            {% endif %}
         </li>
         {% endfor %}
     </ul>
@@ -87,20 +53,11 @@
             class="min-h-tap flex-1 resize-none overflow-hidden rounded-card border border-border bg-surface-1 p-2 text-body text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
         ></textarea>
         <div class="flex shrink-0 flex-col items-end gap-1">
-            <span
-                class="text-caption text-text-muted"
-                data-comment-char-count
-            >0/200</span>
-            <button
-                type="submit"
-                class="min-h-tap shrink-0 rounded-button bg-brand px-4 text-body font-semibold text-on-brand transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-            >{{ strings.COMMENTS_SUBMIT }}</button>
+            <span class="text-caption text-text-muted" data-comment-char-count>0/200</span>
+            <button type="submit" class="min-h-tap shrink-0 rounded-button bg-brand px-4 text-body font-semibold text-on-brand transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">{{ strings.COMMENTS_SUBMIT }}</button>
         </div>
     </form>
     {% elif not viewer_logged_in %}
-    <a
-        href="/"
-        class="text-caption text-text-muted underline-offset-2 hover:underline focus-visible:outline-offset-2"
-    >{{ strings.COMMENTS_LOGIN_TO_COMMENT }}</a>
+    <a href="/" class="text-caption text-text-muted underline-offset-2 hover:underline focus-visible:outline-offset-2">{{ strings.COMMENTS_LOGIN_TO_COMMENT }}</a>
     {% endif %}
 </div>

@@ -168,8 +168,7 @@ async def get_delete_entry_comment_confirm_body(
             return resolved
         _user, owner_id, _activity_id, _entry = resolved
 
-        rows = comments_service.list_comments(conn, entry_id, viewer_id=current_uid)
-        comment = next((row for row in rows if row["id"] == comment_id), None)
+        comment = comments_service.get_visible_comment(conn, entry_id, comment_id)
         if comment is None:
             return HTMLResponse(status_code=404)
         if current_uid != comment["author_id"] and current_uid != owner_id:

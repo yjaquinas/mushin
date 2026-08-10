@@ -144,8 +144,8 @@ def _entries_on_day(
 
 def _resolve_comment_deep_link(
     raw_entry_id: str | None, *, activity_id: int, owner_id: int
-) -> int | None:
-    """Resolve a ``?entry_id={id}`` query param to an entry ID.
+) -> dict[str, Any] | None:
+    """Resolve a ``?entry_id={id}`` query param to its scoped entry.
 
     Returns ``None`` — silently, no error — when *raw_entry_id* is missing,
     non-numeric, or resolves to an entry that doesn't exist or belongs to a
@@ -163,4 +163,4 @@ def _resolve_comment_deep_link(
         return None
     if entry["activity_id"] != activity_id:
         return None
-    return entry_id
+    return entry

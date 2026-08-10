@@ -79,26 +79,32 @@ def list_comments(
         return []
 
     rows = conn.execute(
-        "SELECT c.id, c.entry_id, c.body, c.created_at, c.deleted_at, c.author_id,"
-        " u.username AS author_username"
-        " FROM comment c"
-        " JOIN user u ON u.id = c.author_id"
-        " WHERE c.entry_id = ? AND c.deleted_at IS NULL"
+        "SELECT c.id, c.entry_id, c.parent_comment_id, c.reply_to_comment_id, c.body,"
+        " c.created_at, c.deleted_at, c.hidden_at, c.author_id,"
+        " u.username AS author_username, reply_target_user.username AS reply_to_author_username"
+        " FROM comment c JOIN user u ON u.id = c.author_id"
+        " LEFT JOIN comment reply_target ON reply_target.id = c.reply_to_comment_id"
+        " LEFT JOIN user reply_target_user ON reply_target_user.id = reply_target.author_id"
+        " WHERE c.entry_id = ?"
+        "   AND (c.deleted_at IS NULL OR (c.parent_comment_id IS NULL AND EXISTS ("
+        "       SELECT 1 FROM comment reply"
+        "        WHERE reply.parent_comment_id = c.id AND reply.deleted_at IS NULL"
+        "   )))"
         " ORDER BY julianday(c.created_at) ASC, c.id ASC",
         (entry_id,),
     ).fetchall()
 
-    return [
-        {
-            "id": r["id"],
-            "entry_id": r["entry_id"],
-            "author_id": r["author_id"],
-            "author_username": r["author_username"],
-            "body": r["body"],
-            "created_at": r["created_at"],
-        }
-        for r in rows
-    ]
+    grouped: list[dict[str, Any]] = []
+    parents: dict[int, dict[str, Any]] = {}
+    for record in rows:
+        row = dict(record)
+        row["replies"] = []
+        if row["parent_comment_id"] is None:
+            parents[row["id"]] = row
+            grouped.append(row)
+        elif parent := parents.get(row["parent_comment_id"]):
+            parent["replies"].append(row)
+    return grouped
 
 
 def create_comment(
@@ -135,6 +141,8 @@ def create_comment(
             type="comment",
             actor_id=author_id,
             entry_id=entry_id,
+            comment_id=int(comment_id),
+            comment_preview=notifications.comment_preview(trimmed),
             created_at=now,
         )
 
@@ -143,6 +151,122 @@ def create_comment(
         (comment_id,),
     ).fetchone()
     return dict(row)
+
+
+def create_reply(
+    conn: sqlite3.Connection,
+    entry_id: int,
+    parent_comment_id: int,
+    author_id: int,
+    body: str,
+    *,
+    timezone: str | None = None,
+) -> dict[str, Any]:
+    """Create a first-level reply and notify its thread participants."""
+    trimmed = body.strip()
+    if len(trimmed) > _COMMENT_MAX_CHARS:
+        raise ValueError("comment exceeds max characters")
+    if len(trimmed.splitlines()) > _COMMENT_MAX_LINES:
+        raise ValueError("comment exceeds max lines")
+
+    target = conn.execute(
+        "SELECT target.id, target.entry_id, root.id AS root_comment_id,"
+        " root.author_id AS root_author_id"
+        " FROM comment target"
+        " JOIN comment root ON root.id = COALESCE(target.parent_comment_id, target.id)"
+        " WHERE target.id = ? AND target.deleted_at IS NULL AND root.deleted_at IS NULL",
+        (parent_comment_id,),
+    ).fetchone()
+    if target is None or target["entry_id"] != entry_id:
+        raise CommentNotFoundError(f"comment {parent_comment_id} not found")
+    if _entry_profile_context(conn, entry_id) is None:
+        raise CommentNotFoundError(f"entry {entry_id} not found")
+
+    now = current_timestamp_iso(timezone)
+    cur = conn.execute(
+        "INSERT INTO comment (entry_id, parent_comment_id, reply_to_comment_id, author_id, body, created_at)"
+        " VALUES (?, ?, ?, ?, ?, ?)",
+        (entry_id, target["root_comment_id"], parent_comment_id, author_id, trimmed, now),
+    )
+    reply_id = int(cur.lastrowid)
+    _notify_reply_participants(
+        conn,
+        entry_id=entry_id,
+        parent_comment_id=int(target["root_comment_id"]),
+        parent_author_id=int(target["root_author_id"]),
+        author_id=author_id,
+        comment_preview=notifications.comment_preview(trimmed),
+        created_at=now,
+    )
+    row = conn.execute("SELECT * FROM comment WHERE id = ?", (reply_id,)).fetchone()
+    return dict(row)
+
+
+def _notify_reply_participants(
+    conn: sqlite3.Connection,
+    *,
+    entry_id: int,
+    parent_comment_id: int,
+    parent_author_id: int,
+    author_id: int,
+    comment_preview: str,
+    created_at: str,
+) -> None:
+    if parent_author_id != author_id:
+        conn.execute(
+            "INSERT INTO notification (user_id, type, actor_id, entry_id, comment_id, comment_preview, created_at, read_at)"
+            " VALUES (?, 'comment_reply', ?, ?, ?, ?, ?, NULL)"
+            " ON CONFLICT(user_id, comment_id) WHERE type = 'comment_reply' DO UPDATE SET"
+            " actor_id = excluded.actor_id, entry_id = excluded.entry_id,"
+            " comment_preview = excluded.comment_preview, created_at = excluded.created_at, read_at = NULL",
+            (parent_author_id, author_id, entry_id, parent_comment_id, comment_preview, created_at),
+        )
+
+    rows = conn.execute(
+        "SELECT DISTINCT author_id FROM comment"
+        " WHERE parent_comment_id = ? AND author_id NOT IN (?, ?)",
+        (parent_comment_id, author_id, parent_author_id),
+    ).fetchall()
+    for row in rows:
+        notifications.create(
+            conn,
+            user_id=int(row["author_id"]),
+            type="comment_reply_participant",
+            actor_id=author_id,
+            entry_id=entry_id,
+            comment_id=parent_comment_id,
+            comment_preview=comment_preview,
+            created_at=created_at,
+        )
+
+
+def get_visible_comment(
+    conn: sqlite3.Connection, entry_id: int, comment_id: int
+) -> dict[str, Any] | None:
+    """Return a non-deleted comment scoped to its entry for delete confirmation."""
+    row = conn.execute(
+        "SELECT id, author_id, parent_comment_id FROM comment"
+        " WHERE id = ? AND entry_id = ? AND deleted_at IS NULL",
+        (comment_id, entry_id),
+    ).fetchone()
+    return dict(row) if row is not None else None
+
+
+def get_reply_target(
+    conn: sqlite3.Connection, entry_id: int, comment_id: int
+) -> dict[str, Any] | None:
+    """Return a live reply target whose top-level thread remains replyable."""
+    row = conn.execute(
+        "SELECT target.id, target.author_id, target.parent_comment_id,"
+        " target_user.username AS author_username, root.id AS root_comment_id"
+        " FROM comment target"
+        " JOIN user target_user ON target_user.id = target.author_id"
+        " JOIN comment root ON root.id = COALESCE(target.parent_comment_id, target.id)"
+        " WHERE target.id = ? AND target.entry_id = ?"
+        "   AND target.deleted_at IS NULL AND root.deleted_at IS NULL",
+        (comment_id, entry_id),
+    ).fetchone()
+    return dict(row) if row is not None else None
 
 
 def soft_delete_comment(conn: sqlite3.Connection, comment_id: int, requester_id: int) -> None:

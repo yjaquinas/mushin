@@ -17,7 +17,7 @@
                 class="flex min-h-tap items-start gap-3 transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
             >
                 <span class="flex size-9 shrink-0 self-center items-center justify-center rounded-full border border-border bg-surface-2 text-text-primary">
-                    {% if item.type == 'comment' %}
+                    {% if item.type == 'comment' or item.type == 'comment_reply' or item.type == 'comment_reply_participant' %}
                     {{ icon('message-circle', size=18) }}
                     {% elif item.type == 'connection_request' %}
                     {{ icon('user-plus', size=18) }}
@@ -28,7 +28,23 @@
                 <span class="flex min-w-0 flex-1 flex-col gap-1">
                     <span class="line-clamp-2 text-body text-text-primary">
                         {% if item.type == 'comment' %}
+                        {% if item.comment_preview %}
+                        {{ strings.NOTIFICATIONS_COMMENT_TEXT_WITH_PREVIEW.format(actor=item.actor_username, activity=item.activity_name, preview=item.comment_preview) }}
+                        {% else %}
                         {{ strings.NOTIFICATIONS_COMMENT_TEXT.format(actor=item.actor_username, activity=item.activity_name) }}
+                        {% endif %}
+                        {% elif item.type == 'comment_reply' %}
+                        {% if item.comment_preview %}
+                        {{ strings.NOTIFICATIONS_COMMENT_REPLY_TEXT_WITH_PREVIEW.format(actor=item.actor_username, preview=item.comment_preview) }}
+                        {% else %}
+                        {{ strings.NOTIFICATIONS_COMMENT_REPLY_TEXT.format(actor=item.actor_username) }}
+                        {% endif %}
+                        {% elif item.type == 'comment_reply_participant' %}
+                        {% if item.comment_preview %}
+                        {{ strings.NOTIFICATIONS_COMMENT_REPLY_PARTICIPANT_TEXT_WITH_PREVIEW.format(actor=item.actor_username, preview=item.comment_preview) }}
+                        {% else %}
+                        {{ strings.NOTIFICATIONS_COMMENT_REPLY_PARTICIPANT_TEXT.format(actor=item.actor_username) }}
+                        {% endif %}
                         {% elif item.type == 'connection_request' %}
                         {{ strings.NOTIFICATIONS_CONNECTION_REQUEST_TEXT.format(actor=item.actor_username) }}
                         {% else %}

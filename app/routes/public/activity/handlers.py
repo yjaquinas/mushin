@@ -20,10 +20,22 @@ from app.routes.web import (
     _field_defs_for_activity,
     _resolve_comment_deep_link,
 )
-from app.services.entries import stats
+from app.services.entries import entries, stats
 from app.services.search import indexing, metadata
 from app.services.social import profiles
 from app.ui_strings import META_DESCRIPTION_ACTIVITY
+
+
+def _comment_deep_link_state(
+    request: Request, *, activity_id: int, owner_id: int, tz: Any, today: Any
+) -> tuple[int | None, Any]:
+    """Return the deep-linked entry and the history month that contains it."""
+    entry = _resolve_comment_deep_link(
+        request.query_params.get("entry_id"), activity_id=activity_id, owner_id=owner_id
+    )
+    if entry is None:
+        return None, today
+    return int(entry["id"]), entries._local_day(entry["occurred_at"], tz)
 
 
 def _render_owner_activity_detail(
@@ -43,8 +55,8 @@ def _render_owner_activity_detail(
     """Build + render the full owner-dashboard ``activity_detail.html.jinja2``."""
     today = datetime.now(tz).date()
 
-    expand_comment_entry_id = _resolve_comment_deep_link(
-        request.query_params.get("entry_id"), activity_id=activity_id, owner_id=owner_id
+    expand_comment_entry_id, history_anchor = _comment_deep_link_state(
+        request, activity_id=activity_id, owner_id=owner_id, tz=tz, today=today
     )
 
     owner_context: dict[str, Any] = {
@@ -64,7 +76,7 @@ def _render_owner_activity_detail(
         activity_id,
         owner_id,
         period="month",
-        anchor=today,
+        anchor=history_anchor,
         tz=tz,
         is_owner=True,
         can_comment=can_comment,
@@ -179,8 +191,8 @@ def _render_readonly_activity_detail(
 
     today = datetime.now(tz).date()
 
-    expand_comment_entry_id = _resolve_comment_deep_link(
-        request.query_params.get("entry_id"), activity_id=activity_id, owner_id=owner_id
+    expand_comment_entry_id, history_anchor = _comment_deep_link_state(
+        request, activity_id=activity_id, owner_id=owner_id, tz=tz, today=today
     )
 
     context["activity_id"] = activity_id
@@ -188,7 +200,7 @@ def _render_readonly_activity_detail(
         activity_id,
         owner_id,
         period="month",
-        anchor=today,
+        anchor=history_anchor,
         tz=tz,
         is_owner=False,
         can_comment=can_comment,

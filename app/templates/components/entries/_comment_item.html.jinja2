@@ -1,0 +1,51 @@
+{% if comment.deleted_at %}
+<p class="text-body text-text-muted italic">{{ strings.COMMENTS_DELETED }}</p>
+{% else %}
+{% set author_name = comment.author_username %}
+{% set is_entry_owner_comment = comment.author_id == entry_owner_id %}
+{% set is_current_user_comment = current_user_id is not none and comment.author_id == current_user_id %}
+<div class="flex items-baseline justify-between gap-2">
+    <span class="flex min-w-0 items-center gap-2 text-caption font-medium">
+        {% if is_entry_owner_comment %}
+        <a href="/@{{ comment.author_username }}" class="min-w-0 truncate text-accent-text underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">{{ author_name }}</a>
+        <span class="rounded-full bg-surface-2 px-1 py-px text-[10px] leading-none text-[var(--color-obsidian)]">{{ strings.COMMENTS_AUTHOR_OWNER }}</span>
+        {% elif is_current_user_comment %}
+        <a href="/@{{ comment.author_username }}" class="min-w-0 truncate text-accent-text underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">{{ author_name }}</a>
+        <span class="rounded-full bg-accent-subtle px-1 py-px text-[10px] leading-none text-accent-text">{{ strings.COMMENTS_AUTHOR_YOU }}</span>
+        {% elif comment.author_username %}
+        <a href="/@{{ comment.author_username }}" class="min-w-0 truncate text-accent-text underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">{{ author_name }}</a>
+        {% else %}
+        <span class="min-w-0 truncate text-text-secondary">{{ author_name }}</span>
+        {% endif %}
+    </span>
+    <span class="text-caption text-text-muted" data-local-timestamp="{{ comment.created_at }}" hidden>{{ comment.created_at | format_comment_timestamp }}</span>
+</div>
+<div class="flex items-start justify-between gap-2">
+    {% if comment.hidden_at %}
+    <p class="min-w-0 flex-1 text-body text-text-muted italic">{{ strings.COMMENTS_HIDDEN_BY_MODERATOR }}</p>
+    {% else %}
+    <p class="min-w-0 flex-1 whitespace-pre-wrap break-all text-body text-text-primary">{% if is_reply %}{% set reply_target_username = comment.reply_to_author_username or parent_comment.author_username %}<span class="font-medium text-text-secondary">@{{ reply_target_username }}</span> {% endif %}{{ comment.body }}</p>
+    {% endif %}
+    {% if can_reply %}
+    <button
+        type="button"
+        aria-label="{{ strings.COMMENTS_REPLY_ARIA.format(author=comment.author_username) }}"
+        hx-get="/@{{ username }}/{{ slug }}/entries/{{ entry_id }}/comments/{{ comment.id }}/reply-form"
+        hx-target="#comment-reply-form-{{ comment.id }}"
+        hx-swap="outerHTML"
+        class="flex h-6 shrink-0 items-center gap-1 rounded-button px-1 text-body font-medium text-text-secondary transition hover:bg-surface-2 hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+    >{{ icon('reply', size=16) }}<span>{{ strings.COMMENTS_REPLY }}</span></button>
+    {% endif %}
+    {% if current_user_id is not none and (current_user_id == comment.author_id or current_user_id == entry_owner_id) %}
+    <button
+        type="button"
+        aria-label="{{ strings.COMMENTS_DELETE }}"
+        hx-get="/@{{ username }}/{{ slug }}/entries/{{ entry_id }}/comments/{{ comment.id }}/delete-confirm"
+        hx-target="#comment-delete-dialog-{{ comment.id }}"
+        hx-swap="outerHTML"
+        class="flex size-6 shrink-0 items-center justify-center rounded text-body text-text-muted transition hover:text-danger focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+    >{{ icon('trash', size=16) }}<span class="sr-only">{{ strings.COMMENTS_DELETE }}</span></button>
+    {% endif %}
+</div>
+{% endif %}
+<div id="comment-delete-dialog-{{ comment.id }}"></div>
