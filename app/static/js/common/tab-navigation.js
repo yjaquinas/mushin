@@ -187,6 +187,7 @@
         var idx = appendEntry(tab, entry, options && options.replaceCurrent);
         restoreEntry(tab, idx, { skipSave: true });
         pushBrowserState(tab, idx, url, options && options.replaceState);
+        if (options && options.scrollToTop) window.scrollTo(0, 0);
       })
       .catch(function () {
         window.location.href = url;
@@ -204,6 +205,10 @@
     }
   }
 
+  function isSocialFeed() {
+    return window.location.pathname === "/social";
+  }
+
   document.addEventListener("click", function (e) {
     var tabLink = e.target.closest(".bottom-nav-tab[data-tab]");
     if (!tabLink) return;
@@ -212,6 +217,10 @@
     var tab = tabLink.getAttribute("data-tab");
     var url = tabLink.getAttribute("href");
     if (tab === activeTab) {
+      if (tab === "social" && isSocialFeed()) {
+        navigate(url, { replaceCurrent: true, replaceState: true, scrollToTop: true });
+        return;
+      }
       navigate(url, { replaceCurrent: false });
       return;
     }
