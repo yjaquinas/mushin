@@ -122,3 +122,26 @@ async def delete_entry_comment(
     return await handlers.delete_entry_comment_body(
         request, username, slug, entry_id, comment_id, session
     )
+
+
+@router.post(
+    "/@{username}/{slug}/entries/{entry_id}/comments/{comment_id}/visibility",
+    response_class=HTMLResponse,
+    response_model=None,
+)
+async def set_entry_comment_visibility(
+    request: Request,
+    username: str,
+    slug: str,
+    entry_id: int,
+    comment_id: int,
+    hidden: Annotated[bool, Form()],
+    session: Annotated[str | None, Cookie(alias=sessions.COOKIE_NAME)] = None,
+) -> HTMLResponse:
+    if hidden:
+        return await handlers.hide_entry_comment_body(
+            request, username, slug, entry_id, comment_id, session
+        )
+    return await handlers.unhide_entry_comment_body(
+        request, username, slug, entry_id, comment_id, session
+    )

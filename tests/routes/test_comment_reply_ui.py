@@ -132,3 +132,44 @@ async def test_reply_submission_returns_refreshed_thread_fragment(
     assert response.status_code == 200
     assert 'id="comment-thread-1"' in body
     assert "A new reply" in body
+
+
+async def test_entry_owner_hides_a_comment_and_the_thread_shows_attribution(
+    database_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(db, "DATABASE_PATH", str(database_path))
+    monkeypatch.setattr(handlers.sessions, "read_uid", lambda _session: 1)
+    with db.connect_to(database_path) as conn:
+        comment = comments.create_comment(conn, 1, 2, "Hide this")
+        before = handlers._render_comment_thread(
+            _request(),
+            conn,
+            username="owner",
+            slug="run",
+            owner_id=1,
+            activity_id=1,
+            entry_id=1,
+            current_uid=1,
+            user={"id": 1, "visibility": "public"},
+        ).body.decode()
+        assert f'comments/{comment["id"]}/visibility' in before
+
+    response = await handlers.hide_entry_comment_body(
+        _request(), "owner", "run", 1, comment["id"], None
+    )
+    body = response.body.decode()
+
+    assert response.status_code == 200
+    assert "Hidden by owner" in body
+    assert "Hide this" not in body
+    assert f'comments/{comment["id"]}/visibility' in body
+    assert ">Unhide</button>" in body
+
+    restored_response = await handlers.unhide_entry_comment_body(
+        _request(), "owner", "run", 1, comment["id"], None
+    )
+    restored_body = restored_response.body.decode()
+    assert restored_response.status_code == 200
+    assert "Hide this" in restored_body
+    assert f'comments/{comment["id"]}/visibility' in restored_body
+    assert ">Hide</button>" in restored_body

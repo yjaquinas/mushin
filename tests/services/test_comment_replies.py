@@ -64,6 +64,30 @@ def test_reply_to_a_reply_stays_in_the_original_thread_and_targets_its_author(co
         comments.create_reply(conn, 2, parent["id"], 4, "Cross entry")
 
 
+def test_entry_owner_can_hide_a_comment_with_attribution(conn) -> None:
+    comment = comments.create_comment(conn, 1, 2, "Keep this private")
+
+    with pytest.raises(comments.CommentPermissionError):
+        comments.hide_comment(conn, 1, comment["id"], requester_id=2)
+
+    comments.hide_comment(conn, 1, comment["id"], requester_id=1)
+
+    row = comments.list_comments(conn, 1, viewer_id=3)[0]
+    assert row["body"] == "Keep this private"
+    assert row["hidden_at"] is not None
+    assert row["hidden_by_id"] == 1
+    assert row["hidden_by_username"] == "owner"
+    with pytest.raises(comments.CommentNotFoundError):
+        comments.create_reply(conn, 1, comment["id"], 3, "Reply to hidden")
+    with pytest.raises(comments.CommentNotFoundError):
+        comments.hide_comment(conn, 1, comment["id"], requester_id=2)
+
+    comments.unhide_comment(conn, 1, comment["id"], requester_id=1)
+    restored = comments.list_comments(conn, 1, viewer_id=3)[0]
+    assert restored["hidden_at"] is None
+    assert restored["hidden_by_id"] is None
+
+
 def test_reply_notifications_aggregate_and_fan_out(conn) -> None:
     parent = comments.create_comment(conn, 1, 2, "Parent")
     comments.create_reply(conn, 1, parent["id"], 3, "First")

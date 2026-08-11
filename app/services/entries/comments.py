@@ -80,9 +80,11 @@ def list_comments(
 
     rows = conn.execute(
         "SELECT c.id, c.entry_id, c.parent_comment_id, c.reply_to_comment_id, c.body,"
-        " c.created_at, c.deleted_at, c.hidden_at, c.author_id,"
-        " u.username AS author_username, reply_target_user.username AS reply_to_author_username"
+        " c.created_at, c.deleted_at, c.hidden_at, c.hidden_by_id, c.author_id,"
+        " u.username AS author_username, hidden_by_user.username AS hidden_by_username,"
+        " reply_target_user.username AS reply_to_author_username"
         " FROM comment c JOIN user u ON u.id = c.author_id"
+        " LEFT JOIN user hidden_by_user ON hidden_by_user.id = c.hidden_by_id"
         " LEFT JOIN comment reply_target ON reply_target.id = c.reply_to_comment_id"
         " LEFT JOIN user reply_target_user ON reply_target_user.id = reply_target.author_id"
         " WHERE c.entry_id = ?"
@@ -174,7 +176,9 @@ def create_reply(
         " root.author_id AS root_author_id"
         " FROM comment target"
         " JOIN comment root ON root.id = COALESCE(target.parent_comment_id, target.id)"
-        " WHERE target.id = ? AND target.deleted_at IS NULL AND root.deleted_at IS NULL",
+        " WHERE target.id = ?"
+        "   AND target.deleted_at IS NULL AND target.hidden_at IS NULL"
+        "   AND root.deleted_at IS NULL AND root.hidden_at IS NULL",
         (parent_comment_id,),
     ).fetchone()
     if target is None or target["entry_id"] != entry_id:
@@ -263,7 +267,8 @@ def get_reply_target(
         " JOIN user target_user ON target_user.id = target.author_id"
         " JOIN comment root ON root.id = COALESCE(target.parent_comment_id, target.id)"
         " WHERE target.id = ? AND target.entry_id = ?"
-        "   AND target.deleted_at IS NULL AND root.deleted_at IS NULL",
+        "   AND target.deleted_at IS NULL AND target.hidden_at IS NULL"
+        "   AND root.deleted_at IS NULL AND root.hidden_at IS NULL",
         (comment_id, entry_id),
     ).fetchone()
     return dict(row) if row is not None else None
@@ -290,6 +295,67 @@ def soft_delete_comment(conn: sqlite3.Connection, comment_id: int, requester_id:
         (current_timestamp_iso(), comment_id),
     )
     log.info("comment.soft_deleted", comment_id=comment_id, requester_id=requester_id)
+
+
+def hide_comment(
+    conn: sqlite3.Connection, entry_id: int, comment_id: int, requester_id: int
+) -> None:
+    """Hide a live comment on an entry, preserving its moderation attribution.
+
+    Only the entry owner may hide comments. This is deliberately distinct from
+    author deletion: hiding retains the thread structure and shows a public
+    placeholder instead of removing the comment entirely.
+    """
+    row = conn.execute(
+        "SELECT e.owner_id AS entry_owner_id"
+        " FROM comment c JOIN entry e ON e.id = c.entry_id"
+        " WHERE c.id = ? AND c.entry_id = ?"
+        "   AND c.deleted_at IS NULL AND c.hidden_at IS NULL",
+        (comment_id, entry_id),
+    ).fetchone()
+    if row is None:
+        raise CommentNotFoundError(f"comment {comment_id} not found")
+    if requester_id != row["entry_owner_id"]:
+        raise CommentPermissionError(f"user {requester_id} may not hide comment {comment_id}")
+    if not profiles.is_active_user(conn, requester_id):
+        raise CommentPermissionError(f"user {requester_id} may not hide comment {comment_id}")
+
+    conn.execute(
+        "UPDATE comment SET hidden_at = ?, hidden_by_id = ?"
+        " WHERE id = ? AND entry_id = ? AND hidden_at IS NULL AND deleted_at IS NULL",
+        (current_timestamp_iso(), requester_id, comment_id, entry_id),
+    )
+    log.info("comment.hidden", comment_id=comment_id, entry_id=entry_id, requester_id=requester_id)
+
+
+def unhide_comment(
+    conn: sqlite3.Connection, entry_id: int, comment_id: int, requester_id: int
+) -> None:
+    """Restore a comment previously hidden by its entry owner.
+
+    Moderator-hidden comments deliberately cannot be restored through the
+    public owner controls.
+    """
+    row = conn.execute(
+        "SELECT e.owner_id AS entry_owner_id, c.hidden_by_id"
+        " FROM comment c JOIN entry e ON e.id = c.entry_id"
+        " WHERE c.id = ? AND c.entry_id = ?"
+        "   AND c.deleted_at IS NULL AND c.hidden_at IS NOT NULL",
+        (comment_id, entry_id),
+    ).fetchone()
+    if row is None:
+        raise CommentNotFoundError(f"comment {comment_id} not found")
+    if requester_id != row["entry_owner_id"] or requester_id != row["hidden_by_id"]:
+        raise CommentPermissionError(f"user {requester_id} may not unhide comment {comment_id}")
+    if not profiles.is_active_user(conn, requester_id):
+        raise CommentPermissionError(f"user {requester_id} may not unhide comment {comment_id}")
+
+    conn.execute(
+        "UPDATE comment SET hidden_at = NULL, hidden_by_id = NULL"
+        " WHERE id = ? AND entry_id = ? AND hidden_by_id = ?",
+        (comment_id, entry_id, requester_id),
+    )
+    log.info("comment.unhidden", comment_id=comment_id, entry_id=entry_id, requester_id=requester_id)
 
 
 def unseen_comment_count(conn: sqlite3.Connection, owner_id: int) -> int:

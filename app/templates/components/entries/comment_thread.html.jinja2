@@ -8,18 +8,18 @@
         {% for comment in comments %}
         <li id="comment-{{ comment.id }}" class="flex flex-col gap-0">
             {% set is_reply = false %}
-            {% set thread_can_reply = can_comment and not comment.deleted_at %}
+            {% set thread_can_reply = can_comment and not comment.deleted_at and not comment.hidden_at %}
             {% set can_reply = thread_can_reply %}
             {% include "components/entries/_comment_item.html.jinja2" %}
             <div id="comment-reply-form-{{ comment.id }}"></div>
             {% if comment.replies %}
-            <ul class="ms-4 flex flex-col gap-0 border-s border-border ps-3">
+            <ul class="ms-4 flex flex-col border-s border-border ps-3">
                 {% for reply in comment.replies %}
-                <li id="comment-{{ reply.id }}" class="flex flex-col gap-0">
+                <li id="comment-{{ reply.id }}" class="mt-2 flex flex-col gap-0">
                     {% set is_reply = true %}
                     {% set parent_comment = comment %}
                     {% set comment = reply %}
-                    {% set can_reply = thread_can_reply %}
+                    {% set can_reply = thread_can_reply and not comment.hidden_at %}
                     {% include "components/entries/_comment_item.html.jinja2" %}
                     <div id="comment-reply-form-{{ comment.id }}"></div>
                 </li>

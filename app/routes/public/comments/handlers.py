@@ -223,3 +223,83 @@ async def delete_entry_comment_body(
             current_uid=current_uid,
             user=user,
         )
+
+
+async def hide_entry_comment_body(
+    request: Request,
+    username: str,
+    slug: str,
+    entry_id: int,
+    comment_id: int,
+    session: str | None,
+) -> HTMLResponse:
+    """Hide a comment as the entry owner and return its refreshed thread."""
+    current_uid = sessions.read_uid(session)
+    if current_uid is None:
+        return HTMLResponse(status_code=401)
+
+    with db.connect() as conn:
+        conn.execute("BEGIN")
+        resolved = _resolve_entry_for_comments(conn, username, slug, entry_id, current_uid)
+        if isinstance(resolved, HTMLResponse):
+            return resolved
+        user, owner_id, activity_id, _entry = resolved
+
+        try:
+            comments_service.hide_comment(conn, entry_id, comment_id, requester_id=current_uid)
+        except CommentNotFoundError:
+            return HTMLResponse(status_code=404)
+        except CommentPermissionError:
+            return HTMLResponse(status_code=403)
+
+        return _render_comment_thread(
+            request,
+            conn,
+            username=username,
+            slug=slug,
+            owner_id=owner_id,
+            activity_id=activity_id,
+            entry_id=entry_id,
+            current_uid=current_uid,
+            user=user,
+        )
+
+
+async def unhide_entry_comment_body(
+    request: Request,
+    username: str,
+    slug: str,
+    entry_id: int,
+    comment_id: int,
+    session: str | None,
+) -> HTMLResponse:
+    """Restore an owner-hidden comment and return its refreshed thread."""
+    current_uid = sessions.read_uid(session)
+    if current_uid is None:
+        return HTMLResponse(status_code=401)
+
+    with db.connect() as conn:
+        conn.execute("BEGIN")
+        resolved = _resolve_entry_for_comments(conn, username, slug, entry_id, current_uid)
+        if isinstance(resolved, HTMLResponse):
+            return resolved
+        user, owner_id, activity_id, _entry = resolved
+
+        try:
+            comments_service.unhide_comment(conn, entry_id, comment_id, requester_id=current_uid)
+        except CommentNotFoundError:
+            return HTMLResponse(status_code=404)
+        except CommentPermissionError:
+            return HTMLResponse(status_code=403)
+
+        return _render_comment_thread(
+            request,
+            conn,
+            username=username,
+            slug=slug,
+            owner_id=owner_id,
+            activity_id=activity_id,
+            entry_id=entry_id,
+            current_uid=current_uid,
+            user=user,
+        )
