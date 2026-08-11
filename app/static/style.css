@@ -1264,6 +1264,15 @@
     }
   }
 }
+html, body {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+html::-webkit-scrollbar, body::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
 [data-theme="dark"] {
   --color-brand: #5a6b85;
   --color-surface-0: #0f172a;
@@ -1561,14 +1570,11 @@
   }
   .tab-panel {
     display: none;
+    width: 100%;
   }
   .tab-panel--active {
-    display: block;
-  }
-  .tab-panel[data-tab="settings"].tab-panel--active {
     display: flex;
     flex-direction: column;
-    flex-grow: 1;
   }
   .bottom-nav {
     position: fixed;

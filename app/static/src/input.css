@@ -23,6 +23,20 @@
 
 @import "tailwindcss";
 
+/* Preserve scrolling while keeping browser scrollbars out of the app chrome. */
+html,
+body {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
 @theme {
   /* ── Palette ──────────────────────────────────────────────────────────── */
 
@@ -741,16 +755,12 @@
   /* ── Tab panels ────────────────────────────────────────────────────── */
   .tab-panel {
     display: none;
+    width: 100%;
   }
 
   .tab-panel--active {
-    display: block;
-  }
-
-  .tab-panel[data-tab="settings"].tab-panel--active {
     display: flex;
     flex-direction: column;
-    flex-grow: 1;
   }
 
   /* ── Bottom navigation bar ─────────────────────────────────────────── */
