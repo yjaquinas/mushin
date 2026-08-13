@@ -117,7 +117,7 @@
         {% if entry.hidden_at %}
         <p class="whitespace-pre-wrap break-words text-body text-text-muted italic">{{ strings.ENTRY_HIDDEN_BY_MODERATOR }}</p>
         {% elif memo_text %}
-        <p class="whitespace-pre-wrap break-words text-body text-text-primary">{{ memo_text }}</p>
+        <p class="whitespace-pre-wrap break-words text-body text-text-primary">{{ memo_text | linkify }}</p>
         {% endif %}
 
         {% if (entry.comment_count or can_comment) and username is not none and slug is not none %}

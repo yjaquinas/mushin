@@ -13,6 +13,7 @@ from jinja2 import Environment, FileSystemLoader
 from markupsafe import Markup
 
 from app import ui_strings
+from app.routes.web.common._linkify import linkify
 from app.services.entries import entries
 
 _STATIC_DIR = Path(__file__).resolve().parents[3] / "static"
@@ -73,6 +74,7 @@ templates.env.globals["static_asset"] = _static_asset
 templates.env.globals["canonical_url"] = _canonical_url
 templates.env.globals["og_image_url"] = _og_image_url
 templates.env.filters["entry_tags_csv"] = _entry_tags_csv
+templates.env.filters["linkify"] = linkify
 
 
 def _format_occurred_at(occurred_at: str, time_known: bool = True) -> str:

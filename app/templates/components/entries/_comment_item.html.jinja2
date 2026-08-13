@@ -24,7 +24,7 @@
     {% if comment.hidden_at %}
     <p class="min-w-0 flex-1 text-body text-text-muted italic">{% if comment.hidden_by_username %}{{ strings.COMMENTS_HIDDEN_BY_USER.format(username=comment.hidden_by_username) }}{% else %}{{ strings.COMMENTS_HIDDEN_BY_MODERATOR }}{% endif %}</p>
     {% else %}
-    <p class="min-w-0 flex-1 whitespace-pre-wrap break-all text-body text-text-primary">{% if is_reply %}{% set reply_target_username = comment.reply_to_author_username or parent_comment.author_username %}<span class="font-medium text-text-secondary">@{{ reply_target_username }}</span> {% endif %}{{ comment.body }}</p>
+    <p class="min-w-0 flex-1 whitespace-pre-wrap break-all text-body text-text-primary">{% if is_reply %}{% set reply_target_username = comment.reply_to_author_username or parent_comment.author_username %}<span class="font-medium text-text-secondary">@{{ reply_target_username }}</span> {% endif %}{{ comment.body | linkify }}</p>
     {% endif %}
     {% if can_reply %}
     <button
