@@ -62,8 +62,11 @@ def _canonical_url(request: Request) -> str:
     return url[:qs] if qs != -1 else url
 
 
-def _og_image_url(path: str | None = None) -> str:
-    return path or ui_strings.OG_IMAGE_URL
+def _og_image_url(request: Request, path: str | None = None) -> str:
+    image_path = path or ui_strings.OG_IMAGE_URL
+    if image_path.startswith(("http://", "https://")):
+        return image_path
+    return f"{str(request.base_url).rstrip('/')}/{image_path.lstrip('/')}"
 
 
 _env = Environment(loader=FileSystemLoader("app/templates"), autoescape=True)

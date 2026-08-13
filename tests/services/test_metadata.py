@@ -71,8 +71,10 @@ def test_eligible_profile_metadata_is_specific_escaped_and_valid_json_ld() -> No
     assert '<meta name="robots" content="index, follow">' in body
     assert '<meta property="og:title" content="sam · Mushin">' in body
     assert '<meta property="og:url" content="https://mushin.aqnas.xyz/@sam">' in body
+    assert '<meta property="og:image" content="https://mushin.aqnas.xyz/static/img/og-default.png">' in body
     assert '<link rel="canonical" href="https://mushin.aqnas.xyz/@sam">' in body
     assert '<meta name="twitter:card" content="summary_large_image">' in body
+    assert '<meta name="twitter:image" content="https://mushin.aqnas.xyz/static/img/og-default.png">' in body
     assert schema["@type"] == "ProfilePage"
     assert schema["dateCreated"] == "2025-01-02T00:00:00Z"
     assert schema["dateModified"] == "2026-07-20T12:00:00Z"
@@ -107,9 +109,23 @@ def test_eligible_activity_metadata_is_truthful_and_noindex_page_emits_no_json_l
     assert '<meta name="robots" content="index, follow">' in body
     assert '<meta property="og:title" content="Reading &lt;&#34;classics&#34;&gt; · sam · Mushin">' in body
     assert '<meta property="og:type" content="website">' in body
+    assert '<meta property="og:image" content="https://mushin.aqnas.xyz/static/img/og-default.png">' in body
+    assert '<meta name="twitter:image" content="https://mushin.aqnas.xyz/static/img/og-default.png">' in body
     assert "Recorded from 2026-01-01 to 2026-07-20." in body
     assert "visible_summary" not in data
     assert schema["@type"] == "CollectionPage"
     assert schema["mainEntity"]["@type"] == "Collection"  # type: ignore[index]
     assert schema["mainEntity"]["temporalCoverage"] == "2026-01-01/2026-07-20"  # type: ignore[index]
     assert "application/ld+json" not in noindex_body
+
+
+def test_og_image_urls_are_absolute_and_preserve_external_images() -> None:
+    relative_body = templates.get_template("web/base.html.jinja2").render(
+        request=_request("/@sam"), og_image="/static/img/custom.png"
+    )
+    external_body = templates.get_template("web/base.html.jinja2").render(
+        request=_request("/@sam"), og_image="https://cdn.example.com/custom.png"
+    )
+
+    assert 'content="https://mushin.aqnas.xyz/static/img/custom.png"' in relative_body
+    assert 'content="https://cdn.example.com/custom.png"' in external_body
