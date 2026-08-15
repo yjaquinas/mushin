@@ -80,11 +80,7 @@ def _build_fellows_context(
 ) -> dict[str, Any]:
     fellows = connections.list_fellows(profile_user_id)
     fellow_count = len(fellows)
-    show_names = is_owner or (
-        viewer_id is not None
-        and connections.relationship_state(viewer_id, profile_user_id) == "fellow"
-        and visibility == "public"
-    )
+    show_names = is_owner or visibility == "public"
     sliced = fellows if limit is None else fellows[:limit]
     context: dict[str, Any] = {
         "fellow_count": fellow_count,

@@ -8,6 +8,7 @@ from fastapi.responses import HTMLResponse
 
 from app.routes.public.activity import routes as activity_routes
 from app.routes.public.profile import routes as profile_routes
+from app.routes.web.activities import cards
 from app.routes.web.home import routes as home_routes
 
 
@@ -49,6 +50,26 @@ def _profile_context(*_args: object, **_kwargs: object) -> dict[str, object]:
         "viewer_logged_in": False,
         "bio": "",
     }
+
+
+def test_public_profile_exposes_fellows_but_private_profile_is_count_only(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    listed_fellows = [{"username": "first"}, {"username": "second"}]
+    monkeypatch.setattr(cards.connections, "list_fellows", lambda _user_id: listed_fellows)
+
+    public_context = cards._build_fellows_context(
+        1, viewer_id=None, is_owner=False, visibility="public"
+    )
+    private_context = cards._build_fellows_context(
+        1, viewer_id=None, is_owner=False, visibility="private"
+    )
+
+    assert public_context["show_fellow_names"] is True
+    assert public_context["fellows"] == listed_fellows
+    assert private_context["show_fellow_names"] is False
+    assert private_context["fellows"] == []
+    assert private_context["fellow_count"] == len(listed_fellows)
 
 
 async def test_public_profile_is_crawlable_at_its_canonical_url(
