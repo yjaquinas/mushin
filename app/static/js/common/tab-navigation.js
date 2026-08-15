@@ -75,6 +75,7 @@
     entry.panelHTML = panel.innerHTML;
     entry.mastheadHTML = captureMasthead();
     entry.inputs = captureInputs(panel);
+    entry.scrollY = window.scrollY;
   }
 
   function setActiveChrome(tab) {
@@ -120,6 +121,7 @@
     restoreInputs(panel, entry.inputs);
     restoreMasthead(entry.mastheadHTML);
     setActiveChrome(tab);
+    window.scrollTo(0, entry.scrollY || 0);
     document.body.dispatchEvent(
       new CustomEvent("tab:panel-rendered", { detail: { tab: tab, panel: panel } }),
     );
@@ -161,6 +163,7 @@
       panelHTML: remotePanel.innerHTML,
       mastheadHTML: remoteMasthead ? remoteMasthead.innerHTML : "",
       inputs: captureInputs(remotePanel),
+      scrollY: 0,
     };
   }
 
@@ -274,12 +277,17 @@
     var initialTab = document.body.getAttribute("data-current-tab") || "";
     if (!tabState[initialTab]) return;
 
+    if ("scrollRestoration" in window.history) {
+      window.history.scrollRestoration = "manual";
+    }
+
     var panel = panelFor(initialTab);
     var entry = {
       url: window.location.href,
       panelHTML: panel ? panel.innerHTML : "",
       mastheadHTML: captureMasthead(),
       inputs: captureInputs(panel),
+      scrollY: window.scrollY,
     };
     var idx = appendEntry(initialTab, entry, false);
     setActiveChrome(initialTab);
