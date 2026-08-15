@@ -510,16 +510,6 @@ FELLOWS_HEADING = "Fellows"
 HOME_FLASH_FELLOWS_PRIVATE = "This profile is private."
 TOAST_DISMISS = "Dismiss"
 
-# ---------------------------------------------------------------------------
-# PWA install banner
-# ---------------------------------------------------------------------------
-
-PWA_INSTALL_TEXT = "Install Mushin for quick access from your home screen."
-PWA_INSTALL_BUTTON = "Install"
-PWA_INSTALL_DISMISS = "Not now"
-PWA_INSTALL_SAFARI_IOS_TEXT = "Install Mushin for quick access. Share, View More, then Add to Home Screen."
-PWA_INSTALL_SAFARI_MAC_TEXT = "Install Mushin for quick access. Share, then Add to Dock."
-
 # {count} interpolated by the template. Used for non-owner/non-fellow
 # viewers, who see only the number, never the clickable names.
 FELLOWS_COUNT_LABEL = "{count} fellows"

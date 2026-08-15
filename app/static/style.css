@@ -912,9 +912,6 @@
   .whitespace-nowrap {
     white-space: nowrap;
   }
-  .whitespace-pre-line {
-    white-space: pre-line;
-  }
   .whitespace-pre-wrap {
     white-space: pre-wrap;
   }
@@ -1129,11 +1126,6 @@
   .has-\[\:checked\]\:text-text-primary {
     &:has(*:is(:checked)) {
       color: var(--color-text-primary);
-    }
-  }
-  .sm\:flex {
-    @media (width >= 40rem) {
-      display: flex;
     }
   }
   .sm\:hidden {

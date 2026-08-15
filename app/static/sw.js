@@ -1,4 +1,4 @@
-const CACHE = "mushin-v1";
+const CACHE = "mushin-v3";
 const PRECACHE_URLS = [
   "/static/manifest.json",
   "/static/style.css",

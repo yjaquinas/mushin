@@ -4,8 +4,8 @@
   "description": "No-mind. Just show up, and watch it add up.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#F8FAFC",
-  "theme_color": "#0F172A",
+  "background_color": "#FFFFFF",
+  "theme_color": "#FFFFFF",
   "icons": [
     {
       "src": "/static/favicon/favicon-192x192.png",
