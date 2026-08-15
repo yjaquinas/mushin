@@ -36,3 +36,33 @@ def test_all_history_uses_full_tag_set_and_paginates_filtered_rows(monkeypatch) 
         {"name": "outdoors", "total": 1, "this_period": 1, "last_period": 0, "delta": 1},
         {"name": "read", "total": 1, "this_period": 1, "last_period": 0, "delta": 1},
     ]
+
+
+def test_month_history_opens_the_page_containing_a_deep_linked_entry(monkeypatch) -> None:
+    rows = [
+        {"id": entry_id, "occurred_at": f"2026-08-{13 - entry_id:02d}T10:00:00"}
+        for entry_id in range(1, 13)
+    ]
+
+    def period_entries(*_args, limit=None, offset=None, **_kwargs):
+        if limit is None:
+            return rows
+        return rows[offset : offset + limit]
+
+    monkeypatch.setattr(period.stats, "period_entries", period_entries)
+    monkeypatch.setattr(period.entries, "count_entries", lambda *_args, **_kwargs: len(rows))
+    monkeypatch.setattr(period, "_build_calendar_context", lambda *_args, **_kwargs: {})
+    monkeypatch.setattr(period, "_decorate_comment_counts", lambda *_args: None)
+
+    history = period._build_history_context(
+        7,
+        3,
+        period="month",
+        anchor=date(2026, 8, 1),
+        tz=ZoneInfo("UTC"),
+        expand_comment_entry_id=11,
+        page_size=10,
+    )
+
+    assert history["page"] == 2
+    assert [entry["id"] for group in history["log"] for entry in group["entries"]] == [11, 12]
