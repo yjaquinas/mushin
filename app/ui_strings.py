@@ -804,7 +804,6 @@ META_DESCRIPTION_PROFILE_PUBLIC = "{username} tracks {activity_count} public act
 META_DESCRIPTION_ACTIVITY_PUBLIC = "{username} is tracking {activity}. Current total: {total}."
 META_DESCRIPTION_ACTIVITY_STREAK = "Current streak: {streak} days."
 META_DESCRIPTION_DATE_RANGE = "Recorded from {start} to {end}."
-PUBLIC_PROFILE_SUMMARY = "{username} tracks {activity_count} public activities."
 ACTIVITY_TRACKING_SINCE = "Tracking since {date}"
 SCHEMA_PUBLIC_ACTIVITIES = "Public activities"
 SCHEMA_FELLOWS = "Fellows"

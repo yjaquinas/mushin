@@ -110,9 +110,6 @@ def profile_metadata(
         "og_type": "profile",
         "twitter_card_type": "summary_large_image",
         "structured_data": schema,
-        "visible_summary": ui_strings.PUBLIC_PROFILE_SUMMARY.format(
-            username=username, activity_count=public_activity_count
-        ),
     }
 
 
