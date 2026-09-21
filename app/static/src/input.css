@@ -126,7 +126,7 @@ body::-webkit-scrollbar {
   --color-danger-subtle: #fbeae3;
 
   /*
-   * Heatmap trend strip (activity-detail summary card, 84 trailing days as
+   * Heatmap trend strip (activity-detail summary card, full history as
    * height-encoded bars — added 2026-06-23, replacing the removed year-view
    * heatmap calendar and its 5-step --color-heat-0..4 ramp from 41bdead).
    * Intensity here is height, not color — a single fill communicates "this

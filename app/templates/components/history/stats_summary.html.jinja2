@@ -1,4 +1,4 @@
-{# Shared summary card: title (optional), all-time count, current-year heatmap,
+{# Shared summary card: title (optional), all-time count, full-history heatmap,
    and top tags. #}
 <section
     id="activity-section-summary-{{ activity_id }}"
@@ -64,42 +64,46 @@
         </dl>
     </div>
     <div class="flex flex-col gap-4">
-        {% if heatmap is defined %}
+        {% if heatmap %}
         {% set active_weeks = heatmap | selectattr('intensity', 'gt', 0) | list | length %}
-        <div class="flex flex-col gap-1">
-            <div class="flex gap-px" aria-hidden="true">
-                {% for week in heatmap %}
-                <span class="min-w-0 flex-1 whitespace-nowrap text-caption text-text-muted">
-                    {% if week.quarter_month %}{{ strings.HEATMAP_QUARTER_LABELS[week.quarter_month] }}{% endif %}
-                </span>
-                {% endfor %}
+        <div class="flex flex-col gap-1" data-heatmap-timeline>
+            <div class="flex items-center justify-between gap-3">
+                <button
+                    type="button"
+                    hidden
+                    data-heatmap-now
+                    class="min-h-tap rounded-button px-2 text-caption text-text-secondary transition hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-strong"
+                >{{ strings.HEATMAP_NOW }}</button>
             </div>
-            <div
-                role="img"
-                aria-label="{{ strings.HEATMAP_ARIA.format(active_weeks=active_weeks) }}"
-                class="flex h-12 items-end gap-px"
-            >
-                {% for week in heatmap %}
-                    {% if week.intensity > 0 %}
-                        {% set height_pct = (week.intensity / 7 * 100) | round(1) %}
-                        <div
+            <div class="overflow-x-auto overscroll-contain" data-heatmap-scroll tabindex="0">
+                <div class="flex w-max min-w-full gap-px" aria-hidden="true">
+                    {% for week in heatmap %}
+                    <span class="w-3 shrink-0 whitespace-nowrap text-caption text-text-muted">
+                        {% if week.quarter_month %}
+                            {% set month_label = strings.HEATMAP_QUARTER_LABELS[week.quarter_month] %}
+                            {{ strings.HEATMAP_JANUARY_LABEL.format(month=month_label, year=week.quarter_year) if week.quarter_month == 1 else month_label }}
+                        {% endif %}
+                    </span>
+                    {% endfor %}
+                </div>
+                <div
+                    role="group"
+                    aria-label="{{ strings.HEATMAP_ARIA.format(start=heatmap[0].start, end=heatmap[-1].end, active_weeks=active_weeks) }}"
+                    class="flex h-12 w-max min-w-full items-end gap-px"
+                >
+                    {% for week in heatmap %}
+                        {% set height_pct = (week.intensity / 7 * 100) | round(1) if week.intensity else 0 %}
+                        <span
                             aria-hidden="true"
-                            class="min-w-0 flex-1 bg-heatmap-bar"
-                            style="height: {{ height_pct }}%"
-                        ></div>
-                    {% else %}
-                        <div
-                            aria-hidden="true"
-                            class="min-w-0 flex-1 bg-heatmap-baseline"
-                            style="height: 2px"
-                        ></div>
-                    {% endif %}
-                {% endfor %}
+                            class="w-3 shrink-0 {% if week.intensity > 0 %}bg-heatmap-bar{% else %}bg-heatmap-baseline{% endif %}"
+                            style="height: {{ height_pct if week.intensity else 2 }}{% if week.intensity %}%{% else %}px{% endif %}"
+                        ></span>
+                    {% endfor %}
+                </div>
             </div>
-            {% if active_weeks == 0 %}
-            <p class="text-caption text-text-muted">{{ strings.HEATMAP_EMPTY }}</p>
-            {% endif %}
         </div>
+        {% else %}
+        <p class="text-caption text-text-muted">{{ strings.HEATMAP_EMPTY }}</p>
         {% endif %}
 
     {% include "components/activities/_top_tags_content.html.jinja2" with context %}

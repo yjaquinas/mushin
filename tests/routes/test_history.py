@@ -123,3 +123,21 @@ def test_monthly_average_handles_single_and_empty_month_spans() -> None:
         [date(2026, 4, 1), date(2026, 4, 30)],
     ) == 3.0
     assert entry_stats._average_per_calendar_month(0, []) == 0.0
+
+
+def test_heatmap_weeks_span_history_through_today_without_future_weeks() -> None:
+    heatmap = entry_stats._build_heatmap_weeks(
+        date(2025, 12, 30),
+        date(2026, 1, 2),
+        {date(2025, 12, 30): 1, date(2026, 1, 1): 1},
+    )
+
+    assert heatmap == [
+        {
+            "intensity": 2,
+            "start": "2025-12-28",
+            "end": "2026-01-02",
+            "quarter_month": 1,
+            "quarter_year": 2026,
+        }
+    ]

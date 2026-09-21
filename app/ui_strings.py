@@ -203,20 +203,19 @@ CALENDAR_PREV_MONTH = "Previous month"
 CALENDAR_NEXT_MONTH = "Next month"
 CALENDAR_WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
-# Heatmap strip: non-interactive, so HEATMAP_ARIA carries all the
-# accessibility information for the whole strip; individual week-bars are
-# aria-hidden. {active_weeks} interpolated by the template. Covers the
-# current calendar year (fixed-length, future weeks zero-filled) — quarter
-# labels (HEATMAP_QUARTER_LABELS) orient the reader within the strip instead
-# of a window-length caption.
-HEATMAP_ARIA = "Activity this year, {active_weeks} weeks with activity"
+# Heatmap strip: the scrollable weekly timeline runs from the first entry
+# through today. {active_weeks}, {start}, and {end} are interpolated by the
+# template; sparse quarter labels orient long histories.
+HEATMAP_ARIA = "Activity history from {start} to {end}, {active_weeks} weeks with activity"
 HEATMAP_EMPTY = "No entries yet"
+HEATMAP_NOW = "Now"
 
 # Quarter-start month labels placed along the heatmap strip (sparse — every
 # week is a column, but only the week containing a quarter's 1st gets a text
 # label, keyed by month number so the template can index directly off a
 # bucket's `quarter_month`).
 HEATMAP_QUARTER_LABELS = {1: "JAN", 4: "APR", 7: "JUL", 10: "OCT"}
+HEATMAP_JANUARY_LABEL = "{month} {year}"
 
 TAGS_HEADING = "Tags"
 TAG_FILTER_ENTRY_COUNT_ONE = "{count} entry"

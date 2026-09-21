@@ -200,16 +200,16 @@ def card_stats(
         average_weekly = entry_count / span_weeks
     average_monthly = _average_per_calendar_month(entry_count, distinct_days)
 
-    # Heatmap: current calendar year, grouped into Sunday-starting week buckets.
+    # Heatmap: full activity history through the current day, grouped into
+    # Sunday-starting week buckets.
     today = _today_local(tz)
-    heatmap_start = _year_start(today)
-    heatmap_end = date(today.year, 12, 31)
     day_counts: dict[date, int] = {}
     for d in distinct_days:
-        if heatmap_start <= d <= today:
+        if d <= today:
             day_counts[d] = day_counts.get(d, 0) + 1
-
-    heatmap = _build_heatmap_weeks(heatmap_start, heatmap_end, day_counts)
+    heatmap = (
+        _build_heatmap_weeks(distinct_days[-1], today, day_counts) if distinct_days else []
+    )
 
     # Period counts.
     this_start, last_start, this_end = _period_bounds(today, "month")
@@ -256,28 +256,28 @@ def _build_heatmap_weeks(
 ) -> list[dict[str, Any]]:
     heatmap_weeks: list[dict[str, Any]] = []
     cursor = _sunday_week_start(start)
-    week_days: list[date] = []
     while cursor <= end:
-        week_days.append(cursor)
-        if len(week_days) == 7 or cursor == end:
-            heatmap_weeks.append(
-                {
-                    "intensity": sum(day_counts.get(d, 0) for d in week_days),
-                    "quarter_month": _quarter_month_for_bucket(week_days),
-                }
-            )
-            week_days = []
-        cursor += timedelta(days=1)
-    if week_days:
-        while len(week_days) < 7:
-            week_days.append(cursor)
-            cursor += timedelta(days=1)
+        week_end = min(cursor + timedelta(days=6), end)
+        week_days = [cursor + timedelta(days=offset) for offset in range((week_end - cursor).days + 1)]
+        quarter_month = _quarter_month_for_bucket(week_days)
+        quarter_year = next(
+            (
+                day.year
+                for day in week_days
+                if day.day == 1 and day.month == quarter_month
+            ),
+            None,
+        )
         heatmap_weeks.append(
             {
                 "intensity": sum(day_counts.get(d, 0) for d in week_days),
-                "quarter_month": _quarter_month_for_bucket(week_days),
+                "start": cursor.isoformat(),
+                "end": week_end.isoformat(),
+                "quarter_month": quarter_month,
+                "quarter_year": quarter_year,
             }
         )
+        cursor += timedelta(days=7)
     return heatmap_weeks
 
 
