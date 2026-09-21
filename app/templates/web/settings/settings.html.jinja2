@@ -356,6 +356,9 @@
             {{ strings.ACCOUNT_PRIVACY_LINK }}
         </a>
     </div>
+    <div class="flex flex-col items-start gap-3 pt-2">
+        {% include "components/common/_launch_badges.html.jinja2" with context %}
+    </div>
 </section>
 
 {# Legal dialog — content loaded via HTMX into #settings-target-legal-content. #}

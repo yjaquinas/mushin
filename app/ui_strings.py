@@ -379,6 +379,10 @@ ACCOUNT_SEARCH_DISCOVERY_DESC = (
 
 SETTINGS_ABOUT_HEADING = "About"
 SETTINGS_CONTACT_EMAIL = "mushin@aqnas.xyz"
+PRODUCT_HUNT_BADGE_LABEL = "Mushin on Product Hunt"
+PRODUCT_HUNT_BADGE_ALT = "Mushin 無心 - A social network for people who'd log records. | Product Hunt"
+LAUNCHBUFF_BADGE_LABEL = "Featured on LaunchBuff"
+LAUNCHBUFF_BADGE_ALT = "Featured on LaunchBuff"
 
 ACCOUNT_SETTINGS_SAVE = "Save"
 ACCOUNT_VISIBILITY_SAVE = ACCOUNT_SETTINGS_SAVE
