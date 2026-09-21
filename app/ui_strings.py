@@ -208,7 +208,7 @@ CALENDAR_WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 # template; sparse quarter labels orient long histories.
 HEATMAP_ARIA = "Activity history from {start} to {end}, {active_weeks} weeks with activity"
 HEATMAP_EMPTY = "No entries yet"
-HEATMAP_NOW = "Now"
+HEATMAP_NOW = "Now >>"
 
 # Quarter-start month labels placed along the heatmap strip (sparse — every
 # week is a column, but only the week containing a quarter's 1st gets a text

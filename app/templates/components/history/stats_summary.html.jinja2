@@ -67,7 +67,7 @@
         {% if heatmap %}
         {% set active_weeks = heatmap | selectattr('intensity', 'gt', 0) | list | length %}
         <div class="flex flex-col gap-1" data-heatmap-timeline>
-            <div class="flex items-center justify-between gap-3">
+            <div class="flex justify-end">
                 <button
                     type="button"
                     hidden
