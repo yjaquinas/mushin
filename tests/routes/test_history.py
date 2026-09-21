@@ -125,6 +125,13 @@ def test_monthly_average_handles_single_and_empty_month_spans() -> None:
     assert entry_stats._average_per_calendar_month(0, []) == 0.0
 
 
+def test_first_entry_date_uses_the_earliest_record() -> None:
+    assert entry_stats._first_entry_date(
+        [date(2026, 8, 12), date(2024, 1, 4), date(2025, 6, 30)]
+    ) == "2024-01-04"
+    assert entry_stats._first_entry_date([]) is None
+
+
 def test_heatmap_weeks_span_history_through_today_without_future_weeks() -> None:
     heatmap = entry_stats._build_heatmap_weeks(
         date(2025, 12, 30),

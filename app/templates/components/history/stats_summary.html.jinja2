@@ -108,7 +108,13 @@
 
     {% include "components/activities/_top_tags_content.html.jinja2" with context %}
     </div>
-    {% if created_at %}
-    <p class="self-end text-xs text-text-muted">{{ strings.ACTIVITY_TRACKING_SINCE.format(date=created_at[:10]) }}</p>
+    {% set creation_date = created_at[:10] if created_at else none %}
+    {% set first_record_date = first_entry_date | default(none) %}
+    {% if creation_date or first_record_date %}
+    <p class="self-end text-xs text-text-muted">
+        {% if creation_date %}{{ strings.ACTIVITY_CREATED.format(date=creation_date) }}{% endif %}
+        {% if creation_date and first_record_date and first_record_date != creation_date %} · {% endif %}
+        {% if first_record_date and first_record_date != creation_date %}{{ strings.ACTIVITY_RECORDS_FROM.format(date=first_record_date) }}{% endif %}
+    </p>
     {% endif %}
 </section>

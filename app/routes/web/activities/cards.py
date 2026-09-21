@@ -63,6 +63,7 @@ def _build_card_context(
         "streaks": card_stats["streaks"],
         "average_weekly_count": card_stats["average_weekly_count"],
         "average_monthly_count": card_stats["average_monthly_count"],
+        "first_entry_date": card_stats["first_entry_date"],
         "heatmap": card_stats["heatmap"],
         "top_tags": _build_card_top_tags(activity_id, owner_id, field_defs, tz=tz) if include_top_tags else None,
         "fields": [],

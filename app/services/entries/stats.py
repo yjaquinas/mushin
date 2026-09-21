@@ -199,6 +199,7 @@ def card_stats(
         span_weeks = max(1, ceil(span_days / 7))
         average_weekly = entry_count / span_weeks
     average_monthly = _average_per_calendar_month(entry_count, distinct_days)
+    first_entry_date = _first_entry_date(distinct_days)
 
     # Heatmap: full activity history through the current day, grouped into
     # Sunday-starting week buckets.
@@ -238,6 +239,7 @@ def card_stats(
         },
         "average_weekly_count": average_weekly,
         "average_monthly_count": average_monthly,
+        "first_entry_date": first_entry_date,
         "heatmap": heatmap,
     }
 
@@ -249,6 +251,11 @@ def _average_per_calendar_month(entry_count: int, days: list[date]) -> float:
     first, last = min(days), max(days)
     month_count = ((last.year - first.year) * 12) + last.month - first.month + 1
     return entry_count / month_count
+
+
+def _first_entry_date(days: list[date]) -> str | None:
+    """Return the earliest entry's local calendar date as an ISO string."""
+    return min(days).isoformat() if days else None
 
 
 def _build_heatmap_weeks(

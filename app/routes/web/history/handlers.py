@@ -134,6 +134,7 @@ def stats_summary_fragment_response(request: Request, activity_id: int, owner_id
             "streaks": cs["streaks"],
             "average_weekly_count": cs["average_weekly_count"],
             "average_monthly_count": cs["average_monthly_count"],
+            "first_entry_date": cs["first_entry_date"],
             "heatmap": cs["heatmap"],
             "top_tags": _build_card_top_tags(activity_id, owner_id, field_defs, tz=tz),
             "is_owner": True,
