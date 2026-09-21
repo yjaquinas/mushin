@@ -330,6 +330,9 @@
             {{ strings.SETTINGS_CONTACT_EMAIL }}
         </a>
     </p>
+    <div class="flex flex-col items-start gap-3 pt-2">
+        {% include "components/common/_launch_badges.html.jinja2" with context %}
+    </div>
     <div class="flex gap-3 pt-2">
         <a
             href="/licenses"
@@ -355,9 +358,6 @@
         >
             {{ strings.ACCOUNT_PRIVACY_LINK }}
         </a>
-    </div>
-    <div class="flex flex-col items-start gap-3 pt-2">
-        {% include "components/common/_launch_badges.html.jinja2" with context %}
     </div>
 </section>
 
