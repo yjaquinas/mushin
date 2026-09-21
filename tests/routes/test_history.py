@@ -5,6 +5,7 @@ from zoneinfo import ZoneInfo
 
 from app.routes.web.history import period
 from app.routes.web.history import stats as history_stats
+from app.services.entries import stats as entry_stats
 
 
 def test_all_history_uses_full_tag_set_and_paginates_filtered_rows(monkeypatch) -> None:
@@ -99,9 +100,26 @@ def test_month_history_filters_before_pagination_and_uses_full_month_for_tags(mo
     )
 
     assert [entry["id"] for group in history["log"] for entry in group["entries"]] == [11, 12]
+    assert history["total_count"] == 2
+    assert history["month_total_count"] == 12
     assert history["page"] == 1
     assert history["total_pages"] == 1
     assert history_stats._build_history_tags(history, tz=ZoneInfo("UTC"))["tags"] == [
         {"name": "run", "total": 11, "this_period": 11, "last_period": 0, "delta": 11},
         {"name": "read", "total": 2, "this_period": 2, "last_period": 0, "delta": 2},
     ]
+
+
+def test_monthly_average_includes_inactive_calendar_months() -> None:
+    assert entry_stats._average_per_calendar_month(
+        6,
+        [date(2026, 1, 15), date(2026, 3, 2)],
+    ) == 2.0
+
+
+def test_monthly_average_handles_single_and_empty_month_spans() -> None:
+    assert entry_stats._average_per_calendar_month(
+        3,
+        [date(2026, 4, 1), date(2026, 4, 30)],
+    ) == 3.0
+    assert entry_stats._average_per_calendar_month(0, []) == 0.0

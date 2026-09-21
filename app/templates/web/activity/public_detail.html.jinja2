@@ -12,7 +12,7 @@
     <a href="/@{{ username }}" class="flex items-center gap-1 text-caption text-text-secondary hover:text-text-primary transition">
         {{ icon('chevron-left', size=16) }} {{ strings.PROFILE_VISIT.format(username=username) }}
     </a>
-    {% with card_name=card.name, created_at=card.created_at, average_weekly_count=card.average_weekly_count, show_top_tags=false, is_secret=card.secret %}
+    {% with card_name=card.name, created_at=card.created_at, average_weekly_count=card.average_weekly_count, average_monthly_count=card.average_monthly_count, show_top_tags=false, is_secret=card.secret %}
     {% include "components/history/stats_summary.html.jinja2" with context %}
     {% endwith %}
 

@@ -35,6 +35,7 @@ def _build_history_context(
 
     selected_tags = sorted(set(selected_tags or []))
     tag_source_rows: list[dict[str, Any]] | None = None
+    month_total_count: int | None = None
 
     if period == "all":
         # Hashtags live in free-text memos, so exact matching uses the shared
@@ -51,6 +52,8 @@ def _build_history_context(
     elif selected_day is not None:
         start = stats._shift_period(anchor, period, 0)
         end = stats._shift_period(anchor, period, 1) - timedelta(days=1)
+        tag_source_rows = stats.period_entries(activity_id, owner_id, start, end, tz=tz)
+        month_total_count = len(tag_source_rows)
         day_entries = entries.list_entries_by_day(owner_id, activity_id, selected_day, tz=tz)
         total_count = len(day_entries)
         rows = []
@@ -78,6 +81,7 @@ def _build_history_context(
         # visible month. Filter this complete source before slicing it so
         # matching entries are packed into pages and tag counts stay stable.
         matching_rows = _rows_matching_any_tag(tag_source_rows, selected_tags)
+        month_total_count = len(tag_source_rows)
         total_count = len(matching_rows)
         total_pages = max(1, (total_count + page_size - 1) // page_size)
         page = min(max(1, page), total_pages)
@@ -108,6 +112,7 @@ def _build_history_context(
         "page": page,
         "total_pages": total_pages,
         "total_count": total_count,
+        "month_total_count": month_total_count,
         "page_range": _page_range(page, total_pages),
         "selected_tags": selected_tags,
         "tags_query": ",".join(selected_tags),

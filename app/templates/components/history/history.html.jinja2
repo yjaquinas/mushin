@@ -77,6 +77,14 @@
             <h3 class="text-body font-medium text-text-primary" aria-live="polite">
                 {{ history.label }}
             </h3>
+            {% set history_count = (history.month_total_count | default(history.total_count)) | format_count %}
+            <p class="text-caption text-text-muted">
+                {% if history.month_total_count | default(history.total_count) == 1 %}
+                    {{ strings.HISTORY_MONTH_ENTRY_COUNT_ONE.format(count=history_count) }}
+                {% else %}
+                    {{ strings.HISTORY_MONTH_ENTRY_COUNT.format(count=history_count) }}
+                {% endif %}
+            </p>
         </div>
         <button
             type="button"

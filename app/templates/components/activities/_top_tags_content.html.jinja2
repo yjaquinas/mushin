@@ -7,7 +7,19 @@
 {% if show_top_tags | default(true) and top_tags is defined and top_tags is not none %}
 <div class="flex flex-col gap-2">
     <div class="flex items-center justify-between gap-3">
-        <h3 class="text-body font-medium text-text-primary">{{ strings.TAGS_HEADING }}</h3>
+        <h3 class="flex items-baseline gap-2 text-body font-medium text-text-primary">
+            {{ strings.TAGS_HEADING }}
+            {% if history is defined and history.selected_tags %}
+                {% set filtered_count = history.total_count | format_count %}
+                <span class="text-caption font-normal text-text-muted">
+                    {% if history.total_count == 1 %}
+                        {{ strings.TAG_FILTER_ENTRY_COUNT_ONE.format(count=filtered_count) }}
+                    {% else %}
+                        {{ strings.TAG_FILTER_ENTRY_COUNT.format(count=filtered_count) }}
+                    {% endif %}
+                </span>
+            {% endif %}
+        </h3>
         {% if top_tags.tags %}
             <button
                 type="button"
