@@ -16,7 +16,7 @@
 
     if (event.target.closest("[data-tag-clear]")) {
       tags.setSelected([]);
-      if (!tags.reloadAllHistory()) tags.apply(document);
+      if (!tags.reloadHistory()) tags.apply(document);
       return;
     }
 
@@ -28,7 +28,7 @@
     if (existingIndex === -1) nextSelected.push(tagName);
     else nextSelected.splice(existingIndex, 1);
     tags.setSelected(nextSelected);
-    if (!tags.reloadAllHistory()) tags.apply(document);
+    if (!tags.reloadHistory()) tags.apply(document);
   }, true);
 
   document.addEventListener("DOMContentLoaded", function () {
@@ -55,7 +55,7 @@
     if (!period && event.detail.path) {
       period = new URL(event.detail.path, window.location.origin).searchParams.get("period");
     }
-    if (period === "all") parameters.tags = tags.selected().join(",");
+    if (period === "all" || period === "month") parameters.tags = tags.selected().join(",");
   });
 
   window.addEventListener("resize", function () {

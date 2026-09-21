@@ -68,7 +68,7 @@ def test_month_history_opens_the_page_containing_a_deep_linked_entry(monkeypatch
     assert [entry["id"] for group in history["log"] for entry in group["entries"]] == [11, 12]
 
 
-def test_month_history_uses_full_month_for_tags_when_log_is_paginated(monkeypatch) -> None:
+def test_month_history_filters_before_pagination_and_uses_full_month_for_tags(monkeypatch) -> None:
     rows = [
         {"id": entry_id, "occurred_at": f"2026-08-{13 - entry_id:02d}T10:00:00", "memo": "#run"}
         for entry_id in range(1, 11)
@@ -89,10 +89,18 @@ def test_month_history_uses_full_month_for_tags_when_log_is_paginated(monkeypatc
     monkeypatch.setattr(history_stats.stats, "_today_local", lambda _tz: date(2026, 8, 12))
 
     history = period._build_history_context(
-        7, 3, period="month", anchor=date(2026, 8, 1), tz=ZoneInfo("UTC"), page=2
+        7,
+        3,
+        period="month",
+        anchor=date(2026, 8, 1),
+        tz=ZoneInfo("UTC"),
+        page=2,
+        selected_tags=["read"],
     )
 
     assert [entry["id"] for group in history["log"] for entry in group["entries"]] == [11, 12]
+    assert history["page"] == 1
+    assert history["total_pages"] == 1
     assert history_stats._build_history_tags(history, tz=ZoneInfo("UTC"))["tags"] == [
         {"name": "run", "total": 11, "this_period": 11, "last_period": 0, "delta": 11},
         {"name": "read", "total": 2, "this_period": 2, "last_period": 0, "delta": 2},

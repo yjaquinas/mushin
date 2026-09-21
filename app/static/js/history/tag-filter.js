@@ -127,15 +127,15 @@
     syncTagSections(document);
   }
 
-  function reloadAllHistory() {
-    var root = document.querySelector('[id^="activity-section-history-"][data-history-period="all"]');
+  function reloadHistory() {
+    var root = document.querySelector('[id^="activity-section-history-"]');
     if (!root || !window.htmx) return false;
     var activityId = root.id.slice("activity-section-history-".length);
     window.htmx.ajax("GET", "/activities/" + activityId + "/history", {
       target: root,
       swap: "outerHTML",
       values: {
-        period: "all",
+        period: root.dataset.historyPeriod || "month",
         anchor: root.dataset.historyAnchor || "",
         page: 1,
         tags: selectedTagValues().join(",")
@@ -151,6 +151,6 @@
     selected: selectedTagValues,
     setSelected: setSelectedTagValues,
     syncSection: syncTagSection,
-    reloadAllHistory: reloadAllHistory
+    reloadHistory: reloadHistory
   };
 })();

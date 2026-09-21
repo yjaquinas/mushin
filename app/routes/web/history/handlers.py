@@ -81,7 +81,7 @@ def activity_history_response(
         username=viewer["username"],
         slug=viewer["slug"],
         login_redirect_url=login_redirect_url,
-        selected_tags=selected_tags if period == "all" else None,
+        selected_tags=selected_tags,
         selected_day=selected_day,
         page=page,
     )
