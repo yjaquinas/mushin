@@ -74,6 +74,10 @@ def _build_history_context(
                 or page
             )
         total_count = entries.count_entries(owner_id, activity_id, start=start, end=end)
+        # The entry log is paginated, but the tag rail describes the entire
+        # visible month. Keep its source separate so page navigation cannot
+        # change tag counts or hide tags that appear on another page.
+        tag_source_rows = stats.period_entries(activity_id, owner_id, start, end, tz=tz)
         rows = stats.period_entries(
             activity_id, owner_id, start, end, tz=tz, limit=page_size, offset=(page - 1) * page_size
         )
