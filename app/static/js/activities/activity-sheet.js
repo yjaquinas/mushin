@@ -34,7 +34,7 @@
   }
 
   // Initial page load.
-  initSheet();
+  window.MushinAppReady.when(initSheet);
 
   // HTMX swap into #profile-target-activity-sheet (the new-activity entry point).
   document.body.addEventListener("htmx:afterSwap", function (event) {

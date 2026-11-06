@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en" class="app-booting" data-bootstrap-pending="true" data-theme="{{ theme }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ strings.APP_NAME }} {{ strings.APP_NAME_HANJA }}</title>
+    <link rel="stylesheet" href="{{ static_asset('/static/style.css') }}">
+    <link rel="icon" href="{{ static_asset('/static/logo.png') }}" type="image/png">
+    <noscript><meta http-equiv="refresh" content="0;url={{ bootstrap_fallback }}"></noscript>
+    {% include "components/common/_scripts.html.jinja2" %}
+</head>
+<body hx-history="false" data-current-tab="" data-bootstrap-url="{{ bootstrap_url }}">
+    <div id="bootstrap-splash" class="app-splash" role="status" aria-label="{{ strings.APP_LOADING }}">
+        {% include "components/common/_splash_logo.html.jinja2" %}
+        <div class="bootstrap-recovery" role="alert">
+            <p>{{ strings.BOOTSTRAP_FAILED }}</p>
+            <a href="{{ bootstrap_url }}" data-bootstrap-retry class="min-h-tap underline underline-offset-2">{{ strings.REQUEST_RETRY }}</a>
+            <a href="{{ bootstrap_fallback }}" class="min-h-tap underline underline-offset-2">{{ strings.BOOTSTRAP_FALLBACK }}</a>
+        </div>
+    </div>
+</body>
+</html>

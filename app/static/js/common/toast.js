@@ -51,7 +51,7 @@
     showToast(e.detail.message, e.detail.variant || "informative");
   });
 
-  document.addEventListener("DOMContentLoaded", function () {
+  window.MushinAppReady.when(function () {
     document.querySelectorAll("[data-toast-message]").forEach(function (messageNode) {
       showToast(messageNode.dataset.toastMessage, messageNode.dataset.toastVariant || "informative");
       messageNode.remove();

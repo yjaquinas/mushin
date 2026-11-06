@@ -97,7 +97,7 @@
     updateBoundedTextareaCharCount(textarea);
   }, true);
 
-  document.addEventListener("DOMContentLoaded", function () {
+  window.MushinAppReady.when(function () {
     syncCommentFormState(document);
     syncBoundedTextareas(document);
   });

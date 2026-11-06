@@ -1,5 +1,9 @@
     <script src="{{ static_asset('/static/js/common/theme.js') }}"></script>
     {% include "components/common/_loading_scripts.html.jinja2" %}
+    {% if bootstrap_url is defined %}
+    <script src="{{ static_asset('/static/js/common/bootstrap-fetch.js') }}"></script>
+    <script defer src="{{ static_asset('/static/js/common/bootstrap-install.js') }}"></script>
+    {% endif %}
     <script defer src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.10/dist/htmx.min.js" integrity="sha384-H5SrcfygHmAuTDZphMHqBJLc3FhssKjG7w/CeCpFReSfwBWDTKpkzPP8c+cLsK+V" crossorigin="anonymous"></script>
     <script defer src="{{ static_asset('/static/js/common/htmx-config.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/common/region-loading.js') }}"></script>
@@ -20,6 +24,7 @@
     <script defer src="{{ static_asset('/static/js/common/legal-dialog.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/entries/entry-form-defaults.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/entries/entry-form-edit.js') }}"></script>
+    <script defer src="{{ static_asset('/static/js/entries/entry-focus.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/entries/entry-expansion.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/history/history-focus.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/history/heatmap-timeline.js') }}"></script>

@@ -39,7 +39,7 @@
     (scope || document).querySelectorAll("form[data-original-date]").forEach(initEditForm);
   }
 
-  document.addEventListener("DOMContentLoaded", function () {
+  window.MushinAppReady.when(function () {
     initEditForms(document);
   });
 

@@ -119,7 +119,7 @@
       pushBrowserState(tabs.activeTab, state.idx, window.location.href, true);
     }
   });
-  document.addEventListener("DOMContentLoaded", function () {
+  window.MushinAppReady.when(function () {
     var initialTab = document.body.getAttribute("data-current-tab") || "";
     if (!tabState[initialTab]) return;
     if ("scrollRestoration" in window.history) {

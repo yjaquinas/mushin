@@ -27,16 +27,25 @@ html:not([data-theme="dark"]) .theme-dark {
     height: 5rem;
   }
 
-  .app-splash__name {
-    font-size: var(--text-title);
-    font-weight: 600;
+  .app-booting body > :not(.app-splash) { visibility: hidden; }
+
+  .bootstrap-recovery {
+    position: absolute;
+    top: calc(50% + 4rem);
+    display: flex;
+    width: min(24rem, 100%);
+    padding-inline: 1.5rem;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    text-align: center;
+    visibility: hidden;
+    animation: bootstrap-recovery-show 0s 30s forwards;
   }
 
-  .app-splash__track {
-    width: 5rem;
-    height: 2px;
-    overflow: hidden;
-    background: var(--color-border);
+  [data-bootstrap-error] .bootstrap-recovery {
+    visibility: visible;
+    animation: none;
   }
 
   .page-loading .page-progress {
@@ -50,7 +59,6 @@ html:not([data-theme="dark"]) .theme-dark {
     background: var(--color-border);
   }
 
-  .app-splash__track::after,
   .page-progress::after {
     content: "";
     display: block;
@@ -66,8 +74,11 @@ html:not([data-theme="dark"]) .theme-dark {
   to { transform: translateX(350%); }
 }
 
+@keyframes bootstrap-recovery-show {
+  to { visibility: visible; }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .app-splash__track::after,
   .page-progress::after {
     width: 100%;
     animation: none;

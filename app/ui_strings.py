@@ -20,6 +20,8 @@ from __future__ import annotations
 APP_NAME = "Mushin"
 APP_NAME_HANJA = "無心"
 APP_LOADING = "Loading Mushin"
+BOOTSTRAP_FAILED = "Couldn’t open this page. Please try again."
+BOOTSTRAP_FALLBACK = "Open the page directly"
 PAGE_LOADING = "Loading page"
 REQUEST_LOADING = "Loading…"
 REQUEST_REFRESHING = "Updating…"

@@ -71,7 +71,7 @@
     initPasswordForm();
   }
 
-  document.addEventListener("DOMContentLoaded", initSettingsForms);
+  window.MushinAppReady.when(initSettingsForms);
   document.body.addEventListener("htmx:afterSwap", initSettingsForms);
   document.body.addEventListener("tab:panel-rendered", initSettingsForms);
 })();

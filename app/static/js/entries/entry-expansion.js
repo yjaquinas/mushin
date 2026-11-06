@@ -109,31 +109,10 @@
     event.preventDefault();
   }, true);
 
-  function scrollToDeepLinkedEntry(root) {
-    var row = (root || document).querySelector("[data-entry-deep-link]");
-    if (!row) return;
-    window.requestAnimationFrame(function () {
-      row.scrollIntoView({ behavior: "smooth", block: "center" });
-    });
-  }
-
-  function scrollToDeepLinkedComment() {
-    var match = window.location.hash.match(/^#comment-(\d+)$/);
-    var target = match && document.getElementById("comment-" + match[1]);
-    if (!target) {
-      match = window.location.hash.match(/^#comment-slot-(\d+)$/);
-      target = match && document.getElementById("comment-slot-" + match[1]);
-    }
-    if (!target) return;
-    window.requestAnimationFrame(function () {
-      target.scrollIntoView({ behavior: "smooth", block: "center" });
-    });
-  }
-
-  document.addEventListener("DOMContentLoaded", function () {
+  window.MushinAppReady.when(function () {
     syncExpandedEntries(document);
-    scrollToDeepLinkedEntry(document);
-    scrollToDeepLinkedComment();
+    window.MushinEntryFocus.scrollEntry(document);
+    window.MushinEntryFocus.scrollComment();
   });
 
   document.body.addEventListener("htmx:afterSwap", function (event) {
@@ -142,9 +121,9 @@
       collapseExpandedEntries(target);
     } else {
       syncExpandedEntries(target);
-      scrollToDeepLinkedEntry(target);
+      window.MushinEntryFocus.scrollEntry(target);
     }
-    scrollToDeepLinkedComment();
+    window.MushinEntryFocus.scrollComment();
   });
 
   document.body.addEventListener("htmx:beforeRequest", function (event) {

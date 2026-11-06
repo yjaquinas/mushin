@@ -13,7 +13,11 @@
     return dlg;
   }
 
-  var renameDlg = initDialog("activity-dialog-rename");
+  var renameDlg = null;
+  window.MushinAppReady.when(function () {
+    renameDlg = initDialog("activity-dialog-rename");
+    autoOpenPendingDialogs(document);
+  });
   var dynamicDialogs = {};
 
   function autoOpenDialog(id, dlg) {

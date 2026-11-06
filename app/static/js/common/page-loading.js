@@ -28,10 +28,11 @@
   }
 
   window.MushinPageLoading = { start: start };
-  document.addEventListener("DOMContentLoaded", function () {
+  window.MushinAppReady.when(function () {
     root.classList.remove("app-booting");
-  }, { once: true });
+  });
   window.addEventListener("pageshow", function (event) {
+    if (root.hasAttribute("data-bootstrap-pending") || !window.MushinAppReady.ready) return;
     reset();
     if (event.persisted) {
       const finish = start();

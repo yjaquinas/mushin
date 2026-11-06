@@ -63,7 +63,7 @@
     });
   }
 
-  document.addEventListener("DOMContentLoaded", function () {
+  window.MushinAppReady.when(function () {
     syncEntryDateTimeForms(document);
     syncNoTimeToggle(document);
     syncDatePickers(document);

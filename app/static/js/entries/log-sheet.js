@@ -40,7 +40,7 @@
     resetAndCloseDialog(sheet);
   });
 
-  document.addEventListener("DOMContentLoaded", function () {
+  window.MushinAppReady.when(function () {
     initLogSheet();
   });
 

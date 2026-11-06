@@ -14,16 +14,10 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from app import ui_strings
 from app.auth import sessions
-from app.routes.web.common import _current_user, templates
+from app.routes.web.common import templates
 from app.routes.web.home._crawl import robots_response
+from app.routes.web.home._entry_handlers import entry_response
 from app.routes.web.home._sitemap import sitemap_response
-from app.routes.web.home.handlers import (
-    home_gate_response,
-    login_page_response,
-    redirect_logged_in_home,
-    render_entry_page,
-)
-from app.services.social import profiles
 
 router = APIRouter()
 
@@ -66,13 +60,7 @@ async def index(
     return visitors to the entry screen at ``/`` rather than relying on a
     dedicated ``/login`` route.
     """
-    user = _current_user(session)
-    safe_next = profiles.safe_next_path(next)
-    if user is None:
-        return render_entry_page(request, next_path=safe_next)
-    if safe_next:
-        return RedirectResponse(url=safe_next, status_code=303)
-    return redirect_logged_in_home(user)
+    return entry_response(request, session, next)
 
 
 @router.get("/login", response_class=HTMLResponse, response_model=None)
@@ -91,8 +79,7 @@ async def login(
     straight to the (validated) target, or their home/profile if there is
     none — there's nothing to log into here.
     """
-    user = _current_user(session)
-    return login_page_response(request, user, next)
+    return entry_response(request, session, next)
 
 
 @router.get("/auth/login-form", response_class=HTMLResponse)
@@ -141,8 +128,4 @@ async def home(
     """The character-sheet profile. Redirects to the entry screen with no
     session, or to the user's canonical profile URL when already logged in.
     """
-    user = _current_user(session)
-    gate = home_gate_response(user)
-    if gate is not None:
-        return gate
-    return redirect_logged_in_home(user)
+    return entry_response(request, session, home=True)

@@ -13,7 +13,8 @@
     return dlg;
   }
 
-  var deleteDlg = initDialog("delete-user-dialog");
+  var deleteDlg = null;
+  window.MushinAppReady.when(function () { deleteDlg = initDialog("delete-user-dialog"); });
 
   document.addEventListener("click", function (event) {
     var deleteOpen = event.target.closest("#delete-user-dialog-trigger");

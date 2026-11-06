@@ -50,9 +50,7 @@
     });
   }
 
-  syncLocalTimestamps(document);
-
-  document.addEventListener("DOMContentLoaded", function () {
+  window.MushinAppReady.when(function () {
     syncLocalTimestamps(document);
   });
 

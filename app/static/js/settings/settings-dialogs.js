@@ -23,8 +23,8 @@
     importDlg = initDialog("settings-dialog-entry-import") || importDlg;
   }
 
-  var importDlg = initDialog("settings-dialog-entry-import");
-  var deleteDlg = initDialog("settings-dialog-delete-account");
+  var importDlg = null;
+  var deleteDlg = null;
 
   async function copyShareLink(url) {
     if (!url || !navigator.clipboard || !navigator.clipboard.writeText) return false;
@@ -105,7 +105,7 @@
     }
   }
 
-  autoOpenImportDialog();
+  window.MushinAppReady.when(initSettingsDialogs);
 
   document.body.addEventListener("dialog:close", function (event) {
     if (event.target && event.target.id === "settings-dialog-entry-import") {
@@ -113,9 +113,11 @@
     }
   });
 
-  document.body.addEventListener("htmx:afterSwap", function () {
+  function initSettingsDialogs() {
     importDlg = initDialog("settings-dialog-entry-import") || importDlg;
     deleteDlg = initDialog("settings-dialog-delete-account") || deleteDlg;
     autoOpenImportDialog();
-  });
+  }
+
+  document.body.addEventListener("htmx:afterSwap", initSettingsDialogs);
 })();

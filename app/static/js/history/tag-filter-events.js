@@ -32,7 +32,7 @@
     if (!tags.reloadHistory(tagChip)) tags.apply(document);
   }, true);
 
-  document.addEventListener("DOMContentLoaded", function () {
+  window.MushinAppReady.when(function () {
     tags.apply(document);
   });
 

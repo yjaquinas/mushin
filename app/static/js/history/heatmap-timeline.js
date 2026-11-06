@@ -41,6 +41,6 @@
     (scope || document).querySelectorAll("[data-heatmap-timeline]").forEach(initTimeline);
   }
 
-  document.addEventListener("DOMContentLoaded", function () { initTimelines(document); });
+  window.MushinAppReady.when(function () { initTimelines(document); });
   document.body.addEventListener("htmx:afterSwap", function (event) { initTimelines(event.detail.target); });
 })();

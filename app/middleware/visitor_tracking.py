@@ -15,6 +15,10 @@ log = structlog.get_logger()
 class VisitorTrackingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         response = await call_next(request)
+        if request.headers.get("x-mushin-bootstrap") == "content":
+            response.headers["Cache-Control"] = "private, no-store"
+        if getattr(request.state, "bootstrap_shell", False):
+            return response
         try:
             visitors.record_request(request)
         except Exception as exc:
