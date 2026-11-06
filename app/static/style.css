@@ -1325,6 +1325,101 @@
     animation: none;
   }
 }
+html[data-theme="dark"] .theme-light, html:not([data-theme="dark"]) .theme-dark {
+  display: none;
+}
+@layer components {
+  .app-splash, .page-progress {
+    display: none;
+  }
+  .app-booting .app-splash {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1.25rem;
+    background: var(--color-surface-0);
+    color: var(--color-text-primary);
+  }
+  .app-splash__logo {
+    width: 5rem;
+    height: 5rem;
+  }
+  .app-splash__name {
+    font-size: var(--text-title);
+    font-weight: 600;
+  }
+  .app-splash__track {
+    width: 5rem;
+    height: 2px;
+    overflow: hidden;
+    background: var(--color-border);
+  }
+  .page-loading .page-progress {
+    position: fixed;
+    inset: 0 0 auto;
+    z-index: 100;
+    display: block;
+    height: 3px;
+    overflow: hidden;
+    pointer-events: none;
+    background: var(--color-border);
+  }
+  .app-splash__track::after, .page-progress::after {
+    content: "";
+    display: block;
+    width: 40%;
+    height: 100%;
+    background: var(--color-accent);
+    animation: page-progress-slide 1.1s ease-in-out infinite;
+  }
+}
+@keyframes page-progress-slide {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(350%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-splash__track::after, .page-progress::after {
+    width: 100%;
+    animation: none;
+  }
+}
+@layer components {
+  .request-status[hidden], .request-status [hidden] {
+    display: none;
+  }
+  .request-status {
+    padding-block: 0.5rem;
+    color: var(--color-text-secondary);
+    font-size: var(--text-caption);
+  }
+  .request-status__pending {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .request-status__spinner {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: request-loading-spin 700ms linear infinite;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .request-status__spinner {
+    animation: none;
+  }
+}
 html, body {
   scrollbar-width: none;
   -ms-overflow-style: none;

@@ -39,6 +39,7 @@ window.MushinAuth = {
         redirectUrl = nextField.value;
       }
 
+      window.MushinPageLoading.start();
       window.location.href = redirectUrl;
       return;
     }

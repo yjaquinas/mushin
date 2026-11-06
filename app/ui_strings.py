@@ -19,6 +19,15 @@ from __future__ import annotations
 
 APP_NAME = "Mushin"
 APP_NAME_HANJA = "無心"
+APP_LOADING = "Loading Mushin"
+PAGE_LOADING = "Loading page"
+REQUEST_LOADING = "Loading…"
+REQUEST_REFRESHING = "Updating…"
+REQUEST_FAILED = "Couldn’t load this."
+REQUEST_RETRY = "Try again"
+SEARCH_LOADING = "Searching…"
+COMMENTS_LOADING = "Loading comments…"
+EXPORT_FAILED = "Couldn’t download your entries. Please try again."
 
 # Error pages
 ERROR_PAGE_NOT_FOUND = "The page you're looking for doesn't exist."

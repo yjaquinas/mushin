@@ -122,13 +122,17 @@
 
         {% if (entry.comment_count or can_comment) and username is not none and slug is not none %}
         <div id="comment-slot-{{ entry.id }}"></div>
+        {% with loading_id='comment-status-' ~ entry.id, loading_text=strings.COMMENTS_LOADING %}
+        {% include "components/common/_request_status.html.jinja2" %}
+        {% endwith %}
         <div
             id="comment-loader-{{ entry.id }}"
             hidden
             hx-get="/@{{ username }}/{{ slug }}/entries/{{ entry.id }}/comments"
             hx-target="#comment-slot-{{ entry.id }}"
+            data-loading-status="#comment-status-{{ entry.id }}"
             hx-swap="innerHTML"
-            hx-trigger="{% if expand_comment_entry_id == entry.id %}load{% else %}load-comments{% endif %}"
+            hx-trigger="{% if expand_comment_entry_id == entry.id %}load{% else %}load-comments{% endif %}, request-retry"
         ></div>
         {% elif login_redirect_url %}
         <a

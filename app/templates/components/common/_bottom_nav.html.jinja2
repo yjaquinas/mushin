@@ -1,0 +1,50 @@
+    {# Bottom navigation bar — visible only on tabbed pages (profile/social/settings). #}
+    {% if current_tab is not none or show_bottom_nav | default(false) %}
+    <nav class="bottom-nav" aria-label="{{ strings.NAV_APP }}">
+        <div class="bottom-nav__inner">
+            <a
+                href="{{ home_url }}"
+                class="bottom-nav-tab{% if current_tab == 'profile' %} bottom-nav-tab--active{% endif %}"
+                aria-label="{{ strings.NAV_PROFILE }}"
+                {% if current_tab == 'profile' %}aria-current="page"{% endif %}
+                data-tab="profile"
+            >
+                {{ icon("user", size=22) }}
+            </a>
+            <a
+                href="/social"
+                class="bottom-nav-tab{% if current_tab == 'social' %} bottom-nav-tab--active{% endif %}"
+                aria-label="{{ strings.NAV_SOCIAL }}"
+                {% if current_tab == 'social' %}aria-current="page"{% endif %}
+                data-tab="social"
+            >
+                {{ icon("compass", size=22) }}
+            </a>
+            <a
+                href="/notifications"
+                class="bottom-nav-tab{% if current_tab == 'notifications' %} bottom-nav-tab--active{% endif %} relative"
+                aria-label="{{ strings.NAV_NOTIFICATIONS }}"
+                {% if current_tab == 'notifications' %}aria-current="page"{% endif %}
+                data-tab="notifications"
+            >
+                <span class="bottom-nav-icon">
+                    {{ icon("bell", size=22) }}
+                    {% if unseen_notifications %}
+                    <span class="bottom-nav-badge">
+                        {{ "9+" if unseen_notifications >= 9 else unseen_notifications }}
+                    </span>
+                    {% endif %}
+                </span>
+            </a>
+            <a
+                href="/settings"
+                class="bottom-nav-tab{% if current_tab == 'settings' %} bottom-nav-tab--active{% endif %}"
+                aria-label="{{ strings.NAV_SETTINGS }}"
+                {% if current_tab == 'settings' %}aria-current="page"{% endif %}
+                data-tab="settings"
+            >
+                {{ icon("cog", size=22) }}
+            </a>
+        </div>
+    </nav>
+    {% endif %}

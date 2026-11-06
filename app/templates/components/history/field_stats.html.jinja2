@@ -13,11 +13,16 @@
     id="activity-section-field-stats-{{ activity_id }}"
     data-period="{{ field_stats.period | default('month') }}"
     hx-get="/activities/{{ activity_id }}/field-stats"
-    hx-trigger="log-saved from:body, needs-period-refresh"
+    hx-trigger="log-saved from:body, needs-period-refresh, request-retry"
     hx-swap="outerHTML"
 >
 {% else %}
 <div>
+{% endif %}
+{% if is_owner | default(false) %}
+{% with loading_text=strings.REQUEST_REFRESHING %}
+{% include "components/common/_request_status.html.jinja2" %}
+{% endwith %}
 {% endif %}
 {% if field_stats.tag_groups %}
 <section class="flat-section py-4">

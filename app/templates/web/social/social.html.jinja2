@@ -31,12 +31,17 @@
             placeholder="{{ strings.SEARCH_INPUT_PLACEHOLDER }}"
             autocomplete="off"
             hx-get="/social/results"
-            hx-trigger="input changed delay:300ms, search"
+            hx-trigger="input changed delay:300ms, search, request-retry"
+            hx-sync="this:replace"
+            data-loading-status="#social-search-status"
             hx-target="#social-target-search-results"
             hx-swap="innerHTML"
             class="min-h-tap w-full rounded-input border border-border bg-surface-1 px-3 py-1 text-body text-text-primary focus-visible:outline-2"
         >
     </div>
+    {% with loading_id='social-search-status', loading_text=strings.SEARCH_LOADING %}
+    {% include "components/common/_request_status.html.jinja2" %}
+    {% endwith %}
     <div id="social-target-search-results">
         <p class="py-2 text-center text-caption text-text-secondary">{{ strings.SEARCH_PROMPT }}</p>
     </div>

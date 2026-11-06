@@ -1,0 +1,53 @@
+{# Data, logout, delete #}
+<section id="settings-section-data" class="flat-section py-4">
+    <h2 class="flat-section-title">{{ strings.SETTINGS_DATA_HEADING }}</h2>
+    <div class="flex gap-3">
+      {% include "components/settings/entry_import_dialog.html.jinja2" with context %}
+      <template id="settings-template-entry-import-dialog">
+        {% include "components/settings/entry_import_dialog.html.jinja2" with context %}
+      </template>
+      <button
+          type="button"
+          id="settings-button-entry-import-open"
+          class="flex min-h-tap flex-1 items-center justify-center gap-2 rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline-offset-2"
+      >
+          {{ icon("arrow-down-tray", size=18) }}
+          {{ strings.FOOTER_IMPORT_ENTRIES }}
+      </button>
+        <a
+            href="/export-entries"
+            download data-download aria-describedby="settings-export-error"
+            class="flex min-h-tap flex-1 items-center justify-center gap-2 rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline-offset-2"
+        >
+            {{ icon("arrow-up-tray", size=18) }}
+            {{ strings.FOOTER_EXPORT_ENTRIES }}
+        </a>
+    </div>
+
+    <p id="settings-export-error" hidden role="alert" class="text-caption text-danger">{{ strings.EXPORT_FAILED }}</p>
+    <button
+        type="button"
+        id="settings-button-logout"
+        hx-post="/auth/logout"
+        hx-swap="none"
+        class="flex min-h-tap w-full items-center justify-center gap-2 rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-secondary transition hover:bg-surface-2 focus-visible:outline-offset-2"
+    >
+        {{ icon("circle-user", size=18) }}
+        {{ strings.FOOTER_LOGOUT }}
+    </button>
+
+{% if not is_guest %}
+    <button
+        type="button"
+        id="settings-button-delete-open"
+        class="flex min-h-tap w-full items-center justify-center gap-2 rounded-button border border-danger bg-danger-subtle px-4 py-3 text-body font-semibold text-danger transition hover:opacity-90 focus-visible:outline-offset-2"
+    >
+        {{ icon("trash", size=18) }}
+        {{ strings.FOOTER_DELETE_DATA }}
+    </button>
+
+    {% include "components/settings/delete_account_confirm.html.jinja2" %}
+{% endif %}
+</section>
+<div class="h-px bg-border" aria-hidden="true"></div>
+

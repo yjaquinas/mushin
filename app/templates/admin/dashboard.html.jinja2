@@ -8,11 +8,13 @@
     <link rel="icon" type="image/png" href="{{ static_asset('/static/logo.png') }}">
     <link rel="apple-touch-icon" href="{{ static_asset('/static/favicon/apple-touch-icon.png') }}">
     <link rel="manifest" href="{{ static_asset('/static/manifest.json') }}">
+    {% include "components/common/_loading_scripts.html.jinja2" %}
     <script defer src="{{ static_asset('/static/js/common/dialogs.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/common/sw-register.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/admin/admin-dialogs.js') }}"></script>
 </head>
 <body class="flex flex-col bg-surface-0 min-h-screen text-text-primary text-body">
+    {% include "components/common/_app_loading.html.jinja2" %}
     <main class="mx-auto flex w-full max-w-screen-lg grow flex-col gap-6 px-4 py-4">
         <header class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h1 class="text-title font-semibold text-text-primary">{{ strings.ADMIN_DASHBOARD_TITLE }}</h1>

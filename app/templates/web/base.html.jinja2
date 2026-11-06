@@ -36,41 +36,10 @@
 
     <title>{% block title %}{{ title | default(strings.APP_NAME) }}{% endblock %}</title>
     <link rel="stylesheet" href="{{ static_asset('/static/style.css') }}">
-    <style>html[data-theme="dark"] .theme-light{display:none}html:not([data-theme="dark"]) .theme-dark{display:none}</style>
     <link rel="icon" type="image/png" href="{{ static_asset('/static/logo.png') }}">
     <link rel="apple-touch-icon" href="{{ static_asset('/static/favicon/apple-touch-icon.png') }}">
     <link rel="manifest" href="{{ static_asset('/static/manifest.json') }}">
-    <script>(function(){if(document.cookie.indexOf('mushin_theme=')===-1){var t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t);document.cookie='mushin_theme='+t+';path=/;max-age=31536000;SameSite=Lax'}})();</script>
-    <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.10/dist/htmx.min.js" integrity="sha384-H5SrcfygHmAuTDZphMHqBJLc3FhssKjG7w/CeCpFReSfwBWDTKpkzPP8c+cLsK+V" crossorigin="anonymous"></script>
-    <script>htmx.config.processHidden = true;</script>
-    <script defer src="{{ static_asset('/static/js/common/request-loading.js') }}"></script>
-    <script defer src="{{ static_asset('/static/js/common/tab-navigation.js') }}"></script>
-    <script defer src="{{ static_asset('/static/js/common/toast.js') }}"></script>
-    <script defer src="{{ static_asset('/static/js/common/dialogs.js') }}"></script>
-    <script defer src="{{ static_asset('/static/js/settings/settings-dialogs.js') }}"></script>
-    <script defer src="{{ static_asset('/static/js/settings/settings-forms.js') }}"></script>
-    <script defer src="{{ static_asset('/static/js/activities/activity-dialogs.js') }}"></script>
-    <script defer src="{{ static_asset('/static/js/auth/auth-form.js') }}"></script>
-    <script defer src="{{ static_asset('/static/js/auth/logout.js') }}"></script>
-    <script defer src="{{ static_asset('/static/js/common/textareas.js') }}"></script>
-    <script defer src="{{ static_asset('/static/js/common/local-time.js') }}"></script>
-    <script defer src="{{ static_asset('/static/js/common/sw-register.js') }}"></script>
-    <script defer src="{{ static_asset('/static/js/common/legal-dialog.js') }}"></script>
-    <script defer src="{{ static_asset('/static/js/entries/entry-form-defaults.js') }}"></script>
-    <script defer src="{{ static_asset('/static/js/entries/entry-form-edit.js') }}"></script>
-    <script defer src="{{ static_asset('/static/js/entries/entry-expansion.js') }}"></script>
-    <script defer src="{{ static_asset('/static/js/history/history-focus.js') }}"></script>
-    <script defer src="{{ static_asset('/static/js/history/heatmap-timeline.js') }}"></script>
-    <script defer src="{{ static_asset('/static/js/history/tag-filter.js') }}"></script>
-    <script defer src="{{ static_asset('/static/js/history/tag-filter-events.js') }}"></script>
-    <script defer src="{{ static_asset('/static/js/activities/activity-sheet.js') }}"></script>
-    <script defer src="{{ static_asset('/static/js/history/field-stats.js') }}"></script>
-    <script defer src="{{ static_asset('/static/js/entries/log-sheet.js') }}"></script>
-    <script defer src="{{ static_asset('/static/js/entries/entry-dialog.js') }}"></script>
-    <script defer src="{{ static_asset('/static/js/social/social-search.js') }}"></script>
-    <script defer src="{{ static_asset('/static/js/guides/guide-navigation.js') }}"></script>
-<script defer src="{{ static_asset('/static/js/entries/tag-editor.js') }}"></script>
-<link rel="stylesheet" href="{{ static_asset('/static/entry-editor.css') }}">
+    {% include "components/common/_scripts.html.jinja2" %}
 </head>
 {% set current_tab = current_page if (current_page is defined and current_page in ('notifications', 'profile', 'social', 'settings')) else none %}
 <body
@@ -78,6 +47,7 @@
     hx-history="false"
     data-current-tab="{{ current_tab or '' }}"
 >
+    {% include "components/common/_app_loading.html.jinja2" %}
      {# Masthead — top bar with centered title. Always rendered
         (hidden when no title) so JS can update it on tab switch. #}
     <header
@@ -152,55 +122,6 @@
         <span id="toast-text" class="flex-1"></span>
     </div>
 
-    {# Bottom navigation bar — visible only on tabbed pages (profile/social/settings). #}
-    {% if current_tab is not none or show_bottom_nav | default(false) %}
-    <nav class="bottom-nav" aria-label="{{ strings.NAV_APP }}">
-        <div class="bottom-nav__inner">
-            <a
-                href="{{ home_url }}"
-                class="bottom-nav-tab{% if current_tab == 'profile' %} bottom-nav-tab--active{% endif %}"
-                aria-label="{{ strings.NAV_PROFILE }}"
-                {% if current_tab == 'profile' %}aria-current="page"{% endif %}
-                data-tab="profile"
-            >
-                {{ icon("user", size=22) }}
-            </a>
-            <a
-                href="/social"
-                class="bottom-nav-tab{% if current_tab == 'social' %} bottom-nav-tab--active{% endif %}"
-                aria-label="{{ strings.NAV_SOCIAL }}"
-                {% if current_tab == 'social' %}aria-current="page"{% endif %}
-                data-tab="social"
-            >
-                {{ icon("compass", size=22) }}
-            </a>
-            <a
-                href="/notifications"
-                class="bottom-nav-tab{% if current_tab == 'notifications' %} bottom-nav-tab--active{% endif %} relative"
-                aria-label="{{ strings.NAV_NOTIFICATIONS }}"
-                {% if current_tab == 'notifications' %}aria-current="page"{% endif %}
-                data-tab="notifications"
-            >
-                <span class="bottom-nav-icon">
-                    {{ icon("bell", size=22) }}
-                    {% if unseen_notifications %}
-                    <span class="bottom-nav-badge">
-                        {{ "9+" if unseen_notifications >= 9 else unseen_notifications }}
-                    </span>
-                    {% endif %}
-                </span>
-            </a>
-            <a
-                href="/settings"
-                class="bottom-nav-tab{% if current_tab == 'settings' %} bottom-nav-tab--active{% endif %}"
-                aria-label="{{ strings.NAV_SETTINGS }}"
-                {% if current_tab == 'settings' %}aria-current="page"{% endif %}
-                data-tab="settings"
-            >
-                {{ icon("cog", size=22) }}
-            </a>
-        </div>
-    </nav>
-    {% endif %}
+    {% include "components/common/_bottom_nav.html.jinja2" %}
 </body>
 </html>

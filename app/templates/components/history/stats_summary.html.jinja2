@@ -5,10 +5,15 @@
     class="flex flex-col gap-4 rounded-card border border-border bg-surface-1 p-4"
     {% if is_owner | default(false) %}
     hx-get="/activities/{{ activity_id }}/stats-summary"
-    hx-trigger="log-saved from:body"
+    hx-trigger="log-saved from:body, request-retry"
     hx-swap="outerHTML"
     {% endif %}
 >
+    {% if is_owner | default(false) %}
+    {% with loading_text=strings.REQUEST_REFRESHING %}
+    {% include "components/common/_request_status.html.jinja2" %}
+    {% endwith %}
+    {% endif %}
     {% if card_name is defined and card_name %}
     {% if title_editable | default(false) %}
     <div id="activity-header-rename" class="flex items-center gap-3">

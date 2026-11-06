@@ -4,8 +4,12 @@
 {% if feed_page.next_cursor %}
 <div
     hx-get="/social/feed?scope={{ feed_scope }}&amp;cursor={{ feed_page.next_cursor }}"
-    hx-trigger="revealed once"
+    hx-trigger="revealed once, request-retry"
     hx-swap="outerHTML"
     aria-label="{{ strings.SOCIAL_FEED_LOADING_ARIA }}"
-></div>
+>
+    {% with loading_text=strings.SOCIAL_FEED_LOADING_ARIA %}
+    {% include "components/common/_request_status.html.jinja2" %}
+    {% endwith %}
+</div>
 {% endif %}

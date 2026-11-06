@@ -1,0 +1,7 @@
+<div class="app-splash" role="status" aria-label="{{ strings.APP_LOADING }}">
+    <img src="{{ static_asset('/static/logo.png') }}" class="app-splash__logo theme-light" alt="" width="80" height="80" fetchpriority="high">
+    <img src="{{ static_asset('/static/logo-dark.png') }}" class="app-splash__logo theme-dark" alt="" width="80" height="80" fetchpriority="high">
+    <span class="app-splash__name" aria-hidden="true">{{ strings.APP_NAME }} {{ strings.APP_NAME_HANJA }}</span>
+    <span class="app-splash__track" aria-hidden="true"></span>
+</div>
+<div class="page-progress" role="status" aria-label="{{ strings.PAGE_LOADING }}"></div>

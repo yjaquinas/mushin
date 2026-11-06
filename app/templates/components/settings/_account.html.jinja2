@@ -1,0 +1,106 @@
+<section class="flat-section py-4" id="settings-section-account">
+    <h2 class="flat-section-title">{{ strings.ACCOUNT_VISIBILITY_HEADING }}</h2>
+    <form
+        id="settings-form-account"
+        method="post"
+        action="/settings"
+        class="flex flex-col gap-3"
+        data-original-visibility="{{ visibility }}"
+    >
+        <fieldset class="flex flex-col gap-4">
+            <legend class="sr-only">{{ strings.ACCOUNT_VISIBILITY_HEADING }}</legend>
+            <div class="flex gap-2">
+                <label class="flex-1 cursor-pointer rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-secondary transition hover:bg-surface-2 has-[:checked]:border-2 has-[:checked]:border-brand has-[:checked]:text-text-primary has-[:checked]:font-semibold">
+                    <input
+                        type="radio"
+                        name="visibility"
+                        value="private"
+                        {% if visibility != "public" %}checked{% endif %}
+                        class="sr-only"
+                    >
+                    <span class="relative flex items-center justify-center">
+                        <span class="flex items-center justify-center gap-2">
+                            {{ icon("shield", size=18) }}
+                            {{ strings.ACCOUNT_VISIBILITY_PRIVATE_LABEL }}
+                        </span>
+                        {% if visibility != "public" %}
+                        <span class="absolute right-0 text-brand" aria-label="{{ strings.ACCOUNT_VISIBILITY_CURRENT_BADGE }}">
+                            {{ icon("check", size=18) }}
+                        </span>
+                        {% endif %}
+                    </span>
+                </label>
+                <label class="flex-1 cursor-pointer rounded-button border border-border bg-surface-1 px-4 py-3 text-body font-medium text-text-secondary transition hover:bg-surface-2 has-[:checked]:border-2 has-[:checked]:border-brand has-[:checked]:text-text-primary has-[:checked]:font-semibold">
+                    <input
+                        type="radio"
+                        name="visibility"
+                        value="public"
+                        {% if visibility == "public" %}checked{% endif %}
+                        class="sr-only"
+                    >
+                    <span class="relative flex items-center justify-center">
+                        <span class="flex items-center justify-center gap-2">
+                            {{ icon("globe", size=18) }}
+                            {{ strings.ACCOUNT_VISIBILITY_PUBLIC_LABEL }}
+                        </span>
+                        {% if visibility == "public" %}
+                        <span class="absolute right-0 text-brand" aria-label="{{ strings.ACCOUNT_VISIBILITY_CURRENT_BADGE }}">
+                            {{ icon("check", size=18) }}
+                        </span>
+                        {% endif %}
+                    </span>
+                </label>
+            </div>
+            <div id="settings-target-visibility-explanation" class="text-caption text-text-secondary">
+                <p id="settings-text-visibility-tagline" class="font-medium"></p>
+                <p id="settings-text-visibility-description"></p>
+            </div>
+            <span id="settings-text-visibility-tagline-private" hidden>{{ strings.ACCOUNT_VISIBILITY_PRIVATE_TAGLINE }}</span>
+            <span id="settings-text-visibility-desc-private" hidden>{{ strings.ACCOUNT_VISIBILITY_PRIVATE_DESC }}</span>
+            <span id="settings-text-visibility-tagline-public" hidden>{{ strings.ACCOUNT_VISIBILITY_PUBLIC_TAGLINE }}</span>
+            <span id="settings-text-visibility-desc-public" hidden>{{ strings.ACCOUNT_VISIBILITY_PUBLIC_DESC }}</span>
+        </fieldset>
+
+        <label class="flex cursor-pointer items-start gap-3 rounded-button border border-border bg-surface-1 px-4 py-3">
+            <input
+                id="settings-field-search-discovery"
+                name="search_discovery"
+                type="checkbox"
+                {% if search_discovery %}checked{% endif %}
+                data-original-checked="{{ 'true' if search_discovery else 'false' }}"
+                class="mt-1"
+            >
+            <span class="flex flex-col gap-1">
+                <span class="text-body font-medium text-text-primary">{{ strings.ACCOUNT_SEARCH_DISCOVERY_LABEL }}</span>
+                <span class="text-caption text-text-secondary">{{ strings.ACCOUNT_SEARCH_DISCOVERY_DESC }}</span>
+            </span>
+        </label>
+
+        <label class="flex flex-col gap-2" for="settings-field-email">
+            <span class="text-caption font-medium text-text-primary">{{ strings.ACCOUNT_EMAIL_LABEL }}</span>
+            <input
+                id="settings-field-email"
+                name="email"
+                type="email"
+                value="{{ email or '' }}"
+                data-original-value="{{ email or '' }}"
+                autocomplete="email"
+                inputmode="email"
+                spellcheck="false"
+                class="min-h-tap rounded-button border border-border bg-surface-1 px-4 py-3 text-body text-text-primary placeholder:text-text-muted focus-visible:outline-offset-2"
+            >
+        </label>
+        {% if email_error %}
+        <div hidden data-toast-message="{{ email_error }}"></div>
+        {% endif %}
+
+        <button
+            type="submit"
+            disabled
+            class="flex min-h-tap w-full items-center justify-center rounded-button bg-brand px-4 py-3 text-title font-semibold text-on-brand transition focus-visible:outline-offset-2 disabled:opacity-60"
+        >
+            {{ strings.ACCOUNT_SETTINGS_SAVE }}
+        </button>
+    </form>
+</section>
+<div class="h-px bg-border" aria-hidden="true"></div>

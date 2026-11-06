@@ -23,6 +23,8 @@
 
 @import "tailwindcss";
 @import "./request-loading.css";
+@import "./page-loading.css";
+@import "./region-loading.css";
 
 /* Preserve scrolling while keeping browser scrollbars out of the app chrome. */
 html,

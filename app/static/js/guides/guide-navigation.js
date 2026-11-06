@@ -12,8 +12,9 @@
 
   document.addEventListener("click", function (event) {
     var backLink = event.target.closest("[data-guide-back]");
-    if (!backLink || !hasSameOriginReferrer()) return;
+    if (!backLink || !hasSameOriginReferrer() || window.history.length <= 1) return;
     event.preventDefault();
+    window.MushinPageLoading.start();
     window.history.back();
   });
 })();

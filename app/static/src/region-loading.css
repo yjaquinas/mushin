@@ -1,0 +1,26 @@
+@layer components {
+  .request-status[hidden],
+  .request-status [hidden] { display: none; }
+  .request-status {
+    padding-block: 0.5rem;
+    color: var(--color-text-secondary);
+    font-size: var(--text-caption);
+  }
+  .request-status__pending {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .request-status__spinner {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: request-loading-spin 700ms linear infinite;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .request-status__spinner { animation: none; }
+}

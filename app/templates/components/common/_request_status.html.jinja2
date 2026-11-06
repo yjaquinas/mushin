@@ -1,0 +1,11 @@
+<div{% if loading_id is defined %} id="{{ loading_id }}"{% endif %}
+    class="request-status" data-request-status hidden role="status" aria-live="polite">
+    <span data-request-pending class="request-status__pending">
+        <span class="request-status__spinner" aria-hidden="true"></span>
+        {{ loading_text | default(strings.REQUEST_LOADING) }}
+    </span>
+    <span data-request-failure hidden>
+        {{ strings.REQUEST_FAILED }}
+        <button type="button" data-request-retry class="min-h-tap underline underline-offset-2">{{ strings.REQUEST_RETRY }}</button>
+    </span>
+</div>
