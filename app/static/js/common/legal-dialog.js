@@ -73,6 +73,7 @@
     titleEl.textContent = link.getAttribute("data-dialog-title") || "";
 
     htmx.ajax("GET", "/legal/" + link.getAttribute("data-legal"), {
+      source: link,
       target: "#" + CONTENT_ID,
       swap: "innerHTML",
     });

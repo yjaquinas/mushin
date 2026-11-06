@@ -14,9 +14,10 @@
       return;
     }
 
-    if (event.target.closest("[data-tag-clear]")) {
+    var clearButton = event.target.closest("[data-tag-clear]");
+    if (clearButton) {
       tags.setSelected([]);
-      if (!tags.reloadHistory()) tags.apply(document);
+      if (!tags.reloadHistory(clearButton)) tags.apply(document);
       return;
     }
 
@@ -28,7 +29,7 @@
     if (existingIndex === -1) nextSelected.push(tagName);
     else nextSelected.splice(existingIndex, 1);
     tags.setSelected(nextSelected);
-    if (!tags.reloadHistory()) tags.apply(document);
+    if (!tags.reloadHistory(tagChip)) tags.apply(document);
   }, true);
 
   document.addEventListener("DOMContentLoaded", function () {

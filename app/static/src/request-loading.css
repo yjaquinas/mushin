@@ -1,0 +1,35 @@
+@layer components {
+  .request-loading {
+    position: relative;
+    color: transparent !important;
+    text-shadow: none !important;
+    cursor: wait;
+  }
+
+  .request-loading > * {
+    opacity: 0 !important;
+  }
+
+  .request-loading[aria-busy="true"]::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    width: 1em;
+    height: 1em;
+    border: 2px solid var(--request-loading-color);
+    border-right-color: transparent;
+    border-radius: 50%;
+    background: none;
+    animation: request-loading-spin 700ms linear infinite;
+    pointer-events: none;
+  }
+}
+
+@keyframes request-loading-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .request-loading[aria-busy="true"]::after { animation: none; }
+}

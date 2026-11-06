@@ -127,11 +127,12 @@
     syncTagSections(document);
   }
 
-  function reloadHistory() {
+  function reloadHistory(source) {
     var root = document.querySelector('[id^="activity-section-history-"]');
     if (!root || !window.htmx) return false;
     var activityId = root.id.slice("activity-section-history-".length);
     window.htmx.ajax("GET", "/activities/" + activityId + "/history", {
+      source: source,
       target: root,
       swap: "outerHTML",
       values: {

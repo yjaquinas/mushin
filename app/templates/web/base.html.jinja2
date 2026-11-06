@@ -43,6 +43,7 @@
     <script>(function(){if(document.cookie.indexOf('mushin_theme=')===-1){var t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t);document.cookie='mushin_theme='+t+';path=/;max-age=31536000;SameSite=Lax'}})();</script>
     <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.10/dist/htmx.min.js" integrity="sha384-H5SrcfygHmAuTDZphMHqBJLc3FhssKjG7w/CeCpFReSfwBWDTKpkzPP8c+cLsK+V" crossorigin="anonymous"></script>
     <script>htmx.config.processHidden = true;</script>
+    <script defer src="{{ static_asset('/static/js/common/request-loading.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/common/tab-navigation.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/common/toast.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/common/dialogs.js') }}"></script>
