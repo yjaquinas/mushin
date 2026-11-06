@@ -67,6 +67,8 @@
     <script defer src="{{ static_asset('/static/js/entries/log-sheet.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/social/social-search.js') }}"></script>
     <script defer src="{{ static_asset('/static/js/guides/guide-navigation.js') }}"></script>
+<script defer src="{{ static_asset('/static/js/entries/tag-editor.js') }}"></script>
+<link rel="stylesheet" href="{{ static_asset('/static/entry-editor.css') }}">
 </head>
 {% set current_tab = current_page if (current_page is defined and current_page in ('notifications', 'profile', 'social', 'settings')) else none %}
 <body

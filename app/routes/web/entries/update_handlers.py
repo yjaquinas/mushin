@@ -66,7 +66,7 @@ async def log_sheet_body(request: Request, activity_id: int, owner_id: int) -> H
         row = _db.fetch_one(conn, "activity", owner_id, where="id = ?", params=(activity_id,))
         if row is None:
             return HTMLResponse(status_code=404)
-        fields = _build_log_sheet_fields(conn, activity_id)
+        fields = _build_log_sheet_fields(conn, activity_id, owner_id)
     return templates.TemplateResponse(
         request=request,
         name="components/entries/log_sheet.html.jinja2",

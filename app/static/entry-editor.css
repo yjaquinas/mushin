@@ -1,0 +1,34 @@
+[data-tag-toolbar] [hidden] { display: none; }
+@media (max-width: 639px) {
+  [data-entry-dialog] { height: var(--entry-viewport, 100dvh); max-height: var(--entry-viewport, 100dvh); }
+  [data-entry-dialog] form { flex: 1; min-height: 0; }
+  [data-entry-dialog] .entry-notes { flex: 1; min-height: 8rem; }
+  [data-entry-dialog] textarea[name="memo"] { flex: 1; min-height: 4rem; max-height: 35dvh; overflow-y: auto; }
+}
+
+.entry-tag-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-height: var(--spacing-tap, 44px);
+  min-width: var(--spacing-tap, 44px);
+  padding-inline: 0.5rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-body);
+  white-space: nowrap;
+  cursor: pointer;
+  text-underline-offset: 0.2em;
+}
+.entry-tag-action:hover,
+.entry-tag-action--highlighted {
+  color: var(--color-text-primary);
+  text-decoration: underline;
+}
+.entry-tag-action:focus-visible {
+  outline: 2px solid var(--color-border-strong);
+  outline-offset: -2px;
+}

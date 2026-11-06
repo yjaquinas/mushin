@@ -1,0 +1,7 @@
+<div data-tag-toolbar data-tags='{{ field.suggested_tags | default([]) | tojson | forceescape }}' class="flex min-w-0 flex-col gap-1">
+    <div class="flex min-h-tap items-center justify-between gap-2">
+        <label for="memo" class="text-caption font-medium text-text-secondary">{{ strings.LOG_MEMO_LABEL }}</label>
+        <button type="button" data-insert-tag aria-label="{{ strings.TAG_INSERT_LABEL }}" class="entry-tag-action">{{ strings.TAG_INSERT }}</button>
+    </div>
+    <div data-tag-results hidden class="flex min-h-tap gap-2 overflow-x-auto" role="group" aria-label="{{ strings.TAG_SUGGESTIONS }}"></div>
+</div>
