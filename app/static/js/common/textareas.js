@@ -3,6 +3,11 @@
 
   function autosizeTextarea(textarea) {
     if (!textarea) return;
+    // The mobile entry editor fills its available space through flex layout.
+    if (textarea.closest("[data-entry-dialog]") && window.matchMedia("(max-width: 639px)").matches) {
+      textarea.style.height = "";
+      return;
+    }
     if (textarea.getClientRects().length === 0) {
       textarea.style.height = "";
       return;

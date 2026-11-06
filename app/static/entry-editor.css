@@ -1,9 +1,27 @@
 [data-tag-toolbar] [hidden] { display: none; }
 @media (max-width: 639px) {
-  [data-entry-dialog] { height: var(--entry-viewport, 100dvh); max-height: var(--entry-viewport, 100dvh); }
-  [data-entry-dialog] form { flex: 1; min-height: 0; }
-  [data-entry-dialog] .entry-notes { flex: 1; min-height: 8rem; }
-  [data-entry-dialog] textarea[name="memo"] { flex: 1; min-height: 4rem; max-height: 35dvh; overflow-y: auto; }
+  [data-entry-overlay] {
+    top: var(--entry-viewport-top, 0px);
+    bottom: auto;
+    height: var(--entry-viewport, 100dvh);
+  }
+  [data-entry-dialog] {
+    height: 100%;
+    max-height: 100%;
+    flex-shrink: 0;
+    overscroll-behavior: contain;
+  }
+  [data-entry-dialog] > header { flex-shrink: 0; }
+  [data-entry-dialog] form { flex: 1 0 auto; min-height: 0; }
+  [data-entry-dialog] form > :not(.entry-notes) { flex-shrink: 0; }
+  [data-entry-dialog] .entry-notes { flex: 1 0 auto; min-height: 8rem; }
+  [data-entry-dialog] textarea[name="memo"] {
+    flex: 1;
+    min-height: 4rem;
+    max-height: none;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
 }
 
 .entry-tag-action {

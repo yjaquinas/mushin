@@ -6,6 +6,7 @@
 
 (function () {
   "use strict";
+  var activeDlg = null;
 
   function initSheet() {
     var sheet = document.getElementById("activity-dialog-create");
@@ -16,6 +17,7 @@
     sheet.setAttribute("data-activity-sheet-init", "true");
 
     var dlg = new DialogManager("activity-dialog-create");
+    activeDlg = dlg;
     dlg.init();
     dialogManagerRegistry.add(dlg);
     dlg.open();
@@ -43,8 +45,7 @@
   document.addEventListener("click", function (event) {
     var cancel = event.target.closest("#activity-button-create-cancel");
     if (!cancel) return;
-    var sheet = document.getElementById("activity-dialog-create");
-    if (sheet) sheet.setAttribute("hidden", "");
+    if (activeDlg) activeDlg.close();
   });
 
   // Prevent checking the secret checkbox when the user's plan doesn't allow it.

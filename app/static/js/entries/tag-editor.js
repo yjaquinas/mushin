@@ -94,10 +94,4 @@
       event.preventDefault(); buttons[s.index].click();
     }
   });
-  function viewport() {
-    document.documentElement.style.setProperty('--entry-viewport', (window.visualViewport?.height || window.innerHeight) + 'px');
-  }
-  window.visualViewport?.addEventListener('resize', viewport);
-  window.addEventListener('resize', viewport);
-  viewport();
 })();

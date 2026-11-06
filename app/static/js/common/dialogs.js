@@ -1,18 +1,31 @@
-// Generic dialog manager — handles dialog open/close, focus-trap, Escape-to-close,
-// and overlay-click-to-close via vanilla JS.
-//
-// Usage (in templates):
-//   const dlg = new DialogManager("dialog-id");
-//   dlg.init();
-//   // Wire open buttons:
-//   document.getElementById("open-btn-id")?.addEventListener("click", () => dlg.open());
-//   // Wire cancel button (closes the dialog):
-//   document.getElementById("cancel-btn-id")?.addEventListener("click", () => dlg.close());
-//
-// Each instance wires:
-//   - window "keydown Escape" → close
-//   - overlay clicks (not inner content) → close
-//   - focus-trap on open (moves focus to the dialog root)
+// Shared modal lifecycle and page scroll lock.
+var dialogPageScroll = {
+  saved: null,
+  lock: function () {
+    if (this.saved) return;
+    var body = document.body.style;
+    this.saved = { x: window.scrollX, y: window.scrollY,
+      htmlOverflow: document.documentElement.style.overflow,
+      overflow: body.overflow, position: body.position, top: body.top,
+      left: body.left, width: body.width };
+    document.documentElement.style.overflow = "hidden";
+    body.overflow = "hidden";
+    body.position = "fixed";
+    body.top = -this.saved.y + "px";
+    body.left = -this.saved.x + "px";
+    body.width = "100%";
+  },
+  unlock: function () {
+    var saved = this.saved;
+    if (!saved) return;
+    document.documentElement.style.overflow = saved.htmlOverflow;
+    ["overflow", "position", "top", "left", "width"].forEach(function (key) {
+      document.body.style[key] = saved[key];
+    });
+    window.scrollTo({ left: saved.x, top: saved.y, behavior: "instant" });
+    this.saved = null;
+  },
+};
 
 function DialogManager(id) {
   this.id = id;
@@ -32,9 +45,11 @@ DialogManager.prototype = {
 
     // Window keydown → Escape closes.
     this._keydown = function (e) {
+      if (dialogManagerRegistry.top() !== this) return;
       if (el.hasAttribute("data-disable-escape-close")) return;
       if (e.key === "Escape") {
-        dialogManagerRegistry.remove(this);
+        e.preventDefault();
+        e.stopImmediatePropagation();
         this.close();
       }
     };
@@ -42,10 +57,10 @@ DialogManager.prototype = {
 
     // Backdrop click (outside the dialog panel) → close.
     this._overlayClick = function (e) {
+      if (dialogManagerRegistry.top() !== this) return;
       if (el.hasAttribute("data-disable-backdrop-close")) return;
       var panel = el.querySelector('[role="dialog"]');
       if (panel && !panel.contains(e.target)) {
-        dialogManagerRegistry.remove(this);
         this.close();
       }
     };
@@ -57,10 +72,11 @@ DialogManager.prototype = {
   open: function () {
     if (!this.el) return;
     dialogManagerRegistry.purgeOrphans();
+    dialogManagerRegistry.add(this);
     this.el.removeAttribute("hidden");
-    document.body.style.overflow = "hidden";
+    dialogPageScroll.lock();
     this.el.dispatchEvent(new CustomEvent("dialog:open", { bubbles: true }));
-    this.el.querySelector('[role="dialog"]')?.focus();
+    this.el.querySelector('[role="dialog"]')?.focus({ preventScroll: true });
   },
 
   close: function () {
@@ -69,15 +85,14 @@ DialogManager.prototype = {
     dialogManagerRegistry.purgeOrphans();
     dialogManagerRegistry.remove(this);
     if (dialogManagerRegistry.count() === 0) {
-      document.body.style.overflow = "";
+      dialogPageScroll.unlock();
     }
     this.el.dispatchEvent(new CustomEvent("dialog:close", { bubbles: true }));
   },
 };
 
 // ── registry ─────────────────────────────────────────────────
-// Tracks active DialogManager instances so Escape can reach them.
-// Removing an instance on close also cleans up its event listeners.
+// Tracks instances, including reopened dialogs and HTMX replacements.
 
 var dialogManagerRegistry = {
   _list: [],
@@ -97,6 +112,11 @@ var dialogManagerRegistry = {
     }
     return open;
   },
+  top: function () {
+    return this._list.findLast(function (dlg) {
+      return dlg.el?.isConnected && !dlg.el.hasAttribute("hidden");
+    });
+  },
   // Remove entries whose element is no longer in the DOM (orphaned by tab
   // navigation). Prevents stale DialogManagers from blocking overflow restore.
   purgeOrphans: function () {
@@ -109,7 +129,7 @@ var dialogManagerRegistry = {
     }
     this._list = remaining;
     if (this.count() === 0) {
-      document.body.style.overflow = "";
+      dialogPageScroll.unlock();
     }
   },
 };
